@@ -1,0 +1,153 @@
+/**
+ * PAGE STYLES
+ * 
+ * Статические страницы с двойной буферизацией.
+ */
+
+.page {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  z-index: 1;
+  background-color: var(--bg-page);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  background-image: url("../images/backgrounds/bg-page.webp");
+  background-blend-mode: multiply;
+  overflow: hidden;
+  contain: layout style paint;
+  transition:
+    background-color var(--timing-transition),
+    opacity var(--timing-transition),
+    visibility 0s var(--timing-transition);
+}
+
+.page[data-side="left"] {
+  left: 0;
+  border-right: 1px solid var(--border-page);
+  transform-origin: right center;
+}
+
+.page[data-side="right"] {
+  right: 0;
+  transform-origin: left center;
+}
+
+/* Состояния видимости */
+.page {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.page[data-active="true"] {
+  visibility: visible;
+  opacity: 1;
+  transition:
+    background-color var(--timing-transition),
+    opacity var(--timing-transition),
+    visibility 0s;
+}
+
+.page[data-buffer="true"] {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.book[data-state="flipping"] .page[data-active="true"] {
+  z-index: 5;
+}
+
+/* ═══════════════════════════════════════════
+   КОНТЕНТ СТРАНИЦЫ
+   ═══════════════════════════════════════════ */
+
+.page-content {
+  box-sizing: border-box;
+  padding-right: 2em;
+  padding-left: 2em;
+}
+
+.cols {
+  padding-top: 2em;
+  padding-bottom: 2em;
+}
+
+/* ═══════════════════════════════════════════
+   ТЕНИ СТРАНИЦ
+   ═══════════════════════════════════════════ */
+
+.page[data-side="left"] {
+  box-shadow:
+    inset -1px 0 0 var(--paper-highlight),
+    inset -10px 0 18px var(--spine-soft);
+}
+
+.page[data-side="right"] {
+  box-shadow:
+    inset 1px 0 0 var(--paper-highlight),
+    inset 10px 0 18px var(--spine-soft);
+}
+
+.page::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.page[data-side="left"]::after {
+  right: 0;
+  width: var(--spine-shadow-width);
+  background: linear-gradient(
+    to right,
+    var(--spine-dark) 0%,
+    var(--spine-mid) 20%,
+    var(--spine-soft) 45%,
+    transparent 100%
+  );
+  filter: blur(var(--spine-shadow-blur));
+}
+
+.page[data-side="right"]::after {
+  left: 0;
+  width: var(--spine-shadow-width);
+  background: linear-gradient(
+    to left,
+    var(--spine-dark) 0%,
+    var(--spine-mid) 20%,
+    var(--spine-soft) 45%,
+    transparent 100%
+  );
+  filter: blur(var(--spine-shadow-blur));
+}
+
+/* ═══════════════════════════════════════════
+   КРАЙ СТРАНИЦ (закрытая книга)
+   ═══════════════════════════════════════════ */
+
+.pages-edge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--page-edge-base),
+    var(--page-edge-base) 2px,
+    var(--page-edge-alt) 3px
+  );
+  border-radius: 0 12px 12px 0;
+  z-index: 5;
+  transition: opacity 0.6s ease-in-out;
+}
+
+.book:not([data-state="closed"]) .pages-edge {
+  opacity: 0;
+  pointer-events: none;
+}

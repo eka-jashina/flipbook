@@ -1,0 +1,162 @@
+/**
+ * SHEET STYLES
+ * 
+ * Анимированный лист переворота страницы.
+ * Три фазы: lift -> rotate -> drop
+ */
+
+.sheet {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  z-index: 10;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+  transform: translateZ(0) rotateY(0deg);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  contain: layout style paint;
+}
+
+/* Показываем только во время переворота */
+.book[data-state="flipping"] .sheet {
+  opacity: 1;
+  visibility: visible;
+  z-index: 20;
+  will-change: transform;
+}
+
+/* Направление "назад" - ось справа */
+.sheet[data-direction="prev"] {
+  left: 0;
+  transform-origin: right center;
+}
+
+/* ═══════════════════════════════════════════
+   ФАЗЫ АНИМАЦИИ
+   ═══════════════════════════════════════════ */
+
+.sheet[data-phase="lift"] {
+  transition: transform var(--timing-lift) ease-out;
+  transform: translateZ(1px) rotateY(0deg);
+}
+
+.sheet[data-phase="rotate"][data-direction="next"] {
+  transition: transform var(--timing-rotate) cubic-bezier(0.25, 0.6, 0.25, 1);
+  transform: translateZ(1px) rotateY(-180deg);
+}
+
+.sheet[data-phase="rotate"][data-direction="prev"] {
+  transition: transform var(--timing-rotate) cubic-bezier(0.25, 0.6, 0.25, 1);
+  transform: translateZ(1px) rotateY(180deg);
+}
+
+.sheet[data-phase="drop"][data-direction="next"] {
+  transition: transform var(--timing-drop) ease-in;
+  transform: translateZ(0) rotateY(-180deg);
+}
+
+.sheet[data-phase="drop"][data-direction="prev"] {
+  transition: transform var(--timing-drop) ease-in;
+  transform: translateZ(0) rotateY(180deg);
+}
+
+/* ═══════════════════════════════════════════
+   СТОРОНЫ ЛИСТА
+   ═══════════════════════════════════════════ */
+
+.side {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-page);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  background-image: url("../images/backgrounds/bg-page.webp");
+  backface-visibility: hidden;
+  overflow: hidden;
+  transition: background-color var(--timing-transition);
+}
+
+.side[data-face="back"] {
+  transform: rotateY(180deg);
+}
+
+/* ═══════════════════════════════════════════
+   ТЕНИ ЛИСТА
+   ═══════════════════════════════════════════ */
+
+.sheet .side::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: var(--spine-shadow-size);
+  height: 100%;
+  pointer-events: none;
+  opacity: 1;
+  transition:
+    width 0.35s ease-in-out,
+    filter 0.35s ease-in-out,
+    opacity 0.35s ease-in-out;
+}
+
+.book[data-state="flipping"] .sheet .side[data-face="front"]::after {
+  left: 0;
+  background: radial-gradient(
+    ellipse at left center,
+    rgba(0, 0, 0, var(--spine-shadow-alpha)),
+    transparent 70%
+  );
+  filter: blur(var(--spine-shadow-blur-amount));
+}
+
+.book[data-state="flipping"] .sheet .side[data-face="back"]::after {
+  right: 0;
+  background: radial-gradient(
+    ellipse at right center,
+    rgba(0, 0, 0, var(--spine-shadow-alpha)),
+    transparent 70%
+  );
+  filter: blur(var(--spine-shadow-blur-amount));
+}
+
+/* Инверсия для направления "prev" */
+.sheet[data-direction="prev"] .side[data-face="front"]::after {
+  left: auto;
+  right: 0;
+}
+
+.sheet[data-direction="prev"] .side[data-face="back"]::after {
+  right: auto;
+  left: 0;
+}
+
+.sheet[data-phase="rotate"] {
+  /* Имитация изгиба через перспективу */
+  transform-style: preserve-3d;
+  transform: 
+    translateZ(1px) 
+    rotateY(-90deg) 
+    perspective(800px) 
+    rotateX(2deg); /* лёгкий наклон */
+}
+
+/* Многослойность для толщины */
+.sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0.1) 0%,
+    transparent 5%,
+    transparent 95%,
+    rgba(0,0,0,0.05) 100%
+  );
+  transform: translateZ(-1px);
+}
+
+

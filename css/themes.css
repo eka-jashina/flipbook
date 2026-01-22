@@ -1,0 +1,79 @@
+/**
+ * THEMES
+ * 
+ * Переопределение CSS-переменных для разных тем.
+ */
+
+/* ═══════════════════════════════════════════
+   ТЁМНАЯ ТЕМА
+   ═══════════════════════════════════════════ */
+
+html[data-theme="dark"] {
+  --bg-app: #121212;
+  --bg-book: #1b1b1b;
+  --bg-page: #1e1e1e;
+  --bg-page-alt: #242424;
+  --text-main: #e6e6e6;
+  --text-muted: #aaa;
+  --border-page: rgba(255, 255, 255, 0.08);
+  --page-edge-base: #2a2a2a;
+  --page-edge-alt: #1f1f1f;
+  --shadow-book: 0 30px 60px rgba(0, 0, 0, 0.7);
+  --shadow-page: rgba(0, 0, 0, 0.6);
+  --cover-front-bg: linear-gradient(135deg, #111, #000);
+  --cover-front-text: #eaeaea;
+  --cover-back-bg: #1b1b1b;
+  --spine-dark: rgba(0, 0, 0, 0.9);
+  --spine-mid: rgba(0, 0, 0, 0.6);
+  --spine-soft: rgba(0, 0, 0, 0.25);
+  --paper-highlight: rgba(255, 255, 255, 0.08);
+}
+
+/* Убираем текстуру в тёмной теме */
+html[data-theme="dark"] .page,
+html[data-theme="dark"] .side {
+  background-image: none;
+}
+
+/* Затемняем фоны и изображения */
+html[data-theme="dark"] .bg {
+  filter: brightness(50%);
+}
+
+html[data-theme="dark"] img {
+  filter: brightness(50%);
+}
+
+/* ═══════════════════════════════════════════
+   ЧЁРНО-БЕЛАЯ ТЕМА
+   ═══════════════════════════════════════════ */
+
+html[data-theme="bw"] {
+  --bg-app: #ffffff;
+  --bg-book: #ffffff;
+  --bg-page: #ffffff;
+  --bg-page-alt: #ffffff;
+  --text-main: #000;
+  --text-muted: #000;
+  --border-page: #000;
+  --page-edge-base: #fff;
+  --page-edge-alt: #000;
+  --shadow-book: none;
+  --shadow-page: #000;
+  --cover-front-bg: #000;
+  --cover-front-text: #fff;
+  --cover-back-bg: #fff;
+}
+
+html[data-theme="bw"] .page,
+html[data-theme="bw"] .side {
+  background-image: none;
+}
+
+html[data-theme="bw"] .bg {
+  filter: grayscale(100%);
+}
+
+html[data-theme="bw"] img {
+  filter: grayscale(100%);
+}

@@ -1,0 +1,62 @@
+/**
+ * COVER STYLES
+ * 
+ * Двусторонняя обложка с 3D-трансформацией.
+ */
+
+.cover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 30;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+  transition:
+    transform var(--timing-cover) cubic-bezier(0.25, 0.6, 0.25, 1),
+    opacity var(--timing-cover);
+}
+
+.cover-front,
+.cover-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 12px 0 0 12px;
+  transition:
+    background-color var(--timing-transition),
+    color var(--timing-transition);
+}
+
+.cover-front {
+  background: var(--cover-front-bg);
+  color: var(--cover-front-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cover-back {
+  background: var(--cover-back-bg);
+  transform: rotateY(180deg);
+}
+
+/* Скрываем обложку когда книга открыта */
+.book-wrap[data-state="opened"] .cover {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.book[data-state="closed"] .cover {
+  opacity: 1;
+}
+
+/* Анимация обложки */
+.cover[data-animation="opening"] {
+  transform: rotateY(-180deg);
+}
+
+.cover[data-animation="closing"] {
+  transform: rotateY(0deg);
+}

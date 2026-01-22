@@ -1,0 +1,95 @@
+/**
+ * CSS CUSTOM PROPERTIES (Design Tokens)
+ * 
+ * Централизованное хранилище всех настраиваемых значений.
+ * JavaScript читает эти значения через getComputedStyle.
+ */
+
+:root {
+  /* ═══════════════════════════════════════════
+     ТАЙМИНГИ АНИМАЦИЙ
+     ═══════════════════════════════════════════ */
+  --timing-lift: 240ms;           /* Подъём страницы */
+  --timing-rotate: 900ms;         /* Вращение страницы */
+  --timing-drop: 160ms;           /* Опускание страницы */
+  --timing-cover: 1200ms;         /* Открытие/закрытие обложки */
+  --timing-wrap: 300ms;           /* Расширение контейнера */
+  --timing-transition: 300ms;     /* Общие переходы */
+  --timing-swap-next: 0ms;      /* Задержка смены буферов (вперёд) */
+  --timing-swap-prev: 100ms;      /* Задержка смены буферов (назад) */
+  --timing-resize-debounce: 150ms;/* Дебаунс ресайза */
+
+  /* ═══════════════════════════════════════════
+     РАЗМЕРЫ И ПОРОГИ
+     ═══════════════════════════════════════════ */
+  --font-min: 14px;
+  --font-max: 22px;
+  --font-default: 18px;
+  --swipe-threshold: 20px;        /* Мин. расстояние свайпа */
+  --swipe-vertical-limit: 30px;   /* Макс. вертикальное отклонение */
+  
+  /* ═══════════════════════════════════════════
+     3D И ТЕНИ
+     ═══════════════════════════════════════════ */
+  --perspective: 1600px;
+  --spine-shadow-width: 8px;
+  --spine-shadow-blur: 4px;
+  --page-edge-noise: 2.6px;
+  --pages-depth: 10px;
+  --pages-count: 6;
+
+  /* Динамические тени (меняются во время анимации) */
+  --spine-shadow-size: 22px;
+  --spine-shadow-blur-amount: 18px;
+  --spine-shadow-alpha: 0.22;
+
+  /* ═══════════════════════════════════════════
+     ЦВЕТА (СВЕТЛАЯ ТЕМА)
+     ═══════════════════════════════════════════ */
+  --bg-app: #e6e3dc;
+  --bg-book: #fdfcf8;
+  --bg-page: #fdfcf8;
+  --bg-page-alt: #f3f2ed;
+  --text-main: #1f1f1f;
+  --text-muted: #555;
+  --border-page: rgba(0, 0, 0, 0.08);
+  
+  /* Край страниц */
+  --page-edge-base: #f3f1ea;
+  --page-edge-alt: #e6e3dc;
+  --page-edge-contrast: rgba(0, 0, 0, 0.18);
+  --pages-color: #f3f2ed;
+  --pages-shadow: rgba(0, 0, 0, 0.18);
+  
+  /* Тени */
+  --shadow-book: 0 30px 60px rgba(0, 0, 0, 0.35);
+  --shadow-page: rgba(0, 0, 0, 0.18);
+  
+  /* Корешок */
+  --spine-dark: rgba(0, 0, 0, 0.45);
+  --spine-mid: rgba(0, 0, 0, 0.22);
+  --spine-soft: rgba(0, 0, 0, 0.08);
+  --paper-highlight: rgba(255, 255, 255, 0.35);
+  
+  /* Обложка */
+  --cover-front-bg: linear-gradient(135deg, #3a2d1f, #2a2016);
+  --cover-front-text: #f2e9d8;
+  --cover-back-bg: #fdfcf8;
+
+  /* ═══════════════════════════════════════════
+     НАСТРОЙКИ ЧИТАЛКИ
+     ═══════════════════════════════════════════ */
+  --reader-font-size: var(--font-default);
+  --reader-font-family: Georgia, serif;
+
+  /* ═══════════════════════════════════════════
+     ПАГИНАЦИЯ
+     ═══════════════════════════════════════════ */
+  --pages-per-flip: 2;
+  --pagination-chunk-size: 5;
+  --pagination-yield-interval: 16ms;
+
+  /* Debug переменные */
+  --current-page: 0;
+  --total-pages: 0;
+}

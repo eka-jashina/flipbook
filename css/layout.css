@@ -1,0 +1,60 @@
+/**
+ * LAYOUT
+ * 
+ * Сцена и фон главы.
+ */
+
+/* ═══════════════════════════════════════════
+   ФОНОВОЕ ИЗОБРАЖЕНИЕ ГЛАВЫ
+   ═══════════════════════════════════════════ */
+
+.chapter-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.chapter-bg .bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition:
+    opacity var(--timing-transition) ease-in-out,
+    filter var(--timing-transition);
+  will-change: opacity;
+  contain: strict;
+}
+
+.bg[data-active="true"] {
+  opacity: 1;
+}
+
+.bg[data-active="false"] {
+  opacity: 0;
+}
+
+/* Затемняющий оверлей */
+.chapter-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════
+   СЦЕНА
+   ═══════════════════════════════════════════ */
+
+.scene {
+  max-width: 1440px;
+  padding: 0 40px;
+  margin: 40px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}

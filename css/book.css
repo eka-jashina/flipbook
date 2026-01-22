@@ -1,0 +1,164 @@
+/**
+ * BOOK STYLES
+ * 
+ * Обёртка и контейнер книги с 3D-эффектами.
+ */
+
+/* ═══════════════════════════════════════════
+   ОБЁРТКА КНИГИ
+   ═══════════════════════════════════════════ */
+
+.book-wrap {
+  width: 100%;
+  transition: width var(--timing-wrap) ease-in-out;
+  display: flex;
+  justify-content: flex-end;
+  perspective: var(--perspective);
+}
+
+.book-wrap[data-state="closed"] {
+  width: 50%;
+}
+
+.book-wrap[data-state="opened"] {
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════
+   КНИГА
+   ═══════════════════════════════════════════ */
+
+.book {
+  position: relative;
+  width: 100%;
+  height: 80vh;
+  margin: 0 auto;
+  background-color: var(--bg-book);
+  border-radius: 12px;
+  box-shadow: var(--shadow-book);
+  transform-style: preserve-3d;
+  transform-origin: left;
+  transition:
+    background-color var(--timing-transition),
+    box-shadow var(--timing-transition);
+  contain: layout style;
+}
+
+/* Уменьшаем тени во время переворота */
+.book[data-state="flipping"] {
+  --spine-shadow-size: 14px;
+  --spine-shadow-blur-amount: 10px;
+  --spine-shadow-alpha: 0.24;
+}
+
+.book[data-state="closing"] {
+  background: transparent;
+  box-shadow: none;
+}
+
+.book[data-state="closed"] .page,
+.book[data-state="closed"] .sheet {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.book[data-state="opened"] .cover {
+  pointer-events: none;
+}
+
+.book-wrap[data-state="closed"] .book::before {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════
+   КРАЯ СТРАНИЦ (псевдоэлементы)
+   ═══════════════════════════════════════════ */
+
+.book::before,
+.book::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: var(--pages-depth);
+  z-index: 0;
+  filter: blur(0.35px);
+}
+
+/* Левый край */
+.book::before {
+  left: calc(-1 * var(--pages-depth));
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.1) 0,
+      rgba(0, 0, 0, 0.1) 1px,
+      transparent 2px,
+      transparent 4px
+    ),
+    radial-gradient(
+      circle at 100% 10%,
+      transparent 0,
+      transparent calc(100% - var(--page-edge-noise)),
+      var(--page-edge-contrast) 100%
+    ),
+    radial-gradient(
+      circle at 100% 35%,
+      transparent 0,
+      transparent calc(100% - var(--page-edge-noise)),
+      var(--page-edge-contrast) 100%
+    ),
+    radial-gradient(
+      circle at 100% 65%,
+      transparent 0,
+      transparent calc(100% - var(--page-edge-noise)),
+      var(--page-edge-contrast) 100%
+    ),
+    radial-gradient(
+      circle at 100% 90%,
+      transparent 0,
+      transparent calc(100% - var(--page-edge-noise)),
+      var(--page-edge-contrast) 100%
+    ),
+    linear-gradient(to right, rgba(0, 0, 0, 0.25), transparent);
+  border-radius: 6px 0 0 6px;
+}
+
+/* Правый край */
+.book::after {
+  right: calc(-1 * var(--pages-depth));
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.08) 0,
+      rgba(0, 0, 0, 0.08) 1px,
+      transparent 2px,
+      transparent 4px
+    ),
+    radial-gradient(
+      circle at 0% 12%,
+      transparent 0,
+      transparent calc(100% - var(--page-edge-noise)),
+      var(--page-edge-contrast) 100%
+    ),
+    radial-gradient(
+      circle at 0% 38%,
+      transparent 0,
+      transparent calc(100% - var(--page-edge-noise)),
+      var(--page-edge-contrast) 100%
+    ),
+    radial-gradient(
+      circle at 0% 62%,
+      transparent 0,
+      transparent calc(100% - var(--page-edge-noise)),
+      var(--page-edge-contrast) 100%
+    ),
+    radial-gradient(
+      circle at 0% 88%,
+      transparent 0,
+      transparent calc(100% - var(--page-edge-noise)),
+      var(--page-edge-contrast) 100%
+    ),
+    linear-gradient(to left, rgba(0, 0, 0, 0.22), transparent);
+  border-radius: 0 6px 6px 0;
+}

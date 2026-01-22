@@ -1,0 +1,86 @@
+/**
+ * TYPOGRAPHY
+ * 
+ * Стили текста, заголовков и контента.
+ */
+
+h1 {
+  display: flex;
+  flex-direction: column;
+  font-family: "TolkienCyr", sans-serif;
+  font-size: 400%;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+}
+
+h1 span:nth-child(2) {
+  font-size: 50%;
+}
+
+h2 {
+  margin: 0;
+  margin-bottom: 0.3em;
+  pointer-events: none;
+  font-family: "TolkienCyr", sans-serif;
+  font-weight: 700;
+  font-size: 250%;
+}
+
+p {
+  text-align: justify;
+  text-indent: 1em;
+  margin: 0;
+  margin-bottom: 0.5em;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Буквица */
+h2 + p::first-letter {
+  font-family: "TolkienCyr", sans-serif;
+  font-size: 130%;
+  font-weight: 700;
+  initial-letter: 2;
+  padding-right: 0.5em;
+}
+
+/* Fallback для браузеров без initial-letter */
+@supports not (initial-letter: 2) {
+  h2 + p::first-letter {
+    float: left;
+    font-size: 200%;
+    line-height: 0.8;
+    padding-right: 0.2em;
+    padding-top: 0.1em;
+  }
+}
+
+/* Запрет разрыва статей между колонками */
+article,
+.toc {
+  break-inside: avoid-column;
+  page-break-inside: avoid;
+}
+
+article h2,
+.toc h2 {
+  break-before: left;
+  page-break-before: left;
+}
+
+.toc li {
+  cursor: pointer;
+}
+
+/* Изображения */
+img {
+  display: block;
+  width: 100%;
+  height: 75vh;
+  float: left;
+  margin-bottom: 0.3em;
+  object-fit: cover;
+  object-position: left center;
+  transition: filter var(--timing-transition);
+}

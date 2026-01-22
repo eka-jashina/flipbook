@@ -1,0 +1,89 @@
+/**
+ * RESPONSIVE STYLES
+ * 
+ * Адаптация под разные размеры экранов.
+ */
+
+/* ═══════════════════════════════════════════
+   МОБИЛЬНЫЕ УСТРОЙСТВА
+   ═══════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  :root {
+    --pages-per-flip: 1;
+    --timing-swap-next: 0ms;
+  }
+
+  .scene {
+    padding-left: 0;
+    padding-right: 15px;
+    margin: 15px auto;
+  }
+
+  .book-wrap[data-state="closed"] {
+    width: 99%;
+  }
+
+  /* Левая страница минимальна */
+  .page[data-side="left"] {
+    width: 10%;
+    pointer-events: none;
+    filter: brightness(0.95);
+  }
+
+  .page[data-side="right"] {
+    width: 90%;
+  }
+
+  /* Лист адаптирован */
+  .sheet {
+    left: 10%;
+    width: 90%;
+  }
+
+  .sheet[data-direction="prev"] {
+    left: -80%;
+    width: 90%;
+  }
+
+  img {
+    object-position: center;
+  }
+
+  /* Жесты */
+  html,
+  body {
+    overscroll-behavior-x: none;
+  }
+
+  .scene,
+  .book-wrap,
+  .book {
+    touch-action: pan-y;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ПЛАНШЕТЫ
+   ═══════════════════════════════════════════ */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .scene {
+    padding: 0 20px;
+    margin: 20px auto;
+  }
+
+  .book {
+    height: 75vh;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   БОЛЬШИЕ ЭКРАНЫ
+   ═══════════════════════════════════════════ */
+
+@media (min-width: 1440px) {
+  .book {
+    height: 85vh;
+  }
+}
