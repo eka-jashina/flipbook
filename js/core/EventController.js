@@ -81,6 +81,9 @@ export class EventController {
       this.eventManager.add(this.book, "pointerdown", (e) => {
         if (this.isBusy() || !this.isOpened()) return;
         if (e.target.closest(".toc")) return;
+        
+        // Исключаем зоны захвата углов - там работает drag
+        if (e.target.closest(".corner-zone")) return;
 
         const rect = this.book.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -150,6 +153,10 @@ export class EventController {
   _bindTouch() {
     this._boundHandlers.touchstart = (e) => {
       if (this.isBusy()) return;
+      
+      // Исключаем зоны захвата углов - там работает drag
+      if (e.target.closest(".corner-zone")) return;
+      
       const t = e.touches[0];
       this.touchStartX = t.clientX;
       this.touchStartY = t.clientY;
@@ -157,6 +164,9 @@ export class EventController {
 
     this._boundHandlers.touchend = (e) => {
       if (this.isBusy()) return;
+      
+      // Исключаем зоны захвата углов
+      if (e.target.closest(".corner-zone")) return;
 
       const t = e.changedTouches[0];
       const dx = t.clientX - this.touchStartX;

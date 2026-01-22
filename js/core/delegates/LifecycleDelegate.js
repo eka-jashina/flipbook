@@ -15,6 +15,14 @@ export class LifecycleDelegate {
   get isMobile() { return this.ctrl.isMobile; }
 
   /**
+   * Инициализация - предзагрузка обложки
+   */
+  async init() {
+    // Предзагружаем обложку сразу при старте приложения
+    await this.ctrl.backgroundManager.preload(CONFIG.COVER_BG, true);
+  }
+
+  /**
    * Открыть книгу
    * @param {number} startIndex
    */

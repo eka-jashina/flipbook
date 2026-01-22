@@ -1,0 +1,123 @@
+/**
+ * DRAG CONTROLS
+ * 
+ * Зоны захвата для перелистывания за углы.
+ */
+
+/* ═══════════════════════════════════════════
+   ЗОНЫ ЗАХВАТА
+   ═══════════════════════════════════════════ */
+
+.corner-zone {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  cursor: grab;
+  z-index: 100;
+  /* Для отладки: */
+  /* background: rgba(255, 0, 0, 0.1); */
+}
+
+.corner-zone:active {
+  cursor: grabbing;
+}
+
+/* Позиции углов */
+.corner-zone.top-right {
+  top: 0;
+  right: 0;
+}
+
+.corner-zone.bottom-right {
+  bottom: 0;
+  right: 0;
+}
+
+.corner-zone.top-left {
+  top: 0;
+  left: 0;
+}
+
+.corner-zone.bottom-left {
+  bottom: 0;
+  left: 0;
+}
+
+/* Hover эффект — подсветка угла */
+.corner-zone.top-right:hover,
+.corner-zone.bottom-right:hover {
+  background: radial-gradient(
+    circle at bottom left,
+    rgba(255, 255, 255, 0.15),
+    transparent 70%
+  );
+}
+
+.corner-zone.top-left:hover,
+.corner-zone.bottom-left:hover {
+  background: radial-gradient(
+    circle at bottom right,
+    rgba(255, 255, 255, 0.15),
+    transparent 70%
+  );
+}
+
+/* Скрываем зоны когда книга закрыта или занята */
+.book[data-state="closed"] .corner-zone,
+.book[data-state="opening"] .corner-zone,
+.book[data-state="closing"] .corner-zone,
+.book[data-state="flipping"] .corner-zone {
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* ═══════════════════════════════════════════
+   СТРАНИЦА ПОД ПЕРЕВОРАЧИВАЕМОЙ (при drag)
+   ═══════════════════════════════════════════ */
+
+.page[data-drag-visible="true"] {
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 2;
+  /* Отключаем transition чтобы не было мигания */
+  transition: none !important;
+}
+
+/* Отключаем transition для всех страниц во время drag */
+.book:has(.sheet[data-phase="drag"]) .page {
+  transition: none !important;
+}
+
+/* ═══════════════════════════════════════════
+   DRAG РЕЖИМ SHEET
+   ═══════════════════════════════════════════ */
+
+.sheet[data-phase="drag"] {
+  opacity: 1;
+  visibility: visible;
+  z-index: 20;
+  /* transition убирается через JS для плавного следования */
+}
+
+/* Тени во время drag */
+.book:has(.sheet[data-phase="drag"]) {
+  --spine-shadow-size: 22px;
+  --spine-shadow-blur-amount: 18px;
+}
+
+/* ═══════════════════════════════════════════
+   АДАПТИВ ДЛЯ МОБИЛЬНЫХ
+   ═══════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .corner-zone {
+    width: 60px;
+    height: 60px;
+  }
+  
+  /* На мобильных левые зоны не нужны (страница слева узкая) */
+  .corner-zone.top-left,
+  .corner-zone.bottom-left {
+    display: none;
+  }
+}

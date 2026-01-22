@@ -11,6 +11,7 @@ import { BookAnimator } from './BookAnimator.js';
 import { LoadingIndicator } from './LoadingIndicator.js';
 import { EventController } from './EventController.js';
 import { DebugPanel } from './DebugPanel.js';
+import { DragController } from './DragController.js';
 
 // Делегаты
 import { NavigationDelegate } from './delegates/NavigationDelegate.js';
@@ -32,7 +33,7 @@ export class BookController {
   get isMobile() { return mediaQueries.get("mobile"); }
   get pagesPerFlip() { return cssVars.getNumber("--pages-per-flip", this.isMobile ? 1 : 2); }
 
-  // === ПУБЛИЧНЫЙ API (без изменений) ===
+  // === ПУБЛИЧНЫЙ API ===
 
   async init() {
     if (this.isDestroyed) return;
@@ -42,6 +43,10 @@ export class BookController {
       this._initUI();
       this._bindResize();
       await document.fonts.ready;
+
+      // Предзагружаем обложку и первый фон
+      await this.lifecycleDelegate.init();
+
       this._updateDebug();
     } catch (error) {
       ErrorHandler.handle(error, "Ошибка инициализации");
@@ -67,7 +72,7 @@ export class BookController {
     this._subscriptions = [];
 
     [this.animator, this.paginator, this.contentLoader, this.backgroundManager,
-     this.eventController, this.stateMachine, this.settings].forEach(c => c.destroy?.());
+     this.eventController, this.stateMachine, this.settings, this.dragController].forEach(c => c?.destroy?.());
 
     this.eventManager.clear();
     this.timerManager.clear();
@@ -131,8 +136,20 @@ export class BookController {
       onTOCClick: ch => this.handleTOCNavigation(ch),
       onOpen: cont => this.openBook(cont ? this.settings.get("page") : 0),
       onSettings: (k, v) => this.handleSettingsChange(k, v),
-      isBusy: () => this.stateMachine.isBusy,
+      isBusy: () => this.stateMachine.isBusy || this.dragController?.isActive,
       isOpened: () => this.stateMachine.isOpened,
+    });
+    
+    // Drag Controller
+    this.dragController = new DragController({
+      book: this.elements.book,
+      sheet: this.elements.sheet,
+      eventManager: this.eventManager,
+      onDragStart: (dir) => this._handleDragStart(dir),
+      onDragEnd: (completed, dir) => this._handleDragEnd(completed, dir),
+      canFlipNext: () => this._canDragNext(),
+      canFlipPrev: () => this._canDragPrev(),
+      isBusy: () => this.stateMachine.isBusy,
     });
   }
 
@@ -148,6 +165,8 @@ export class BookController {
     this.chapterStarts = [];
     this.isDestroyed = false;
     this._subscriptions = [];
+    this._dragDirection = null;
+    this._dragElements = null;
   }
 
   _initUI() {
@@ -163,6 +182,9 @@ export class BookController {
       decreaseBtn: this.elements.decreaseBtn, fontSelect: this.elements.fontSelect,
       themeSelect: this.elements.themeSelect, debugToggle: this.elements.debugToggle,
     });
+    
+    // Привязываем drag controller
+    this.dragController.bind();
   }
 
   _setupSubscriptions() {
@@ -191,5 +213,145 @@ export class BookController {
       currentPage: this.index, cacheSize: this.renderer.cacheSize,
       cacheLimit: CONFIG.VIRTUALIZATION.cacheLimit, listenerCount: this.eventManager.count,
     });
+  }
+
+  // === DRAG HANDLERS ===
+
+  /**
+   * Проверка возможности drag вперёд
+   */
+  _canDragNext() {
+    if (!this.stateMachine.isOpened) return false;
+    const step = this.pagesPerFlip;
+    const maxIndex = this.renderer.getMaxIndex(this.isMobile);
+    return this.index + step <= maxIndex;
+  }
+
+  /**
+   * Проверка возможности drag назад
+   */
+  _canDragPrev() {
+    if (!this.stateMachine.isOpened) return false;
+    return this.index > 0;
+  }
+
+  /**
+   * Начало drag - подготовить sheet и буферы
+   */
+  _handleDragStart(direction) {
+    this._dragDirection = direction;
+    
+    const step = this.pagesPerFlip;
+    const nextIndex = direction === 'next' 
+      ? this.index + step 
+      : this.index - step;
+    
+    // Подготавливаем буфер (следующий/предыдущий разворот)
+    this.renderer.prepareBuffer(nextIndex, this.isMobile);
+    
+    // Подготавливаем sheet (лицо и оборот переворачиваемой страницы)
+    this.renderer.prepareSheet(this.index, direction, this.isMobile);
+    
+    // Показываем страницу ПОД переворачиваемой
+    // next: переворачиваем правую → показываем левый буфер (следующая левая)
+    // prev: переворачиваем левую → показываем правый буфер (предыдущая правая)
+    this._showUnderPage(direction);
+    
+    // Обновляем состояние книги для CSS
+    this.elements.book.dataset.state = 'flipping';
+  }
+
+  /**
+   * Показать страницы под переворачиваемой при drag
+   * Показываем ОБА буфера, чтобы после swap не было мигания
+   */
+  _showUnderPage(direction) {
+    const { leftActive, rightActive } = this.renderer.elements;
+    const { leftBuffer, rightBuffer } = this.renderer.elements;
+    
+    // Сохраняем ссылки для очистки потом
+    this._dragElements = { leftActive, rightActive, leftBuffer, rightBuffer };
+    
+    // Показываем оба буфера
+    leftBuffer.dataset.buffer = 'false';
+    rightBuffer.dataset.buffer = 'false';
+    leftBuffer.dataset.dragVisible = 'true';
+    rightBuffer.dataset.dragVisible = 'true';
+    
+    if (this.isMobile) {
+      rightActive.style.visibility = 'hidden';
+    } else {
+      if (direction === 'next') {
+        // Переворачиваем правую → rightBuffer должен быть виден, leftBuffer под leftActive
+        rightActive.style.visibility = 'hidden';
+        leftBuffer.style.zIndex = '0'; // под активной левой
+        rightBuffer.style.zIndex = '2'; // виден
+      } else {
+        // Переворачиваем левую → leftBuffer должен быть виден, rightBuffer под rightActive
+        leftActive.style.visibility = 'hidden';
+        leftBuffer.style.zIndex = '2'; // виден
+        rightBuffer.style.zIndex = '0'; // под активной правой
+      }
+    }
+  }
+
+  /**
+   * Скрыть страницы под переворачиваемой
+   */
+  _hideUnderPage() {
+    // Используем сохранённые ссылки (до swap)
+    const { leftActive, rightActive, leftBuffer, rightBuffer } = this._dragElements || this.renderer.elements;
+    
+    leftBuffer.dataset.buffer = 'true';
+    rightBuffer.dataset.buffer = 'true';
+    delete leftBuffer.dataset.dragVisible;
+    delete rightBuffer.dataset.dragVisible;
+    leftBuffer.style.zIndex = '';
+    rightBuffer.style.zIndex = '';
+    leftActive.style.visibility = '';
+    rightActive.style.visibility = '';
+    
+    this._dragElements = null;
+  }
+
+  /**
+   * Конец drag - применить или откатить изменения
+   */
+  _handleDragEnd(completed, direction) {
+    // Используем сохранённые ссылки на все 4 страницы (до swap)
+    const { leftActive, rightActive, leftBuffer, rightBuffer } = this._dragElements || this.renderer.elements;
+    const allPages = [leftActive, rightActive, leftBuffer, rightBuffer];
+    
+    if (completed) {
+      // Отключаем transition на время swap чтобы не было мигания
+      allPages.forEach(el => {
+        el.style.transition = 'none';
+      });
+      
+      // Переворот завершён - обновляем индекс и меняем буферы
+      const step = this.pagesPerFlip;
+      this.index = direction === 'next' 
+        ? this.index + step 
+        : this.index - step;
+      
+      this.renderer.swapBuffers();
+      this.settings.set("page", this.index);
+      this.chapterDelegate.updateChapterUI();
+      
+      // Возвращаем transition после отрисовки
+      requestAnimationFrame(() => {
+        allPages.forEach(el => {
+          el.style.transition = '';
+        });
+      });
+    }
+    
+    // Скрываем временно показанные страницы (использует _dragElements)
+    this._hideUnderPage();
+    
+    // Возвращаем состояние
+    this.elements.book.dataset.state = 'opened';
+    this._dragDirection = null;
+    this._updateDebug();
   }
 }

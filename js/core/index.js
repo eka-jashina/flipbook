@@ -8,3 +8,4 @@ export { BookAnimator } from './BookAnimator.js';
 export { EventController } from './EventController.js';
 export { LoadingIndicator } from './LoadingIndicator.js';
 export { DebugPanel } from './DebugPanel.js';
+export { DragController } from './DragController.js';
