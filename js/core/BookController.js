@@ -101,6 +101,7 @@ export class BookController {
       book: $("book"), bookWrap: $("book-wrap"), cover: $("cover"),
       leftA: $("leftA"), rightA: $("rightA"), leftB: $("leftB"), rightB: $("rightB"),
       sheet: $("sheet"), sheetFront: $("sheetFront"), sheetBack: $("sheetBack"),
+      flipShadow: $("flipShadow"), // Элемент тени от переворота
       loadingOverlay: $("loadingOverlay"), loadingProgress: $("loadingProgress"),
       nextBtn: $("next"), prevBtn: $("prev"), tocBtn: $("tocBtn"), continueBtn: $("continueBtn"),
       increaseBtn: $("increase"), decreaseBtn: $("decrease"),
@@ -140,10 +141,11 @@ export class BookController {
       isOpened: () => this.stateMachine.isOpened,
     });
     
-    // Drag Controller
+    // Drag Controller с поддержкой flip-shadow
     this.dragController = new DragController({
       book: this.elements.book,
       sheet: this.elements.sheet,
+      flipShadow: this.elements.flipShadow, // Передаём элемент тени
       eventManager: this.eventManager,
       onDragStart: (dir) => this._handleDragStart(dir),
       onDragEnd: (completed, dir) => this._handleDragEnd(completed, dir),

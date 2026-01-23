@@ -9,6 +9,7 @@ export class DragController {
   constructor(options) {
     this.book = options.book;
     this.sheet = options.sheet;
+    this.flipShadow = options.flipShadow; // НОВОЕ: элемент тени
     this.eventManager = options.eventManager;
     
     // Callbacks
@@ -88,6 +89,9 @@ export class DragController {
     // Инициализируем sheet для drag-режима
     this._initSheetForDrag();
     
+    // Показываем тень
+    this.flipShadow?.classList.add('active');
+    
     // Обновляем угол из текущей позиции
     this._updateAngleFromEvent(e);
   }
@@ -153,21 +157,54 @@ export class DragController {
     
     this.sheet.style.transform = `translateZ(1px) rotateY(${angle}deg)`;
     
-    // Динамические тени
-    this._updateShadows();
+    // Динамические тени на sheet
+    this._updateSheetShadows();
+    
+    // Динамическая тень на странице (как в примере)
+    this._updateFlipShadow();
   }
 
   /**
-   * Обновить динамические тени
+   * Обновить тени на самом sheet (CSS переменные)
    */
-  _updateShadows() {
+  _updateSheetShadows() {
     const progress = this.currentAngle / 180;
     const shadowOpacity = Math.sin(progress * Math.PI) * 0.35;
     const shadowSize = Math.sin(progress * Math.PI) * 25;
     
-    // Обновляем CSS переменные для теней
     this.book.style.setProperty('--spine-shadow-alpha', shadowOpacity.toFixed(2));
     this.book.style.setProperty('--spine-shadow-size', `${shadowSize}px`);
+  }
+
+  /**
+   * Обновить тень, падающую на страницу под переворачиваемой
+   * (как в примере page-flip-3d-fixed.html)
+   */
+  _updateFlipShadow() {
+    if (!this.flipShadow) return;
+    
+    const progress = this.currentAngle / 180;
+    // Синусоида даёт плавное нарастание и убывание
+    const shadowOpacity = Math.sin(progress * Math.PI) * 0.4;
+    const shadowWidth = Math.sin(progress * Math.PI) * 120;
+    
+    if (this.direction === 'next') {
+      // Тень падает на правую сторону (на страницу под переворачиваемой)
+      this.flipShadow.style.cssText = `
+        display: block;
+        left: 50%;
+        width: ${shadowWidth}px;
+        background: linear-gradient(to right, rgba(0, 0, 0, ${shadowOpacity}), transparent);
+      `;
+    } else {
+      // Тень падает на левую сторону
+      this.flipShadow.style.cssText = `
+        display: block;
+        left: calc(50% - ${shadowWidth}px);
+        width: ${shadowWidth}px;
+        background: linear-gradient(to left, rgba(0, 0, 0, ${shadowOpacity}), transparent);
+      `;
+    }
   }
 
   /**
@@ -246,9 +283,15 @@ export class DragController {
     delete this.sheet.dataset.phase;
     delete this.sheet.dataset.direction;
     
-    // Сбрасываем тени
+    // Сбрасываем тени на sheet
     this.book.style.removeProperty('--spine-shadow-alpha');
     this.book.style.removeProperty('--spine-shadow-size');
+    
+    // Скрываем и очищаем flip-shadow
+    if (this.flipShadow) {
+      this.flipShadow.classList.remove('active');
+      this.flipShadow.style.cssText = '';
+    }
     
     // Уведомляем о завершении
     this.onDragEnd?.(completed, direction);
