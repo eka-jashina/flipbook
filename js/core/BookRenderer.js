@@ -84,24 +84,24 @@ export class BookRenderer {
     }
   }
 
-  prepareSheet(index, direction, isMobile) {
+  prepareSheet(currentIndex, nextIndex, direction, isMobile) {
     const { sheetFront, sheetBack } = this.elements;
 
     if (isMobile) {
       if (direction === "next") {
-        this.fill(sheetFront, index);
-        this.fill(sheetBack, index + 1);
+        this.fill(sheetFront, currentIndex);
+        this.fill(sheetBack, nextIndex);
       } else {
-        this.fill(sheetFront, index);
-        this.fill(sheetBack, index - 1);
+        this.fill(sheetFront, currentIndex);
+        this.fill(sheetBack, nextIndex);
       }
     } else {
       if (direction === "next") {
-        this.fill(sheetFront, index + 1);
-        this.fill(sheetBack, index + 2);
+        this.fill(sheetFront, currentIndex + 1);
+        this.fill(sheetBack, currentIndex + 2);
       } else {
-        this.fill(sheetFront, index);
-        this.fill(sheetBack, index - 1);
+        this.fill(sheetFront, currentIndex);
+        this.fill(sheetBack, currentIndex - 1);
       }
     }
   }

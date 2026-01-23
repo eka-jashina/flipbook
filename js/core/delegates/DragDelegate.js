@@ -6,6 +6,8 @@
 
 import { cssVars } from '../../utils/CSSVariables.js';
 
+console.log('🔧 DragDelegate loaded');
+
 export class DragDelegate {
   constructor(controller) {
     this.ctrl = controller;
@@ -28,6 +30,8 @@ export class DragDelegate {
       onTouchMove: this._onTouchMove.bind(this),
       onTouchEnd: this._onTouchEnd.bind(this),
     };
+    
+    console.log('🔧 DragDelegate constructed');
   }
 
   // === АЛИАСЫ ===
@@ -48,8 +52,11 @@ export class DragDelegate {
    */
   bind() {
     const corners = this.elements.book.querySelectorAll('.corner-zone');
+    console.log('🔧 DragDelegate.bind() - found corner zones:', corners.length);
     
     corners.forEach(zone => {
+      console.log(' - binding zone:', zone.dataset.dir);
+      
       this.ctrl.eventManager.add(zone, 'mousedown', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -67,6 +74,8 @@ export class DragDelegate {
     this.ctrl.eventManager.add(document, 'mouseup', this._boundHandlers.onMouseUp);
     this.ctrl.eventManager.add(document, 'touchmove', this._boundHandlers.onTouchMove, { passive: false });
     this.ctrl.eventManager.add(document, 'touchend', this._boundHandlers.onTouchEnd);
+    
+    console.log('✅ DragDelegate bound');
   }
 
   // === ПРОВЕРКИ ВОЗМОЖНОСТИ ДЕЙСТВИЯ ===
@@ -92,10 +101,20 @@ export class DragDelegate {
    * @param {'next'|'prev'} dir
    */
   _startDrag(e, dir) {
+    console.log('🎯 _startDrag called:', { dir, isBusy: this.state.isBusy });
+    
     if (this.state.isBusy) return;
     
-    if (dir === 'next' && !this.canFlipNext()) return;
-    if (dir === 'prev' && !this.canFlipPrev()) return;
+    if (dir === 'next' && !this.canFlipNext()) {
+      console.log('⛔ Cannot flip next');
+      return;
+    }
+    if (dir === 'prev' && !this.canFlipPrev()) {
+      console.log('⛔ Cannot flip prev');
+      return;
+    }
+    
+    console.log('✅ Starting drag');
     
     this.isDragging = true;
     this.direction = dir;
@@ -118,8 +137,15 @@ export class DragDelegate {
       ? this.ctrl.index + this.pagesPerFlip 
       : this.ctrl.index - this.pagesPerFlip;
     
+    console.log('[DRAG] _prepareFlip:', { 
+      currentIndex: this.ctrl.index, 
+      nextIndex, 
+      direction: this.direction,
+      isMobile: this.isMobile 
+    });
+    
     this.renderer.prepareBuffer(nextIndex, this.isMobile);
-    this.renderer.prepareSheet(this.ctrl.index, this.direction, this.isMobile);
+    this.renderer.prepareSheet(this.ctrl.index, nextIndex, this.direction, this.isMobile);
     this._showUnderPage();
     
     this.elements.sheet.dataset.direction = this.direction;
@@ -138,14 +164,15 @@ export class DragDelegate {
     if (this.isMobile) {
       rightBuffer.dataset.buffer = 'false';
       rightBuffer.dataset.dragVisible = 'true';
+      rightActive.style.display = 'none';
     } else if (this.direction === 'next') {
       rightBuffer.dataset.buffer = 'false';
       rightBuffer.dataset.dragVisible = 'true';
-      rightActive.style.visibility = 'hidden';
+      rightActive.style.display = 'none';
     } else {
       leftBuffer.dataset.buffer = 'false';
       leftBuffer.dataset.dragVisible = 'true';
-      leftActive.style.visibility = 'hidden';
+      leftActive.style.display = 'none';
     }
   }
 
@@ -210,17 +237,20 @@ export class DragDelegate {
     const flipOpacity = Math.sin(progress * Math.PI) * 0.4;
     const flipWidth = Math.sin(progress * Math.PI) * 120;
     
+    // На мобильном корешок на 10%, на десктопе на 50%
+    const spinePosition = this.isMobile ? '10%' : '50%';
+    
     if (this.direction === 'next') {
       flipShadow.style.cssText = `
         display: block;
-        left: 50%;
+        left: ${spinePosition};
         width: ${flipWidth}px;
         background: linear-gradient(to right, rgba(0,0,0,${flipOpacity}), transparent);
       `;
     } else {
       flipShadow.style.cssText = `
         display: block;
-        left: calc(50% - ${flipWidth}px);
+        left: calc(${spinePosition} - ${flipWidth}px);
         width: ${flipWidth}px;
         background: linear-gradient(to left, rgba(0,0,0,${flipOpacity}), transparent);
       `;
@@ -361,8 +391,8 @@ export class DragDelegate {
     
     delete leftBuffer.dataset.dragVisible;
     delete rightBuffer.dataset.dragVisible;
-    leftActive.style.visibility = '';
-    rightActive.style.visibility = '';
+    leftActive.style.display = '';
+    rightActive.style.display = '';
     
     // При отмене возвращаем буферы в скрытое состояние
     if (!completed) {

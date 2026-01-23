@@ -68,7 +68,9 @@ export class NavigationDelegate {
     }
 
     this.renderer.prepareBuffer(targetIndex, this.isMobile);
-    this.renderer.prepareSheet(this.ctrl.index, direction, this.isMobile);
+    
+    const nextIndex = targetIndex; // Для prepareSheet целевая страница это и есть "следующая"
+    this.renderer.prepareSheet(this.ctrl.index, nextIndex, direction, this.isMobile);
 
     try {
       await this.animator.runFlip(direction, () => {
@@ -81,7 +83,6 @@ export class NavigationDelegate {
       this.ctrl.chapterDelegate.updateChapterUI();
       this.ctrl._updateDebug();
     } catch (error) {
-      console.error("Flip error:", error);
       this.state.transitionTo(BookState.OPENED);
     }
   }
@@ -118,7 +119,7 @@ export class NavigationDelegate {
     if (!this.state.transitionTo(BookState.FLIPPING)) return;
 
     this.renderer.prepareBuffer(nextIndex, this.isMobile);
-    this.renderer.prepareSheet(this.ctrl.index, direction, this.isMobile);
+    this.renderer.prepareSheet(this.ctrl.index, nextIndex, direction, this.isMobile);
 
     try {
       await this.animator.runFlip(direction, () => {
@@ -131,7 +132,6 @@ export class NavigationDelegate {
       this.ctrl.chapterDelegate.updateChapterUI();
       this.ctrl._updateDebug();
     } catch (error) {
-      console.error("Flip error:", error);
       this.state.transitionTo(BookState.OPENED);
     }
   }
