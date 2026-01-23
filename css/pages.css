@@ -161,3 +161,14 @@
   opacity: 0;
   pointer-events: none;
 }
+
+/* Firefox: фикс для видимости заголовков */
+@supports (-moz-appearance: none) {
+  .page-content h2 {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    /* Принудительная композиция слоя */
+    isolation: isolate;
+  }
+}

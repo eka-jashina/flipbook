@@ -73,14 +73,56 @@ article h2,
   cursor: pointer;
 }
 
-/* Изображения */
+/* Изображения - базовые стили */
 img {
   display: block;
   width: 100%;
   height: 75vh;
-  float: left;
   margin-bottom: 0.3em;
   object-fit: cover;
   object-position: left center;
   transition: filter var(--timing-transition);
 }
+
+/* Картинка В ТЕКСТЕ (после параграфа) - обтекание */
+p + img,
+p ~ img {
+  float: left;
+}
+
+/* Картинка ПЕРЕД заголовком - БЕЗ float */
+article > img:first-child,
+img + h2 {
+  float: none;
+}
+
+/* Заголовок после картинки - очищаем float */
+img + h2 {
+  clear: both;
+  display: block;
+}
+
+/* Firefox: специфичные фиксы */
+@supports (-moz-appearance: none) {
+  /* Картинка перед заголовком - точно без float */
+  article > img:first-child {
+    float: none !important;
+  }
+  
+  /* Заголовок после картинки - принудительный clearing */
+  img + h2 {
+    clear: both !important;
+    display: flow-root;
+    /* Принудительный rendering */
+    contain: layout;
+  }
+  
+  /* Картинка в тексте - используем shape-outside для надёжности */
+  p + img,
+  p ~ img {
+    float: left;
+    shape-outside: inset(0);
+    shape-margin: 0.3em;
+  }
+}
+

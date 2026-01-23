@@ -73,21 +73,12 @@
   position: absolute;
   inset: 0;
   
-  /* 
-   * FIREFOX FIX: Сначала сплошной цвет, потом изображение.
-   * Firefox иногда не рендерит background-image при 3D,
-   * но background-color работает стабильно.
-   */
   background-color: var(--bg-page);
   background-image: url("../images/backgrounds/bg-page.webp");
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
-  
-  /* 
-   * FIREFOX FIX: transform-style на КАЖДОМ уровне иерархии.
-   * Без этого Firefox может "схлопнуть" 3D-контекст.
-   */
+
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
   
