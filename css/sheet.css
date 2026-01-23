@@ -3,6 +3,7 @@
  * 
  * Анимированный лист переворота страницы.
  * Три фазы: lift -> rotate -> drop
+ * 
  */
 
 .sheet {
@@ -13,12 +14,12 @@
   height: 100%;
   z-index: 10;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   transform-origin: left center;
   transform: translateZ(0) rotateY(0deg);
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  contain: layout style paint;
 }
 
 /* Показываем только во время переворота */
@@ -71,12 +72,29 @@
 .side {
   position: absolute;
   inset: 0;
-  background: var(--bg-page);
+  
+  /* 
+   * FIREFOX FIX: Сначала сплошной цвет, потом изображение.
+   * Firefox иногда не рендерит background-image при 3D,
+   * но background-color работает стабильно.
+   */
+  background-color: var(--bg-page);
+  background-image: url("../images/backgrounds/bg-page.webp");
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
-  background-image: url("../images/backgrounds/bg-page.webp");
+  
+  /* 
+   * FIREFOX FIX: transform-style на КАЖДОМ уровне иерархии.
+   * Без этого Firefox может "схлопнуть" 3D-контекст.
+   */
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  
+  /* Обе версии для кросс-браузерности */
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  
   overflow: hidden;
   transition: background-color var(--timing-transition);
 }
@@ -133,30 +151,3 @@
   right: auto;
   left: 0;
 }
-
-.sheet[data-phase="rotate"] {
-  /* Имитация изгиба через перспективу */
-  transform-style: preserve-3d;
-  transform: 
-    translateZ(1px) 
-    rotateY(-90deg) 
-    perspective(800px) 
-    rotateX(2deg); /* лёгкий наклон */
-}
-
-/* Многослойность для толщины */
-.sheet::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to right,
-    rgba(0,0,0,0.1) 0%,
-    transparent 5%,
-    transparent 95%,
-    rgba(0,0,0,0.05) 100%
-  );
-  transform: translateZ(-1px);
-}
-
-
