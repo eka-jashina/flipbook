@@ -79,12 +79,13 @@
   visibility: visible !important;
   opacity: 1 !important;
   z-index: 2;
-  /* Отключаем transition чтобы не было мигания */
-  transition: none !important;
 }
 
-/* Отключаем transition для всех страниц во время drag */
-.book:has(.sheet[data-phase="drag"]) .page {
+/* Отключаем transition на время swap чтобы не было мигания */
+.book[data-no-transition="true"] .page,
+.book[data-no-transition="true"] .page[data-active="true"],
+.book[data-no-transition="true"] .page[data-buffer="true"],
+.book[data-no-transition="true"] .sheet {
   transition: none !important;
 }
 

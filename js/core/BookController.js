@@ -166,7 +166,7 @@ export class BookController {
     this.isDestroyed = false;
     this._subscriptions = [];
     this._dragDirection = null;
-    this._dragElements = null;
+    this._dragPageRefs = null;
   }
 
   _initUI() {
@@ -262,71 +262,66 @@ export class BookController {
   }
 
   /**
-   * Показать страницы под переворачиваемой при drag
-   * Показываем ОБА буфера, чтобы после swap не было мигания
+   * Показать страницу под переворачиваемой при drag
    */
   _showUnderPage(direction) {
     const { leftActive, rightActive } = this.renderer.elements;
     const { leftBuffer, rightBuffer } = this.renderer.elements;
     
-    // Сохраняем ссылки для очистки потом
-    this._dragElements = { leftActive, rightActive, leftBuffer, rightBuffer };
-    
-    // Показываем оба буфера
-    leftBuffer.dataset.buffer = 'false';
-    rightBuffer.dataset.buffer = 'false';
-    leftBuffer.dataset.dragVisible = 'true';
-    rightBuffer.dataset.dragVisible = 'true';
+    // Сохраняем ссылки для cleanup после swap
+    this._dragPageRefs = { leftActive, rightActive, leftBuffer, rightBuffer };
     
     if (this.isMobile) {
-      rightActive.style.visibility = 'hidden';
+      rightBuffer.dataset.buffer = 'false';
+      rightBuffer.dataset.dragVisible = 'true';
     } else {
       if (direction === 'next') {
-        // Переворачиваем правую → rightBuffer должен быть виден, leftBuffer под leftActive
+        // Переворачиваем правую страницу → под ней следующая ПРАВАЯ
+        rightBuffer.dataset.buffer = 'false';
+        rightBuffer.dataset.dragVisible = 'true';
+        // Скрываем текущую правую (её заменяет sheet)
         rightActive.style.visibility = 'hidden';
-        leftBuffer.style.zIndex = '0'; // под активной левой
-        rightBuffer.style.zIndex = '2'; // виден
       } else {
-        // Переворачиваем левую → leftBuffer должен быть виден, rightBuffer под rightActive
+        // Переворачиваем левую страницу → под ней предыдущая ЛЕВАЯ
+        leftBuffer.dataset.buffer = 'false';
+        leftBuffer.dataset.dragVisible = 'true';
+        // Скрываем текущую левую (её заменяет sheet)
         leftActive.style.visibility = 'hidden';
-        leftBuffer.style.zIndex = '2'; // виден
-        rightBuffer.style.zIndex = '0'; // под активной правой
       }
     }
   }
 
   /**
-   * Скрыть страницы под переворачиваемой
+   * Скрыть страницу под переворачиваемой
+   * @param {boolean} completed - true если переворот завершён, false если отменён
    */
-  _hideUnderPage() {
+  _hideUnderPage(completed) {
     // Используем сохранённые ссылки (до swap)
-    const { leftActive, rightActive, leftBuffer, rightBuffer } = this._dragElements || this.renderer.elements;
+    const { leftActive, rightActive, leftBuffer, rightBuffer } = this._dragPageRefs || this.renderer.elements;
     
-    leftBuffer.dataset.buffer = 'true';
-    rightBuffer.dataset.buffer = 'true';
+    // Убираем drag-атрибуты
     delete leftBuffer.dataset.dragVisible;
     delete rightBuffer.dataset.dragVisible;
-    leftBuffer.style.zIndex = '';
-    rightBuffer.style.zIndex = '';
     leftActive.style.visibility = '';
     rightActive.style.visibility = '';
     
-    this._dragElements = null;
+    // При отмене возвращаем буферы в скрытое состояние
+    // При завершении это уже сделал swapBuffers
+    if (!completed) {
+      leftBuffer.dataset.buffer = 'true';
+      rightBuffer.dataset.buffer = 'true';
+    }
+    
+    this._dragPageRefs = null;
   }
 
   /**
    * Конец drag - применить или откатить изменения
    */
   _handleDragEnd(completed, direction) {
-    // Используем сохранённые ссылки на все 4 страницы (до swap)
-    const { leftActive, rightActive, leftBuffer, rightBuffer } = this._dragElements || this.renderer.elements;
-    const allPages = [leftActive, rightActive, leftBuffer, rightBuffer];
-    
     if (completed) {
-      // Отключаем transition на время swap чтобы не было мигания
-      allPages.forEach(el => {
-        el.style.transition = 'none';
-      });
+      // Отключаем transition СРАЗУ, до любых изменений
+      this.elements.book.dataset.noTransition = 'true';
       
       // Переворот завершён - обновляем индекс и меняем буферы
       const step = this.pagesPerFlip;
@@ -334,20 +329,25 @@ export class BookController {
         ? this.index + step 
         : this.index - step;
       
+      // СНАЧАЛА swap - буферы станут active и видимыми
       this.renderer.swapBuffers();
+      
+      // ПОТОМ убираем drag-атрибуты
+      this._hideUnderPage(true);
+      
       this.settings.set("page", this.index);
       this.chapterDelegate.updateChapterUI();
       
-      // Возвращаем transition после отрисовки
+      // Включаем transition обратно после двух кадров отрисовки
       requestAnimationFrame(() => {
-        allPages.forEach(el => {
-          el.style.transition = '';
+        requestAnimationFrame(() => {
+          delete this.elements.book.dataset.noTransition;
         });
       });
+    } else {
+      // Отмена - просто убираем drag-атрибуты
+      this._hideUnderPage(false);
     }
-    
-    // Скрываем временно показанные страницы (использует _dragElements)
-    this._hideUnderPage();
     
     // Возвращаем состояние
     this.elements.book.dataset.state = 'opened';
