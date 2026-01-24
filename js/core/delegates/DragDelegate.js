@@ -1,12 +1,12 @@
 /**
  * DRAG DELEGATE
- * Делегат drag-перелистывания.
+ * Управление drag-перелистыванием.
+ * 
  * Управляет перелистыванием страниц перетаскиванием за углы.
+ * Обновлено для работы с DOMManager.
  */
 
 import { cssVars } from '../../utils/CSSVariables.js';
-
-console.log('🔧 DragDelegate loaded');
 
 export class DragDelegate {
   constructor(controller) {
@@ -30,13 +30,10 @@ export class DragDelegate {
       onTouchMove: this._onTouchMove.bind(this),
       onTouchEnd: this._onTouchEnd.bind(this),
     };
-    
-    console.log('🔧 DragDelegate constructed');
   }
 
   // === АЛИАСЫ ===
   
-  get elements() { return this.ctrl.elements; }
   get renderer() { return this.ctrl.renderer; }
   get state() { return this.ctrl.stateMachine; }
   get isMobile() { return this.ctrl.isMobile; }
@@ -51,11 +48,14 @@ export class DragDelegate {
    * Привязать события к зонам захвата
    */
   bind() {
-    const corners = this.elements.book.querySelectorAll('.corner-zone');
-    console.log('🔧 DragDelegate.bind() - found corner zones:', corners.length);
+    const book = this.ctrl.dom.get('book');
+    if (!book) {
+      return;
+    }
+
+    const corners = book.querySelectorAll('.corner-zone');
     
     corners.forEach(zone => {
-      console.log(' - binding zone:', zone.dataset.dir);
       
       this.ctrl.eventManager.add(zone, 'mousedown', (e) => {
         e.preventDefault();
@@ -74,9 +74,7 @@ export class DragDelegate {
     this.ctrl.eventManager.add(document, 'mouseup', this._boundHandlers.onMouseUp);
     this.ctrl.eventManager.add(document, 'touchmove', this._boundHandlers.onTouchMove, { passive: false });
     this.ctrl.eventManager.add(document, 'touchend', this._boundHandlers.onTouchEnd);
-    
-    console.log('✅ DragDelegate bound');
-  }
+      }
 
   // === ПРОВЕРКИ ВОЗМОЖНОСТИ ДЕЙСТВИЯ ===
 
@@ -100,32 +98,32 @@ export class DragDelegate {
    * @param {MouseEvent|Touch} e
    * @param {'next'|'prev'} dir
    */
-  _startDrag(e, dir) {
-    console.log('🎯 _startDrag called:', { dir, isBusy: this.state.isBusy });
-    
+  _startDrag(e, dir) {    
     if (this.state.isBusy) return;
     
     if (dir === 'next' && !this.canFlipNext()) {
-      console.log('⛔ Cannot flip next');
       return;
     }
     if (dir === 'prev' && !this.canFlipPrev()) {
-      console.log('⛔ Cannot flip prev');
       return;
     }
-    
-    console.log('✅ Starting drag');
-    
+        
     this.isDragging = true;
     this.direction = dir;
     this.startX = e.clientX;
     this.currentAngle = 0;
     
-    this.bookRect = this.elements.book.getBoundingClientRect();
+    const book = this.ctrl.dom.get('book');
+    if (!book) return;
+    
+    this.bookRect = book.getBoundingClientRect();
     this.bookWidth = this.bookRect.width;
     
     this._prepareFlip();
-    this.elements.flipShadow?.classList.add('active');
+    
+    const flipShadow = this.ctrl.dom.get('flipShadow');
+    if (flipShadow) flipShadow.classList.add('active');
+    
     this._updateAngleFromEvent(e);
   }
 
@@ -137,21 +135,22 @@ export class DragDelegate {
       ? this.ctrl.index + this.pagesPerFlip 
       : this.ctrl.index - this.pagesPerFlip;
     
-    console.log('[DRAG] _prepareFlip:', { 
-      currentIndex: this.ctrl.index, 
-      nextIndex, 
-      direction: this.direction,
-      isMobile: this.isMobile 
-    });
-    
     this.renderer.prepareBuffer(nextIndex, this.isMobile);
     this.renderer.prepareSheet(this.ctrl.index, nextIndex, this.direction, this.isMobile);
     this._showUnderPage();
     
-    this.elements.sheet.dataset.direction = this.direction;
-    this.elements.sheet.dataset.phase = 'drag';
-    this.elements.sheet.style.transition = 'none';
-    this.elements.book.dataset.state = 'flipping';
+    const sheet = this.ctrl.dom.get('sheet');
+    const book = this.ctrl.dom.get('book');
+    
+    if (sheet) {
+      sheet.dataset.direction = this.direction;
+      sheet.dataset.phase = 'drag';
+      sheet.style.transition = 'none';
+    }
+    
+    if (book) {
+      book.dataset.state = 'flipping';
+    }
   }
 
   /**
@@ -162,17 +161,29 @@ export class DragDelegate {
     this._pageRefs = { leftActive, rightActive, leftBuffer, rightBuffer };
     
     if (this.isMobile) {
-      rightBuffer.dataset.buffer = 'false';
-      rightBuffer.dataset.dragVisible = 'true';
-      rightActive.style.display = 'none';
+      if (rightBuffer) {
+        rightBuffer.dataset.buffer = 'false';
+        rightBuffer.dataset.dragVisible = 'true';
+      }
+      if (rightActive) {
+        rightActive.style.display = 'none';
+      }
     } else if (this.direction === 'next') {
-      rightBuffer.dataset.buffer = 'false';
-      rightBuffer.dataset.dragVisible = 'true';
-      rightActive.style.display = 'none';
+      if (rightBuffer) {
+        rightBuffer.dataset.buffer = 'false';
+        rightBuffer.dataset.dragVisible = 'true';
+      }
+      if (rightActive) {
+        rightActive.style.display = 'none';
+      }
     } else {
-      leftBuffer.dataset.buffer = 'false';
-      leftBuffer.dataset.dragVisible = 'true';
-      leftActive.style.display = 'none';
+      if (leftBuffer) {
+        leftBuffer.dataset.buffer = 'false';
+        leftBuffer.dataset.dragVisible = 'true';
+      }
+      if (leftActive) {
+        leftActive.style.display = 'none';
+      }
     }
   }
 
@@ -194,6 +205,8 @@ export class DragDelegate {
    * @param {MouseEvent|Touch} e
    */
   _updateAngleFromEvent(e) {
+    if (!this.bookRect) return;
+    
     const x = e.clientX - this.bookRect.left;
     
     if (this.direction === 'next') {
@@ -215,7 +228,11 @@ export class DragDelegate {
       ? -this.currentAngle 
       : this.currentAngle;
     
-    this.elements.sheet.style.transform = `translateZ(1px) rotateY(${angle}deg)`;
+    const sheet = this.ctrl.dom.get('sheet');
+    if (sheet) {
+      sheet.style.transform = `translateZ(1px) rotateY(${angle}deg)`;
+    }
+    
     this._updateShadows();
   }
 
@@ -227,11 +244,14 @@ export class DragDelegate {
     const shadowOpacity = Math.sin(progress * Math.PI) * 0.35;
     const shadowSize = Math.sin(progress * Math.PI) * 25;
     
-    this.elements.book.style.setProperty('--spine-shadow-alpha', shadowOpacity.toFixed(2));
-    this.elements.book.style.setProperty('--spine-shadow-size', `${shadowSize}px`);
+    const book = this.ctrl.dom.get('book');
+    if (book) {
+      book.style.setProperty('--spine-shadow-alpha', shadowOpacity.toFixed(2));
+      book.style.setProperty('--spine-shadow-size', `${shadowSize}px`);
+    }
     
     // Тень на странице под переворотом
-    const { flipShadow } = this.elements;
+    const flipShadow = this.ctrl.dom.get('flipShadow');
     if (!flipShadow) return;
     
     const flipOpacity = Math.sin(progress * Math.PI) * 0.4;
@@ -319,19 +339,27 @@ export class DragDelegate {
   _finish(completed) {
     const direction = this.direction;
     
+    const sheet = this.ctrl.dom.get('sheet');
+    const book = this.ctrl.dom.get('book');
+    const flipShadow = this.ctrl.dom.get('flipShadow');
+    
     // Reset sheet
-    this.elements.sheet.style.transition = '';
-    this.elements.sheet.style.transform = '';
-    delete this.elements.sheet.dataset.phase;
-    delete this.elements.sheet.dataset.direction;
+    if (sheet) {
+      sheet.style.transition = '';
+      sheet.style.transform = '';
+      delete sheet.dataset.phase;
+      delete sheet.dataset.direction;
+    }
     
     // Reset shadows
-    this.elements.book.style.removeProperty('--spine-shadow-alpha');
-    this.elements.book.style.removeProperty('--spine-shadow-size');
+    if (book) {
+      book.style.removeProperty('--spine-shadow-alpha');
+      book.style.removeProperty('--spine-shadow-size');
+    }
     
-    if (this.elements.flipShadow) {
-      this.elements.flipShadow.classList.remove('active');
-      this.elements.flipShadow.style.cssText = '';
+    if (flipShadow) {
+      flipShadow.classList.remove('active');
+      flipShadow.style.cssText = '';
     }
     
     if (completed) {
@@ -350,7 +378,10 @@ export class DragDelegate {
    * @param {'next'|'prev'} direction
    */
   _completeFlip(direction) {
-    this.elements.book.dataset.noTransition = 'true';
+    const book = this.ctrl.dom.get('book');
+    if (book) {
+      book.dataset.noTransition = 'true';
+    }
     
     this.ctrl.index = direction === 'next'
       ? this.ctrl.index + this.pagesPerFlip
@@ -359,12 +390,16 @@ export class DragDelegate {
     this.renderer.swapBuffers();
     this._hideUnderPage(true);
     
-    this.elements.book.dataset.state = 'opened';
+    if (book) {
+      book.dataset.state = 'opened';
+    }
     
     // Включаем transitions обратно после отрисовки
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        delete this.elements.book.dataset.noTransition;
+        if (book) {
+          delete book.dataset.noTransition;
+        }
       });
     });
     
@@ -378,7 +413,12 @@ export class DragDelegate {
    */
   _cancelFlip() {
     this._hideUnderPage(false);
-    this.elements.book.dataset.state = 'opened';
+    
+    const book = this.ctrl.dom.get('book');
+    if (book) {
+      book.dataset.state = 'opened';
+    }
+    
     this.ctrl._updateDebug();
   }
 
@@ -389,15 +429,15 @@ export class DragDelegate {
   _hideUnderPage(completed) {
     const { leftActive, rightActive, leftBuffer, rightBuffer } = this._pageRefs || this.renderer.elements;
     
-    delete leftBuffer.dataset.dragVisible;
-    delete rightBuffer.dataset.dragVisible;
-    leftActive.style.display = '';
-    rightActive.style.display = '';
+    if (leftBuffer) delete leftBuffer.dataset.dragVisible;
+    if (rightBuffer) delete rightBuffer.dataset.dragVisible;
+    if (leftActive) leftActive.style.display = '';
+    if (rightActive) rightActive.style.display = '';
     
     // При отмене возвращаем буферы в скрытое состояние
     if (!completed) {
-      leftBuffer.dataset.buffer = 'true';
-      rightBuffer.dataset.buffer = 'true';
+      if (leftBuffer) leftBuffer.dataset.buffer = 'true';
+      if (rightBuffer) rightBuffer.dataset.buffer = 'true';
     }
   }
 

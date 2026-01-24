@@ -3,7 +3,31 @@
  * 
  * Централизованное хранилище всех настраиваемых значений.
  * JavaScript читает эти значения через getComputedStyle.
+ * 
  */
+
+/* ═══════════════════════════════════════════
+   ANIMATABLE CUSTOM PROPERTIES
+   Позволяют браузеру анимировать значения через transitions
+   ═══════════════════════════════════════════ */
+
+@property --spine-shadow-size {
+  syntax: '<length>';
+  initial-value: 22px;
+  inherits: false;
+}
+
+@property --spine-shadow-blur-amount {
+  syntax: '<length>';
+  initial-value: 18px;
+  inherits: false;
+}
+
+@property --spine-shadow-alpha {
+  syntax: '<number>';
+  initial-value: 0.22;
+  inherits: false;
+}
 
 :root {
   /* ═══════════════════════════════════════════
@@ -15,7 +39,7 @@
   --timing-cover: 1200ms;         /* Открытие/закрытие обложки */
   --timing-wrap: 300ms;           /* Расширение контейнера */
   --timing-transition: 300ms;     /* Общие переходы */
-  --timing-swap-next: 0ms;      /* Задержка смены буферов (вперёд) */
+  --timing-swap-next: 0ms;        /* Задержка смены буферов (вперёд) */
   --timing-swap-prev: 100ms;      /* Задержка смены буферов (назад) */
   --timing-resize-debounce: 150ms;/* Дебаунс ресайза */
 
@@ -38,10 +62,8 @@
   --pages-depth: 10px;
   --pages-count: 6;
 
-  /* Динамические тени (меняются во время анимации) */
-  --spine-shadow-size: 22px;
-  --spine-shadow-blur-amount: 18px;
-  --spine-shadow-alpha: 0.22;
+  /* Динамические тени (теперь animatable через @property) */
+  /* Значения по умолчанию определены выше в @property */
 
   /* ═══════════════════════════════════════════
      ЦВЕТА (СВЕТЛАЯ ТЕМА)

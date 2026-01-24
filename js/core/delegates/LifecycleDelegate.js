@@ -1,6 +1,13 @@
 /**
- * Делегат жизненного цикла книги.
- * Открытие, закрытие, пагинация.
+ * LIFECYCLE DELEGATE
+ * Управление жизненным циклом книги.
+ * 
+ * Отвечает за:
+ * - Открытие книги
+ * - Закрытие книги
+ * - Репагинацию контента
+ * 
+ * Обновлено для работы с DOMManager.
  */
 
 import { CONFIG, BookState } from '../../config.js';
@@ -47,9 +54,14 @@ export class LifecycleDelegate {
       // Ждём стабилизации layout
       await this._waitForLayout();
 
+      const rightA = this.ctrl.dom.get('rightA');
+      if (!rightA) {
+        throw new Error('rightA element not found');
+      }
+
       const { pages, chapterStarts } = await this.ctrl.paginator.paginate(
         html,
-        this.ctrl.elements.rightA
+        rightA
       );
 
       this.ctrl.renderer.setPageContents(pages);
@@ -84,18 +96,24 @@ export class LifecycleDelegate {
 
     if (!this.state.transitionTo(BookState.CLOSING)) return;
 
-    const { leftA, rightA } = this.ctrl.elements;
+    const leftA = this.ctrl.dom.get('leftA');
+    const rightA = this.ctrl.dom.get('rightA');
     
-    leftA.style.visibility = "hidden";
-    rightA.style.visibility = "hidden";
+    if (leftA) {
+      leftA.style.visibility = "hidden";
+      leftA.innerHTML = "";
+    }
+    
+    if (rightA) {
+      rightA.style.visibility = "hidden";
+      rightA.innerHTML = "";
+    }
 
     try {
       await this.ctrl.animator.runCloseAnimation();
 
-      leftA.innerHTML = "";
-      rightA.innerHTML = "";
-      leftA.style.visibility = "";
-      rightA.style.visibility = "";
+      if (leftA) leftA.style.visibility = "";
+      if (rightA) rightA.style.visibility = "";
 
       this.ctrl.index = 0;
       this.ctrl.settings.set("page", 0);
@@ -132,9 +150,14 @@ export class LifecycleDelegate {
         return;
       }
 
+      const rightA = this.ctrl.dom.get('rightA');
+      if (!rightA) {
+        throw new Error('rightA element not found');
+      }
+
       const { pages, chapterStarts } = await this.ctrl.paginator.paginate(
         html,
-        this.ctrl.elements.rightA
+        rightA
       );
 
       this.ctrl.renderer.setPageContents(pages);
@@ -161,8 +184,13 @@ export class LifecycleDelegate {
    * @private
    */
   async _waitForLayout() {
-    const pageWidth = this.ctrl.elements.rightA.clientWidth;
-    const bookWidth = this.ctrl.elements.book.clientWidth;
+    const rightA = this.ctrl.dom.get('rightA');
+    const book = this.ctrl.dom.get('book');
+    
+    if (!rightA || !book) return;
+    
+    const pageWidth = rightA.clientWidth;
+    const bookWidth = book.clientWidth;
     
     if (!this.isMobile && pageWidth < bookWidth * CONFIG.LAYOUT.MIN_PAGE_WIDTH_RATIO) {
       await new Promise(r => setTimeout(r, CONFIG.LAYOUT.SETTLE_DELAY));

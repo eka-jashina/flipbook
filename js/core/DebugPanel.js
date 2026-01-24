@@ -13,6 +13,9 @@ export class DebugPanel {
   toggle() {
     this.visible = !this.visible;
     this.container.classList.toggle("visible", this.visible);
+    
+    // УЛУЧШЕНИЕ: Включаем/выключаем debug режим для drag-зон
+    document.body.dataset.debug = this.visible;
   }
 
   update(data) {
@@ -30,3 +33,17 @@ export class DebugPanel {
     }
   }
 }
+
+/**
+ * ИСПОЛЬЗОВАНИЕ:
+ * 
+ * При включении debug режима (Ctrl+D):
+ * - Панель отладки становится видимой
+ * - Зоны drag подсвечиваются красным с анимацией
+ * - Показываются метки направлений (next/prev)
+ * 
+ * Это помогает:
+ * - Визуально проверить расположение зон
+ * - Отладить взаимодействие
+ * - Понять механику drag-перелистывания
+ */

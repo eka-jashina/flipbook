@@ -21,8 +21,6 @@ async function init() {
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
       window.bookApp = app;
     }
-
-    console.log('📖 Book Reader initialized');
   } catch (error) {
     console.error('Failed to initialize Book Reader:', error);
   }

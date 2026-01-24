@@ -1,5 +1,8 @@
 /**
- * Делегат настроек.
+ * SETTINGS DELEGATE
+ * Управление применением и изменением настроек.
+ * 
+ * Обновлено для работы с DOMManager.
  */
 
 import { CONFIG } from '../../config.js';
@@ -10,14 +13,31 @@ export class SettingsDelegate {
     this.ctrl = controller;
   }
 
-  get elements() { return this.ctrl.elements; }
-  get settings() { return this.ctrl.settings; }
+  /**
+   * Получить DOM элементы
+   * @returns {Object}
+   */
+  get elements() {
+    return this.ctrl.dom.elements;
+  }
+
+  /**
+   * Получить менеджер настроек
+   * @returns {SettingsManager}
+   */
+  get settings() {
+    return this.ctrl.settings;
+  }
 
   /**
    * Применить все настройки к DOM
    */
   apply() {
-    const { html } = this.elements;
+    const html = this.ctrl.dom.get('html');
+    if (!html) {
+      console.error('HTML element not found');
+      return;
+    }
 
     html.style.setProperty(
       "--reader-font-family",
@@ -58,6 +78,11 @@ export class SettingsDelegate {
     }
   }
 
+  /**
+   * Обработать изменение размера шрифта
+   * @private
+   * @param {'increase'|'decrease'} action
+   */
   _handleFontSize(action) {
     const current = this.settings.get("fontSize");
     const minSize = cssVars.getNumber("--font-min", 14);
@@ -68,19 +93,44 @@ export class SettingsDelegate {
       : Math.max(current - 1, minSize);
 
     this.settings.set("fontSize", newSize);
-    this.elements.html.style.setProperty("--reader-font-size", `${newSize}px`);
+    
+    const html = this.ctrl.dom.get('html');
+    if (html) {
+      html.style.setProperty("--reader-font-size", `${newSize}px`);
+    }
+    
     this.ctrl._repaginate(true);
   }
 
+  /**
+   * Обработать изменение шрифта
+   * @private
+   * @param {string} value
+   */
   _handleFont(value) {
     this.settings.set("font", value);
-    this.elements.html.style.setProperty("--reader-font-family", CONFIG.FONTS[value]);
+    
+    const html = this.ctrl.dom.get('html');
+    if (html) {
+      html.style.setProperty("--reader-font-family", CONFIG.FONTS[value]);
+    }
+    
     this.ctrl._repaginate(true);
   }
 
+  /**
+   * Обработать изменение темы
+   * @private
+   * @param {string} value
+   */
   _handleTheme(value) {
     this.settings.set("theme", value);
-    this.elements.html.dataset.theme = value === "light" ? "" : value;
+    
+    const html = this.ctrl.dom.get('html');
+    if (html) {
+      html.dataset.theme = value === "light" ? "" : value;
+    }
+    
     cssVars.invalidateCache();
   }
 }

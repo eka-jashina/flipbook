@@ -2,6 +2,7 @@
  * BOOK STYLES
  * 
  * Обёртка и контейнер книги с 3D-эффектами.
+ * 
  */
 
 /* ═══════════════════════════════════════════
@@ -42,9 +43,14 @@
   -webkit-transform-style: preserve-3d;
   
   transform-origin: left;
+  
+  /* УЛУЧШЕНИЕ: Добавлены transitions для @property переменных */
   transition:
     background-color var(--timing-transition),
-    box-shadow var(--timing-transition);
+    box-shadow var(--timing-transition),
+    --spine-shadow-size 0.2s ease-out,
+    --spine-shadow-blur-amount 0.2s ease-out,
+    --spine-shadow-alpha 0.2s ease-out;
 }
 
 /* Уменьшаем тени во время переворота */
@@ -71,6 +77,44 @@
 
 .book-wrap[data-state="closed"] .book::before {
   display: none;
+}
+
+/* ═══════════════════════════════════════════
+   CURSOR HINTS ДЛЯ УЛУЧШЕННОГО UX
+   ═══════════════════════════════════════════ */
+
+.book {
+  cursor: default;
+}
+
+/* Закрытая книга - можно открыть */
+.book[data-state="closed"] .cover {
+  cursor: pointer;
+}
+
+.book[data-state="closed"] .cover:hover {
+  filter: brightness(1.05);
+}
+
+/* Открытая книга в режиме ожидания */
+.book[data-state="flipping"] {
+  cursor: wait;
+}
+
+/* Зоны клика на страницах (только на десктопе) */
+@media (min-width: 769px) {
+  .book[data-state="opened"] .page[data-side="left"]:hover {
+    cursor: w-resize;
+  }
+  
+  .book[data-state="opened"] .page[data-side="right"]:hover {
+    cursor: e-resize;
+  }
+  
+  /* Исключаем TOC из зон клика - там уже свой cursor */
+  .book[data-state="opened"] .page:has(.toc):hover {
+    cursor: default;
+  }
 }
 
 /* ═══════════════════════════════════════════

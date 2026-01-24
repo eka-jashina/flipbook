@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="css/index.css" />
   </head>
 
-  <body>
+<body data-debug="false">
     <!-- Фоновые изображения глав (два слоя для кроссфейда) -->
     <div class="chapter-bg">
       <div class="bg" data-active="false"></div>
@@ -34,6 +34,11 @@
       <div>Cache: <span id="debugCache">0</span></div>
       <div>Memory: <span id="debugMemory">-</span></div>
       <div>Listeners: <span id="debugListeners">0</span></div>
+    </div>
+
+    <!-- Error message в HTML-->
+    <div class="error-message" id="errorMessage" hidden role="alert">
+      <span id="errorText"></span>
     </div>
 
     <div class="scene">
@@ -80,14 +85,15 @@
 
           <div class="flip-shadow" id="flipShadow"></div>
 
-          <!-- Зоны захвата для drag-перелистывания -->
+          <!-- Зоны захвата для drag
+            В debug режиме ([data-debug="true"]) будут видны -->
           <div class="corner-zone top-right" data-dir="next"></div>
           <div class="corner-zone bottom-right" data-dir="next"></div>
           <div class="corner-zone top-left" data-dir="prev"></div>
           <div class="corner-zone bottom-left" data-dir="prev"></div>
 
-          <!-- Оверлей загрузки -->
-          <div class="loading-overlay" id="loadingOverlay">
+          <!-- Loading overlay с hidden атрибутом -->
+          <div class="loading-overlay" id="loadingOverlay" hidden>
             <div class="loading-spinner"></div>
             <div class="loading-progress" id="loadingProgress">Загрузка...</div>
           </div>
@@ -144,5 +150,5 @@
 
     <!-- ES Module entry point -->
     <script type="module" src="js/index.js"></script>
-  </body>
+</body>
 </html>

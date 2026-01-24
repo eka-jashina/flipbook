@@ -11,14 +11,10 @@
   justify-content: center;
   background: var(--bg-page);
   z-index: 100;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s, visibility 0.3s;
 }
 
-.loading-overlay[data-visible="true"] {
-  opacity: 1;
-  visibility: visible;
+.loading-overlay[hidden] {
+  display: none;
 }
 
 .loading-spinner {

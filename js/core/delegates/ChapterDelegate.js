@@ -1,5 +1,13 @@
 /**
- * Делегат управления главами.
+ * CHAPTER DELEGATE
+ * Управление главами книги.
+ * 
+ * Отвечает за:
+ * - Определение текущей главы
+ * - Обновление фона и UI главы
+ * - Предзагрузку фонов следующих глав
+ * 
+ * Обновлено для работы с DOMManager.
  */
 
 import { CONFIG } from '../../config.js';
@@ -44,9 +52,12 @@ export class ChapterDelegate {
   updateChapterUI(pageIndex = this.ctrl.index) {
     if (this.ctrl.isDestroyed) return;
 
+    const body = this.ctrl.dom.get('body');
+    if (!body) return;
+
     if (!this.ctrl.stateMachine.isOpened || pageIndex === 0) {
       this.ctrl.backgroundManager.setBackground(CONFIG.COVER_BG);
-      this.ctrl.elements.body.dataset.chapter = "cover";
+      body.dataset.chapter = "cover";
       
       // Предзагружаем фон первой главы когда на обложке
       if (CONFIG.CHAPTERS[0]) {
@@ -62,7 +73,7 @@ export class ChapterDelegate {
 
     if (chapter) {
       this.ctrl.backgroundManager.setBackground(chapter.bg);
-      this.ctrl.elements.body.dataset.chapter = chapter.id;
+      body.dataset.chapter = chapter.id;
       
       // Предзагружаем фон следующей главы
       this._preloadNextChapterBackground(chapterIndex);
@@ -88,7 +99,6 @@ export class ChapterDelegate {
       if (nextChapterData && nextChapterData.bg) {
         this.ctrl.backgroundManager.preload(nextChapterData.bg)
           .then(() => {
-            console.log(`✓ Preloaded background for chapter ${nextChapter + 1}`);
             this.lastPreloadedChapter = nextChapter;
           });
       }

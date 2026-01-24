@@ -10,11 +10,11 @@ export class LoadingIndicator {
   }
 
   show() {
-    this.overlay.dataset.visible = "true";
+    this.overlay.hidden = false;
   }
 
   hide() {
-    this.overlay.dataset.visible = "false";
+    this.overlay.hidden = true;
   }
 
   setProgress(text) {
