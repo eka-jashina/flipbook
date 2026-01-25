@@ -1,5 +1,5 @@
 /**
- * DRAG CONTROLS
+ * DRAG CONTROLS - ПРОСТОЙ ЭФФЕКТ ЗАГИБА УГЛА
  * 
  * Зоны захвата для перелистывания за углы.
  */
@@ -14,8 +14,10 @@
   height: 80px;
   cursor: grab;
   z-index: 100;
-  /* Для отладки: */
-  /* background: rgba(255, 0, 0, 0.1); */
+  overflow: visible;
+  
+  /* Для отладки раскомментируйте: */
+  /* background: rgba(255, 0, 0, 0.15) !important; */
 }
 
 .corner-zone:active {
@@ -43,23 +45,136 @@
   left: 0;
 }
 
-/* Hover эффект — подсветка угла */
-.corner-zone.top-right:hover,
-.corner-zone.bottom-right:hover {
+/* ═══════════════════════════════════════════
+   ЭФФЕКТ ЗАГИБА - ПРОСТОЙ И ЕСТЕСТВЕННЫЙ
+   ═══════════════════════════════════════════ */
+
+/* Подсветка зоны при hover */
+.corner-zone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+/* Правые углы */
+.corner-zone.top-right::before,
+.corner-zone.bottom-right::before {
   background: radial-gradient(
     circle at bottom left,
-    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.05) 50%,
     transparent 70%
   );
 }
 
-.corner-zone.top-left:hover,
-.corner-zone.bottom-left:hover {
+/* Левые углы */
+.corner-zone.top-left::before,
+.corner-zone.bottom-left::before {
   background: radial-gradient(
     circle at bottom right,
-    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.05) 50%,
     transparent 70%
   );
+}
+
+/* Тень загиба */
+.corner-zone::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  border-style: solid;
+}
+
+/* Правый верхний угол */
+.corner-zone.top-right::after {
+  top: 0;
+  right: 0;
+  border-width: 0 0 0 0;
+  border-color: transparent;
+}
+
+.corner-zone.top-right:hover::before {
+  opacity: 1;
+}
+
+.corner-zone.top-right:hover::after {
+  opacity: 1;
+  border-width: 0 45px 45px 0;
+  border-color: transparent rgba(0, 0, 0, 0.15) transparent transparent;
+  filter: blur(3px);
+}
+
+/* Правый нижний угол */
+.corner-zone.bottom-right::after {
+  bottom: 0;
+  right: 0;
+  border-width: 0 0 0 0;
+  border-color: transparent;
+}
+
+.corner-zone.bottom-right:hover::before {
+  opacity: 1;
+}
+
+.corner-zone.bottom-right:hover::after {
+  opacity: 1;
+  border-width: 45px 45px 0 0;
+  border-color: transparent rgba(0, 0, 0, 0.15) transparent transparent;
+  filter: blur(3px);
+}
+
+/* Левый верхний угол */
+.corner-zone.top-left::after {
+  top: 0;
+  left: 0;
+  border-width: 0 0 0 0;
+  border-color: transparent;
+}
+
+.corner-zone.top-left:hover::before {
+  opacity: 1;
+}
+
+.corner-zone.top-left:hover::after {
+  opacity: 1;
+  border-width: 45px 0 0 45px;
+  border-color: transparent transparent transparent rgba(0, 0, 0, 0.15);
+  filter: blur(3px);
+  transform: rotate(90deg);
+}
+
+/* Левый нижний угол */
+.corner-zone.bottom-left::after {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 0 0;
+  border-color: transparent;
+}
+
+.corner-zone.bottom-left:hover::before {
+  opacity: 1;
+}
+
+.corner-zone.bottom-left:hover::after {
+  opacity: 1;
+  border-width: 0 0 45px 45px;
+  border-color: transparent transparent rgba(0, 0, 0, 0.15) transparent;
+  filter: blur(3px);
+  transform: rotate(90deg);
+}
+
+/* При активном состоянии (захват) - убираем эффект */
+.corner-zone:active::before,
+.corner-zone:active::after {
+  opacity: 0 !important;
 }
 
 /* Скрываем зоны когда книга закрыта или занята */
@@ -80,7 +195,7 @@
   top: 0;
   height: 100%;
   pointer-events: none;
-  z-index: 15; /* Между страницами и sheet */
+  z-index: 15;
   display: none;
 }
 
@@ -114,7 +229,6 @@
   opacity: 1;
   visibility: visible;
   z-index: 20;
-  /* transition убирается через JS для плавного следования */
 }
 
 /* Тени во время drag */
@@ -133,7 +247,7 @@
     height: 60px;
   }
   
-  /* На мобильных левые зоны не нужны (страница слева узкая) */
+  /* На мобильных левые зоны не нужны */
   .corner-zone.top-left,
   .corner-zone.bottom-left {
     display: none;
