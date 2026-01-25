@@ -74,7 +74,7 @@
   inset: 0;
   
   background-color: var(--bg-page);
-  background-image: url("../images/backgrounds/bg-page.webp");
+  background-image: url("/images/backgrounds/bg-page.webp");
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;

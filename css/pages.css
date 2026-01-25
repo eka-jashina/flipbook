@@ -3,9 +3,6 @@
  * 
  * Статические страницы с двойной буферизацией.
  * 
- * FIREFOX FIX:
- * - Убран contain: layout style paint (ломает рендеринг h2 и других элементов)
- * - Добавлен will-change: contents для стабильного рендеринга
  */
 
 .page {
@@ -18,7 +15,7 @@
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
-  background-image: url("../images/backgrounds/bg-page.webp");
+  background-image: url("/images/backgrounds/bg-page.webp");
   background-blend-mode: multiply;
   overflow: hidden;
   

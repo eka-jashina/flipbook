@@ -6,12 +6,12 @@
 
 export const CONFIG = Object.freeze({
   STORAGE_KEY: "reader-settings",
-  COVER_BG: "images/backgrounds/bg-cover.webp",
+  COVER_BG: "/images/backgrounds/bg-cover.webp",
 
   CHAPTERS: [
-    { id: "part_1", file: "content/part_1.html", bg: "images/backgrounds/part_1.webp" },
-    { id: "part_2", file: "content/part_2.html", bg: "images/backgrounds/part_2.webp" },
-    { id: "part_3", file: "content/part_3.html", bg: "images/backgrounds/part_3.webp" },
+    { id: "part_1", file: "/content/part_1.html", bg: "/images/backgrounds/part_1.webp" },
+    { id: "part_2", file: "/content/part_2.html", bg: "/images/backgrounds/part_2.webp" },
+    { id: "part_3", file: "/content/part_3.html", bg: "/images/backgrounds/part_3.webp" },
   ],
 
   FONTS: {

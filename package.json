@@ -1,0 +1,53 @@
+{
+  "name": "book-reader",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Interactive book reader with page flip animations",
+  "author": "Ekaterina Yashina",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eka-jashina/book-reader.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rm -rf dist",
+    "build:prod": "npm run clean && vite build",
+    "build:analyze": "vite build --mode analyze",
+    "serve": "npx serve dist -s",
+    "deploy": "npm run build:prod && npm run deploy:netlify",
+    "deploy:netlify": "netlify deploy --prod --dir=dist",
+    "deploy:vercel": "vercel --prod",
+    "size": "du -sh dist/*"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-imagemin": "^0.6.1",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "terser": "^5.26.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions",
+    "not dead",
+    "not IE 11"
+  ],
+  "keywords": [
+    "book-reader",
+    "ebook",
+    "page-flip",
+    "3d-animation",
+    "interactive",
+    "reading"
+  ]
+}
