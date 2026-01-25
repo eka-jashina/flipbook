@@ -1,192 +1,73 @@
-import { defineConfig } from 'vite';
-import viteCompression from 'vite-plugin-compression';
-import viteImagemin from 'vite-plugin-imagemin';
-import autoprefixer from 'autoprefixer';
-
 /**
- * VITE CONFIG С ПОДДЕРЖКОЙ GITHUB PAGES
+ * CONFIGURATION
  * 
- * Автоматически определяет base path:
- * - Development: '/'
- * - GitHub Pages: '/repo-name/'
+ * Централизованное хранилище настроек.
  */
 
-export default defineConfig(({ command, mode }) => {
-  // Определяем base path для GitHub Pages
-  // Измените 'flipbook' на название вашего репозитория
-  const base = mode === 'production' ? '/flipbook/' : '/';
+// Vite подставляет base URL для production
+const BASE_URL = import.meta.env.BASE_URL || '/';
 
-  return {
-    base,
+export const CONFIG = Object.freeze({
+  STORAGE_KEY: "reader-settings",
+  // Используем BASE_URL для правильных путей на GitHub Pages
+  COVER_BG: `${BASE_URL}images/backgrounds/bg-cover.webp`,
 
-    server: {
-      port: 3000,
-      open: true,
-      host: true,
+  CHAPTERS: [
+    { 
+      id: "part_1", 
+      file: `${BASE_URL}content/part_1.html`, 
+      bg: `${BASE_URL}images/backgrounds/part_1.webp` 
     },
-
-    preview: {
-      port: 4173,
-      open: true,
+    { 
+      id: "part_2", 
+      file: `${BASE_URL}content/part_2.html`, 
+      bg: `${BASE_URL}images/backgrounds/part_2.webp` 
     },
-
-    css: {
-      devSourcemap: true,
-      postcss: {
-        plugins: [
-          autoprefixer({
-            flexbox: 'no-2009',
-            grid: 'autoplace',
-          }),
-        ],
-      },
+    { 
+      id: "part_3", 
+      file: `${BASE_URL}content/part_3.html`, 
+      bg: `${BASE_URL}images/backgrounds/part_3.webp` 
     },
+  ],
 
-    build: {
-      outDir: 'dist',
-      assetsDir: 'assets',
-      sourcemap: true,
-      
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info'],
-        },
-        format: {
-          comments: false,
-        },
-      },
+  FONTS: {
+    georgia: "Georgia, serif",
+    merriweather: '"Merriweather", serif',
+    "libre-baskerville": '"Libre Baskerville", serif',
+    inter: "Inter, sans-serif",
+    roboto: "Roboto, sans-serif",
+    "open-sans": '"Open Sans", sans-serif',
+  },
 
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'utils': [
-              './js/utils/CSSVariables.js',
-              './js/utils/MediaQueryManager.js',
-              './js/utils/EventEmitter.js',
-              './js/utils/EventListenerManager.js',
-              './js/utils/TimerManager.js',
-              './js/utils/LRUCache.js',
-              './js/utils/TransitionHelper.js',
-              './js/utils/HTMLSanitizer.js',
-              './js/utils/ErrorHandler.js',
-              './js/utils/StorageManager.js',
-            ],
-            'managers': [
-              './js/managers/BookStateMachine.js',
-              './js/managers/SettingsManager.js',
-              './js/managers/BackgroundManager.js',
-              './js/managers/ContentLoader.js',
-              './js/managers/AsyncPaginator.js',
-            ],
-            'delegates': [
-              './js/core/delegates/NavigationDelegate.js',
-              './js/core/delegates/SettingsDelegate.js',
-              './js/core/delegates/LifecycleDelegate.js',
-              './js/core/delegates/ChapterDelegate.js',
-              './js/core/delegates/DragDelegate.js',
-            ],
-          },
-          
-          entryFileNames: 'assets/js/[name]-[hash].js',
-          chunkFileNames: 'assets/js/[name]-[hash].js',
-          assetFileNames: (assetInfo) => {
-            if (!assetInfo.name) {
-              return 'assets/[name]-[hash][extname]';
-            }
-            
-            const name = assetInfo.name;
-            
-            if (/\.(png|jpe?g|webp|svg|gif|tiff|bmp|ico)$/i.test(name)) {
-              return 'assets/images/[name]-[hash][extname]';
-            }
-            
-            if (/\.(woff2?|eot|ttf|otf)$/i.test(name)) {
-              return 'assets/fonts/[name]-[hash][extname]';
-            }
-            
-            if (/\.css$/i.test(name)) {
-              return 'assets/css/[name]-[hash][extname]';
-            }
-            
-            return 'assets/[name]-[hash][extname]';
-          },
-        },
-      },
+  DEFAULT_SETTINGS: {
+    font: "georgia",
+    fontSize: 18,
+    theme: "light",
+    page: 0,
+  },
 
-      chunkSizeWarningLimit: 600,
-      cssCodeSplit: true,
-      cssMinify: true,
-      copyPublicDir: true,
-    },
+  VIRTUALIZATION: {
+    cacheLimit: 12,
+    preloadWindow: 4,
+    observerRootMargin: "200px",
+  },
 
-    plugins: [
-      // Gzip сжатие
-      viteCompression({
-        verbose: true,
-        disable: false,
-        threshold: 10240,
-        algorithm: 'gzip',
-        ext: '.gz',
-        deleteOriginFile: false,
-      }),
+  LAYOUT: {
+    // Минимальное соотношение ширины страницы к книге
+    // при котором считаем что layout стабилизировался
+    MIN_PAGE_WIDTH_RATIO: 0.4,
+    
+    // Задержка ожидания стабилизации layout (ms)
+    SETTLE_DELAY: 100,
+  },
 
-      // Brotli сжатие
-      viteCompression({
-        verbose: true,
-        disable: false,
-        threshold: 10240,
-        algorithm: 'brotliCompress',
-        ext: '.br',
-        deleteOriginFile: false,
-      }),
+  TIMING_SAFETY_MARGIN: 100
+});
 
-      // Оптимизация изображений
-      viteImagemin({
-        gifsicle: {
-          optimizationLevel: 7,
-          interlaced: false,
-        },
-        optipng: {
-          optimizationLevel: 7,
-        },
-        mozjpeg: {
-          quality: 85,
-        },
-        pngquant: {
-          quality: [0.8, 0.9],
-          speed: 4,
-        },
-        svgo: {
-          plugins: [
-            {
-              name: 'removeViewBox',
-              active: false,
-            },
-            {
-              name: 'removeEmptyAttrs',
-              active: true,
-            },
-          ],
-        },
-        webp: {
-          quality: 85,
-        },
-      }),
-    ],
-
-    resolve: {
-      alias: {
-        '@': '/js',
-        '@utils': '/js/utils',
-        '@managers': '/js/managers',
-        '@core': '/js/core',
-        '@css': '/css',
-        '@images': '/images',
-        '@fonts': '/fonts',
-      },
-    },
-  };
+export const BookState = Object.freeze({
+  CLOSED: "closed",
+  OPENING: "opening",
+  OPENED: "opened",
+  FLIPPING: "flipping",
+  CLOSING: "closing",
 });
