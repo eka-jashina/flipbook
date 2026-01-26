@@ -3,7 +3,7 @@
  * Управление навигацией по книге.
  * 
  * Обрабатывает переходы между страницами и главами.
- * Обновлено для работы с DOMManager.
+ * Обновлено для работы с DOMManager и звуком.
  */
 
 import { CONFIG, BookState } from '../../config.js';
@@ -19,6 +19,7 @@ export class NavigationDelegate {
   get renderer() { return this.ctrl.renderer; }
   get animator() { return this.ctrl.animator; }
   get settings() { return this.ctrl.settings; }
+  get soundManager() { return this.ctrl.soundManager; }
   get isMobile() { return this.ctrl.isMobile; }
 
   /**
@@ -65,6 +66,9 @@ export class NavigationDelegate {
 
     if (!this.state.transitionTo(BookState.FLIPPING)) return;
 
+    // Воспроизводим звук перелистывания
+    this._playFlipSound();
+
     // Обновляем фон если уходим с обложки
     if (this.ctrl.index === 0 && targetIndex > 0) {
       this.ctrl.chapterDelegate.updateChapterUI(targetIndex);
@@ -72,7 +76,7 @@ export class NavigationDelegate {
 
     this.renderer.prepareBuffer(targetIndex, this.isMobile);
     
-    const nextIndex = targetIndex; // Для prepareSheet целевая страница это и есть "следующая"
+    const nextIndex = targetIndex;
     this.renderer.prepareSheet(this.ctrl.index, nextIndex, direction, this.isMobile);
 
     try {
@@ -121,6 +125,9 @@ export class NavigationDelegate {
 
     if (!this.state.transitionTo(BookState.FLIPPING)) return;
 
+    // Воспроизводим звук перелистывания
+    this._playFlipSound();
+
     this.renderer.prepareBuffer(nextIndex, this.isMobile);
     this.renderer.prepareSheet(this.ctrl.index, nextIndex, direction, this.isMobile);
 
@@ -136,6 +143,18 @@ export class NavigationDelegate {
       this.ctrl._updateDebug();
     } catch (error) {
       this.state.transitionTo(BookState.OPENED);
+    }
+  }
+
+  /**
+   * Воспроизвести звук перелистывания
+   * @private
+   */
+  _playFlipSound() {
+    if (this.soundManager) {
+      // Небольшая вариация в скорости для естественности
+      const playbackRate = 0.9 + Math.random() * 0.2;
+      this.soundManager.play('pageFlip', { playbackRate });
     }
   }
 }

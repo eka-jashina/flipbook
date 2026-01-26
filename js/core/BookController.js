@@ -25,6 +25,7 @@ import { ComponentFactory } from './ComponentFactory.js';
 import { AppInitializer } from './AppInitializer.js';
 import { SubscriptionManager } from './SubscriptionManager.js';
 import { ResizeHandler } from './ResizeHandler.js';
+import { SoundManager } from '../utils/index.js';
 import {
   NavigationDelegate,
   SettingsDelegate,
@@ -154,7 +155,8 @@ export class BookController {
     const components = [
       this.animator, this.paginator, this.contentLoader,
       this.backgroundManager, this.eventController,
-      this.stateMachine, this.settings, this.dragDelegate
+      this.stateMachine, this.settings, this.dragDelegate,
+      this.soundManager
     ];
     
     components.forEach(component => component?.destroy?.());
@@ -199,6 +201,7 @@ export class BookController {
 
     this.stateMachine = factory.createStateMachine();
     this.settings = factory.createSettingsManager();
+    this.soundManager = factory.createSoundManager(this.settings);
     this.backgroundManager = factory.createBackgroundManager();
     this.contentLoader = factory.createContentLoader();
     this.paginator = factory.createPaginator();

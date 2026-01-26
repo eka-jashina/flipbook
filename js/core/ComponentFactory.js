@@ -10,6 +10,7 @@
 
 import { CONFIG } from '../config.js';
 import { sanitizer } from '../utils/HTMLSanitizer.js';
+import { SoundManager } from '../utils/SoundManager.js';
 import { BookStateMachine, SettingsManager, BackgroundManager, ContentLoader, AsyncPaginator } from '../managers/index.js';
 import { BookRenderer } from './BookRenderer.js';
 import { BookAnimator } from './BookAnimator.js';
@@ -42,6 +43,26 @@ export class ComponentFactory {
    */
   createSettingsManager() {
     return new SettingsManager(this.storage, CONFIG.DEFAULT_SETTINGS);
+  }
+
+  /**
+   * Создать менеджер звуков
+   * @param {Object} settings - Настройки из SettingsManager
+   * @returns {SoundManager}
+   */
+  createSoundManager(settings) {
+    const soundManager = new SoundManager({
+      enabled: settings.get('soundEnabled'),
+      volume: settings.get('soundVolume'),
+    });
+
+    // Регистрируем звуки
+    soundManager
+      .register('pageFlip', CONFIG.SOUNDS.pageFlip, { preload: true, poolSize: 3 })
+      .register('bookOpen', CONFIG.SOUNDS.bookOpen, { preload: true, poolSize: 1 })
+      .register('bookClose', CONFIG.SOUNDS.bookClose, { preload: true, poolSize: 1 });
+
+    return soundManager;
   }
 
   /**

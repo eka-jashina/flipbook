@@ -13,3 +13,4 @@ export { TransitionHelper } from './TransitionHelper.js';
 export { HTMLSanitizer, sanitizer } from './HTMLSanitizer.js';
 export { ErrorHandler } from './ErrorHandler.js';
 export { StorageManager } from './StorageManager.js';
+export { SoundManager } from './SoundManager.js';

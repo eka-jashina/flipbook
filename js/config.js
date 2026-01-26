@@ -39,11 +39,19 @@ export const CONFIG = Object.freeze({
     "open-sans": '"Open Sans", sans-serif',
   },
 
-  DEFAULT_SETTINGS: {
+  SOUNDS: {
+    pageFlip: `${BASE_URL}sounds/page-flip.mp3`,
+    bookOpen: `${BASE_URL}sounds/cover-flip.mp3`,
+    bookClose:`${BASE_URL}sounds/cover-flip.mp3`,
+  },
+
+ DEFAULT_SETTINGS: {
     font: "georgia",
     fontSize: 18,
     theme: "light",
     page: 0,
+    soundEnabled: true,
+    soundVolume: 0.3,
   },
 
   VIRTUALIZATION: {

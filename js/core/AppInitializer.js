@@ -75,6 +75,18 @@ export class AppInitializer {
     
     if (fontSelect) fontSelect.value = this.settings.get("font");
     if (themeSelect) themeSelect.value = this.settings.get("theme");
+
+    // Синхронизировать контролы звука
+    const soundToggle = this.dom.get('soundToggle');
+    const volumeSlider = this.dom.get('volumeSlider');
+    
+    if (soundToggle) {
+      soundToggle.checked = this.settings.get("soundEnabled");
+    }
+    
+    if (volumeSlider) {
+      volumeSlider.value = this.settings.get("soundVolume") * 100;
+    }
   }
 
   /**
@@ -84,13 +96,15 @@ export class AppInitializer {
   _bindEvents() {
     const {
       nextBtn, prevBtn, tocBtn, continueBtn, cover,
-      increaseBtn, decreaseBtn, fontSelect, themeSelect, debugToggle
+      increaseBtn, decreaseBtn, fontSelect, themeSelect, debugToggle,
+      soundToggle, volumeSlider, volumeDown, volumeUp
     } = this.dom.elements;
 
     this.eventController.bind({
       nextBtn, prevBtn, tocBtn, continueBtn,
       coverEl: cover,
       increaseBtn, decreaseBtn, fontSelect, themeSelect, debugToggle,
+      soundToggle, volumeSlider, volumeDown, volumeUp
     });
 
     this.dragDelegate.bind();

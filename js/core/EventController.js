@@ -3,19 +3,19 @@
  * Обработка всех пользовательских событий.
  */
 
-import { cssVars } from '../utils/CSSVariables.js';
-import { mediaQueries } from '../utils/MediaQueryManager.js';
+import { cssVars } from "../utils/CSSVariables.js";
+import { mediaQueries } from "../utils/MediaQueryManager.js";
 
 export class EventController {
   constructor(options) {
     this.book = options.book;
     this.eventManager = options.eventManager;
-    
+
     this.onFlip = options.onFlip;
     this.onTOCClick = options.onTOCClick;
     this.onOpen = options.onOpen;
     this.onSettings = options.onSettings;
-    
+
     this.isBusy = options.isBusy;
     this.isOpened = options.isOpened;
 
@@ -81,7 +81,7 @@ export class EventController {
       this.eventManager.add(this.book, "pointerdown", (e) => {
         if (this.isBusy() || !this.isOpened()) return;
         if (e.target.closest(".toc")) return;
-        
+
         // Исключаем зоны захвата углов - там работает drag
         if (e.target.closest(".corner-zone")) return;
 
@@ -94,7 +94,17 @@ export class EventController {
   }
 
   _bindSettingsControls(elements) {
-    const { increaseBtn, decreaseBtn, fontSelect, themeSelect, debugToggle } = elements;
+    const {
+      increaseBtn,
+      decreaseBtn,
+      fontSelect,
+      themeSelect,
+      debugToggle,
+      soundToggle,
+      volumeSlider,
+      volumeDown,
+      volumeUp,
+    } = elements;
 
     this.eventManager.add(increaseBtn, "click", () => {
       this.onSettings("fontSize", "increase");
@@ -115,6 +125,39 @@ export class EventController {
     this.eventManager.add(debugToggle, "click", () => {
       this.onSettings("debug", "toggle");
     });
+
+    if (soundToggle) {
+      this.eventManager.add(soundToggle, "change", (e) => {
+        this.onSettings("soundEnabled", e.target.checked);
+      });
+    }
+
+    if (volumeSlider) {
+      this.eventManager.add(volumeSlider, "input", (e) => {
+        const volume = parseFloat(e.target.value) / 100;
+        this.onSettings("soundVolume", volume);
+      });
+    }
+
+    if (volumeDown) {
+      this.eventManager.add(volumeDown, "click", () => {
+        this.onSettings("soundVolume", "decrease");
+        this._updateVolumeSlider();
+      });
+    }
+
+    if (volumeUp) {
+      this.eventManager.add(volumeUp, "click", () => {
+        this.onSettings("soundVolume", "increase");
+        this._updateVolumeSlider();
+      });
+    }
+  }
+
+  _updateVolumeSlider() {
+    const slider = document.getElementById("volume-slider");
+    if (slider && this.isOpened()) {
+    }
   }
 
   _bindKeyboard() {
@@ -153,10 +196,10 @@ export class EventController {
   _bindTouch() {
     this._boundHandlers.touchstart = (e) => {
       if (this.isBusy()) return;
-      
+
       // Исключаем зоны захвата углов - там работает drag
       if (e.target.closest(".corner-zone")) return;
-      
+
       const t = e.touches[0];
       this.touchStartX = t.clientX;
       this.touchStartY = t.clientY;
@@ -164,7 +207,7 @@ export class EventController {
 
     this._boundHandlers.touchend = (e) => {
       if (this.isBusy()) return;
-      
+
       // Исключаем зоны захвата углов
       if (e.target.closest(".corner-zone")) return;
 
@@ -172,7 +215,10 @@ export class EventController {
       const dx = t.clientX - this.touchStartX;
       const dy = t.clientY - this.touchStartY;
 
-      const swipeVerticalLimit = cssVars.getNumber("--swipe-vertical-limit", 30);
+      const swipeVerticalLimit = cssVars.getNumber(
+        "--swipe-vertical-limit",
+        30,
+      );
       const swipeThreshold = cssVars.getNumber("--swipe-threshold", 20);
 
       if (Math.abs(dy) > swipeVerticalLimit) return;
@@ -181,7 +227,12 @@ export class EventController {
       this.onFlip(dx < 0 ? "next" : "prev");
     };
 
-    this.eventManager.add(this.book, "touchstart", this._boundHandlers.touchstart, { passive: true });
+    this.eventManager.add(
+      this.book,
+      "touchstart",
+      this._boundHandlers.touchstart,
+      { passive: true },
+    );
     this.eventManager.add(this.book, "touchend", this._boundHandlers.touchend);
   }
 

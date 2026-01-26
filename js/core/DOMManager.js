@@ -64,6 +64,12 @@ export class DOMManager {
       fontSelect: $("font-select"),
       themeSelect: $("theme-select"),
       debugToggle: $("debugToggle"),
+
+      // Sound controls
+      soundToggle: $("sound-toggle"),
+      volumeSlider: $("volume-slider"),
+      volumeDown: $("volume-down"),
+      volumeUp: $("volume-up"),
       
       // Debug panel
       debugInfo: $("debugInfo"),

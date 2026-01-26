@@ -139,6 +139,24 @@
               <option value="bw">Ч/б</option>
             </select>
           </div>
+          <div class="sound-controls">
+            <label>
+              <input type="checkbox" id="sound-toggle" checked />
+              Звук
+            </label>
+            <div class="sound-volume">
+              <button id="volume-down" title="Уменьшить громкость">🔉</button>
+              <input 
+                type="range" 
+                id="volume-slider" 
+                min="0" 
+                max="100" 
+                value="30" 
+                title="Громкость"
+              />
+              <button id="volume-up" title="Увеличить громкость">🔊</button>
+            </div>
+          </div>
           <button id="debugToggle">Debug</button>
         </div>
         <div class="copyright">

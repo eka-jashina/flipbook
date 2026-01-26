@@ -7,7 +7,7 @@
  * - Закрытие книги
  * - Репагинацию контента
  * 
- * Обновлено для работы с DOMManager.
+ * Обновлено для работы с DOMManager и звуком.
  */
 
 import { CONFIG, BookState } from '../../config.js';
@@ -20,13 +20,17 @@ export class LifecycleDelegate {
 
   get state() { return this.ctrl.stateMachine; }
   get isMobile() { return this.ctrl.isMobile; }
+  get soundManager() { return this.ctrl.soundManager; }
 
   /**
-   * Инициализация - предзагрузка обложки
+   * Инициализация - предзагрузка обложки и звуков
    */
   async init() {
-    // Предзагружаем обложку сразу при старте приложения
-    await this.ctrl.backgroundManager.preload(CONFIG.COVER_BG, true);
+    // Предзагружаем обложку и звуки параллельно
+    await Promise.all([
+      this.ctrl.backgroundManager.preload(CONFIG.COVER_BG, true),
+      this.soundManager ? this.soundManager.preload() : Promise.resolve(),
+    ]);
   }
 
   /**
@@ -39,6 +43,11 @@ export class LifecycleDelegate {
     }
 
     if (!this.state.transitionTo(BookState.OPENING)) return;
+
+    // Воспроизводим звук открытия книги
+    if (this.soundManager) {
+      this.soundManager.play('bookOpen');
+    }
 
     try {
       this.ctrl.loadingIndicator.show();
@@ -95,6 +104,11 @@ export class LifecycleDelegate {
     }
 
     if (!this.state.transitionTo(BookState.CLOSING)) return;
+
+    // Воспроизводим звук закрытия книги
+    if (this.soundManager) {
+      this.soundManager.play('bookClose');
+    }
 
     const leftA = this.ctrl.dom.get('leftA');
     const rightA = this.ctrl.dom.get('rightA');

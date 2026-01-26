@@ -2,7 +2,7 @@
  * SETTINGS DELEGATE
  * Управление применением и изменением настроек.
  * 
- * Обновлено для работы с DOMManager.
+ * Обновлено для работы с DOMManager и звуком.
  */
 
 import { CONFIG } from '../../config.js';
@@ -52,6 +52,12 @@ export class SettingsDelegate {
     const theme = this.settings.get("theme");
     html.dataset.theme = theme === "light" ? "" : theme;
 
+    // Применить настройки звука
+    if (this.ctrl.soundManager) {
+      this.ctrl.soundManager.setEnabled(this.settings.get("soundEnabled"));
+      this.ctrl.soundManager.setVolume(this.settings.get("soundVolume"));
+    }
+
     cssVars.invalidateCache();
   }
 
@@ -70,6 +76,12 @@ export class SettingsDelegate {
         break;
       case "theme":
         this._handleTheme(value);
+        break;
+      case "soundEnabled":
+        this._handleSoundToggle(value);
+        break;
+      case "soundVolume":
+        this._handleSoundVolume(value);
         break;
       case "debug":
         this.ctrl.debugPanel.toggle();
@@ -132,5 +144,52 @@ export class SettingsDelegate {
     }
     
     cssVars.invalidateCache();
+  }
+
+  /**
+   * Обработать включение/выключение звука
+   * @private
+   * @param {boolean|'toggle'} value
+   */
+  _handleSoundToggle(value) {
+    const current = this.settings.get("soundEnabled");
+    const newValue = value === 'toggle' ? !current : value;
+    
+    this.settings.set("soundEnabled", newValue);
+    
+    if (this.ctrl.soundManager) {
+      this.ctrl.soundManager.setEnabled(newValue);
+    }
+
+    // Воспроизводим тестовый звук если включили
+    if (newValue && this.ctrl.soundManager) {
+      this.ctrl.soundManager.play('pageFlip', { volume: 0.2 });
+    }
+  }
+
+  /**
+   * Обработать изменение громкости
+   * @private
+   * @param {number|'increase'|'decrease'} value
+   */
+  _handleSoundVolume(value) {
+    let newVolume;
+    
+    if (typeof value === 'number') {
+      newVolume = Math.max(0, Math.min(1, value));
+    } else {
+      const current = this.settings.get("soundVolume");
+      newVolume = value === 'increase'
+        ? Math.min(current + 0.1, 1)
+        : Math.max(current - 0.1, 0);
+    }
+    
+    this.settings.set("soundVolume", newVolume);
+    
+    if (this.ctrl.soundManager) {
+      this.ctrl.soundManager.setVolume(newVolume);
+      // Воспроизводим тестовый звук
+      this.ctrl.soundManager.play('pageFlip', { volume: newVolume });
+    }
   }
 }
