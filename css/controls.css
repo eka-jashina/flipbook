@@ -58,7 +58,7 @@
 /* Панель настроек */
 .settings {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 5px;
   justify-content: center;
   align-items: center;
@@ -70,11 +70,18 @@
     max-height var(--timing-transition) ease-in-out;
 }
 
+.settings div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: space-between;
+}
+
 /* Показываем через :has() */
 .controls:has(.settings-checkbox:checked) .settings {
   opacity: 1;
   min-height: auto;
-  max-height: 200px;
+  max-height: 500px;
   visibility: visible;
 }
 
@@ -196,12 +203,9 @@
 /* Контролы ambient звука */
 .ambient-controls {
   display: flex;
-  flex-direction: column;
   gap: 8px;
   align-items: center;
-  padding: 8px;
   border-top: 1px dashed var(--border-page, #ccc);
-  margin-top: 5px;
 }
 
 .ambient-controls label {

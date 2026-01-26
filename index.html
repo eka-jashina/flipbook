@@ -115,69 +115,73 @@
           </label>
         </div>
         <div class="settings" role="group" aria-label="Настройки чтения">
-          <div class="font-size">
-            <span>Размер шрифта </span>
-            <button id="decrease">−</button>
-            <button id="increase">+</button>
+          <div>
+            <div class="font-size">
+              <span>Размер шрифта </span>
+              <button id="decrease">−</button>
+              <button id="increase">+</button>
+            </div>
+            <div class="font-choice">
+              <label for="font-select">Шрифт:</label>
+              <select id="font-select">
+                <option value="georgia">Georgia</option>
+                <option value="merriweather">Merriweather</option>
+                <option value="libre-baskerville">Libre Baskerville</option>
+                <option value="inter">Inter</option>
+                <option value="roboto">Roboto</option>
+                <option value="open-sans">Open Sans</option>
+              </select>
+            </div>
+            <div class="theme-choice">
+              <label for="theme-select">Тема:</label>
+              <select id="theme-select">
+                <option value="light">Светлая</option>
+                <option value="dark">Тёмная</option>
+                <option value="bw">Ч/б</option>
+              </select>
+            </div>
+            <!-- <button id="debugToggle">Debug</button> -->
           </div>
-          <div class="font-choice">
-            <label for="font-select">Шрифт:</label>
-            <select id="font-select">
-              <option value="georgia">Georgia</option>
-              <option value="merriweather">Merriweather</option>
-              <option value="libre-baskerville">Libre Baskerville</option>
-              <option value="inter">Inter</option>
-              <option value="roboto">Roboto</option>
-              <option value="open-sans">Open Sans</option>
-            </select>
-          </div>
-          <div class="theme-choice">
-            <label for="theme-select">Тема:</label>
-            <select id="theme-select">
-              <option value="light">Светлая</option>
-              <option value="dark">Тёмная</option>
-              <option value="bw">Ч/б</option>
-            </select>
-          </div>
-          <div class="sound-controls">
-            <label>
-              <input type="checkbox" id="sound-toggle" checked />
-              Звук
-            </label>
-            <div class="sound-volume">
-              <button id="volume-down" title="Уменьшить громкость">🔉</button>
-              <input 
-                type="range" 
-                id="volume-slider" 
-                min="0" 
-                max="100" 
-                value="30" 
-                title="Громкость"
-              />
-              <button id="volume-up" title="Увеличить громкость">🔊</button>
+          <div>
+            <div class="sound-controls">
+              <label>
+                <input type="checkbox" id="sound-toggle" checked />
+                Звук
+              </label>
+              <div class="sound-volume">
+                <button id="volume-down" title="Уменьшить громкость">🔉</button>
+                <input 
+                  type="range" 
+                  id="volume-slider" 
+                  min="0" 
+                  max="100" 
+                  value="30" 
+                  title="Громкость"
+                />
+                <button id="volume-up" title="Увеличить громкость">🔊</button>
+              </div>
+            </div>
+            <div class="ambient-controls">
+              <label for="ambient-select">Фон:</label>
+              <select id="ambient-select">
+                <option value="none">Без звука</option>
+                <option value="rain">🌧️ Дождь</option>
+                <option value="fireplace">🔥 Камин</option>
+                <option value="cafe">☕ Кафе</option>
+              </select>
+              <div class="ambient-volume" id="ambient-volume-wrapper">
+                <input 
+                  type="range" 
+                  id="ambient-volume" 
+                  min="0" 
+                  max="100" 
+                  value="50" 
+                  title="Громкость фона"
+                />
+                <span id="ambient-volume-label">50%</span>
+              </div>
             </div>
           </div>
-          <div class="ambient-controls">
-            <label for="ambient-select">Фон:</label>
-            <select id="ambient-select">
-              <option value="none">Без звука</option>
-              <option value="rain">🌧️ Дождь</option>
-              <option value="fireplace">🔥 Камин</option>
-              <option value="cafe">☕ Кафе</option>
-            </select>
-            <div class="ambient-volume" id="ambient-volume-wrapper">
-              <input 
-                type="range" 
-                id="ambient-volume" 
-                min="0" 
-                max="100" 
-                value="50" 
-                title="Громкость фона"
-              />
-              <span id="ambient-volume-label">50%</span>
-            </div>
-          </div>
-          <button id="debugToggle">Debug</button>
         </div>
         <div class="copyright">
           <span>разработка - <a href="https://t.me/layare">@layare</a></span>
