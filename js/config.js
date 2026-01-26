@@ -52,6 +52,8 @@ export const CONFIG = Object.freeze({
     page: 0,
     soundEnabled: true,
     soundVolume: 0.3,
+    ambientType: 'none',
+    ambientVolume: 0.5
   },
 
   VIRTUALIZATION: {

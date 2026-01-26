@@ -17,6 +17,7 @@ import { BookAnimator } from './BookAnimator.js';
 import { LoadingIndicator } from './LoadingIndicator.js';
 import { DebugPanel } from './DebugPanel.js';
 import { EventController } from './EventController.js';
+import { AmbientManager } from '../utils/AmbientManager.js';
 
 export class ComponentFactory {
   /**
@@ -123,6 +124,26 @@ export class ComponentFactory {
       sheet,
       timerManager: this.timerManager,
     });
+  }
+
+  /**
+   * Создать менеджер ambient звуков
+   * @param {Object} settings - Настройки из SettingsManager
+   * @returns {AmbientManager}
+   */
+  createAmbientManager(settings) {
+    const ambientManager = new AmbientManager({
+      currentType: settings.get('ambientType'),
+      volume: settings.get('ambientVolume'),
+    });
+
+    // Регистрируем доступные ambient звуки
+    ambientManager
+      .register('rain', 'public/sounds/ambient/rain.mp3')
+      .register('fireplace', 'public/sounds/ambient/fireplace.mp3')
+      .register('cafe', 'public/sounds/ambient/cafe.mp3');
+
+    return ambientManager;
   }
 
   /**

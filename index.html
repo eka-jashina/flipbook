@@ -157,6 +157,26 @@
               <button id="volume-up" title="Увеличить громкость">🔊</button>
             </div>
           </div>
+          <div class="ambient-controls">
+            <label for="ambient-select">Фон:</label>
+            <select id="ambient-select">
+              <option value="none">Без звука</option>
+              <option value="rain">🌧️ Дождь</option>
+              <option value="fireplace">🔥 Камин</option>
+              <option value="cafe">☕ Кафе</option>
+            </select>
+            <div class="ambient-volume" id="ambient-volume-wrapper">
+              <input 
+                type="range" 
+                id="ambient-volume" 
+                min="0" 
+                max="100" 
+                value="50" 
+                title="Громкость фона"
+              />
+              <span id="ambient-volume-label">50%</span>
+            </div>
+          </div>
           <button id="debugToggle">Debug</button>
         </div>
         <div class="copyright">

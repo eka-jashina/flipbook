@@ -70,6 +70,12 @@ export class DOMManager {
       volumeSlider: $("volume-slider"),
       volumeDown: $("volume-down"),
       volumeUp: $("volume-up"),
+
+      // Ambient controls
+      ambientSelect: $("ambient-select"),
+      ambientVolume: $("ambient-volume"),
+      ambientVolumeLabel: $("ambient-volume-label"),
+      ambientVolumeWrapper: $("ambient-volume-wrapper"),
       
       // Debug panel
       debugInfo: $("debugInfo"),

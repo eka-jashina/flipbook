@@ -187,3 +187,103 @@
 #volume-slider::-moz-range-thumb:hover {
   transform: scale(1.2);
 }
+
+/* 
+  AMBIENT CONTROLS STYLES
+  Добавить в css/controls.css после блока .sound-controls
+*/
+
+/* Контролы ambient звука */
+.ambient-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-top: 1px dashed var(--border-page, #ccc);
+  margin-top: 5px;
+}
+
+.ambient-controls label {
+  font-size: 0.9em;
+}
+
+.ambient-controls select {
+  min-width: 120px;
+}
+
+.ambient-volume {
+  display: none; /* Скрыт по умолчанию */
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Показываем громкость когда есть активный ambient */
+.ambient-controls.has-ambient .ambient-volume {
+  display: flex;
+}
+
+#ambient-volume {
+  width: 80px;
+  height: 4px;
+  background: var(--border-page, #ccc);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#ambient-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: brown;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+#ambient-volume::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+#ambient-volume::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: brown;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+#ambient-volume::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+#ambient-volume-label {
+  font-size: 0.8em;
+  min-width: 35px;
+  text-align: center;
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 600px) {
+  .ambient-controls {
+    width: 100%;
+  }
+  
+  .ambient-controls select {
+    width: 100%;
+  }
+  
+  #ambient-volume {
+    width: 100px;
+  }
+}

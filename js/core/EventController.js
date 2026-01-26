@@ -104,6 +104,8 @@ export class EventController {
       volumeSlider,
       volumeDown,
       volumeUp,
+      ambientSelect,
+      ambientVolume
     } = elements;
 
     this.eventManager.add(increaseBtn, "click", () => {
@@ -150,6 +152,19 @@ export class EventController {
       this.eventManager.add(volumeUp, "click", () => {
         this.onSettings("soundVolume", "increase");
         this._updateVolumeSlider();
+      });
+    }
+
+    if (ambientSelect) {
+      this.eventManager.add(ambientSelect, "change", (e) => {
+        this.onSettings("ambientType", e.target.value);
+      });
+    }
+
+    if (ambientVolume) {
+      this.eventManager.add(ambientVolume, "input", (e) => {
+        const volume = parseFloat(e.target.value) / 100;
+        this.onSettings("ambientVolume", volume);
       });
     }
   }

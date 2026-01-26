@@ -87,6 +87,33 @@ export class AppInitializer {
     if (volumeSlider) {
       volumeSlider.value = this.settings.get("soundVolume") * 100;
     }
+
+    // Синхронизировать контролы ambient
+    const ambientSelect = this.dom.get('ambientSelect');
+    const ambientVolume = this.dom.get('ambientVolume');
+    const ambientVolumeLabel = this.dom.get('ambientVolumeLabel');
+    const ambientControls = ambientSelect?.closest('.ambient-controls');
+
+    if (ambientSelect) {
+      const savedType = this.settings.get("ambientType");
+      ambientSelect.value = savedType;
+      
+      // Показать/скрыть слайдер в зависимости от типа
+      if (ambientControls) {
+        if (savedType !== 'none') {
+          ambientControls.classList.add('has-ambient');
+        }
+      }
+    }
+
+    if (ambientVolume) {
+      const savedVolume = this.settings.get("ambientVolume");
+      ambientVolume.value = savedVolume * 100;
+      
+      if (ambientVolumeLabel) {
+        ambientVolumeLabel.textContent = `${Math.round(savedVolume * 100)}%`;
+      }
+    }
   }
 
   /**
@@ -97,14 +124,14 @@ export class AppInitializer {
     const {
       nextBtn, prevBtn, tocBtn, continueBtn, cover,
       increaseBtn, decreaseBtn, fontSelect, themeSelect, debugToggle,
-      soundToggle, volumeSlider, volumeDown, volumeUp
+      soundToggle, volumeSlider, volumeDown, volumeUp, ambientSelect, ambientVolume
     } = this.dom.elements;
 
     this.eventController.bind({
       nextBtn, prevBtn, tocBtn, continueBtn,
       coverEl: cover,
       increaseBtn, decreaseBtn, fontSelect, themeSelect, debugToggle,
-      soundToggle, volumeSlider, volumeDown, volumeUp
+      soundToggle, volumeSlider, volumeDown, volumeUp, ambientSelect, ambientVolume
     });
 
     this.dragDelegate.bind();
