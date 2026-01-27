@@ -1,20 +1,31 @@
 /**
  * DRAG DELEGATE
  * Управление drag-перелистыванием.
- *
- * Управляет перелистыванием страниц перетаскиванием за углы.
- * Обновлено для работы с DOMManager.
+ * 
  */
 
 import { cssVars } from "../../utils/CSSVariables.js";
+import { BaseDelegate } from './BaseDelegate.js';
 
-export class DragDelegate {
-  get soundManager() {
-    return this.ctrl.soundManager;
-  }
-
-  constructor(controller) {
-    this.ctrl = controller;
+export class DragDelegate extends BaseDelegate {
+  /**
+   * @param {Object} deps
+   * @param {BookStateMachine} deps.stateMachine
+   * @param {BookRenderer} deps.renderer
+   * @param {BookAnimator} deps.animator
+   * @param {SoundManager} deps.soundManager
+   * @param {DOMManager} deps.dom
+   * @param {EventListenerManager} deps.eventManager
+   * @param {MediaQueryManager} deps.mediaQueries
+   * @param {Object} deps.state
+   * @param {Function} deps.onIndexChange - Коллбэк при изменении индекса
+   * @param {Function} deps.onChapterUpdate - Коллбэк для обновления UI главы
+   */
+  constructor(deps) {
+    super(deps);
+    this.eventManager = deps.eventManager;
+    this.onIndexChange = deps.onIndexChange;
+    this.onChapterUpdate = deps.onChapterUpdate;
 
     // Состояние drag
     this.isDragging = false;
@@ -36,47 +47,55 @@ export class DragDelegate {
     };
   }
 
-  // === АЛИАСЫ ===
+  /**
+   * Валидация зависимостей
+   * @protected
+   */
+  _validateRequiredDependencies(deps) {
+    this._validateDependencies(
+      deps,
+      ['stateMachine', 'renderer', 'dom', 'eventManager', 'mediaQueries', 'state'],
+      'DragDelegate'
+    );
+  }
 
-  get renderer() {
-    return this.ctrl.renderer;
-  }
-  get state() {
-    return this.ctrl.stateMachine;
-  }
-  get isMobile() {
-    return this.ctrl.isMobile;
-  }
+  /**
+   * Количество страниц на переворот
+   * @returns {number}
+   */
   get pagesPerFlip() {
-    return this.ctrl.pagesPerFlip;
+    return cssVars.getNumber("--pages-per-flip", this.isMobile ? 1 : 2);
   }
 
-  /** @returns {boolean} Активен ли drag в данный момент */
+  /**
+   * Активен ли drag в данный момент
+   * @returns {boolean}
+   */
   get isActive() {
     return this.isDragging;
   }
 
-  // === ПУБЛИЧНЫЙ API ===
+  // ═══════════════════════════════════════════
+  // ПУБЛИЧНЫЙ API
+  // ═══════════════════════════════════════════
 
   /**
    * Привязать события к зонам захвата
    */
   bind() {
-    const book = this.ctrl.dom.get("book");
-    if (!book) {
-      return;
-    }
+    const book = this.dom.get("book");
+    if (!book) return;
 
     const corners = book.querySelectorAll(".corner-zone");
 
     corners.forEach((zone) => {
-      this.ctrl.eventManager.add(zone, "mousedown", (e) => {
+      this.eventManager.add(zone, "mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
         this._startDrag(e, zone.dataset.dir);
       });
 
-      this.ctrl.eventManager.add(
+      this.eventManager.add(
         zone,
         "touchstart",
         (e) => {
@@ -88,67 +107,44 @@ export class DragDelegate {
       );
     });
 
-    this.ctrl.eventManager.add(
-      document,
-      "mousemove",
-      this._boundHandlers.onMouseMove,
-    );
-    this.ctrl.eventManager.add(
-      document,
-      "mouseup",
-      this._boundHandlers.onMouseUp,
-    );
-    this.ctrl.eventManager.add(
-      document,
-      "touchmove",
-      this._boundHandlers.onTouchMove,
-      { passive: false },
-    );
-    this.ctrl.eventManager.add(
-      document,
-      "touchend",
-      this._boundHandlers.onTouchEnd,
-    );
+    // Глобальные обработчики движения и отпускания
+    this.eventManager.add(document, "mousemove", this._boundHandlers.onMouseMove);
+    this.eventManager.add(document, "mouseup", this._boundHandlers.onMouseUp);
+    this.eventManager.add(document, "touchmove", this._boundHandlers.onTouchMove, { passive: false });
+    this.eventManager.add(document, "touchend", this._boundHandlers.onTouchEnd);
   }
 
-  // === ПРОВЕРКИ ВОЗМОЖНОСТИ ДЕЙСТВИЯ ===
+  // ═══════════════════════════════════════════
+  // ПРОВЕРКИ ВОЗМОЖНОСТИ ДЕЙСТВИЯ
+  // ═══════════════════════════════════════════
 
-  /** @returns {boolean} Можно ли листать вперёд */
   canFlipNext() {
-    if (!this.state.isOpened) return false;
+    if (!this.isOpened) return false;
     const maxIndex = this.renderer.getMaxIndex(this.isMobile);
-    return this.ctrl.index + this.pagesPerFlip <= maxIndex;
+    return this.currentIndex + this.pagesPerFlip <= maxIndex;
   }
 
-  /** @returns {boolean} Можно ли листать назад */
   canFlipPrev() {
-    if (!this.state.isOpened) return false;
-    return this.ctrl.index > 0;
+    if (!this.isOpened) return false;
+    return this.currentIndex > 0;
   }
 
-  // === НАЧАЛО DRAG ===
+  // ═══════════════════════════════════════════
+  // DRAG LIFECYCLE
+  // ═══════════════════════════════════════════
 
-  /**
-   * Начать перетаскивание
-   * @param {MouseEvent|Touch} e
-   * @param {'next'|'prev'} dir
-   */
   _startDrag(e, dir) {
-    if (this.state.isBusy) return;
+    if (this.isBusy) return;
 
-    if (dir === "next" && !this.canFlipNext()) {
-      return;
-    }
-    if (dir === "prev" && !this.canFlipPrev()) {
-      return;
-    }
+    if (dir === "next" && !this.canFlipNext()) return;
+    if (dir === "prev" && !this.canFlipPrev()) return;
 
     this.isDragging = true;
     this.direction = dir;
     this.startX = e.clientX;
     this.currentAngle = 0;
 
-    const book = this.ctrl.dom.get("book");
+    const book = this.dom.get("book");
     if (!book) return;
 
     this.bookRect = book.getBoundingClientRect();
@@ -156,32 +152,24 @@ export class DragDelegate {
 
     this._prepareFlip();
 
-    const flipShadow = this.ctrl.dom.get("flipShadow");
+    const flipShadow = this.dom.get("flipShadow");
     if (flipShadow) flipShadow.classList.add("active");
 
     this._updateAngleFromEvent(e);
   }
 
-  /**
-   * Подготовить буферы, sheet и страницу под переворотом
-   */
   _prepareFlip() {
     const nextIndex =
       this.direction === "next"
-        ? this.ctrl.index + this.pagesPerFlip
-        : this.ctrl.index - this.pagesPerFlip;
+        ? this.currentIndex + this.pagesPerFlip
+        : this.currentIndex - this.pagesPerFlip;
 
     this.renderer.prepareBuffer(nextIndex, this.isMobile);
-    this.renderer.prepareSheet(
-      this.ctrl.index,
-      nextIndex,
-      this.direction,
-      this.isMobile,
-    );
+    this.renderer.prepareSheet(this.currentIndex, nextIndex, this.direction, this.isMobile);
     this._showUnderPage();
 
-    const sheet = this.ctrl.dom.get("sheet");
-    const book = this.ctrl.dom.get("book");
+    const sheet = this.dom.get("sheet");
+    const book = this.dom.get("book");
 
     if (sheet) {
       sheet.dataset.direction = this.direction;
@@ -194,12 +182,8 @@ export class DragDelegate {
     }
   }
 
-  /**
-   * Показать страницу под переворачиваемой
-   */
   _showUnderPage() {
-    const { leftActive, rightActive, leftBuffer, rightBuffer } =
-      this.renderer.elements;
+    const { leftActive, rightActive, leftBuffer, rightBuffer } = this.renderer.elements;
     this._pageRefs = { leftActive, rightActive, leftBuffer, rightBuffer };
 
     if (this.isMobile) {
@@ -207,29 +191,25 @@ export class DragDelegate {
         rightBuffer.dataset.buffer = "false";
         rightBuffer.dataset.dragVisible = "true";
       }
-      if (rightActive) {
-        rightActive.style.display = "none";
-      }
+      if (rightActive) rightActive.style.display = "none";
     } else if (this.direction === "next") {
       if (rightBuffer) {
         rightBuffer.dataset.buffer = "false";
         rightBuffer.dataset.dragVisible = "true";
       }
-      if (rightActive) {
-        rightActive.style.display = "none";
-      }
+      if (rightActive) rightActive.style.display = "none";
     } else {
       if (leftBuffer) {
         leftBuffer.dataset.buffer = "false";
         leftBuffer.dataset.dragVisible = "true";
       }
-      if (leftActive) {
-        leftActive.style.display = "none";
-      }
+      if (leftActive) leftActive.style.display = "none";
     }
   }
 
-  // === ДВИЖЕНИЕ ===
+  // ═══════════════════════════════════════════
+  // ДВИЖЕНИЕ
+  // ═══════════════════════════════════════════
 
   _onMouseMove(e) {
     if (!this.isDragging) return;
@@ -242,10 +222,6 @@ export class DragDelegate {
     this._updateAngleFromEvent(e.touches[0]);
   }
 
-  /**
-   * Вычислить угол из позиции курсора
-   * @param {MouseEvent|Touch} e
-   */
   _updateAngleFromEvent(e) {
     if (!this.bookRect) return;
 
@@ -262,14 +238,10 @@ export class DragDelegate {
     this._render();
   }
 
-  /**
-   * Отрисовать текущее состояние drag
-   */
   _render() {
-    const angle =
-      this.direction === "next" ? -this.currentAngle : this.currentAngle;
+    const angle = this.direction === "next" ? -this.currentAngle : this.currentAngle;
 
-    const sheet = this.ctrl.dom.get("sheet");
+    const sheet = this.dom.get("sheet");
     if (sheet) {
       sheet.style.transform = `translateZ(1px) rotateY(${angle}deg)`;
     }
@@ -277,28 +249,22 @@ export class DragDelegate {
     this._updateShadows();
   }
 
-  /**
-   * Обновить тени (на sheet и flip-shadow на странице)
-   */
   _updateShadows() {
     const progress = this.currentAngle / 180;
     const shadowOpacity = Math.sin(progress * Math.PI) * 0.35;
     const shadowSize = Math.sin(progress * Math.PI) * 25;
 
-    const book = this.ctrl.dom.get("book");
+    const book = this.dom.get("book");
     if (book) {
       book.style.setProperty("--spine-shadow-alpha", shadowOpacity.toFixed(2));
       book.style.setProperty("--spine-shadow-size", `${shadowSize}px`);
     }
 
-    // Тень на странице под переворотом
-    const flipShadow = this.ctrl.dom.get("flipShadow");
+    const flipShadow = this.dom.get("flipShadow");
     if (!flipShadow) return;
 
     const flipOpacity = Math.sin(progress * Math.PI) * 0.4;
     const flipWidth = Math.sin(progress * Math.PI) * 120;
-
-    // На мобильном корешок на 10%, на десктопе на 50%
     const spinePosition = this.isMobile ? "10%" : "50%";
 
     if (this.direction === "next") {
@@ -318,7 +284,9 @@ export class DragDelegate {
     }
   }
 
-  // === ЗАВЕРШЕНИЕ ===
+  // ═══════════════════════════════════════════
+  // ЗАВЕРШЕНИЕ
+  // ═══════════════════════════════════════════
 
   _onMouseUp() {
     if (!this.isDragging) return;
@@ -330,9 +298,6 @@ export class DragDelegate {
     this._endDrag();
   }
 
-  /**
-   * Завершить перетаскивание — решить, завершить или отменить
-   */
   _endDrag() {
     if (!this.isDragging) return;
     this.isDragging = false;
@@ -341,25 +306,17 @@ export class DragDelegate {
     this._animateTo(willComplete ? 180 : 0, willComplete);
   }
 
-  /**
-   * Анимировать к целевому углу
-   * @param {number} targetAngle
-   * @param {boolean} willComplete
-   */
   _animateTo(targetAngle, willComplete) {
     const startAngle = this.currentAngle;
     const duration = Math.max(
       150,
-      (cssVars.getTime("--timing-rotate", 350) *
-        Math.abs(targetAngle - startAngle)) /
-        180,
+      (cssVars.getTime("--timing-rotate", 350) * Math.abs(targetAngle - startAngle)) / 180,
     );
     const startTime = performance.now();
 
     const animate = (now) => {
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
-      // Easing: ease-in-out quad
       const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
       this.currentAngle = startAngle + (targetAngle - startAngle) * eased;
@@ -375,18 +332,13 @@ export class DragDelegate {
     requestAnimationFrame(animate);
   }
 
-  /**
-   * Финализировать drag — сбросить состояние и применить результат
-   * @param {boolean} completed
-   */
   _finish(completed) {
     const direction = this.direction;
 
-    const sheet = this.ctrl.dom.get("sheet");
-    const book = this.ctrl.dom.get("book");
-    const flipShadow = this.ctrl.dom.get("flipShadow");
+    const sheet = this.dom.get("sheet");
+    const book = this.dom.get("book");
+    const flipShadow = this.dom.get("flipShadow");
 
-    // Reset sheet
     if (sheet) {
       sheet.style.transition = "";
       sheet.style.transform = "";
@@ -394,7 +346,6 @@ export class DragDelegate {
       delete sheet.dataset.direction;
     }
 
-    // Reset shadows
     if (book) {
       book.style.removeProperty("--spine-shadow-alpha");
       book.style.removeProperty("--spine-shadow-size");
@@ -416,87 +367,80 @@ export class DragDelegate {
     this._pageRefs = null;
   }
 
-  /**
-   * Завершить переворот успешно — обновить индекс и поменять буферы
-   * @param {'next'|'prev'} direction
-   */
   _completeFlip(direction) {
-    const book = this.ctrl.dom.get("book");
-    if (book) {
-      book.dataset.noTransition = "true";
-    }
+    const book = this.dom.get("book");
+    if (book) book.dataset.noTransition = "true";
 
-    this.ctrl.index =
+    const newIndex =
       direction === "next"
-        ? this.ctrl.index + this.pagesPerFlip
-        : this.ctrl.index - this.pagesPerFlip;
+        ? this.currentIndex + this.pagesPerFlip
+        : this.currentIndex - this.pagesPerFlip;
 
-    this.renderer.swapBuffers();
-    this._hideUnderPage(true);
-
-    if (book) {
-      book.dataset.state = "opened";
-    }
-
-    // Воспроизводим звук перелистывания
+    // Воспроизводим звук
     if (this.soundManager) {
       const playbackRate = 0.9 + Math.random() * 0.2;
-      this.soundManager.play("pageFlip", { playbackRate });
+      this.soundManager.play('pageFlip', { playbackRate });
     }
 
-    // Включаем transitions обратно после отрисовки
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (book) {
-          delete book.dataset.noTransition;
-        }
-      });
-    });
+    this.renderer.swapBuffers();
 
-    this.ctrl.settings.set("page", this.ctrl.index);
-    this.ctrl.chapterDelegate.updateChapterUI();
-    this.ctrl._updateDebug();
+    // Обновляем индекс через коллбэк
+    if (this.onIndexChange) {
+      this.onIndexChange(newIndex);
+    }
+
+    // Обновляем UI главы
+    if (this.onChapterUpdate) {
+      this.onChapterUpdate();
+    }
+
+    this._cleanupAfterFlip(book);
   }
 
-  /**
-   * Отменить переворот — вернуть всё как было
-   */
   _cancelFlip() {
-    this._hideUnderPage(false);
+    const book = this.dom.get("book");
+    this._cleanupAfterFlip(book);
+  }
 
-    const book = this.ctrl.dom.get("book");
+  _cleanupAfterFlip(book) {
+    if (book) book.dataset.state = "opened";
+
+    if (this._pageRefs) {
+      const { leftActive, rightActive, leftBuffer, rightBuffer } = this._pageRefs;
+      
+      if (leftActive) leftActive.style.display = "";
+      if (rightActive) rightActive.style.display = "";
+      if (leftBuffer) {
+        leftBuffer.dataset.buffer = "true";
+        delete leftBuffer.dataset.dragVisible;
+      }
+      if (rightBuffer) {
+        rightBuffer.dataset.buffer = "true";
+        delete rightBuffer.dataset.dragVisible;
+      }
+    }
+
     if (book) {
-      book.dataset.state = "opened";
-    }
-
-    this.ctrl._updateDebug();
-  }
-
-  /**
-   * Скрыть страницу под переворачиваемой
-   * @param {boolean} completed - true если переворот завершён
-   */
-  _hideUnderPage(completed) {
-    const { leftActive, rightActive, leftBuffer, rightBuffer } =
-      this._pageRefs || this.renderer.elements;
-
-    if (leftBuffer) delete leftBuffer.dataset.dragVisible;
-    if (rightBuffer) delete rightBuffer.dataset.dragVisible;
-    if (leftActive) leftActive.style.display = "";
-    if (rightActive) rightActive.style.display = "";
-
-    // При отмене возвращаем буферы в скрытое состояние
-    if (!completed) {
-      if (leftBuffer) leftBuffer.dataset.buffer = "true";
-      if (rightBuffer) rightBuffer.dataset.buffer = "true";
+      requestAnimationFrame(() => {
+        if (book) delete book.dataset.noTransition;
+      });
     }
   }
 
   /**
-   * Очистка при уничтожении
+   * Очистка
    */
   destroy() {
-    this._boundHandlers = {};
+    this.isDragging = false;
+    this.direction = null;
+    this.currentAngle = 0;
+    this.bookWidth = 0;
+    this.bookRect = null;
     this._pageRefs = null;
+    this._boundHandlers = null;
+    this.eventManager = null;
+    this.onIndexChange = null;
+    this.onChapterUpdate = null;
+    super.destroy();
   }
 }

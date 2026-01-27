@@ -14,7 +14,7 @@ export class DebugPanel {
     this.visible = !this.visible;
     this.container.classList.toggle("visible", this.visible);
     
-    // УЛУЧШЕНИЕ: Включаем/выключаем debug режим для drag-зон
+    // Включаем/выключаем debug режим для drag-зон
     document.body.dataset.debug = this.visible;
   }
 

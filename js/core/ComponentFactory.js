@@ -1,23 +1,24 @@
 /**
  * COMPONENT FACTORY
  * Фабрика для создания всех компонентов приложения.
- * 
- * Преимущества:
- * - Централизованная логика создания
- * - Упрощение тестирования
- * - Явные зависимости
  */
 
-import { CONFIG } from '../config.js';
-import { sanitizer } from '../utils/HTMLSanitizer.js';
-import { SoundManager } from '../utils/SoundManager.js';
-import { BookStateMachine, SettingsManager, BackgroundManager, ContentLoader, AsyncPaginator } from '../managers/index.js';
-import { BookRenderer } from './BookRenderer.js';
-import { BookAnimator } from './BookAnimator.js';
-import { LoadingIndicator } from './LoadingIndicator.js';
-import { DebugPanel } from './DebugPanel.js';
-import { EventController } from './EventController.js';
-import { AmbientManager } from '../utils/AmbientManager.js';
+import { CONFIG } from "../config.js";
+import { sanitizer } from "../utils/HTMLSanitizer.js";
+import { SoundManager } from "../utils/SoundManager.js";
+import {
+  BookStateMachine,
+  SettingsManager,
+  BackgroundManager,
+  ContentLoader,
+  AsyncPaginator,
+} from "../managers/index.js";
+import { BookRenderer } from "./BookRenderer.js";
+import { BookAnimator } from "./BookAnimator.js";
+import { LoadingIndicator } from "./LoadingIndicator.js";
+import { DebugPanel } from "./DebugPanel.js";
+import { EventController } from "./EventController.js";
+import { AmbientManager } from "../utils/AmbientManager.js";
 
 export class ComponentFactory {
   /**
@@ -53,15 +54,24 @@ export class ComponentFactory {
    */
   createSoundManager(settings) {
     const soundManager = new SoundManager({
-      enabled: settings.get('soundEnabled'),
-      volume: settings.get('soundVolume'),
+      enabled: settings.get("soundEnabled"),
+      volume: settings.get("soundVolume"),
     });
 
     // Регистрируем звуки
     soundManager
-      .register('pageFlip', CONFIG.SOUNDS.pageFlip, { preload: true, poolSize: 3 })
-      .register('bookOpen', CONFIG.SOUNDS.bookOpen, { preload: true, poolSize: 1 })
-      .register('bookClose', CONFIG.SOUNDS.bookClose, { preload: true, poolSize: 1 });
+      .register("pageFlip", CONFIG.SOUNDS.pageFlip, {
+        preload: true,
+        poolSize: 3,
+      })
+      .register("bookOpen", CONFIG.SOUNDS.bookOpen, {
+        preload: true,
+        poolSize: 1,
+      })
+      .register("bookClose", CONFIG.SOUNDS.bookClose, {
+        preload: true,
+        poolSize: 1,
+      });
 
     return soundManager;
   }
@@ -95,8 +105,15 @@ export class ComponentFactory {
    * @returns {BookRenderer}
    */
   createRenderer() {
-    const { leftA, rightA, leftB, rightB, sheetFront, sheetBack } = 
-      this.dom.getMultiple('leftA', 'rightA', 'leftB', 'rightB', 'sheetFront', 'sheetBack');
+    const { leftA, rightA, leftB, rightB, sheetFront, sheetBack } =
+      this.dom.getMultiple(
+        "leftA",
+        "rightA",
+        "leftB",
+        "rightB",
+        "sheetFront",
+        "sheetBack",
+      );
 
     return new BookRenderer({
       cacheLimit: CONFIG.VIRTUALIZATION.cacheLimit,
@@ -114,8 +131,12 @@ export class ComponentFactory {
    * @returns {BookAnimator}
    */
   createAnimator() {
-    const { book, bookWrap, cover, sheet } = 
-      this.dom.getMultiple('book', 'bookWrap', 'cover', 'sheet');
+    const { book, bookWrap, cover, sheet } = this.dom.getMultiple(
+      "book",
+      "bookWrap",
+      "cover",
+      "sheet",
+    );
 
     return new BookAnimator({
       book,
@@ -133,15 +154,15 @@ export class ComponentFactory {
    */
   createAmbientManager(settings) {
     const ambientManager = new AmbientManager({
-      currentType: settings.get('ambientType'),
-      volume: settings.get('ambientVolume'),
+      currentType: settings.get("ambientType"),
+      volume: settings.get("ambientVolume"),
     });
 
     // Регистрируем доступные ambient звуки
     ambientManager
-      .register('rain', 'public/sounds/ambient/rain.mp3')
-      .register('fireplace', 'public/sounds/ambient/fireplace.mp3')
-      .register('cafe', 'public/sounds/ambient/cafe.mp3');
+      .register("rain", "public/sounds/ambient/rain.mp3")
+      .register("fireplace", "public/sounds/ambient/fireplace.mp3")
+      .register("cafe", "public/sounds/ambient/cafe.mp3");
 
     return ambientManager;
   }
@@ -151,8 +172,10 @@ export class ComponentFactory {
    * @returns {LoadingIndicator}
    */
   createLoadingIndicator() {
-    const { loadingOverlay, loadingProgress } = 
-      this.dom.getMultiple('loadingOverlay', 'loadingProgress');
+    const { loadingOverlay, loadingProgress } = this.dom.getMultiple(
+      "loadingOverlay",
+      "loadingProgress",
+    );
 
     return new LoadingIndicator(loadingOverlay, loadingProgress);
   }
@@ -162,8 +185,23 @@ export class ComponentFactory {
    * @returns {DebugPanel}
    */
   createDebugPanel() {
-    const { debugInfo, debugState, debugTotal, debugCurrent, debugCache, debugMemory, debugListeners } = 
-      this.dom.getMultiple('debugInfo', 'debugState', 'debugTotal', 'debugCurrent', 'debugCache', 'debugMemory', 'debugListeners');
+    const {
+      debugInfo,
+      debugState,
+      debugTotal,
+      debugCurrent,
+      debugCache,
+      debugMemory,
+      debugListeners,
+    } = this.dom.getMultiple(
+      "debugInfo",
+      "debugState",
+      "debugTotal",
+      "debugCurrent",
+      "debugCache",
+      "debugMemory",
+      "debugListeners",
+    );
 
     return new DebugPanel({
       container: debugInfo,
@@ -189,7 +227,7 @@ export class ComponentFactory {
    */
   createEventController(handlers) {
     return new EventController({
-      book: this.dom.get('book'),
+      book: this.dom.get("book"),
       eventManager: this.eventManager,
       ...handlers,
     });

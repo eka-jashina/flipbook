@@ -7,15 +7,35 @@
  * - Обновление фона и UI главы
  * - Предзагрузку фонов следующих глав
  * 
- * Обновлено для работы с DOMManager.
  */
 
 import { CONFIG } from '../../config.js';
+import { BaseDelegate } from './BaseDelegate.js';
 
-export class ChapterDelegate {
-  constructor(controller) {
-    this.ctrl = controller;
+export class ChapterDelegate extends BaseDelegate {
+  /**
+   * @param {Object} deps
+   * @param {BackgroundManager} deps.backgroundManager
+   * @param {DOMManager} deps.dom
+   * @param {Object} deps.state - Объект состояния контроллера
+   * @param {number} deps.state.index
+   * @param {number[]} deps.state.chapterStarts
+   */
+  constructor(deps) {
+    super(deps);
     this.lastPreloadedChapter = -1;
+  }
+
+  /**
+   * Валидация зависимостей
+   * @protected
+   */
+  _validateRequiredDependencies(deps) {
+    this._validateDependencies(
+      deps,
+      ['backgroundManager', 'dom', 'state'],
+      'ChapterDelegate'
+    );
   }
 
   /**
@@ -23,10 +43,10 @@ export class ChapterDelegate {
    * @param {number} pageIndex
    * @returns {number}
    */
-  getCurrentChapter(pageIndex = this.ctrl.index) {
+  getCurrentChapter(pageIndex = this.currentIndex) {
     let current = 0;
-    for (let i = 0; i < this.ctrl.chapterStarts.length; i++) {
-      if (this.ctrl.chapterStarts[i] <= pageIndex) {
+    for (let i = 0; i < this.chapterStarts.length; i++) {
+      if (this.chapterStarts[i] <= pageIndex) {
         current = i;
       } else {
         break;
@@ -46,37 +66,30 @@ export class ChapterDelegate {
   }
 
   /**
-   * Обновить UI главы (фон, data-атрибут) и предзагрузить следующий фон
-   * @param {number} [pageIndex]
+   * Обновить фон главы
+   * @param {number} pageIndex - Индекс текущей страницы
+   * @param {boolean} isMobile - Мобильный режим
    */
-  updateChapterUI(pageIndex = this.ctrl.index) {
-    if (this.ctrl.isDestroyed) return;
+  updateBackground(pageIndex, isMobile) {
+    const currentChapter = this.getCurrentChapter(pageIndex);
+    const chapterInfo = CONFIG.CHAPTERS[currentChapter];
+    
+    if (!chapterInfo) return;
 
-    const body = this.ctrl.dom.get('body');
-    if (!body) return;
-
-    if (!this.ctrl.stateMachine.isOpened || pageIndex === 0) {
-      this.ctrl.backgroundManager.setBackground(CONFIG.COVER_BG);
-      body.dataset.chapter = "cover";
-      
-      // Предзагружаем фон первой главы когда на обложке
-      if (CONFIG.CHAPTERS[0]) {
-        this.ctrl.backgroundManager.preload(CONFIG.CHAPTERS[0].bg, true);
-      }
-      return;
+    // Обновить data-атрибут для стилей
+    const body = this.dom.get('body');
+    if (body) {
+      body.dataset.chapter = chapterInfo.id;
     }
 
-    if (!this.ctrl.chapterStarts.length) return;
+    // Установить фон главы
+    if (chapterInfo.bg) {
+      this.backgroundManager.setBackground(chapterInfo.bg);
+    }
 
-    const chapterIndex = this.getCurrentChapter(pageIndex);
-    const chapter = CONFIG.CHAPTERS[chapterIndex];
-
-    if (chapter) {
-      this.ctrl.backgroundManager.setBackground(chapter.bg);
-      body.dataset.chapter = chapter.id;
-      
-      // Предзагружаем фон следующей главы
-      this._preloadNextChapterBackground(chapterIndex);
+    // Предзагрузить следующую главу
+    if (!isMobile) {
+      this._preloadNextChapter(currentChapter);
     }
   }
 
@@ -85,36 +98,24 @@ export class ChapterDelegate {
    * @private
    * @param {number} currentChapter
    */
-  _preloadNextChapterBackground(currentChapter) {
-    // Не предзагружаем повторно
-    if (this.lastPreloadedChapter === currentChapter + 1) {
-      return;
-    }
-
+  _preloadNextChapter(currentChapter) {
     const nextChapter = this.getNextChapter(currentChapter);
     
-    if (nextChapter !== null) {
-      const nextChapterData = CONFIG.CHAPTERS[nextChapter];
+    if (nextChapter !== null && nextChapter !== this.lastPreloadedChapter) {
+      const nextChapterInfo = CONFIG.CHAPTERS[nextChapter];
       
-      if (nextChapterData && nextChapterData.bg) {
-        this.ctrl.backgroundManager.preload(nextChapterData.bg)
-          .then(() => {
-            this.lastPreloadedChapter = nextChapter;
-          });
+      if (nextChapterInfo?.bg) {
+        this.backgroundManager.preload(nextChapterInfo.bg);
+        this.lastPreloadedChapter = nextChapter;
       }
     }
   }
 
   /**
-   * Предзагрузить все фоны глав (для быстрого интернета)
-   * @returns {Promise<void>}
+   * Очистка
    */
-  async preloadAllBackgrounds() {
-    const urls = [
-      CONFIG.COVER_BG,
-      ...CONFIG.CHAPTERS.map(ch => ch.bg).filter(Boolean)
-    ];
-
-    return this.ctrl.backgroundManager.preloadMultiple(urls);
+  destroy() {
+    this.lastPreloadedChapter = -1;
+    super.destroy();
   }
 }

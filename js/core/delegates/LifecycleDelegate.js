@@ -1,97 +1,153 @@
 /**
- * LIFECYCLE DELEGATE
+ * LIFECYCLE DELEGATE - REFACTORED
  * Управление жизненным циклом книги.
- * 
- * Отвечает за:
- * - Открытие книги
- * - Закрытие книги
- * - Репагинацию контента
- * 
- * Обновлено для работы с DOMManager и звуком.
  */
 
 import { CONFIG, BookState } from '../../config.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
+import { BaseDelegate } from './BaseDelegate.js';
 
-export class LifecycleDelegate {
-  constructor(controller) {
-    this.ctrl = controller;
+export class LifecycleDelegate extends BaseDelegate {
+  /**
+   * @param {Object} deps
+   * @param {BookStateMachine} deps.stateMachine
+   * @param {BackgroundManager} deps.backgroundManager
+   * @param {ContentLoader} deps.contentLoader
+   * @param {AsyncPaginator} deps.paginator
+   * @param {BookRenderer} deps.renderer
+   * @param {BookAnimator} deps.animator
+   * @param {LoadingIndicator} deps.loadingIndicator
+   * @param {SoundManager} deps.soundManager
+   * @param {MediaQueryManager} deps.mediaQueries
+   * @param {DOMManager} deps.dom
+   * @param {Object} deps.state
+   * @param {Function} deps.onPaginationComplete - Коллбэк с результатами пагинации
+   * @param {Function} deps.onIndexChange - Коллбэк при изменении индекса
+   * @param {Function} deps.onChapterUpdate - Коллбэк для обновления UI главы
+   */
+  constructor(deps) {
+    super(deps);
+    this.contentLoader = deps.contentLoader;
+    this.paginator = deps.paginator;
+    this.loadingIndicator = deps.loadingIndicator;
+    this.onPaginationComplete = deps.onPaginationComplete;
+    this.onIndexChange = deps.onIndexChange;
+    this.onChapterUpdate = deps.onChapterUpdate;
   }
 
-  get state() { return this.ctrl.stateMachine; }
-  get isMobile() { return this.ctrl.isMobile; }
-  get soundManager() { return this.ctrl.soundManager; }
+  /**
+   * Валидация зависимостей
+   * @protected
+   */
+  _validateRequiredDependencies(deps) {
+    this._validateDependencies(
+      deps,
+      [
+        'stateMachine',
+        'backgroundManager',
+        'contentLoader',
+        'paginator',
+        'renderer',
+        'animator',
+        'loadingIndicator',
+        'dom',
+        'mediaQueries',
+        'state'
+      ],
+      'LifecycleDelegate'
+    );
+  }
 
   /**
    * Инициализация - предзагрузка обложки и звуков
    */
   async init() {
-    // Предзагружаем обложку и звуки параллельно
     await Promise.all([
-      this.ctrl.backgroundManager.preload(CONFIG.COVER_BG, true),
+      this.backgroundManager.preload(CONFIG.COVER_BG, true),
       this.soundManager ? this.soundManager.preload() : Promise.resolve(),
     ]);
   }
 
   /**
    * Открыть книгу
-   * @param {number} startIndex
+   * @param {number} startIndex - Индекс начальной страницы
    */
   async open(startIndex = 0) {
-    if (this.state.isBusy || !this.state.isClosed || this.ctrl.isDestroyed) {
+    if (this.isBusy || !this.stateMachine.isClosed) {
       return;
     }
 
-    if (!this.state.transitionTo(BookState.OPENING)) return;
+    if (!this.stateMachine.transitionTo(BookState.OPENING)) {
+      return;
+    }
 
-    // Воспроизводим звук открытия книги
+    // Воспроизводим звук открытия
     if (this.soundManager) {
       this.soundManager.play('bookOpen');
     }
 
     try {
-      this.ctrl.loadingIndicator.show();
+      this.loadingIndicator.show();
 
-      const urls = CONFIG.CHAPTERS.map(c => c.file);
+      // Параллельно запускаем анимацию и загрузку контента
+      const chapterUrls = CONFIG.CHAPTERS.map(c => c.file);
       const [signal, html] = await Promise.all([
-        this.ctrl.animator.runOpenAnimation(),
-        this.ctrl.contentLoader.load(urls),
+        this.animator.runOpenAnimation(),
+        this.contentLoader.load(chapterUrls),
       ]);
 
-      if (!signal || !html || this.ctrl.isDestroyed) return;
+      // Проверяем, что анимация не была отменена
+      if (!signal || !html) {
+        return;
+      }
 
       // Ждём стабилизации layout
       await this._waitForLayout();
 
-      const rightA = this.ctrl.dom.get('rightA');
+      // Получаем элемент для измерения
+      const rightA = this.dom.get('rightA');
       if (!rightA) {
-        throw new Error('rightA element not found');
+        throw new Error('LifecycleDelegate: rightA element not found');
       }
 
-      const { pages, chapterStarts } = await this.ctrl.paginator.paginate(
-        html,
-        rightA
-      );
+      // Выполняем пагинацию
+      const { pages, chapterStarts } = await this.paginator.paginate(html, rightA);
 
-      this.ctrl.renderer.setPageContents(pages);
-      this.ctrl.chapterStarts = chapterStarts;
+      // Передаем результаты пагинации через коллбэк
+      if (this.onPaginationComplete) {
+        this.onPaginationComplete(pages, chapterStarts);
+      }
 
-      const maxIndex = this.ctrl.renderer.getMaxIndex(this.isMobile);
-      this.ctrl.index = Math.max(0, Math.min(startIndex, maxIndex));
-      this.ctrl.renderer.renderSpread(this.ctrl.index, this.isMobile);
-      this.ctrl.chapterDelegate.updateChapterUI();
+      // Вычисляем начальный индекс (с учетом maxIndex)
+      const maxIndex = this.renderer.getMaxIndex(this.isMobile);
+      const safeStartIndex = Math.max(0, Math.min(startIndex, maxIndex));
 
-      await this.ctrl.animator.finishOpenAnimation(signal);
+      // Рендерим начальный разворот
+      this.renderer.renderSpread(safeStartIndex, this.isMobile);
 
-      this.state.transitionTo(BookState.OPENED);
-      this.ctrl._updateDebug();
+      // Обновляем индекс через коллбэк
+      if (this.onIndexChange) {
+        this.onIndexChange(safeStartIndex);
+      }
+
+      // Обновляем UI главы
+      if (this.onChapterUpdate) {
+        this.onChapterUpdate();
+      }
+
+      // Завершаем анимацию открытия
+      await this.animator.finishOpenAnimation(signal);
+
+      // Переходим в состояние OPENED
+      this.stateMachine.transitionTo(BookState.OPENED);
+
     } catch (error) {
       if (error.name !== "AbortError") {
         ErrorHandler.handle(error, "Ошибка при открытии книги");
       }
-      this.state.reset(BookState.CLOSED);
+      this.stateMachine.reset(BookState.CLOSED);
     } finally {
-      this.ctrl.loadingIndicator.hide();
+      this.loadingIndicator.hide();
     }
   }
 
@@ -99,19 +155,22 @@ export class LifecycleDelegate {
    * Закрыть книгу
    */
   async close() {
-    if (this.state.isBusy || !this.state.isOpened || this.ctrl.isDestroyed) {
+    if (this.isBusy || !this.isOpened) {
       return;
     }
 
-    if (!this.state.transitionTo(BookState.CLOSING)) return;
+    if (!this.stateMachine.transitionTo(BookState.CLOSING)) {
+      return;
+    }
 
-    // Воспроизводим звук закрытия книги
+    // Воспроизводим звук закрытия
     if (this.soundManager) {
       this.soundManager.play('bookClose');
     }
 
-    const leftA = this.ctrl.dom.get('leftA');
-    const rightA = this.ctrl.dom.get('rightA');
+    // Скрываем страницы перед анимацией
+    const leftA = this.dom.get('leftA');
+    const rightA = this.dom.get('rightA');
     
     if (leftA) {
       leftA.style.visibility = "hidden";
@@ -124,72 +183,83 @@ export class LifecycleDelegate {
     }
 
     try {
-      await this.ctrl.animator.runCloseAnimation();
+      await this.animator.runCloseAnimation();
 
+      // Восстанавливаем видимость
       if (leftA) leftA.style.visibility = "";
       if (rightA) rightA.style.visibility = "";
 
-      this.ctrl.index = 0;
-      this.ctrl.settings.set("page", 0);
-      this.ctrl.renderer.clearCache();
+      // Сбрасываем индекс через коллбэк
+      if (this.onIndexChange) {
+        this.onIndexChange(0);
+      }
 
-      this.state.transitionTo(BookState.CLOSED);
-      this.ctrl._updateDebug();
+      // Очищаем кэш рендерера
+      this.renderer.clearCache();
+
+      // Переходим в состояние CLOSED
+      this.stateMachine.transitionTo(BookState.CLOSED);
+
     } catch (error) {
       if (error.name !== "AbortError") {
         ErrorHandler.handle(error, "Ошибка при закрытии книги");
       }
-      this.state.reset(BookState.OPENED);
+      this.stateMachine.reset(BookState.OPENED);
     }
   }
 
   /**
-   * Репагинация (при изменении шрифта/размера/ориентации)
-   * @param {boolean} keepIndex
+   * Репагинация при изменении шрифта/размера/ориентации
+   * @param {boolean} keepIndex - Сохранить текущую позицию
    */
   async repaginate(keepIndex = false) {
-    if (this.ctrl.isDestroyed) return;
-
     try {
-      this.ctrl.loadingIndicator.show();
-      this.ctrl.renderer.clearCache();
+      this.loadingIndicator.show();
+      this.renderer.clearCache();
 
-      const prevIndex = keepIndex ? this.ctrl.index : 0;
-      
-      const urls = CONFIG.CHAPTERS.map(c => c.file);
-      const html = await this.ctrl.contentLoader.load(urls);
+      const prevIndex = keepIndex ? this.currentIndex : 0;
 
-      if (!html || this.ctrl.isDestroyed) {
-        this.ctrl.loadingIndicator.hide();
-        return;
-      }
-
-      const rightA = this.ctrl.dom.get('rightA');
+      const rightA = this.dom.get('rightA');
       if (!rightA) {
-        throw new Error('rightA element not found');
+        throw new Error('LifecycleDelegate: rightA element not found during repagination');
       }
 
-      const { pages, chapterStarts } = await this.ctrl.paginator.paginate(
-        html,
-        rightA
-      );
+      // Загружаем и пагинируем заново
+      const chapterUrls = CONFIG.CHAPTERS.map(c => c.file);
+      const html = await this.contentLoader.load(chapterUrls);
+      
+      if (!html) {
+        throw new Error('LifecycleDelegate: Failed to load content during repagination');
+      }
 
-      this.ctrl.renderer.setPageContents(pages);
-      this.ctrl.chapterStarts = chapterStarts;
+      const { pages, chapterStarts } = await this.paginator.paginate(html, rightA);
 
-      const maxIndex = this.ctrl.renderer.getMaxIndex(this.isMobile);
-      this.ctrl.index = Math.min(prevIndex, maxIndex);
+      // Передаем результаты через коллбэк
+      if (this.onPaginationComplete) {
+        this.onPaginationComplete(pages, chapterStarts);
+      }
 
-      this.ctrl.renderer.renderSpread(this.ctrl.index, this.isMobile);
-      this.ctrl.chapterDelegate.updateChapterUI();
-      this.ctrl._updateDebug();
+      // Вычисляем новый индекс
+      const maxIndex = this.renderer.getMaxIndex(this.isMobile);
+      const newIndex = keepIndex ? Math.min(prevIndex, maxIndex) : 0;
 
-      this.ctrl.loadingIndicator.hide();
+      // Рендерим разворот
+      this.renderer.renderSpread(newIndex, this.isMobile);
+
+      // Обновляем индекс
+      if (this.onIndexChange) {
+        this.onIndexChange(newIndex);
+      }
+
+      // Обновляем UI главы
+      if (this.onChapterUpdate) {
+        this.onChapterUpdate();
+      }
+
     } catch (error) {
-      this.ctrl.loadingIndicator.hide();
-      if (error.name !== "AbortError") {
-        ErrorHandler.handle(error, "Ошибка при обновлении страниц");
-      }
+      ErrorHandler.handle(error, "Ошибка при репагинации");
+    } finally {
+      this.loadingIndicator.hide();
     }
   }
 
@@ -198,16 +268,43 @@ export class LifecycleDelegate {
    * @private
    */
   async _waitForLayout() {
-    const rightA = this.ctrl.dom.get('rightA');
-    const book = this.ctrl.dom.get('book');
+    const book = this.dom.get('book');
+    const rightA = this.dom.get('rightA');
     
-    if (!rightA || !book) return;
-    
-    const pageWidth = rightA.clientWidth;
-    const bookWidth = book.clientWidth;
-    
-    if (!this.isMobile && pageWidth < bookWidth * CONFIG.LAYOUT.MIN_PAGE_WIDTH_RATIO) {
-      await new Promise(r => setTimeout(r, CONFIG.LAYOUT.SETTLE_DELAY));
-    }
+    if (!book || !rightA) return;
+
+    const bookWidth = book.offsetWidth;
+    const minPageWidth = bookWidth * CONFIG.LAYOUT.MIN_PAGE_WIDTH_RATIO;
+    const settleDelay = CONFIG.LAYOUT.SETTLE_DELAY;
+
+    return new Promise((resolve) => {
+      let settled = false;
+
+      const checkLayout = () => {
+        const pageWidth = rightA.offsetWidth;
+
+        if (pageWidth >= minPageWidth && !settled) {
+          settled = true;
+          setTimeout(resolve, settleDelay);
+        } else if (!settled) {
+          requestAnimationFrame(checkLayout);
+        }
+      };
+
+      checkLayout();
+    });
+  }
+
+  /**
+   * Очистка
+   */
+  destroy() {
+    this.contentLoader = null;
+    this.paginator = null;
+    this.loadingIndicator = null;
+    this.onPaginationComplete = null;
+    this.onIndexChange = null;
+    this.onChapterUpdate = null;
+    super.destroy();
   }
 }

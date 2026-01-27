@@ -1,52 +1,130 @@
 /**
- * NAVIGATION DELEGATE
+ * NAVIGATION DELEGATE - REFACTORED
  * Управление навигацией по книге.
- * 
- * Обрабатывает переходы между страницами и главами.
- * Обновлено для работы с DOMManager и звуком.
  */
 
 import { CONFIG, BookState } from '../../config.js';
+import { BaseDelegate } from './BaseDelegate.js';
+import { cssVars } from '../../utils/CSSVariables.js';
 
-export class NavigationDelegate {
-  /** @param {BookController} controller */
-  constructor(controller) {
-    this.ctrl = controller;
+export class NavigationDelegate extends BaseDelegate {
+  /**
+   * @param {Object} deps
+   * @param {BookStateMachine} deps.stateMachine
+   * @param {BookRenderer} deps.renderer
+   * @param {BookAnimator} deps.animator
+   * @param {SettingsManager} deps.settings
+   * @param {SoundManager} deps.soundManager
+   * @param {MediaQueryManager} deps.mediaQueries
+   * @param {Object} deps.state - Объект состояния контроллера
+   * @param {Function} deps.onIndexChange - Коллбэк при изменении индекса
+   * @param {Function} deps.onBookOpen - Коллбэк для открытия книги
+   * @param {Function} deps.onBookClose - Коллбэк для закрытия книги
+   */
+  constructor(deps) {
+    super(deps);
+    this.onIndexChange = deps.onIndexChange;
+    this.onBookOpen = deps.onBookOpen;
+    this.onBookClose = deps.onBookClose;
   }
 
-  // Короткие алиасы для частых обращений
-  get state() { return this.ctrl.stateMachine; }
-  get renderer() { return this.ctrl.renderer; }
-  get animator() { return this.ctrl.animator; }
-  get settings() { return this.ctrl.settings; }
-  get soundManager() { return this.ctrl.soundManager; }
-  get isMobile() { return this.ctrl.isMobile; }
+  /**
+   * Валидация зависимостей
+   * @protected
+   */
+  _validateRequiredDependencies(deps) {
+    this._validateDependencies(
+      deps,
+      ['stateMachine', 'renderer', 'animator', 'settings', 'mediaQueries', 'state'],
+      'NavigationDelegate'
+    );
+  }
+
+  /**
+   * Получить количество страниц на переворот
+   * @returns {number}
+   */
+  get pagesPerFlip() {
+    return cssVars.getNumber("--pages-per-flip", this.isMobile ? 1 : 2);
+  }
+
+  // ═══════════════════════════════════════════
+  // ПУБЛИЧНЫЕ МЕТОДЫ НАВИГАЦИИ
+  // ═══════════════════════════════════════════
+
+  /**
+   * Переворот страницы вперёд/назад
+   * @param {'next'|'prev'} direction
+   */
+  async flip(direction) {
+    // Открываем книгу если закрыта и направление "next"
+    if (!this.isOpened && direction === "next") {
+      if (this.onBookOpen) {
+        await this.onBookOpen();
+      }
+      return;
+    }
+
+    // Закрываем если на первой странице и направление "prev"
+    if (this.isOpened && direction === "prev" && this.currentIndex === 0) {
+      if (this.onBookClose) {
+        await this.onBookClose();
+      }
+      return;
+    }
+
+    // Не продолжаем если книга не открыта или занята
+    if (!this.isOpened || this.isBusy) {
+      return;
+    }
+
+    const step = this.pagesPerFlip;
+    const nextIndex = direction === "next" 
+      ? this.currentIndex + step 
+      : this.currentIndex - step;
+    
+    const maxIndex = this.renderer.getMaxIndex(this.isMobile);
+
+    if (nextIndex < 0 || nextIndex > maxIndex) {
+      return;
+    }
+
+    await this._executeFlip(direction, nextIndex);
+  }
 
   /**
    * Навигация по оглавлению
    * @param {number|undefined} chapter
    */
-  handleTOCNavigation(chapter) {
-    if (!this.state.isOpened) {
-      this.ctrl.flip("next");
+  async handleTOCNavigation(chapter) {
+    // Если книга закрыта - просто открываем
+    if (!this.isOpened) {
+      await this.flip("next");
       return;
     }
 
+    // Переход к началу книги
     if (chapter === undefined) {
-      this.flipToPage(0, "prev");
+      await this.flipToPage(0, "prev");
       return;
     }
 
+    // Переход к концу книги
     if (chapter === -1) {
-      this.flipToPage(this.renderer.getMaxIndex(this.isMobile), "next");
+      const maxIndex = this.renderer.getMaxIndex(this.isMobile);
+      await this.flipToPage(maxIndex, "next");
       return;
     }
 
-    const page = this.ctrl.chapterStarts[chapter];
-    if (page == null) return;
+    // Переход к конкретной главе
+    const pageIndex = this.chapterStarts[chapter];
+    if (pageIndex == null) return;
 
-    const target = this.isMobile ? page : page - (page % 2);
-    this.flipToPage(target, target > this.ctrl.index ? "next" : "prev");
+    // Выравниваем по развороту для десктопа
+    const targetIndex = this.isMobile ? pageIndex : pageIndex - (pageIndex % 2);
+    const direction = targetIndex > this.currentIndex ? "next" : "prev";
+    
+    await this.flipToPage(targetIndex, direction);
   }
 
   /**
@@ -55,94 +133,65 @@ export class NavigationDelegate {
    * @param {'next'|'prev'} direction
    */
   async flipToPage(targetIndex, direction) {
-    if (this.state.isBusy || !this.state.isOpened || this.ctrl.isDestroyed) {
+    if (this.isBusy || !this.isOpened) {
       return;
     }
 
     const maxIndex = this.renderer.getMaxIndex(this.isMobile);
     targetIndex = Math.max(0, Math.min(targetIndex, maxIndex));
 
-    if (this.ctrl.index === targetIndex) return;
-
-    if (!this.state.transitionTo(BookState.FLIPPING)) return;
-
-    // Воспроизводим звук перелистывания
-    this._playFlipSound();
-
-    // Обновляем фон если уходим с обложки
-    if (this.ctrl.index === 0 && targetIndex > 0) {
-      this.ctrl.chapterDelegate.updateChapterUI(targetIndex);
+    if (this.currentIndex === targetIndex) {
+      return;
     }
 
-    this.renderer.prepareBuffer(targetIndex, this.isMobile);
-    
-    const nextIndex = targetIndex;
-    this.renderer.prepareSheet(this.ctrl.index, nextIndex, direction, this.isMobile);
-
-    try {
-      await this.animator.runFlip(direction, () => {
-        this.ctrl.index = targetIndex;
-        this.renderer.swapBuffers();
-      });
-
-      this.state.transitionTo(BookState.OPENED);
-      this.settings.set("page", this.ctrl.index);
-      this.ctrl.chapterDelegate.updateChapterUI();
-      this.ctrl._updateDebug();
-    } catch (error) {
-      this.state.transitionTo(BookState.OPENED);
-    }
+    await this._executeFlip(direction, targetIndex);
   }
 
+  // ═══════════════════════════════════════════
+  // ВНУТРЕННИЕ МЕТОДЫ
+  // ═══════════════════════════════════════════
+
   /**
-   * Переворот страницы вперёд/назад
+   * Выполнить анимацию перелистывания
+   * @private
    * @param {'next'|'prev'} direction
+   * @param {number} nextIndex
    */
-  async flip(direction) {
-    if (this.ctrl.isDestroyed) return;
-
-    // Открываем книгу если закрыта
-    if (!this.state.isOpened && direction === "next") {
-      await this.ctrl.lifecycleDelegate.open();
+  async _executeFlip(direction, nextIndex) {
+    // Переходим в состояние FLIPPING
+    if (!this.stateMachine.transitionTo(BookState.FLIPPING)) {
       return;
     }
 
-    // Закрываем если на первой странице
-    if (this.state.isOpened && direction === "prev" && this.ctrl.index === 0) {
-      await this.ctrl.lifecycleDelegate.close();
-      return;
-    }
-
-    if (!this.state.isOpened || this.state.isBusy) return;
-
-    const step = this.ctrl.pagesPerFlip;
-    const nextIndex = direction === "next" 
-      ? this.ctrl.index + step 
-      : this.ctrl.index - step;
-    const maxIndex = this.renderer.getMaxIndex(this.isMobile);
-
-    if (nextIndex < 0 || nextIndex > maxIndex) return;
-
-    if (!this.state.transitionTo(BookState.FLIPPING)) return;
-
-    // Воспроизводим звук перелистывания
+    // Воспроизводим звук
     this._playFlipSound();
 
+    // Подготавливаем буферы и анимированный лист
     this.renderer.prepareBuffer(nextIndex, this.isMobile);
-    this.renderer.prepareSheet(this.ctrl.index, nextIndex, direction, this.isMobile);
+    this.renderer.prepareSheet(
+      this.currentIndex,
+      nextIndex,
+      direction,
+      this.isMobile
+    );
 
     try {
+      // Запускаем анимацию с коллбэком для swapBuffers
       await this.animator.runFlip(direction, () => {
-        this.ctrl.index = nextIndex;
         this.renderer.swapBuffers();
       });
 
-      this.state.transitionTo(BookState.OPENED);
-      this.settings.set("page", this.ctrl.index);
-      this.ctrl.chapterDelegate.updateChapterUI();
-      this.ctrl._updateDebug();
+      // Возвращаемся в состояние OPENED
+      this.stateMachine.transitionTo(BookState.OPENED);
+
+      // Уведомляем контроллер об изменении индекса
+      if (this.onIndexChange) {
+        this.onIndexChange(nextIndex);
+      }
+
     } catch (error) {
-      this.state.transitionTo(BookState.OPENED);
+      console.error('Navigation flip error:', error);
+      this.stateMachine.transitionTo(BookState.OPENED);
     }
   }
 
@@ -156,5 +205,15 @@ export class NavigationDelegate {
       const playbackRate = 0.9 + Math.random() * 0.2;
       this.soundManager.play('pageFlip', { playbackRate });
     }
+  }
+
+  /**
+   * Очистка
+   */
+  destroy() {
+    this.onIndexChange = null;
+    this.onBookOpen = null;
+    this.onBookClose = null;
+    super.destroy();
   }
 }

@@ -41,7 +41,7 @@ export class AmbientManager {
 
   /**
    * Зарегистрировать ambient звук
-   * @param {string} type - Тип звука (rain, fireplace, cafe)
+   * @param {string} type - Тип звука
    * @param {string} url - URL аудио файла
    * @returns {AmbientManager}
    */

@@ -3,6 +3,7 @@
  * Централизованный экспорт всех делегатов.
  */
 
+export { BaseDelegate } from './BaseDelegate.js';
 export { NavigationDelegate } from './NavigationDelegate.js';
 export { SettingsDelegate } from './SettingsDelegate.js';
 export { LifecycleDelegate } from './LifecycleDelegate.js';

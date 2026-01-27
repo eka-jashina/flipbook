@@ -1,69 +1,82 @@
 /**
- * SETTINGS DELEGATE
+ * SETTINGS DELEGATE - REFACTORED
  * Управление применением и изменением настроек.
- *
- * Обновлено для работы с DOMManager и звуком.
  */
 
 import { CONFIG } from "../../config.js";
 import { cssVars } from "../../utils/CSSVariables.js";
+import { BaseDelegate } from './BaseDelegate.js';
 
-export class SettingsDelegate {
-  constructor(controller) {
-    this.ctrl = controller;
+export class SettingsDelegate extends BaseDelegate {
+  /**
+   * @param {Object} deps
+   * @param {DOMManager} deps.dom
+   * @param {SettingsManager} deps.settings
+   * @param {SoundManager} deps.soundManager
+   * @param {AmbientManager} deps.ambientManager
+   * @param {DebugPanel} deps.debugPanel
+   * @param {Function} deps.onUpdate - Коллбэк для обновления UI после изменений
+   * @param {Function} deps.onRepaginate - Коллбэк для репагинации
+   */
+  constructor(deps) {
+    super(deps);
+    this.debugPanel = deps.debugPanel;
+    this.onUpdate = deps.onUpdate;
+    this.onRepaginate = deps.onRepaginate;
   }
 
   /**
-   * Получить DOM элементы
-   * @returns {Object}
+   * Валидация зависимостей
+   * @protected
    */
-  get elements() {
-    return this.ctrl.dom.elements;
-  }
-
-  /**
-   * Получить менеджер настроек
-   * @returns {SettingsManager}
-   */
-  get settings() {
-    return this.ctrl.settings;
+  _validateRequiredDependencies(deps) {
+    this._validateDependencies(
+      deps,
+      ['dom', 'settings'],
+      'SettingsDelegate'
+    );
   }
 
   /**
    * Применить все настройки к DOM
    */
   apply() {
-    const html = this.ctrl.dom.get("html");
+    const html = this.dom.get("html");
     if (!html) {
-      console.error("HTML element not found");
+      console.error("SettingsDelegate: HTML element not found");
       return;
     }
 
+    // Применить шрифт
+    const font = this.settings.get("font");
     html.style.setProperty(
       "--reader-font-family",
-      CONFIG.FONTS[this.settings.get("font")],
+      CONFIG.FONTS[font] || CONFIG.FONTS.georgia
     );
 
+    // Применить размер шрифта
+    const fontSize = this.settings.get("fontSize");
     html.style.setProperty(
       "--reader-font-size",
-      `${this.settings.get("fontSize")}px`,
+      `${fontSize}px`
     );
 
+    // Применить тему
     const theme = this.settings.get("theme");
     html.dataset.theme = theme === "light" ? "" : theme;
 
     // Применить настройки звука
-    if (this.ctrl.soundManager) {
-      this.ctrl.soundManager.setEnabled(this.settings.get("soundEnabled"));
-      this.ctrl.soundManager.setVolume(this.settings.get("soundVolume"));
+    if (this.soundManager) {
+      this.soundManager.setEnabled(this.settings.get("soundEnabled"));
+      this.soundManager.setVolume(this.settings.get("soundVolume"));
     }
 
     // Применить настройки ambient
-    if (this.ctrl.ambientManager) {
-      this.ctrl.ambientManager.setVolume(this.settings.get("ambientVolume"));
+    if (this.ambientManager) {
+      this.ambientManager.setVolume(this.settings.get("ambientVolume"));
       const ambientType = this.settings.get("ambientType");
       if (ambientType !== "none") {
-        this.ctrl.ambientManager.setType(ambientType, false);
+        this.ambientManager.setType(ambientType, false);
       }
     }
 
@@ -76,6 +89,10 @@ export class SettingsDelegate {
    * @param {*} value
    */
   handleChange(key, value) {
+    // Сначала сохраняем значение
+    this.settings.set(key, value);
+
+    // Затем обрабатываем специфичные для настройки действия
     switch (key) {
       case "fontSize":
         this._handleFontSize(value);
@@ -93,8 +110,7 @@ export class SettingsDelegate {
         this._handleSoundVolume(value);
         break;
       case "debug":
-        this.ctrl.debugPanel.toggle();
-        this.ctrl._updateDebug();
+        this._handleDebug();
         break;
       case "ambientType":
         this._handleAmbientType(value);
@@ -103,7 +119,16 @@ export class SettingsDelegate {
         this._handleAmbientVolume(value);
         break;
     }
+
+    // Уведомляем контроллер об обновлении
+    if (this.onUpdate) {
+      this.onUpdate();
+    }
   }
+
+  // ═══════════════════════════════════════════
+  // ОБРАБОТЧИКИ КОНКРЕТНЫХ НАСТРОЕК
+  // ═══════════════════════════════════════════
 
   /**
    * Обработать изменение размера шрифта
@@ -115,143 +140,125 @@ export class SettingsDelegate {
     const minSize = cssVars.getNumber("--font-min", 14);
     const maxSize = cssVars.getNumber("--font-max", 22);
 
-    const newSize =
-      action === "increase"
-        ? Math.min(current + 1, maxSize)
-        : Math.max(current - 1, minSize);
-
-    this.settings.set("fontSize", newSize);
-
-    const html = this.ctrl.dom.get("html");
-    if (html) {
-      html.style.setProperty("--reader-font-size", `${newSize}px`);
+    let newSize = current;
+    if (action === "increase") {
+      newSize = Math.min(current + 1, maxSize);
+    } else if (action === "decrease") {
+      newSize = Math.max(current - 1, minSize);
     }
 
-    this.ctrl._repaginate(true);
+    if (newSize !== current) {
+      this.settings.set("fontSize", newSize);
+      
+      const html = this.dom.get("html");
+      if (html) {
+        html.style.setProperty("--reader-font-size", `${newSize}px`);
+      }
+
+      cssVars.invalidateCache();
+      
+      // Требуется репагинация
+      if (this.onRepaginate && this.isOpened) {
+        this.onRepaginate(true);
+      }
+    }
   }
 
   /**
    * Обработать изменение шрифта
    * @private
-   * @param {string} value
+   * @param {string} fontKey
    */
-  _handleFont(value) {
-    this.settings.set("font", value);
-
-    const html = this.ctrl.dom.get("html");
+  _handleFont(fontKey) {
+    const html = this.dom.get("html");
     if (html) {
-      html.style.setProperty("--reader-font-family", CONFIG.FONTS[value]);
+      html.style.setProperty(
+        "--reader-font-family",
+        CONFIG.FONTS[fontKey] || CONFIG.FONTS.georgia
+      );
     }
 
-    this.ctrl._repaginate(true);
+    cssVars.invalidateCache();
+
+    // Требуется репагинация
+    if (this.onRepaginate && this.isOpened) {
+      this.onRepaginate(true);
+    }
   }
 
   /**
    * Обработать изменение темы
    * @private
-   * @param {string} value
+   * @param {string} theme
    */
-  _handleTheme(value) {
-    this.settings.set("theme", value);
-
-    const html = this.ctrl.dom.get("html");
+  _handleTheme(theme) {
+    const html = this.dom.get("html");
     if (html) {
-      html.dataset.theme = value === "light" ? "" : value;
-    }
-
-    cssVars.invalidateCache();
-  }
-
-  /**
-   * Обработать включение/выключение звука
-   * @private
-   * @param {boolean|'toggle'} value
-   */
-  _handleSoundToggle(value) {
-    const current = this.settings.get("soundEnabled");
-    const newValue = value === "toggle" ? !current : value;
-
-    this.settings.set("soundEnabled", newValue);
-
-    if (this.ctrl.soundManager) {
-      this.ctrl.soundManager.setEnabled(newValue);
-    }
-
-    // Воспроизводим тестовый звук если включили
-    if (newValue && this.ctrl.soundManager) {
-      this.ctrl.soundManager.play("pageFlip", { volume: 0.2 });
+      html.dataset.theme = theme === "light" ? "" : theme;
     }
   }
 
   /**
-   * Обработать изменение громкости
+   * Обработать переключение звука
    * @private
-   * @param {number|'increase'|'decrease'} value
+   * @param {boolean} enabled
    */
-  _handleSoundVolume(value) {
-    let newVolume;
-
-    if (typeof value === "number") {
-      newVolume = Math.max(0, Math.min(1, value));
-    } else {
-      const current = this.settings.get("soundVolume");
-      newVolume =
-        value === "increase"
-          ? Math.min(current + 0.1, 1)
-          : Math.max(current - 0.1, 0);
+  _handleSoundToggle(enabled) {
+    if (this.soundManager) {
+      this.soundManager.setEnabled(enabled);
     }
+  }
 
-    this.settings.set("soundVolume", newVolume);
+  /**
+   * Обработать изменение громкости звука
+   * @private
+   * @param {number} volume
+   */
+  _handleSoundVolume(volume) {
+    if (this.soundManager) {
+      this.soundManager.setVolume(volume);
+    }
+  }
 
-    if (this.ctrl.soundManager) {
-      this.ctrl.soundManager.setVolume(newVolume);
-      // Воспроизводим тестовый звук
-      this.ctrl.soundManager.play("pageFlip", { volume: newVolume });
+  /**
+   * Обработать переключение отладки
+   * @private
+   */
+  _handleDebug() {
+    if (this.debugPanel) {
+      this.debugPanel.toggle();
     }
   }
 
   /**
    * Обработать изменение типа ambient звука
    * @private
-   * @param {string} value
+   * @param {string} type
    */
-  _handleAmbientType(value) {
-    this.settings.set("ambientType", value);
-
-    if (this.ctrl.ambientManager) {
-      this.ctrl.ambientManager.setType(value);
-    }
-
-    // Обновить UI - показать/скрыть слайдер громкости
-    const wrapper = this.ctrl.dom.get("ambientVolumeWrapper");
-    const controls = wrapper?.closest(".ambient-controls");
-
-    if (controls) {
-      if (value === "none") {
-        controls.classList.remove("has-ambient");
-      } else {
-        controls.classList.add("has-ambient");
-      }
+  _handleAmbientType(type) {
+    if (this.ambientManager) {
+      this.ambientManager.setType(type, true);
     }
   }
 
   /**
    * Обработать изменение громкости ambient
    * @private
-   * @param {number} value
+   * @param {number} volume
    */
-  _handleAmbientVolume(value) {
-    const newVolume = Math.max(0, Math.min(1, value));
-    this.settings.set("ambientVolume", newVolume);
-
-    if (this.ctrl.ambientManager) {
-      this.ctrl.ambientManager.setVolume(newVolume);
+  _handleAmbientVolume(volume) {
+    if (this.ambientManager) {
+      this.ambientManager.setVolume(volume);
     }
+  }
 
-    // Обновить label
-    const label = this.ctrl.dom.get("ambientVolumeLabel");
-    if (label) {
-      label.textContent = `${Math.round(newVolume * 100)}%`;
-    }
+  /**
+   * Очистка
+   */
+  destroy() {
+    this.debugPanel = null;
+    this.onUpdate = null;
+    this.onRepaginate = null;
+    super.destroy();
   }
 }
