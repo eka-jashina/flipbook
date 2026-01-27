@@ -45,6 +45,15 @@ export const CONFIG = Object.freeze({
     bookClose:`${BASE_URL}sounds/cover-flip.mp3`,
   },
 
+  // Конфигурация ambient звуков
+  // Для добавления нового типа достаточно добавить запись сюда
+  AMBIENT: {
+    none: { label: "Без звука", file: null },
+    rain: { label: "🌧️ Дождь", file: `${BASE_URL}sounds/ambient/rain.mp3` },
+    fireplace: { label: "🔥 Камин", file: `${BASE_URL}sounds/ambient/fireplace.mp3` },
+    cafe: { label: "☕ Кафе", file: `${BASE_URL}sounds/ambient/cafe.mp3` },
+  },
+
  DEFAULT_SETTINGS: {
     font: "georgia",
     fontSize: 18,

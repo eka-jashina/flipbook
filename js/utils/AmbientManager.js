@@ -11,14 +11,9 @@
 
 export class AmbientManager {
   /**
-   * Доступные типы ambient звуков
+   * Тип "без звука" - используется как значение по умолчанию
    */
-  static TYPES = {
-    NONE: 'none',
-    RAIN: 'rain',
-    FIREPLACE: 'fireplace',
-    CAFE: 'cafe',
-  };
+  static TYPE_NONE = 'none';
 
   /**
    * @param {Object} options
@@ -27,7 +22,7 @@ export class AmbientManager {
    * @param {Object} options.sounds - Карта типов к URL файлов
    */
   constructor(options = {}) {
-    this.currentType = options.currentType ?? AmbientManager.TYPES.NONE;
+    this.currentType = options.currentType ?? AmbientManager.TYPE_NONE;
     this.volume = options.volume ?? 0.5;
     this.sounds = options.sounds ?? {};
     
@@ -63,8 +58,8 @@ export class AmbientManager {
 
     this.currentType = type;
 
-    // Если выбрано "без звука" - останавливаем
-    if (type === AmbientManager.TYPES.NONE) {
+    // Если выбрано "без звука" или тип без файла - останавливаем
+    if (type === AmbientManager.TYPE_NONE || !this.sounds[type]) {
       await this.stop(fade);
       return;
     }
