@@ -19,9 +19,12 @@ export class ResizeHandler {
     this.repaginateFn = context.repaginateFn;
     this.isOpenedFn = context.isOpenedFn;
     this.isDestroyedFn = context.isDestroyedFn;
-    
+
     this.resizeTimer = null;
     this.debounceDelay = cssVars.getTime("--timing-resize-debounce", 150);
+
+    // Сохраняем начальную ширину для сравнения
+    this.lastWidth = window.innerWidth;
   }
 
   /**
@@ -36,10 +39,21 @@ export class ResizeHandler {
    * @private
    */
   _handleResize() {
+    const currentWidth = window.innerWidth;
+
+    // На мобильных устройствах при скролле адресная строка браузера
+    // скрывается/появляется, что меняет высоту viewport и триггерит resize.
+    // Репагинация нужна только при изменении ширины.
+    if (currentWidth === this.lastWidth) {
+      return;
+    }
+
+    this.lastWidth = currentWidth;
+
     if (this.resizeTimer) {
       this.timerManager.clearTimeout(this.resizeTimer);
     }
-    
+
     this.resizeTimer = this.timerManager.setTimeout(() => {
       if (this.isOpenedFn() && !this.isDestroyedFn()) {
         cssVars.invalidateCache();
