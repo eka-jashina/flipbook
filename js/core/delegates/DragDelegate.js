@@ -164,12 +164,19 @@ export class DragDelegate extends BaseDelegate {
         ? this.currentIndex + this.pagesPerFlip
         : this.currentIndex - this.pagesPerFlip;
 
+    const book = this.dom.get("book");
+
+    // Отключаем transitions ДО изменения видимости страниц,
+    // чтобы избежать мигания белого фона на мобильных
+    if (book) {
+      book.dataset.noTransition = "true";
+    }
+
     this.renderer.prepareBuffer(nextIndex, this.isMobile);
     this.renderer.prepareSheet(this.currentIndex, nextIndex, this.direction, this.isMobile);
     this._showUnderPage();
 
     const sheet = this.dom.get("sheet");
-    const book = this.dom.get("book");
 
     if (sheet) {
       sheet.dataset.direction = this.direction;
