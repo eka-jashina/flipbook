@@ -141,6 +141,9 @@ export class LifecycleDelegate extends BaseDelegate {
       // Переходим в состояние OPENED
       this.stateMachine.transitionTo(BookState.OPENED);
 
+      // Запускаем ambient звук (требует user gesture, поэтому здесь, а не при инициализации)
+      this._startAmbientIfNeeded();
+
     } catch (error) {
       if (error.name !== "AbortError") {
         ErrorHandler.handle(error, "Ошибка при открытии книги");
@@ -260,6 +263,20 @@ export class LifecycleDelegate extends BaseDelegate {
       ErrorHandler.handle(error, "Ошибка при репагинации");
     } finally {
       this.loadingIndicator.hide();
+    }
+  }
+
+  /**
+   * Запустить ambient звук, если он выбран в настройках
+   * @private
+   */
+  _startAmbientIfNeeded() {
+    if (!this.ambientManager || !this.settings) return;
+
+    const ambientType = this.settings.get("ambientType");
+    if (ambientType && ambientType !== "none") {
+      // Запускаем с fade-in для плавного появления
+      this.ambientManager.setType(ambientType, true);
     }
   }
 
