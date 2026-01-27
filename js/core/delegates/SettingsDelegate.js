@@ -89,10 +89,14 @@ export class SettingsDelegate extends BaseDelegate {
    * @param {*} value
    */
   handleChange(key, value) {
-    // Сначала сохраняем значение
-    this.settings.set(key, value);
+    // Для action-параметров (increase/decrease) не сохраняем напрямую —
+    // обработчики сами вычислят и сохранят новое значение
+    const isActionValue = value === "increase" || value === "decrease";
+    if (!isActionValue) {
+      this.settings.set(key, value);
+    }
 
-    // Затем обрабатываем специфичные для настройки действия
+    // Обрабатываем специфичные для настройки действия
     switch (key) {
       case "fontSize":
         this._handleFontSize(value);
@@ -212,11 +216,26 @@ export class SettingsDelegate extends BaseDelegate {
   /**
    * Обработать изменение громкости звука
    * @private
-   * @param {number} volume
+   * @param {'increase'|'decrease'|number} action
    */
-  _handleSoundVolume(volume) {
-    if (this.soundManager) {
-      this.soundManager.setVolume(volume);
+  _handleSoundVolume(action) {
+    if (!this.soundManager) return;
+
+    const current = this.settings.get("soundVolume");
+    const step = 0.1;
+    let newVolume = current;
+
+    if (action === "increase") {
+      newVolume = Math.min(current + step, 1);
+    } else if (action === "decrease") {
+      newVolume = Math.max(current - step, 0);
+    } else if (typeof action === "number") {
+      newVolume = Math.max(0, Math.min(action, 1));
+    }
+
+    if (newVolume !== current) {
+      this.settings.set("soundVolume", newVolume);
+      this.soundManager.setVolume(newVolume);
     }
   }
 
