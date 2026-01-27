@@ -394,29 +394,34 @@ export class DragDelegate extends BaseDelegate {
       this.onChapterUpdate();
     }
 
-    this._cleanupAfterFlip(book);
+    this._cleanupAfterFlip(book, true);
   }
 
   _cancelFlip() {
     const book = this.dom.get("book");
-    this._cleanupAfterFlip(book);
+    this._cleanupAfterFlip(book, false);
   }
 
-  _cleanupAfterFlip(book) {
+  _cleanupAfterFlip(book, completed = false) {
     if (book) book.dataset.state = "opened";
 
     if (this._pageRefs) {
       const { leftActive, rightActive, leftBuffer, rightBuffer } = this._pageRefs;
-      
+
+      // Восстанавливаем display для скрытых элементов
       if (leftActive) leftActive.style.display = "";
       if (rightActive) rightActive.style.display = "";
-      if (leftBuffer) {
-        leftBuffer.dataset.buffer = "true";
-        delete leftBuffer.dataset.dragVisible;
-      }
-      if (rightBuffer) {
-        rightBuffer.dataset.buffer = "true";
-        delete rightBuffer.dataset.dragVisible;
+
+      // Удаляем dragVisible
+      if (leftBuffer) delete leftBuffer.dataset.dragVisible;
+      if (rightBuffer) delete rightBuffer.dataset.dragVisible;
+
+      // Атрибуты buffer устанавливаем только при отмене флипа.
+      // При успешном флипе swapBuffers() уже корректно настроил атрибуты,
+      // и изменение их по старым ссылкам скроет активную страницу.
+      if (!completed) {
+        if (leftBuffer) leftBuffer.dataset.buffer = "true";
+        if (rightBuffer) rightBuffer.dataset.buffer = "true";
       }
     }
 
