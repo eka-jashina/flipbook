@@ -72,12 +72,11 @@ export class SettingsDelegate extends BaseDelegate {
     }
 
     // Применить настройки ambient
+    // НЕ запускаем воспроизведение здесь — на мобильных браузерах
+    // audio требует user gesture. Воспроизведение запустится
+    // после первого взаимодействия (открытия книги).
     if (this.ambientManager) {
       this.ambientManager.setVolume(this.settings.get("ambientVolume"));
-      const ambientType = this.settings.get("ambientType");
-      if (ambientType !== "none") {
-        this.ambientManager.setType(ambientType, false);
-      }
     }
 
     cssVars.invalidateCache();
