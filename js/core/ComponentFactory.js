@@ -158,11 +158,12 @@ export class ComponentFactory {
       volume: settings.get("ambientVolume"),
     });
 
-    // Регистрируем доступные ambient звуки
-    ambientManager
-      .register("rain", "public/sounds/ambient/rain.mp3")
-      .register("fireplace", "public/sounds/ambient/fireplace.mp3")
-      .register("cafe", "public/sounds/ambient/cafe.mp3");
+    // Регистрируем ambient звуки из конфигурации
+    for (const [type, config] of Object.entries(CONFIG.AMBIENT)) {
+      if (config.file) {
+        ambientManager.register(type, config.file);
+      }
+    }
 
     return ambientManager;
   }

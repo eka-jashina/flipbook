@@ -95,6 +95,9 @@ export class AppInitializer {
     const ambientControls = ambientSelect?.closest('.ambient-controls');
 
     if (ambientSelect) {
+      // Заполнить options из конфигурации
+      this._populateAmbientOptions(ambientSelect);
+
       const savedType = this.settings.get("ambientType");
       ambientSelect.value = savedType;
       
@@ -113,6 +116,22 @@ export class AppInitializer {
       if (ambientVolumeLabel) {
         ambientVolumeLabel.textContent = `${Math.round(savedVolume * 100)}%`;
       }
+    }
+  }
+
+  /**
+   * Заполнить опции выбора ambient из конфигурации
+   * @private
+   * @param {HTMLSelectElement} selectEl
+   */
+  _populateAmbientOptions(selectEl) {
+    selectEl.innerHTML = '';
+
+    for (const [type, config] of Object.entries(CONFIG.AMBIENT)) {
+      const option = document.createElement('option');
+      option.value = type;
+      option.textContent = config.label;
+      selectEl.appendChild(option);
     }
   }
 
