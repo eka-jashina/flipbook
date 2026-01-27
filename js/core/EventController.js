@@ -1,30 +1,55 @@
 /**
  * EVENT CONTROLLER
  * Обработка всех пользовательских событий.
+ *
+ * Особенности:
+ * - Централизованная обработка кликов, touch, keyboard
+ * - Делегирование событий через коллбэки
+ * - Поддержка swipe-жестов на мобильных
+ * - Автоматическое определение зон клика (left/right half)
  */
 
 import { cssVars } from "../utils/CSSVariables.js";
 import { mediaQueries } from "../utils/MediaQueryManager.js";
 
 export class EventController {
+  /**
+   * @param {Object} options - Конфигурация контроллера
+   * @param {HTMLElement} options.book - Контейнер книги
+   * @param {EventListenerManager} options.eventManager - Менеджер слушателей
+   * @param {Function} options.onFlip - Коллбэк перелистывания ('next'|'prev')
+   * @param {Function} options.onTOCClick - Коллбэк клика по оглавлению
+   * @param {Function} options.onOpen - Коллбэк открытия книги
+   * @param {Function} options.onSettings - Коллбэк изменения настроек
+   * @param {Function} options.isBusy - Проверка занятости (анимация)
+   * @param {Function} options.isOpened - Проверка открыта ли книга
+   */
   constructor(options) {
     this.book = options.book;
     this.eventManager = options.eventManager;
 
+    // Коллбэки для делегирования событий
     this.onFlip = options.onFlip;
     this.onTOCClick = options.onTOCClick;
     this.onOpen = options.onOpen;
     this.onSettings = options.onSettings;
 
+    // Функции проверки состояния
     this.isBusy = options.isBusy;
     this.isOpened = options.isOpened;
 
+    // Координаты начала touch для определения swipe
     this.touchStartX = 0;
     this.touchStartY = 0;
 
+    /** @type {Object} Сохранённые обработчики для cleanup */
     this._boundHandlers = {};
   }
 
+  /**
+   * Привязать все обработчики событий
+   * @param {Object} elements - DOM-элементы управления
+   */
   bind(elements) {
     this._bindNavigationButtons(elements);
     this._bindBookInteractions();
@@ -33,6 +58,11 @@ export class EventController {
     this._bindTouch();
   }
 
+  /**
+   * Привязать кнопки навигации (prev/next, TOC, continue)
+   * @private
+   * @param {Object} elements - DOM-элементы кнопок
+   */
   _bindNavigationButtons(elements) {
     const { nextBtn, prevBtn, tocBtn, continueBtn, coverEl } = elements;
 
@@ -58,6 +88,7 @@ export class EventController {
       continueBtn.hidden = true;
     });
 
+    // Клик по обложке открывает книгу
     this.eventManager.add(coverEl, "click", () => {
       if (!this.isOpened() && !this.isBusy()) {
         this.onFlip("next");
@@ -65,6 +96,10 @@ export class EventController {
     });
   }
 
+  /**
+   * Привязать взаимодействия с книгой (клики по страницам, TOC)
+   * @private
+   */
   _bindBookInteractions() {
     const isMobile = mediaQueries.get("mobile");
 
@@ -77,6 +112,7 @@ export class EventController {
       this.onTOCClick(chapter);
     });
 
+    // На desktop: клик по левой/правой половине книги перелистывает
     if (!isMobile) {
       this.eventManager.add(this.book, "pointerdown", (e) => {
         if (this.isBusy() || !this.isOpened()) return;
@@ -88,11 +124,17 @@ export class EventController {
         const rect = this.book.getBoundingClientRect();
         const x = e.clientX - rect.left;
 
+        // Левая половина = prev, правая = next
         this.onFlip(x < rect.width / 2 ? "prev" : "next");
       });
     }
   }
 
+  /**
+   * Привязать элементы управления настройками
+   * @private
+   * @param {Object} elements - DOM-элементы настроек
+   */
   _bindSettingsControls(elements) {
     const {
       increaseBtn,
@@ -169,12 +211,21 @@ export class EventController {
     }
   }
 
+  /**
+   * Обновить позицию слайдера громкости (для синхронизации с кнопками +/-)
+   * @private
+   */
   _updateVolumeSlider() {
     const slider = document.getElementById("volume-slider");
     if (slider && this.isOpened()) {
     }
   }
 
+  /**
+   * Привязать клавиатурные сокращения
+   * Arrows: навигация, Home/End: начало/конец, Ctrl+D: debug
+   * @private
+   */
   _bindKeyboard() {
     this._boundHandlers.keydown = (e) => {
       if (this.isBusy()) return;
@@ -208,6 +259,10 @@ export class EventController {
     this.eventManager.add(document, "keydown", this._boundHandlers.keydown);
   }
 
+  /**
+   * Привязать touch-события для swipe-навигации
+   * @private
+   */
   _bindTouch() {
     this._boundHandlers.touchstart = (e) => {
       if (this.isBusy()) return;
@@ -251,6 +306,9 @@ export class EventController {
     this.eventManager.add(this.book, "touchend", this._boundHandlers.touchend);
   }
 
+  /**
+   * Очистить ресурсы
+   */
   destroy() {
     this._boundHandlers = {};
   }
