@@ -1,13 +1,30 @@
 /**
  * BOOK RENDERER
  * Отвечает за рендеринг страниц в DOM.
+ *
+ * Особенности:
+ * - Двойная буферизация (active/buffer) для плавных переходов
+ * - LRU-кэш DOM-элементов страниц для производительности
+ * - Раздельный рендеринг для desktop (разворот) и mobile (одна страница)
+ * - Подготовка sheet (перелистываемый лист) для анимации
  */
 
 import { LRUCache } from '../utils/LRUCache.js';
 
 export class BookRenderer {
+  /**
+   * @param {Object} options - Конфигурация рендерера
+   * @param {number} options.cacheLimit - Максимальный размер LRU-кэша
+   * @param {HTMLElement} options.leftActive - Левая активная страница
+   * @param {HTMLElement} options.rightActive - Правая активная страница
+   * @param {HTMLElement} options.leftBuffer - Левый буфер
+   * @param {HTMLElement} options.rightBuffer - Правый буфер
+   * @param {HTMLElement} options.sheetFront - Лицевая сторона перелистываемого листа
+   * @param {HTMLElement} options.sheetBack - Оборотная сторона перелистываемого листа
+   */
   constructor(options) {
     this.cache = new LRUCache(options.cacheLimit || 12);
+    /** @type {string[]} HTML-содержимое всех страниц */
     this.pageContents = [];
 
     this.elements = {
@@ -20,11 +37,20 @@ export class BookRenderer {
     };
   }
 
+  /**
+   * Установить содержимое страниц (после пагинации)
+   * @param {string[]} contents - Массив HTML-строк для каждой страницы
+   */
   setPageContents(contents) {
     this.pageContents = contents;
     this.cache.clear();
   }
 
+  /**
+   * Получить DOM-элемент страницы (с кэшированием)
+   * @param {number} index - Индекс страницы
+   * @returns {HTMLElement|null} Клон DOM-элемента или null
+   */
   getPageDOM(index) {
     if (index < 0 || index >= this.pageContents.length) {
       return null;
@@ -35,6 +61,7 @@ export class BookRenderer {
       return cached.cloneNode(true);
     }
 
+    // Парсим HTML и кэшируем
     const wrapper = document.createElement("div");
     wrapper.innerHTML = this.pageContents[index];
     const dom = wrapper.firstElementChild || wrapper;
@@ -43,6 +70,11 @@ export class BookRenderer {
     return dom;
   }
 
+  /**
+   * Заполнить контейнер содержимым страницы
+   * @param {HTMLElement} container - Контейнер страницы
+   * @param {number} pageIndex - Индекс страницы
+   */
   fill(container, pageIndex) {
     if (!container) return;
     const dom = this.getPageDOM(pageIndex);
@@ -54,6 +86,11 @@ export class BookRenderer {
     }
   }
 
+  /**
+   * Отрендерить текущий разворот (две страницы на desktop, одна на mobile)
+   * @param {number} index - Индекс левой страницы
+   * @param {boolean} isMobile - Мобильный режим
+   */
   renderSpread(index, isMobile) {
     const { leftActive, rightActive } = this.elements;
 
@@ -64,14 +101,21 @@ export class BookRenderer {
     }
 
     if (isMobile) {
+      // На мобильных: левая пустая, правая = текущая страница
       leftActive?.replaceChildren();
       this.fill(rightActive, index);
     } else {
+      // На desktop: левая = чётная, правая = нечётная
       this.fill(leftActive, index);
       this.fill(rightActive, index + 1);
     }
   }
 
+  /**
+   * Подготовить буферные страницы для следующего разворота
+   * @param {number} index - Индекс левой страницы следующего разворота
+   * @param {boolean} isMobile - Мобильный режим
+   */
   prepareBuffer(index, isMobile) {
     const { leftBuffer, rightBuffer } = this.elements;
 
@@ -84,6 +128,13 @@ export class BookRenderer {
     }
   }
 
+  /**
+   * Подготовить sheet (перелистываемый лист) для анимации
+   * @param {number} currentIndex - Текущий индекс
+   * @param {number} nextIndex - Следующий индекс
+   * @param {'next'|'prev'} direction - Направление перелистывания
+   * @param {boolean} isMobile - Мобильный режим
+   */
   prepareSheet(currentIndex, nextIndex, direction, isMobile) {
     const { sheetFront, sheetBack } = this.elements;
 
@@ -96,6 +147,8 @@ export class BookRenderer {
         this.fill(sheetBack, nextIndex);
       }
     } else {
+      // Desktop: sheet содержит правую страницу текущего разворота
+      // и левую страницу следующего/предыдущего
       if (direction === "next") {
         this.fill(sheetFront, currentIndex + 1);
         this.fill(sheetBack, currentIndex + 2);
@@ -106,25 +159,36 @@ export class BookRenderer {
     }
   }
 
+  /**
+   * Поменять местами active и buffer страницы
+   * Вызывается в середине анимации перелистывания
+   */
   swapBuffers() {
     const { leftActive, rightActive, leftBuffer, rightBuffer } = this.elements;
 
+    // Текущие active становятся buffer
     leftActive.dataset.buffer = "true";
     rightActive.dataset.buffer = "true";
     leftActive.dataset.active = "false";
     rightActive.dataset.active = "false";
 
+    // Текущие buffer становятся active
     leftBuffer.dataset.buffer = "false";
     rightBuffer.dataset.buffer = "false";
     leftBuffer.dataset.active = "true";
     rightBuffer.dataset.active = "true";
 
+    // Обновляем ссылки
     this.elements.leftActive = leftBuffer;
     this.elements.leftBuffer = leftActive;
     this.elements.rightActive = rightBuffer;
     this.elements.rightBuffer = rightActive;
   }
 
+  /**
+   * Предзагрузить страницу в кэш
+   * @param {number} pageIndex - Индекс страницы
+   */
   preloadPage(pageIndex) {
     if (!this.cache.has(pageIndex) && this.pageContents[pageIndex]) {
       const wrapper = document.createElement("div");
@@ -134,16 +198,29 @@ export class BookRenderer {
     }
   }
 
+  /**
+   * Очистить кэш DOM-элементов
+   */
   clearCache() {
     this.cache.clear();
   }
 
+  /**
+   * Текущий размер кэша
+   * @returns {number}
+   */
   get cacheSize() {
     return this.cache.size;
   }
 
+  /**
+   * Получить максимальный допустимый индекс страницы
+   * @param {boolean} isMobile - Мобильный режим
+   * @returns {number}
+   */
   getMaxIndex(isMobile) {
     const total = this.pageContents.length;
+    // На desktop последняя страница = total - 2 (левая страница последнего разворота)
     return isMobile ? total - 1 : Math.max(0, total - 2);
   }
 }
