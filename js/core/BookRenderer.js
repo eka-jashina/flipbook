@@ -188,13 +188,73 @@ export class BookRenderer {
   /**
    * Предзагрузить страницу в кэш
    * @param {number} pageIndex - Индекс страницы
+   * @returns {boolean} true если страница была загружена, false если уже в кэше или не существует
    */
   preloadPage(pageIndex) {
-    if (!this.cache.has(pageIndex) && this.pageContents[pageIndex]) {
-      const wrapper = document.createElement("div");
-      wrapper.innerHTML = this.pageContents[pageIndex];
-      const dom = wrapper.firstElementChild || wrapper;
-      this.cache.set(pageIndex, dom);
+    if (pageIndex < 0 || pageIndex >= this.pageContents.length) {
+      return false;
+    }
+
+    if (this.cache.has(pageIndex)) {
+      return false;
+    }
+
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = this.pageContents[pageIndex];
+    const dom = wrapper.firstElementChild || wrapper;
+    this.cache.set(pageIndex, dom);
+    return true;
+  }
+
+  /**
+   * Предзагрузить страницы вокруг текущей позиции
+   * Использует requestIdleCallback для неблокирующей загрузки
+   * @param {number} centerIndex - Центральный индекс (текущая страница)
+   * @param {number} window - Количество страниц в каждую сторону для предзагрузки
+   */
+  preloadAround(centerIndex, window = 4) {
+    const pagesToPreload = [];
+
+    // Собираем индексы страниц для предзагрузки (ближайшие первыми)
+    for (let offset = 1; offset <= window; offset++) {
+      // Сначала следующие страницы (более вероятное направление чтения)
+      pagesToPreload.push(centerIndex + offset);
+      pagesToPreload.push(centerIndex + offset + 1); // +1 для разворота
+      // Затем предыдущие
+      pagesToPreload.push(centerIndex - offset);
+      pagesToPreload.push(centerIndex - offset - 1);
+    }
+
+    // Фильтруем невалидные индексы и уже закэшированные
+    const validPages = pagesToPreload.filter(
+      idx => idx >= 0 &&
+             idx < this.pageContents.length &&
+             !this.cache.has(idx)
+    );
+
+    if (validPages.length === 0) return;
+
+    // Используем requestIdleCallback для неблокирующей загрузки
+    const preloadBatch = (deadline) => {
+      while (validPages.length > 0 && deadline.timeRemaining() > 0) {
+        const pageIndex = validPages.shift();
+        this.preloadPage(pageIndex);
+      }
+
+      // Если остались страницы - планируем следующий batch
+      if (validPages.length > 0) {
+        requestIdleCallback(preloadBatch, { timeout: 500 });
+      }
+    };
+
+    // Запускаем предзагрузку в idle time
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(preloadBatch, { timeout: 1000 });
+    } else {
+      // Fallback для Safari
+      setTimeout(() => {
+        validPages.forEach(idx => this.preloadPage(idx));
+      }, 100);
     }
   }
 

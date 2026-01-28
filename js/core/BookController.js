@@ -209,6 +209,19 @@ export class BookController {
     this.settings.set("page", newIndex);
     this._updateChapterBackground();
     this._updateDebug();
+
+    // Предзагрузка соседних страниц в idle time
+    this._preloadAroundCurrentPage(newIndex);
+  }
+
+  /**
+   * Предзагрузить страницы вокруг текущей позиции
+   * @private
+   * @param {number} index
+   */
+  _preloadAroundCurrentPage(index) {
+    const preloadWindow = CONFIG.VIRTUALIZATION.preloadWindow;
+    this.renderer.preloadAround(index, preloadWindow);
   }
 
   /**
