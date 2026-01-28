@@ -125,169 +125,344 @@
   animation: slideDown 0.3s ease-out;
 }
 
-/* Контролы звука */
-.sound-controls {
+/* ═══════════════════════════════════════════
+   AUDIO POD - Modern Audio Controls
+   ═══════════════════════════════════════════ */
+
+.audio-pod {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 320px;
 }
 
-.sound-controls label {
+.audio-section {
   display: flex;
-  align-items: center;
-  gap: 0.5em;
-  cursor: pointer;
-}
-
-.sound-controls input[type="checkbox"] {
-  width: auto;
-  height: auto;
-  cursor: pointer;
-}
-
-.sound-volume {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.sound-volume button {
-  padding: 0.2em 0.4em;
-  min-width: 2em;
-}
-
-#volume-slider {
-  width: 100px;
-  height: 4px;
-  background: var(--border-page);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-  padding: 0;
-}
-
-#volume-slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  background: brown;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-#volume-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-#volume-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  background: brown;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-#volume-slider::-moz-range-thumb:hover {
-  transform: scale(1.2);
-}
-
-/* 
-  AMBIENT CONTROLS STYLES
-  Добавить в css/controls.css после блока .sound-controls
-*/
-
-/* Контролы ambient звука */
-.ambient-controls {
-  display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: center;
-  border-top: 1px dashed var(--border-page, #ccc);
 }
 
-.ambient-controls label {
+.audio-section:not(:last-child) {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(139, 69, 19, 0.2);
+}
+
+.audio-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.9em;
+  font-weight: 600;
+  opacity: 0.9;
 }
 
-.ambient-controls select {
-  min-width: 120px;
+.audio-icon {
+  opacity: 0.7;
 }
 
-.ambient-volume {
-  display: none; /* Скрыт по умолчанию */
+/* Audio Row - toggle + volume */
+.audio-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ═══════════════════════════════════════════
+   TOGGLE SWITCH - iOS Style
+   ═══════════════════════════════════════════ */
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: rgba(139, 69, 19, 0.3);
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--cover-front-text);
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: rgba(139, 69, 19, 0.8);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.toggle-switch input:focus + .toggle-slider {
+  box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.4);
+}
+
+.toggle-switch:hover {
+  transform: none;
+  outline: none;
+}
+
+/* ═══════════════════════════════════════════
+   VOLUME CONTROL - Slider with Icons
+   ═══════════════════════════════════════════ */
+
+.volume-control {
+  display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 4px;
+  flex: 1;
 }
 
-/* Показываем громкость когда есть активный ambient */
-.ambient-controls.has-ambient .ambient-volume {
-  display: flex;
+.vol-icon {
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
 }
 
-#ambient-volume {
-  width: 80px;
-  height: 4px;
-  background: var(--border-page, #ccc);
-  border-radius: 2px;
+.volume-control:hover .vol-icon {
+  opacity: 0.9;
+}
+
+.volume-slider {
+  flex: 1;
+  height: 6px;
+  background: rgba(139, 69, 19, 0.2);
+  border-radius: 3px;
   outline: none;
   cursor: pointer;
-  padding: 0;
   -webkit-appearance: none;
   appearance: none;
+  padding: 0;
 }
 
-#ambient-volume::-webkit-slider-thumb {
+.volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
-  background: brown;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #8b4513, #5d3a1a);
   border-radius: 50%;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-#ambient-volume::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 
-#ambient-volume::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  background: brown;
+.volume-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #8b4513, #5d3a1a);
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-#ambient-volume::-moz-range-thumb:hover {
-  transform: scale(1.2);
+.volume-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 
-#ambient-volume-label {
-  font-size: 0.8em;
-  min-width: 35px;
-  text-align: center;
-  color: inherit;
+/* Disabled state for volume */
+.volume-control.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════
+   AMBIENT PILLS - Pill Button Selection
+   ═══════════════════════════════════════════ */
+
+.ambient-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ambient-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  background: rgba(139, 69, 19, 0.15);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.75em;
+  min-width: 56px;
+}
+
+.ambient-pill:hover {
+  background: rgba(139, 69, 19, 0.25);
+  transform: translateY(-1px);
+}
+
+.ambient-pill[data-active="true"] {
+  background: rgba(139, 69, 19, 0.35);
+  border-color: rgba(139, 69, 19, 0.6);
+  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.2);
+}
+
+.ambient-pill-icon {
+  font-size: 1.4em;
+  line-height: 1;
+}
+
+.ambient-pill-label {
+  font-weight: 500;
   opacity: 0.8;
 }
 
-/* Адаптация для мобильных */
+/* Ambient volume row - hidden when no ambient */
+.ambient-volume-row {
+  display: none;
+  margin-top: 4px;
+}
+
+.ambient-volume-row.visible {
+  display: flex;
+}
+
+/* ═══════════════════════════════════════════
+   DARK THEME OVERRIDES
+   ═══════════════════════════════════════════ */
+
+html[data-theme="dark"] .audio-pod {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .audio-section:not(:last-child) {
+  border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+
+html[data-theme="dark"] .toggle-slider {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+html[data-theme="dark"] .toggle-switch input:checked + .toggle-slider {
+  background-color: rgba(200, 150, 100, 0.7);
+}
+
+html[data-theme="dark"] .volume-slider {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+html[data-theme="dark"] .volume-slider::-webkit-slider-thumb {
+  background: linear-gradient(135deg, #c8966d, #a07850);
+}
+
+html[data-theme="dark"] .volume-slider::-moz-range-thumb {
+  background: linear-gradient(135deg, #c8966d, #a07850);
+}
+
+html[data-theme="dark"] .ambient-pill {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"] .ambient-pill:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+html[data-theme="dark"] .ambient-pill[data-active="true"] {
+  background: rgba(200, 150, 100, 0.3);
+  border-color: rgba(200, 150, 100, 0.5);
+}
+
+/* ═══════════════════════════════════════════
+   B&W THEME OVERRIDES
+   ═══════════════════════════════════════════ */
+
+html[data-theme="bw"] .audio-pod {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid #000;
+}
+
+html[data-theme="bw"] .toggle-slider {
+  background-color: #ccc;
+}
+
+html[data-theme="bw"] .toggle-switch input:checked + .toggle-slider {
+  background-color: #000;
+}
+
+html[data-theme="bw"] .toggle-slider::before {
+  background-color: #fff;
+}
+
+html[data-theme="bw"] .volume-slider {
+  background: #ccc;
+}
+
+html[data-theme="bw"] .volume-slider::-webkit-slider-thumb {
+  background: #000;
+}
+
+html[data-theme="bw"] .volume-slider::-moz-range-thumb {
+  background: #000;
+}
+
+html[data-theme="bw"] .ambient-pill {
+  background: transparent;
+  border: 1px solid #000;
+}
+
+html[data-theme="bw"] .ambient-pill[data-active="true"] {
+  background: #000;
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE - Mobile Adaptation
+   ═══════════════════════════════════════════ */
+
 @media (max-width: 600px) {
-  .ambient-controls {
-    width: 100%;
+  .audio-pod {
+    max-width: 100%;
   }
-  
-  .ambient-controls select {
-    width: 100%;
+
+  .ambient-pills {
+    justify-content: center;
   }
-  
-  #ambient-volume {
-    width: 100px;
+
+  .ambient-pill {
+    flex: 1;
+    min-width: 60px;
+    max-width: 80px;
   }
 }

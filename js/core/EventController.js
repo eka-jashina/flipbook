@@ -144,10 +144,10 @@ export class EventController {
       debugToggle,
       soundToggle,
       volumeSlider,
-      volumeDown,
-      volumeUp,
-      ambientSelect,
-      ambientVolume
+      pageVolumeControl,
+      ambientPills,
+      ambientVolume,
+      ambientVolumeWrapper
     } = elements;
 
     this.eventManager.add(increaseBtn, "click", () => {
@@ -170,9 +170,16 @@ export class EventController {
       this.onSettings("debug", "toggle");
     });
 
+    // Sound toggle - также обновляет состояние volume control
     if (soundToggle) {
       this.eventManager.add(soundToggle, "change", (e) => {
-        this.onSettings("soundEnabled", e.target.checked);
+        const enabled = e.target.checked;
+        this.onSettings("soundEnabled", enabled);
+
+        // Обновить визуальное состояние volume control
+        if (pageVolumeControl) {
+          pageVolumeControl.classList.toggle('disabled', !enabled);
+        }
       });
     }
 
@@ -183,21 +190,27 @@ export class EventController {
       });
     }
 
-    if (volumeDown) {
-      this.eventManager.add(volumeDown, "click", () => {
-        this.onSettings("soundVolume", "decrease");
-      });
-    }
+    // Ambient pills - делегирование клика по контейнеру
+    if (ambientPills) {
+      this.eventManager.add(ambientPills, "click", (e) => {
+        const pill = e.target.closest('.ambient-pill');
+        if (!pill) return;
 
-    if (volumeUp) {
-      this.eventManager.add(volumeUp, "click", () => {
-        this.onSettings("soundVolume", "increase");
-      });
-    }
+        const type = pill.dataset.type;
+        this.onSettings("ambientType", type);
 
-    if (ambientSelect) {
-      this.eventManager.add(ambientSelect, "change", (e) => {
-        this.onSettings("ambientType", e.target.value);
+        // Обновить состояние всех pills
+        const allPills = ambientPills.querySelectorAll('.ambient-pill');
+        allPills.forEach(p => {
+          const isActive = p.dataset.type === type;
+          p.dataset.active = isActive;
+          p.setAttribute('aria-checked', isActive);
+        });
+
+        // Показать/скрыть слайдер громкости
+        if (ambientVolumeWrapper) {
+          ambientVolumeWrapper.classList.toggle('visible', type !== 'none');
+        }
       });
     }
 
