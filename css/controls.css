@@ -1042,11 +1042,26 @@ html[data-theme="bw"] .ambient-pill[data-active="true"] {
     min-width: 240px;
   }
 
-  /* Settings container - horizontal */
+  /* Settings container - horizontal, collapsed by default */
   .settings {
     flex-direction: row;
     gap: 16px;
     align-items: flex-start;
+    max-height: 0;
+    overflow: hidden;
+    /* На десктопе полностью убираем из потока когда скрыто */
+    width: 0;
+    padding: 0;
+    transition:
+      opacity var(--timing-transition) ease-in-out,
+      max-height var(--timing-transition) ease-in-out,
+      width var(--timing-transition) ease-in-out;
+  }
+
+  /* Когда открыты - показываем с нормальной шириной */
+  .controls:has(.settings-checkbox:checked) .settings {
+    width: auto;
+    max-height: 500px;
   }
 
   /* Settings Pod - compact for desktop */
