@@ -84,6 +84,7 @@ export class BookController {
     this.settings = this.factory.createSettingsManager();
     this.soundManager = this.factory.createSoundManager(this.settings);
     this.ambientManager = this.factory.createAmbientManager(this.settings);
+    this._setupAmbientLoadingCallbacks();
     this.backgroundManager = this.factory.createBackgroundManager();
     this.contentLoader = this.factory.createContentLoader();
     this.paginator = this.factory.createPaginator();
@@ -295,6 +296,26 @@ export class BookController {
       const progress = (currentPage / totalPages) * 100;
       progressBar.style.width = `${progress}%`;
     }
+  }
+
+  /**
+   * Настроить коллбэки загрузки для ambient pills
+   * @private
+   */
+  _setupAmbientLoadingCallbacks() {
+    const ambientPills = this.dom.get('ambientPills');
+    if (!ambientPills) return;
+
+    // Функция для установки состояния загрузки на pill
+    const setPillLoading = (type, isLoading) => {
+      const pill = ambientPills.querySelector(`[data-type="${type}"]`);
+      if (pill) {
+        pill.dataset.loading = isLoading;
+      }
+    };
+
+    this.ambientManager.onLoadStart = (type) => setPillLoading(type, true);
+    this.ambientManager.onLoadEnd = (type) => setPillLoading(type, false);
   }
 
   // ═══════════════════════════════════════════

@@ -20,16 +20,23 @@ export class AmbientManager {
    * @param {string} options.currentType - Текущий тип звука
    * @param {number} options.volume - Громкость (0-1)
    * @param {Object} options.sounds - Карта типов к URL файлов
+   * @param {Function} options.onLoadStart - Коллбэк начала загрузки
+   * @param {Function} options.onLoadEnd - Коллбэк завершения загрузки
    */
   constructor(options = {}) {
     this.currentType = options.currentType ?? AmbientManager.TYPE_NONE;
     this.volume = options.volume ?? 0.5;
     this.sounds = options.sounds ?? {};
-    
+
+    // Коллбэки для UI
+    this.onLoadStart = options.onLoadStart ?? (() => {});
+    this.onLoadEnd = options.onLoadEnd ?? (() => {});
+
     this.audio = null;
     this.isPlaying = false;
+    this.isLoading = false;
     this.fadeInterval = null;
-    
+
     this._boundVisibilityHandler = this._handleVisibilityChange.bind(this);
     this._setupVisibilityListener();
   }
@@ -87,6 +94,10 @@ export class AmbientManager {
       await this.stop(fade);
     }
 
+    // Начинаем загрузку
+    this.isLoading = true;
+    this.onLoadStart(type);
+
     try {
       this.audio = new Audio(url);
       this.audio.loop = true;
@@ -116,6 +127,10 @@ export class AmbientManager {
         console.warn('Failed to play ambient sound:', error);
       }
       this.isPlaying = false;
+    } finally {
+      // Загрузка завершена (успешно или с ошибкой)
+      this.isLoading = false;
+      this.onLoadEnd(type);
     }
   }
 
