@@ -65,16 +65,14 @@ export class DOMManager {
       themeSelect: $("theme-select"),
       debugToggle: $("debugToggle"),
 
-      // Sound controls
+      // Sound controls (new Audio Pod)
       soundToggle: $("sound-toggle"),
       volumeSlider: $("volume-slider"),
-      volumeDown: $("volume-down"),
-      volumeUp: $("volume-up"),
+      pageVolumeControl: $("page-volume-control"),
 
-      // Ambient controls
-      ambientSelect: $("ambient-select"),
+      // Ambient controls (pill buttons)
+      ambientPills: document.querySelector(".ambient-pills"),
       ambientVolume: $("ambient-volume"),
-      ambientVolumeLabel: $("ambient-volume-label"),
       ambientVolumeWrapper: $("ambient-volume-wrapper"),
       
       // Debug panel

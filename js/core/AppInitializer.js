@@ -89,51 +89,91 @@ export class AppInitializer {
       volumeSlider.value = this.settings.get("soundVolume") * 100;
     }
 
-    // Синхронизировать контролы ambient
-    const ambientSelect = this.dom.get('ambientSelect');
+    // Синхронизировать контролы ambient (новые pill buttons)
+    const ambientPills = this.dom.get('ambientPills');
     const ambientVolume = this.dom.get('ambientVolume');
-    const ambientVolumeLabel = this.dom.get('ambientVolumeLabel');
-    const ambientControls = ambientSelect?.closest('.ambient-controls');
+    const ambientVolumeWrapper = this.dom.get('ambientVolumeWrapper');
 
-    if (ambientSelect) {
-      // Заполнить options из конфигурации
-      this._populateAmbientOptions(ambientSelect);
+    if (ambientPills) {
+      // Заполнить pills из конфигурации
+      this._populateAmbientPills(ambientPills);
 
       const savedType = this.settings.get("ambientType");
-      ambientSelect.value = savedType;
-      
-      // Показать/скрыть слайдер в зависимости от типа
-      if (ambientControls) {
-        if (savedType !== AmbientManager.TYPE_NONE) {
-          ambientControls.classList.add('has-ambient');
-        }
+      this._updateAmbientPillsState(ambientPills, savedType);
+
+      // Показать/скрыть слайдер громкости в зависимости от типа
+      if (ambientVolumeWrapper && savedType !== AmbientManager.TYPE_NONE) {
+        ambientVolumeWrapper.classList.add('visible');
       }
     }
 
     if (ambientVolume) {
       const savedVolume = this.settings.get("ambientVolume");
       ambientVolume.value = savedVolume * 100;
-      
-      if (ambientVolumeLabel) {
-        ambientVolumeLabel.textContent = `${Math.round(savedVolume * 100)}%`;
-      }
+    }
+
+    // Синхронизировать состояние volume control для перелистывания
+    const pageVolumeControl = this.dom.get('pageVolumeControl');
+    if (pageVolumeControl) {
+      const soundEnabled = this.settings.get("soundEnabled");
+      pageVolumeControl.classList.toggle('disabled', !soundEnabled);
     }
   }
 
   /**
-   * Заполнить опции выбора ambient из конфигурации
+   * Заполнить pill buttons для выбора ambient из конфигурации
    * @private
-   * @param {HTMLSelectElement} selectEl
+   * @param {HTMLElement} container
    */
-  _populateAmbientOptions(selectEl) {
-    selectEl.innerHTML = '';
+  _populateAmbientPills(container) {
+    container.innerHTML = '';
+
+    // Иконки для каждого типа ambient
+    const icons = {
+      none: '✕',
+      rain: '🌧️',
+      fireplace: '🔥',
+      cafe: '☕'
+    };
+
+    // Короткие лейблы
+    const labels = {
+      none: 'Нет',
+      rain: 'Дождь',
+      fireplace: 'Камин',
+      cafe: 'Кафе'
+    };
 
     for (const [type, config] of Object.entries(CONFIG.AMBIENT)) {
-      const option = document.createElement('option');
-      option.value = type;
-      option.textContent = config.label;
-      selectEl.appendChild(option);
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'ambient-pill';
+      pill.dataset.type = type;
+      pill.setAttribute('role', 'radio');
+      pill.setAttribute('aria-label', config.label);
+
+      pill.innerHTML = `
+        <span class="ambient-pill-icon">${icons[type] || '🎵'}</span>
+        <span class="ambient-pill-label">${labels[type] || config.label}</span>
+      `;
+
+      container.appendChild(pill);
     }
+  }
+
+  /**
+   * Обновить состояние активности pills
+   * @private
+   * @param {HTMLElement} container
+   * @param {string} activeType
+   */
+  _updateAmbientPillsState(container, activeType) {
+    const pills = container.querySelectorAll('.ambient-pill');
+    pills.forEach(pill => {
+      const isActive = pill.dataset.type === activeType;
+      pill.dataset.active = isActive;
+      pill.setAttribute('aria-checked', isActive);
+    });
   }
 
   /**
@@ -144,14 +184,16 @@ export class AppInitializer {
     const {
       nextBtn, prevBtn, tocBtn, continueBtn, cover,
       increaseBtn, decreaseBtn, fontSelect, themeSelect, debugToggle,
-      soundToggle, volumeSlider, volumeDown, volumeUp, ambientSelect, ambientVolume
+      soundToggle, volumeSlider, pageVolumeControl,
+      ambientPills, ambientVolume, ambientVolumeWrapper
     } = this.dom.elements;
 
     this.eventController.bind({
       nextBtn, prevBtn, tocBtn, continueBtn,
       coverEl: cover,
       increaseBtn, decreaseBtn, fontSelect, themeSelect, debugToggle,
-      soundToggle, volumeSlider, volumeDown, volumeUp, ambientSelect, ambientVolume
+      soundToggle, volumeSlider, pageVolumeControl,
+      ambientPills, ambientVolume, ambientVolumeWrapper
     });
 
     this.dragDelegate.bind();
