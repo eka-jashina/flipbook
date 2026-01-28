@@ -42,11 +42,11 @@ export class BookAnimator {
   getTimings() {
     return {
       lift: cssVars.getTime("--timing-lift", 240),
-      rotate: cssVars.getTime("--timing-rotate", 800),
+      rotate: cssVars.getTime("--timing-rotate", 900),
       drop: cssVars.getTime("--timing-drop", 160),
       cover: cssVars.getTime("--timing-cover", 1200),
       wrap: cssVars.getTime("--timing-wrap", 300),
-      swapNext: cssVars.getTime("--timing-swap-next", 100),
+      swapNext: cssVars.getTime("--timing-swap-next", 0),
       swapPrev: cssVars.getTime("--timing-swap-prev", 100),
     };
   }

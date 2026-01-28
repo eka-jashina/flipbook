@@ -80,34 +80,6 @@ export class BackgroundManager {
   }
 
   /**
-   * Предзагрузить несколько изображений
-   * @param {string[]} urls - Массив URL
-   * @param {boolean} highPriority - Высокий приоритет
-   * @returns {Promise<void[]>}
-   */
-  async preloadMultiple(urls, highPriority = false) {
-    return Promise.all(
-      urls.map(url => this.preload(url, highPriority))
-    );
-  }
-
-  /**
-   * Проверить, загружен ли фон
-   * @param {string} url
-   * @returns {boolean}
-   */
-  isPreloaded(url) {
-    return this.preloadedUrls.has(url);
-  }
-
-  /**
-   * Очистить кэш предзагрузки
-   */
-  clearPreloadCache() {
-    this.preloadedUrls.clear();
-  }
-
-  /**
    * Удалить из очереди загрузки
    * @private
    */

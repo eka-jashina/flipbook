@@ -5,6 +5,7 @@
 
 import { CONFIG, BookState } from '../../config.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
+import { AmbientManager } from '../../utils/AmbientManager.js';
 import { BaseDelegate } from './BaseDelegate.js';
 
 export class LifecycleDelegate extends BaseDelegate {
@@ -274,7 +275,7 @@ export class LifecycleDelegate extends BaseDelegate {
     if (!this.ambientManager || !this.settings) return;
 
     const ambientType = this.settings.get("ambientType");
-    if (ambientType && ambientType !== "none") {
+    if (ambientType && ambientType !== AmbientManager.TYPE_NONE) {
       // Запускаем с fade-in для плавного появления
       this.ambientManager.setType(ambientType, true);
     }
