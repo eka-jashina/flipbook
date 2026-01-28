@@ -198,19 +198,19 @@ export class DragDelegate extends BaseDelegate {
         rightBuffer.dataset.buffer = "false";
         rightBuffer.dataset.dragVisible = "true";
       }
-      if (rightActive) rightActive.style.display = "none";
+      if (rightActive) rightActive.style.visibility = "hidden";
     } else if (this.direction === "next") {
       if (rightBuffer) {
         rightBuffer.dataset.buffer = "false";
         rightBuffer.dataset.dragVisible = "true";
       }
-      if (rightActive) rightActive.style.display = "none";
+      if (rightActive) rightActive.style.visibility = "hidden";
     } else {
       if (leftBuffer) {
         leftBuffer.dataset.buffer = "false";
         leftBuffer.dataset.dragVisible = "true";
       }
-      if (leftActive) leftActive.style.display = "none";
+      if (leftActive) leftActive.style.visibility = "hidden";
     }
   }
 
@@ -415,9 +415,9 @@ export class DragDelegate extends BaseDelegate {
     if (this._pageRefs) {
       const { leftActive, rightActive, leftBuffer, rightBuffer } = this._pageRefs;
 
-      // Восстанавливаем display для скрытых элементов
-      if (leftActive) leftActive.style.display = "";
-      if (rightActive) rightActive.style.display = "";
+      // Восстанавливаем visibility для скрытых элементов
+      if (leftActive) leftActive.style.visibility = "";
+      if (rightActive) rightActive.style.visibility = "";
 
       // Удаляем dragVisible
       if (leftBuffer) delete leftBuffer.dataset.dragVisible;

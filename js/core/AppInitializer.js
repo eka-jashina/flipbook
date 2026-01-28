@@ -12,6 +12,7 @@
 
 import { CONFIG } from '../config.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
+import { AmbientManager } from '../utils/AmbientManager.js';
 
 export class AppInitializer {
   /**
@@ -103,7 +104,7 @@ export class AppInitializer {
       
       // Показать/скрыть слайдер в зависимости от типа
       if (ambientControls) {
-        if (savedType !== 'none') {
+        if (savedType !== AmbientManager.TYPE_NONE) {
           ambientControls.classList.add('has-ambient');
         }
       }

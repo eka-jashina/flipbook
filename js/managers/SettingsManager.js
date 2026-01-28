@@ -50,12 +50,4 @@ export class SettingsManager extends EventEmitter {
     this.emit("change", { key, value, oldValue });
     this.emit(`change:${key}`, { value, oldValue });
   }
-
-  /**
-   * Получить копию всех настроек
-   * @returns {Object} Копия объекта настроек
-   */
-  getAll() {
-    return { ...this.settings };
-  }
 }

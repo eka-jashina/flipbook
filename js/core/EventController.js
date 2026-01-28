@@ -186,14 +186,12 @@ export class EventController {
     if (volumeDown) {
       this.eventManager.add(volumeDown, "click", () => {
         this.onSettings("soundVolume", "decrease");
-        this._updateVolumeSlider();
       });
     }
 
     if (volumeUp) {
       this.eventManager.add(volumeUp, "click", () => {
         this.onSettings("soundVolume", "increase");
-        this._updateVolumeSlider();
       });
     }
 
@@ -208,16 +206,6 @@ export class EventController {
         const volume = parseFloat(e.target.value) / 100;
         this.onSettings("ambientVolume", volume);
       });
-    }
-  }
-
-  /**
-   * Обновить позицию слайдера громкости (для синхронизации с кнопками +/-)
-   * @private
-   */
-  _updateVolumeSlider() {
-    const slider = document.getElementById("volume-slider");
-    if (slider && this.isOpened()) {
     }
   }
 
