@@ -115,15 +115,62 @@
           </label>
         </div>
         <div class="settings" role="group" aria-label="Настройки чтения">
-          <div>
-            <div class="font-size">
-              <span>Размер шрифта </span>
-              <button id="decrease">−</button>
-              <button id="increase">+</button>
+          <!-- Settings Pod - настройки оформления -->
+          <div class="settings-pod">
+            <!-- Размер шрифта - Stepper -->
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <svg class="settings-icon" viewBox="0 0 24 24" width="18" height="18">
+                  <path fill="currentColor" d="M9 4v3h5v12h3V7h5V4H9zm-6 8h3v7h3v-7h3V9H3v3z"/>
+                </svg>
+                <span>Размер шрифта</span>
+              </div>
+              <div class="font-size-stepper">
+                <button type="button" id="decrease" class="stepper-btn" aria-label="Уменьшить размер">−</button>
+                <span class="stepper-value" id="font-size-value">18</span>
+                <button type="button" id="increase" class="stepper-btn" aria-label="Увеличить размер">+</button>
+              </div>
             </div>
-            <div class="font-choice">
-              <label for="font-select">Шрифт:</label>
-              <select id="font-select">
+
+            <!-- Тема - Segmented Control -->
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <svg class="settings-icon" viewBox="0 0 24 24" width="18" height="18">
+                  <path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                </svg>
+                <span>Тема</span>
+              </div>
+              <div class="theme-segmented" role="radiogroup" aria-label="Выбор темы">
+                <button type="button" class="theme-segment" data-theme="light" data-active="true" aria-checked="true" role="radio">
+                  <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path fill="currentColor" d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>
+                  </svg>
+                  <span>Светлая</span>
+                </button>
+                <button type="button" class="theme-segment" data-theme="dark" role="radio">
+                  <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                  </svg>
+                  <span>Тёмная</span>
+                </button>
+                <button type="button" class="theme-segment" data-theme="bw" role="radio">
+                  <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18V4c4.41 0 8 3.59 8 8s-3.59 8-8 8z"/>
+                  </svg>
+                  <span>Ч/Б</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Шрифт - оставляем Select -->
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <svg class="settings-icon" viewBox="0 0 24 24" width="18" height="18">
+                  <path fill="currentColor" d="M9.93 13.5h4.14L12 7.98 9.93 13.5zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-3H9.17l-1.12 3H5.96l5.11-13h1.86l5.11 13h-2.09z"/>
+                </svg>
+                <span>Шрифт</span>
+              </div>
+              <select id="font-select" class="font-select-modern">
                 <option value="georgia">Georgia</option>
                 <option value="merriweather">Merriweather</option>
                 <option value="libre-baskerville">Libre Baskerville</option>
@@ -132,16 +179,8 @@
                 <option value="open-sans">Open Sans</option>
               </select>
             </div>
-            <div class="theme-choice">
-              <label for="theme-select">Тема:</label>
-              <select id="theme-select">
-                <option value="light">Светлая</option>
-                <option value="dark">Тёмная</option>
-                <option value="bw">Ч/б</option>
-              </select>
-            </div>
-            <!-- <button id="debugToggle">Debug</button> -->
           </div>
+
           <!-- Audio Control Pod - объединённая панель звука -->
           <div class="audio-pod">
             <!-- Секция звука перелистывания -->

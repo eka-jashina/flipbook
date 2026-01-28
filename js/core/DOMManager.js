@@ -58,11 +58,12 @@ export class DOMManager {
       tocBtn: $("tocBtn"),
       continueBtn: $("continueBtn"),
       
-      // Settings controls
+      // Settings controls (new Settings Pod)
       increaseBtn: $("increase"),
       decreaseBtn: $("decrease"),
+      fontSizeValue: $("font-size-value"),
       fontSelect: $("font-select"),
-      themeSelect: $("theme-select"),
+      themeSegmented: document.querySelector(".theme-segmented"),
       debugToggle: $("debugToggle"),
 
       // Sound controls (new Audio Pod)

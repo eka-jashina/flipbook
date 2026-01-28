@@ -139,8 +139,9 @@ export class EventController {
     const {
       increaseBtn,
       decreaseBtn,
+      fontSizeValue,
       fontSelect,
-      themeSelect,
+      themeSegmented,
       debugToggle,
       soundToggle,
       volumeSlider,
@@ -150,21 +151,39 @@ export class EventController {
       ambientVolumeWrapper
     } = elements;
 
+    // Font size stepper - с обновлением отображаемого значения
     this.eventManager.add(increaseBtn, "click", () => {
       this.onSettings("fontSize", "increase");
+      this._updateFontSizeDisplay(fontSizeValue, 1);
     });
 
     this.eventManager.add(decreaseBtn, "click", () => {
       this.onSettings("fontSize", "decrease");
+      this._updateFontSizeDisplay(fontSizeValue, -1);
     });
 
     this.eventManager.add(fontSelect, "change", (e) => {
       this.onSettings("font", e.target.value);
     });
 
-    this.eventManager.add(themeSelect, "change", (e) => {
-      this.onSettings("theme", e.target.value);
-    });
+    // Theme segmented control - клик по сегментам
+    if (themeSegmented) {
+      this.eventManager.add(themeSegmented, "click", (e) => {
+        const segment = e.target.closest('.theme-segment');
+        if (!segment) return;
+
+        const theme = segment.dataset.theme;
+        this.onSettings("theme", theme);
+
+        // Обновить состояние всех сегментов
+        const allSegments = themeSegmented.querySelectorAll('.theme-segment');
+        allSegments.forEach(s => {
+          const isActive = s.dataset.theme === theme;
+          s.dataset.active = isActive;
+          s.setAttribute('aria-checked', isActive);
+        });
+      });
+    }
 
     this.eventManager.add(debugToggle, "click", () => {
       this.onSettings("debug", "toggle");
@@ -305,6 +324,23 @@ export class EventController {
       { passive: true },
     );
     this.eventManager.add(this.book, "touchend", this._boundHandlers.touchend);
+  }
+
+  /**
+   * Обновить отображение размера шрифта
+   * @private
+   * @param {HTMLElement} element - Элемент отображения значения
+   * @param {number} delta - Изменение (+1 или -1)
+   */
+  _updateFontSizeDisplay(element, delta) {
+    if (!element) return;
+
+    const minSize = cssVars.getNumber("--font-min", 14);
+    const maxSize = cssVars.getNumber("--font-max", 22);
+    const current = parseInt(element.textContent, 10) || 18;
+    const newSize = Math.max(minSize, Math.min(maxSize, current + delta));
+
+    element.textContent = newSize;
   }
 
   /**
