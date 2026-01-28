@@ -209,6 +209,7 @@ export class BookController {
     this.settings.set("page", newIndex);
     this._updateChapterBackground();
     this._updateDebug();
+    this._updateNavigationUI();
   }
 
   /**
@@ -220,6 +221,7 @@ export class BookController {
   _handlePaginationComplete(pages, chapterStarts) {
     this.renderer.setPageContents(pages);
     this.state.chapterStarts = chapterStarts;
+    this._updateNavigationUI();
   }
 
   /**
@@ -270,6 +272,29 @@ export class BookController {
       cacheLimit: CONFIG.VIRTUALIZATION.cacheLimit,
       listenerCount: this.eventManager.count,
     });
+  }
+
+  /**
+   * Обновить навигационный UI (счётчик страниц и прогресс-бар)
+   * @private
+   */
+  _updateNavigationUI() {
+    const totalPages = this.renderer.pageContents.length;
+    const currentPage = this.state.index + 1; // 1-based для отображения
+
+    // Обновить счётчик страниц
+    const currentPageEl = this.dom.get('currentPage');
+    const totalPagesEl = this.dom.get('totalPages');
+
+    if (currentPageEl) currentPageEl.textContent = currentPage;
+    if (totalPagesEl) totalPagesEl.textContent = totalPages;
+
+    // Обновить прогресс-бар
+    const progressBar = this.dom.get('readingProgress');
+    if (progressBar && totalPages > 0) {
+      const progress = (currentPage / totalPages) * 100;
+      progressBar.style.width = `${progress}%`;
+    }
   }
 
   // ═══════════════════════════════════════════

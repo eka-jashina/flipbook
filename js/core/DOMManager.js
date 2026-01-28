@@ -52,11 +52,14 @@ export class DOMManager {
       loadingOverlay: $("loadingOverlay"),
       loadingProgress: $("loadingProgress"),
       
-      // Navigation controls
+      // Navigation controls (new Navigation Pod)
       nextBtn: $("next"),
       prevBtn: $("prev"),
       tocBtn: $("tocBtn"),
       continueBtn: $("continueBtn"),
+      currentPage: $("current-page"),
+      totalPages: $("total-pages"),
+      readingProgress: $("reading-progress"),
       
       // Settings controls (new Settings Pod)
       increaseBtn: $("increase"),
