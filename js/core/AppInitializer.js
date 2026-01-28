@@ -70,12 +70,25 @@ export class AppInitializer {
       if (continueBtn) continueBtn.hidden = false;
     }
     
-    // Синхронизировать селекты с настройками
+    // Синхронизировать настройки шрифта
     const fontSelect = this.dom.get('fontSelect');
-    const themeSelect = this.dom.get('themeSelect');
-    
+    const fontSizeValue = this.dom.get('fontSizeValue');
+
     if (fontSelect) fontSelect.value = this.settings.get("font");
-    if (themeSelect) themeSelect.value = this.settings.get("theme");
+    if (fontSizeValue) fontSizeValue.textContent = this.settings.get("fontSize");
+
+    // Синхронизировать theme segmented control
+    const themeSegmented = this.dom.get('themeSegmented');
+    const savedTheme = this.settings.get("theme");
+
+    if (themeSegmented) {
+      const segments = themeSegmented.querySelectorAll('.theme-segment');
+      segments.forEach(segment => {
+        const isActive = segment.dataset.theme === savedTheme;
+        segment.dataset.active = isActive;
+        segment.setAttribute('aria-checked', isActive);
+      });
+    }
 
     // Синхронизировать контролы звука
     const soundToggle = this.dom.get('soundToggle');
@@ -183,7 +196,7 @@ export class AppInitializer {
   _bindEvents() {
     const {
       nextBtn, prevBtn, tocBtn, continueBtn, cover,
-      increaseBtn, decreaseBtn, fontSelect, themeSelect, debugToggle,
+      increaseBtn, decreaseBtn, fontSizeValue, fontSelect, themeSegmented, debugToggle,
       soundToggle, volumeSlider, pageVolumeControl,
       ambientPills, ambientVolume, ambientVolumeWrapper
     } = this.dom.elements;
@@ -191,7 +204,7 @@ export class AppInitializer {
     this.eventController.bind({
       nextBtn, prevBtn, tocBtn, continueBtn,
       coverEl: cover,
-      increaseBtn, decreaseBtn, fontSelect, themeSelect, debugToggle,
+      increaseBtn, decreaseBtn, fontSizeValue, fontSelect, themeSegmented, debugToggle,
       soundToggle, volumeSlider, pageVolumeControl,
       ambientPills, ambientVolume, ambientVolumeWrapper
     });
