@@ -1021,3 +1021,131 @@ html[data-theme="bw"] .ambient-pill[data-active="true"] {
     max-width: 80px;
   }
 }
+
+/* ═══════════════════════════════════════════
+   DESKTOP HORIZONTAL LAYOUT
+   Pods sit side by side on larger screens
+   ═══════════════════════════════════════════ */
+
+@media (min-width: 801px) {
+  .controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  /* Navigation Pod - compact width */
+  .navigation-pod {
+    max-width: 280px;
+    min-width: 240px;
+  }
+
+  /* Settings container - horizontal */
+  .settings {
+    flex-direction: row;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  /* Settings Pod - compact for desktop */
+  .settings-pod {
+    max-width: 240px;
+    min-width: 200px;
+    margin-bottom: 0;
+  }
+
+  .settings-section:not(:last-child) {
+    padding-bottom: 10px;
+  }
+
+  .settings-section-header {
+    font-size: 0.8em;
+  }
+
+  .font-size-stepper {
+    gap: 2px;
+  }
+
+  .stepper-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1em;
+  }
+
+  .stepper-value {
+    min-width: 40px;
+    height: 32px;
+    font-size: 0.9em;
+  }
+
+  .theme-segmented {
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .theme-segment {
+    padding: 6px 4px;
+    font-size: 0.65em;
+  }
+
+  .theme-segment svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .font-select-modern {
+    padding: 8px 10px;
+    font-size: 0.85em;
+    padding-right: 32px;
+  }
+
+  /* Audio Pod - compact for desktop */
+  .audio-pod {
+    max-width: 260px;
+    min-width: 220px;
+  }
+
+  .audio-section:not(:last-child) {
+    padding-bottom: 10px;
+  }
+
+  .audio-section-header {
+    font-size: 0.8em;
+  }
+
+  .toggle-switch {
+    width: 40px;
+    height: 22px;
+  }
+
+  .toggle-slider::before {
+    height: 16px;
+    width: 16px;
+  }
+
+  .toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+  }
+
+  .ambient-pill {
+    padding: 6px 8px;
+    font-size: 0.7em;
+    min-width: 48px;
+  }
+
+  .ambient-pill-icon {
+    font-size: 1.2em;
+  }
+
+  /* Copyright centered below */
+  .copyright {
+    width: 100%;
+    flex-direction: row;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 8px;
+    font-size: 0.85em;
+  }
+}
