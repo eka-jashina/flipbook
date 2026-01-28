@@ -1,6 +1,11 @@
 /**
  * LIFECYCLE DELEGATE - REFACTORED
  * Управление жизненным циклом книги.
+ *
+ * Поддерживает lazy loading глав:
+ * - При открытии загружается только первая глава
+ * - Остальные главы загружаются в фоне
+ * - После загрузки всех глав происходит репагинация
  */
 
 import { CONFIG, BookState } from '../../config.js';
@@ -33,6 +38,9 @@ export class LifecycleDelegate extends BaseDelegate {
     this.onPaginationComplete = deps.onPaginationComplete;
     this.onIndexChange = deps.onIndexChange;
     this.onChapterUpdate = deps.onChapterUpdate;
+
+    /** @type {boolean} Флаг: все главы загружены */
+    this.allChaptersLoaded = false;
   }
 
   /**
@@ -89,11 +97,16 @@ export class LifecycleDelegate extends BaseDelegate {
     try {
       this.loadingIndicator.show();
 
-      // Параллельно запускаем анимацию и загрузку контента
-      const chapterUrls = CONFIG.CHAPTERS.map(c => c.file);
+      const allChapterUrls = CONFIG.CHAPTERS.map(c => c.file);
+
+      // Lazy loading: загружаем только первую главу для быстрого старта
+      const firstChapterUrl = [allChapterUrls[0]];
+      const remainingChapterUrls = allChapterUrls.slice(1);
+
+      // Параллельно запускаем анимацию и загрузку первой главы
       const [signal, html] = await Promise.all([
         this.animator.runOpenAnimation(),
-        this.contentLoader.load(chapterUrls),
+        this.contentLoader.load(firstChapterUrl),
       ]);
 
       // Проверяем, что анимация не была отменена
@@ -110,7 +123,7 @@ export class LifecycleDelegate extends BaseDelegate {
         throw new Error('LifecycleDelegate: rightA element not found');
       }
 
-      // Выполняем пагинацию
+      // Выполняем пагинацию первой главы
       const { pages, chapterStarts } = await this.paginator.paginate(html, rightA);
 
       // Передаем результаты пагинации через коллбэк
@@ -118,7 +131,7 @@ export class LifecycleDelegate extends BaseDelegate {
         this.onPaginationComplete(pages, chapterStarts);
       }
 
-      // Вычисляем начальный индекс (с учетом maxIndex)
+      // Для первой главы startIndex должен быть 0 (остальные главы ещё не загружены)
       const maxIndex = this.renderer.getMaxIndex(this.isMobile);
       const safeStartIndex = Math.max(0, Math.min(startIndex, maxIndex));
 
@@ -144,6 +157,13 @@ export class LifecycleDelegate extends BaseDelegate {
       // Запускаем ambient звук (требует user gesture, поэтому здесь, а не при инициализации)
       this._startAmbientIfNeeded();
 
+      // Запускаем фоновую загрузку остальных глав
+      this.allChaptersLoaded = remainingChapterUrls.length === 0;
+
+      if (!this.allChaptersLoaded) {
+        this._loadRemainingChaptersInBackground(allChapterUrls, startIndex);
+      }
+
     } catch (error) {
       if (error.name !== "AbortError") {
         ErrorHandler.handle(error, "Ошибка при открытии книги");
@@ -151,6 +171,84 @@ export class LifecycleDelegate extends BaseDelegate {
       this.stateMachine.reset(BookState.CLOSED);
     } finally {
       this.loadingIndicator.hide();
+    }
+  }
+
+  /**
+   * Загрузить оставшиеся главы в фоне и репагинировать
+   * @private
+   * @param {string[]} allChapterUrls - Все URL глав
+   * @param {number} originalStartIndex - Исходный запрошенный индекс
+   */
+  async _loadRemainingChaptersInBackground(allChapterUrls, originalStartIndex) {
+    const remainingUrls = allChapterUrls.slice(1);
+
+    // Запускаем фоновую загрузку
+    await this.contentLoader.preloadInBackground(remainingUrls);
+
+    // Проверяем, что книга всё ещё открыта
+    if (!this.isOpened || this.isBusy) {
+      return;
+    }
+
+    this.allChaptersLoaded = true;
+
+    // Репагинируем с полным контентом
+    // Используем requestIdleCallback чтобы не прерывать взаимодействие
+    const doRepaginate = async () => {
+      // Ещё раз проверяем состояние
+      if (!this.isOpened || this.isBusy) {
+        return;
+      }
+
+      try {
+        // Загружаем полный контент (из кэша)
+        const html = await this.contentLoader.load(allChapterUrls);
+
+        const rightA = this.dom.get('rightA');
+        if (!rightA || !this.isOpened) return;
+
+        // Сохраняем текущую позицию
+        const currentIndex = this.currentIndex;
+
+        // Репагинируем
+        this.renderer.clearCache();
+        const { pages, chapterStarts } = await this.paginator.paginate(html, rightA);
+
+        if (!this.isOpened) return;
+
+        // Обновляем контент
+        if (this.onPaginationComplete) {
+          this.onPaginationComplete(pages, chapterStarts);
+        }
+
+        // Восстанавливаем позицию или переходим к запрошенной
+        const maxIndex = this.renderer.getMaxIndex(this.isMobile);
+        const targetIndex = originalStartIndex > 0
+          ? Math.min(originalStartIndex, maxIndex)
+          : Math.min(currentIndex, maxIndex);
+
+        this.renderer.renderSpread(targetIndex, this.isMobile);
+
+        if (this.onIndexChange) {
+          this.onIndexChange(targetIndex);
+        }
+
+        if (this.onChapterUpdate) {
+          this.onChapterUpdate();
+        }
+
+      } catch (error) {
+        // Фоновая репагинация не должна ломать приложение
+        console.warn('Background repagination failed:', error.message);
+      }
+    };
+
+    // Выполняем репагинацию в idle time
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(doRepaginate, { timeout: 3000 });
+    } else {
+      setTimeout(doRepaginate, 500);
     }
   }
 
@@ -322,6 +420,7 @@ export class LifecycleDelegate extends BaseDelegate {
     this.onPaginationComplete = null;
     this.onIndexChange = null;
     this.onChapterUpdate = null;
+    this.allChaptersLoaded = false;
     super.destroy();
   }
 }
