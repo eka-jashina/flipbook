@@ -102,9 +102,15 @@ export class BookAnimator {
       // Фаза 2: Rotate (поворот страницы на 180°)
       sheet.dataset.phase = "rotate";
 
-      // Подмена буферов происходит в середине поворота
+      // Подмена буферов происходит в середине поворота.
+      // Проверяем signal.aborted перед вызовом, чтобы избежать
+      // неконсистентного состояния при отмене операции.
       const swapDelay = direction === "next" ? timings.swapNext : timings.swapPrev;
-      this.timerManager.setTimeout(onSwap, swapDelay);
+      this.timerManager.setTimeout(() => {
+        if (!signal.aborted) {
+          onSwap();
+        }
+      }, swapDelay);
 
       await TransitionHelper.waitFor(
         sheet, "transform", timings.rotate + safetyMargin, signal
