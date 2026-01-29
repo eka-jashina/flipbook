@@ -1,6 +1,11 @@
 /**
- * LIFECYCLE DELEGATE - REFACTORED
- * Управление жизненным циклом книги.
+ * LIFECYCLE DELEGATE
+ * Управление жизненным циклом книги: открытие, закрытие, репагинация.
+ *
+ * Основные операции:
+ * - open()       → Открыть книгу с анимацией и загрузкой контента
+ * - close()      → Закрыть книгу с анимацией
+ * - repaginate() → Пересчитать страницы (при смене шрифта/размера)
  */
 
 import { CONFIG, BookState } from '../../config.js';
@@ -74,6 +79,7 @@ export class LifecycleDelegate extends BaseDelegate {
    * @param {number} startIndex - Индекс начальной страницы
    */
   async open(startIndex = 0) {
+    // ─── Этап 1: Проверка состояния ───
     if (this.isBusy || !this.stateMachine.isClosed) {
       return;
     }
@@ -82,7 +88,7 @@ export class LifecycleDelegate extends BaseDelegate {
       return;
     }
 
-    // Воспроизводим звук открытия
+    // ─── Этап 2: Звук открытия ───
     if (this.soundManager) {
       this.soundManager.play('bookOpen');
     }
@@ -90,59 +96,52 @@ export class LifecycleDelegate extends BaseDelegate {
     try {
       this.loadingIndicator.show();
 
-      // Параллельно запускаем анимацию и загрузку контента
+      // ─── Этап 3: Параллельная загрузка (анимация + контент) ───
       const chapterUrls = CONFIG.CHAPTERS.map(c => c.file);
       const [signal, html] = await Promise.all([
         this.animator.runOpenAnimation(),
         this.contentLoader.load(chapterUrls),
       ]);
 
-      // Проверяем, что анимация не была отменена
       if (!signal || !html) {
-        return;
+        return; // Анимация была отменена
       }
 
-      // Ждём стабилизации layout
+      // ─── Этап 4: Ожидание стабилизации layout ───
       await this._waitForLayout();
 
-      // Получаем элемент для измерения
       const rightA = this.dom.get('rightA');
       if (!rightA) {
         throw new Error('LifecycleDelegate: rightA element not found');
       }
 
-      // Выполняем пагинацию
+      // ─── Этап 5: Пагинация контента ───
       const { pages, chapterStarts } = await this.paginator.paginate(html, rightA);
 
-      // Передаем результаты пагинации через коллбэк
       if (this.onPaginationComplete) {
         this.onPaginationComplete(pages, chapterStarts);
       }
 
-      // Вычисляем начальный индекс (с учетом maxIndex)
+      // ─── Этап 6: Рендеринг начального разворота ───
       const maxIndex = this.renderer.getMaxIndex(this.isMobile);
       const safeStartIndex = Math.max(0, Math.min(startIndex, maxIndex));
 
-      // Рендерим начальный разворот
       this.renderer.renderSpread(safeStartIndex, this.isMobile);
 
-      // Обновляем индекс через коллбэк
       if (this.onIndexChange) {
         this.onIndexChange(safeStartIndex);
       }
 
-      // Обновляем UI главы
       if (this.onChapterUpdate) {
         this.onChapterUpdate();
       }
 
-      // Завершаем анимацию открытия
+      // ─── Этап 7: Завершение анимации и переход в OPENED ───
       await this.animator.finishOpenAnimation(signal);
-
-      // Переходим в состояние OPENED
       this.stateMachine.transitionTo(BookState.OPENED);
 
-      // Запускаем ambient звук (требует user gesture, поэтому здесь, а не при инициализации)
+      // ─── Этап 8: Запуск ambient звука ───
+      // (требует user gesture, поэтому здесь, а не при инициализации)
       this._startAmbientIfNeeded();
 
     } catch (error) {
@@ -159,6 +158,7 @@ export class LifecycleDelegate extends BaseDelegate {
    * Закрыть книгу
    */
   async close() {
+    // ─── Этап 1: Проверка состояния ───
     if (this.isBusy || !this.isOpened) {
       return;
     }
@@ -167,12 +167,12 @@ export class LifecycleDelegate extends BaseDelegate {
       return;
     }
 
-    // Воспроизводим звук закрытия
+    // ─── Этап 2: Звук закрытия ───
     if (this.soundManager) {
       this.soundManager.play('bookClose');
     }
 
-    // Скрываем страницы перед анимацией
+    // ─── Этап 3: Скрытие страниц перед анимацией ───
     const leftA = this.dom.get('leftA');
     const rightA = this.dom.get('rightA');
 
@@ -187,21 +187,20 @@ export class LifecycleDelegate extends BaseDelegate {
     }
 
     try {
+      // ─── Этап 4: Анимация закрытия ───
       await this.animator.runCloseAnimation();
 
-      // Восстанавливаем видимость
+      // ─── Этап 5: Восстановление и очистка ───
       if (leftA) leftA.classList.remove("closing-hidden");
       if (rightA) rightA.classList.remove("closing-hidden");
 
-      // Сбрасываем индекс через коллбэк
       if (this.onIndexChange) {
         this.onIndexChange(0);
       }
 
-      // Очищаем кэш рендерера
       this.renderer.clearCache();
 
-      // Переходим в состояние CLOSED
+      // ─── Этап 6: Переход в CLOSED ───
       this.stateMachine.transitionTo(BookState.CLOSED);
 
     } catch (error) {
@@ -218,6 +217,7 @@ export class LifecycleDelegate extends BaseDelegate {
    */
   async repaginate(keepIndex = false) {
     try {
+      // ─── Этап 1: Подготовка ───
       this.loadingIndicator.show();
       this.renderer.clearCache();
 
@@ -228,34 +228,31 @@ export class LifecycleDelegate extends BaseDelegate {
         throw new Error('LifecycleDelegate: rightA element not found during repagination');
       }
 
-      // Загружаем и пагинируем заново
+      // ─── Этап 2: Загрузка контента ───
       const chapterUrls = CONFIG.CHAPTERS.map(c => c.file);
       const html = await this.contentLoader.load(chapterUrls);
-      
+
       if (!html) {
         throw new Error('LifecycleDelegate: Failed to load content during repagination');
       }
 
+      // ─── Этап 3: Пагинация ───
       const { pages, chapterStarts } = await this.paginator.paginate(html, rightA);
 
-      // Передаем результаты через коллбэк
       if (this.onPaginationComplete) {
         this.onPaginationComplete(pages, chapterStarts);
       }
 
-      // Вычисляем новый индекс
+      // ─── Этап 4: Рендеринг с сохранением позиции ───
       const maxIndex = this.renderer.getMaxIndex(this.isMobile);
       const newIndex = keepIndex ? Math.min(prevIndex, maxIndex) : 0;
 
-      // Рендерим разворот
       this.renderer.renderSpread(newIndex, this.isMobile);
 
-      // Обновляем индекс
       if (this.onIndexChange) {
         this.onIndexChange(newIndex);
       }
 
-      // Обновляем UI главы
       if (this.onChapterUpdate) {
         this.onChapterUpdate();
       }
