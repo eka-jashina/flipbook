@@ -16,16 +16,30 @@ img {
   margin-bottom: 0.3em;
   object-fit: cover;
   object-position: left center;
-  transition: filter var(--timing-blur) ease-out;
+  transition: opacity var(--timing-blur) ease-out;
+  background: linear-gradient(135deg, #d4cfc7 0%, #e8e4dc 50%, #d4cfc7 100%);
+  background-size: 200% 200%;
 }
 
-/* Blur placeholder при загрузке изображения */
+/* Пока изображение загружается - скрываем и показываем placeholder */
 img[data-loading="true"] {
-  filter: blur(15px);
+  opacity: 0;
+  animation: placeholder-shimmer 1.5s ease-in-out infinite;
 }
 
 img[data-loading="false"] {
-  filter: blur(0);
+  opacity: 1;
+  animation: none;
+}
+
+/* Shimmer анимация для placeholder */
+@keyframes placeholder-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ═══════════════════════════════════════════
