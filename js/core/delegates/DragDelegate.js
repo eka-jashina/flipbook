@@ -1,7 +1,19 @@
 /**
  * DRAG DELEGATE
- * Управление drag-перелистыванием.
- * 
+ * Управление drag-перелистыванием страниц.
+ *
+ * Жизненный цикл drag-операции:
+ * 1. _startDrag()     → Инициализация: проверка возможности, захват координат
+ * 2. _prepareFlip()   → Подготовка DOM: буфер, sheet, отключение transitions
+ * 3. _showUnderPage() → Показ страницы "под" текущей (целевая страница)
+ * 4. _updateAngle()   → Цикл: обновление угла по позиции курсора/пальца
+ * 5. _render()        → Цикл: применение угла к CSS-переменным
+ * 6. _updateShadows() → Цикл: расчёт и применение теней
+ * 7. _endDrag()       → Решение: завершить (>90°) или отменить (<90°)
+ * 8. _animateTo()     → Анимация до целевого угла (0° или 180°)
+ * 9. _finish()        → Очистка CSS-переменных и состояния sheet
+ * 10. _completeFlip() → При успехе: swap буферов, обновление индекса
+ *     _cancelFlip()   → При отмене: возврат видимости страниц
  */
 
 import { cssVars } from "../../utils/CSSVariables.js";
@@ -118,12 +130,20 @@ export class DragDelegate extends BaseDelegate {
   // ПРОВЕРКИ ВОЗМОЖНОСТИ ДЕЙСТВИЯ
   // ═══════════════════════════════════════════
 
+  /**
+   * Проверить возможность перелистывания вперёд
+   * @returns {boolean} true если есть следующие страницы
+   */
   canFlipNext() {
     if (!this.isOpened) return false;
     const maxIndex = this.renderer.getMaxIndex(this.isMobile);
     return this.currentIndex + this.pagesPerFlip <= maxIndex;
   }
 
+  /**
+   * Проверить возможность перелистывания назад
+   * @returns {boolean} true если есть предыдущие страницы
+   */
   canFlipPrev() {
     if (!this.isOpened) return false;
     return this.currentIndex > 0;
@@ -133,6 +153,12 @@ export class DragDelegate extends BaseDelegate {
   // DRAG LIFECYCLE
   // ═══════════════════════════════════════════
 
+  /**
+   * Начать drag-операцию
+   * @private
+   * @param {MouseEvent|Touch} e - Событие мыши или touch
+   * @param {string} dir - Направление: 'next' или 'prev'
+   */
   _startDrag(e, dir) {
     if (this.isBusy) return;
 
@@ -161,6 +187,13 @@ export class DragDelegate extends BaseDelegate {
     this._updateAngleFromEvent(e);
   }
 
+  /**
+   * Подготовить DOM к перелистыванию:
+   * - Отключить transitions для мгновенного обновления
+   * - Подготовить буфер с целевой страницей
+   * - Настроить sheet для drag-режима
+   * @private
+   */
   _prepareFlip() {
     const nextIndex =
       this.direction === "next"
@@ -192,6 +225,11 @@ export class DragDelegate extends BaseDelegate {
     }
   }
 
+  /**
+   * Показать страницу "под" текущей (целевую страницу).
+   * Буферная страница становится видимой, активная скрывается.
+   * @private
+   */
   _showUnderPage() {
     const { leftActive, rightActive, leftBuffer, rightBuffer } = this.renderer.elements;
     this._pageRefs = { leftActive, rightActive, leftBuffer, rightBuffer };
@@ -221,17 +259,25 @@ export class DragDelegate extends BaseDelegate {
   // ДВИЖЕНИЕ
   // ═══════════════════════════════════════════
 
+  /** @private Обработчик движения мыши */
   _onMouseMove(e) {
     if (!this.isDragging) return;
     this._updateAngleFromEvent(e);
   }
 
+  /** @private Обработчик движения touch */
   _onTouchMove(e) {
     if (!this.isDragging) return;
     e.preventDefault();
     this._updateAngleFromEvent(e.touches[0]);
   }
 
+  /**
+   * Пересчитать угол поворота страницы по позиции курсора.
+   * Угол 0° = страница на месте, 180° = полностью перевёрнута.
+   * @private
+   * @param {MouseEvent|Touch} e - Событие с координатами
+   */
   _updateAngleFromEvent(e) {
     if (!this.bookRect) return;
 
@@ -248,6 +294,10 @@ export class DragDelegate extends BaseDelegate {
     this._render();
   }
 
+  /**
+   * Применить текущий угол к CSS-переменным sheet
+   * @private
+   */
   _render() {
     const angle = this.direction === "next" ? -this.currentAngle : this.currentAngle;
 
@@ -259,6 +309,11 @@ export class DragDelegate extends BaseDelegate {
     this._updateShadows();
   }
 
+  /**
+   * Обновить тени в зависимости от угла поворота.
+   * Тени максимальны при 90° (sin(π/2) = 1) и минимальны при 0°/180°.
+   * @private
+   */
   _updateShadows() {
     const progress = this.currentAngle / 180;
     const shadowOpacity = Math.sin(progress * Math.PI) * 0.35;
@@ -291,16 +346,23 @@ export class DragDelegate extends BaseDelegate {
   // ЗАВЕРШЕНИЕ
   // ═══════════════════════════════════════════
 
+  /** @private Обработчик отпускания мыши */
   _onMouseUp() {
     if (!this.isDragging) return;
     this._endDrag();
   }
 
+  /** @private Обработчик окончания touch */
   _onTouchEnd() {
     if (!this.isDragging) return;
     this._endDrag();
   }
 
+  /**
+   * Завершить drag-операцию.
+   * Если угол > 90° — завершить перелистывание, иначе — отменить.
+   * @private
+   */
   _endDrag() {
     if (!this.isDragging) return;
     this.isDragging = false;
@@ -309,6 +371,12 @@ export class DragDelegate extends BaseDelegate {
     this._animateTo(willComplete ? 180 : 0, willComplete);
   }
 
+  /**
+   * Анимировать угол до целевого значения (0° или 180°)
+   * @private
+   * @param {number} targetAngle - Целевой угол
+   * @param {boolean} willComplete - Будет ли перелистывание завершено
+   */
   _animateTo(targetAngle, willComplete) {
     const startAngle = this.currentAngle;
     const duration = Math.max(
@@ -335,6 +403,12 @@ export class DragDelegate extends BaseDelegate {
     requestAnimationFrame(animate);
   }
 
+  /**
+   * Финализация после завершения анимации.
+   * Очищает CSS-переменные и вызывает _completeFlip или _cancelFlip.
+   * @private
+   * @param {boolean} completed - true если перелистывание успешно
+   */
   _finish(completed) {
     const direction = this.direction;
 
@@ -373,6 +447,11 @@ export class DragDelegate extends BaseDelegate {
     this._pageRefs = null;
   }
 
+  /**
+   * Завершить перелистывание: обменять буферы, обновить индекс, воспроизвести звук
+   * @private
+   * @param {string} direction - Направление перелистывания
+   */
   _completeFlip(direction) {
     const book = this.dom.get("book");
     if (book) book.dataset.noTransition = "true";
@@ -403,11 +482,23 @@ export class DragDelegate extends BaseDelegate {
     this._cleanupAfterFlip(book, true);
   }
 
+  /**
+   * Отменить перелистывание: вернуть страницы в исходное состояние
+   * @private
+   */
   _cancelFlip() {
     const book = this.dom.get("book");
     this._cleanupAfterFlip(book, false);
   }
 
+  /**
+   * Очистить DOM-атрибуты после перелистывания.
+   * При отмене восстанавливает buffer-атрибуты, при успехе — нет
+   * (swapBuffers уже корректно настроил их).
+   * @private
+   * @param {HTMLElement} book - Контейнер книги
+   * @param {boolean} completed - Было ли перелистывание успешным
+   */
   _cleanupAfterFlip(book, completed = false) {
     if (book) book.dataset.state = "opened";
 

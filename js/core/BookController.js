@@ -1,6 +1,18 @@
 /**
  * BOOK CONTROLLER
  * Главный координатор приложения с Dependency Injection.
+ *
+ * Архитектура:
+ * - Централизованное состояние (state)
+ * - Делегаты для разделения ответственности
+ * - Фабрика для создания компонентов
+ * - Подписки на события через SubscriptionManager
+ *
+ * Порядок инициализации (критичен!):
+ * 1. Core       → DOM, EventManager, TimerManager, Storage
+ * 2. Components → StateMachine, Managers, Renderer, Animator
+ * 3. Delegates  → Navigation, Lifecycle, Settings, Chapter, Drag
+ * 4. Managers   → Subscriptions, ResizeHandler
  */
 
 import { 
