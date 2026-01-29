@@ -26,6 +26,8 @@ export class BookRenderer {
     this.cache = new LRUCache(options.cacheLimit || 12);
     /** @type {string[]} HTML-содержимое всех страниц */
     this.pageContents = [];
+    /** @type {Set<string>} Уже загруженные URL изображений */
+    this.loadedImageUrls = new Set();
 
     this.elements = {
       leftActive: options.leftActive,
@@ -44,6 +46,7 @@ export class BookRenderer {
   setPageContents(contents) {
     this.pageContents = contents;
     this.cache.clear();
+    // Не очищаем loadedImageUrls - изображения остаются в кэше браузера
   }
 
   /**
@@ -88,7 +91,7 @@ export class BookRenderer {
   }
 
   /**
-   * Настроить blur placeholder для изображений в контейнере
+   * Настроить placeholder для изображений в контейнере
    * @param {HTMLElement} container - Контейнер с контентом
    * @private
    */
@@ -96,21 +99,31 @@ export class BookRenderer {
     const images = container.querySelectorAll("img");
 
     images.forEach((img) => {
-      // Если изображение уже загружено (из кэша браузера)
-      if (img.complete && img.naturalWidth > 0) {
+      const src = img.src;
+
+      // Если это изображение уже загружалось ранее - показываем сразу
+      if (this.loadedImageUrls.has(src)) {
         img.dataset.loading = "false";
         return;
       }
 
-      // Показываем blur placeholder
+      // Если изображение уже загружено (из кэша браузера)
+      if (img.complete && img.naturalWidth > 0) {
+        this.loadedImageUrls.add(src);
+        img.dataset.loading = "false";
+        return;
+      }
+
+      // Показываем placeholder
       img.dataset.loading = "true";
 
-      // Убираем blur после загрузки
+      // Убираем placeholder после загрузки
       img.addEventListener("load", () => {
+        this.loadedImageUrls.add(src);
         img.dataset.loading = "false";
       }, { once: true });
 
-      // При ошибке тоже убираем blur
+      // При ошибке тоже убираем placeholder
       img.addEventListener("error", () => {
         img.dataset.loading = "false";
       }, { once: true });
