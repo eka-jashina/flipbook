@@ -170,6 +170,7 @@
 
 .progress-bar {
   height: 100%;
+  width: var(--progress-width, 0%);
   background: linear-gradient(90deg, rgba(139, 69, 19, 0.6), rgba(139, 69, 19, 0.9));
   border-radius: 2px;
   transition: width 0.3s ease;

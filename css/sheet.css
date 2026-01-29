@@ -65,6 +65,11 @@
   transform: translateZ(0) rotateY(180deg);
 }
 
+/* Отключение transition (используется при drag) */
+.sheet.no-transition {
+  transition: none !important;
+}
+
 /* ═══════════════════════════════════════════
    СТОРОНЫ ЛИСТА
    ═══════════════════════════════════════════ */

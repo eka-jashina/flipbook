@@ -175,14 +175,14 @@ export class LifecycleDelegate extends BaseDelegate {
     // Скрываем страницы перед анимацией
     const leftA = this.dom.get('leftA');
     const rightA = this.dom.get('rightA');
-    
+
     if (leftA) {
-      leftA.style.visibility = "hidden";
+      leftA.classList.add("closing-hidden");
       leftA.innerHTML = "";
     }
-    
+
     if (rightA) {
-      rightA.style.visibility = "hidden";
+      rightA.classList.add("closing-hidden");
       rightA.innerHTML = "";
     }
 
@@ -190,8 +190,8 @@ export class LifecycleDelegate extends BaseDelegate {
       await this.animator.runCloseAnimation();
 
       // Восстанавливаем видимость
-      if (leftA) leftA.style.visibility = "";
-      if (rightA) rightA.style.visibility = "";
+      if (leftA) leftA.classList.remove("closing-hidden");
+      if (rightA) rightA.classList.remove("closing-hidden");
 
       // Сбрасываем индекс через коллбэк
       if (this.onIndexChange) {
