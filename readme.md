@@ -99,10 +99,12 @@ flipbook/
 │   │   ├── CSSVariables.js         # Чтение CSS Custom Properties
 │   │   ├── MediaQueryManager.js    # Реактивные media queries
 │   │   ├── TransitionHelper.js     # Промисификация CSS transitions
+│   │   ├── TimerManager.js         # Управление таймерами с debounce
 │   │   ├── HTMLSanitizer.js        # Защита от XSS
+│   │   ├── ErrorHandler.js         # Централизованная обработка ошибок
+│   │   ├── StorageManager.js       # Абстракция над localStorage
 │   │   ├── SoundManager.js         # Управление звуковыми эффектами
-│   │   ├── AmbientManager.js       # Фоновые ambient-звуки
-│   │   └── ...
+│   │   └── AmbientManager.js       # Фоновые ambient-звуки
 │   │
 │   ├── managers/                   # Бизнес-логика и данные
 │   │   ├── BookStateMachine.js     # Конечный автомат состояний
@@ -118,24 +120,36 @@ flipbook/
 │       ├── BookRenderer.js         # Рендеринг страниц (double buffering)
 │       ├── BookAnimator.js         # Оркестрация CSS-анимаций
 │       ├── EventController.js      # Обработка пользовательского ввода
+│       ├── LoadingIndicator.js     # UI индикатора загрузки
+│       ├── DebugPanel.js           # Панель отладки (dev)
 │       ├── AppInitializer.js       # Инициализация приложения
 │       ├── SubscriptionManager.js  # Управление подписками на события
 │       ├── ResizeHandler.js        # Обработка изменения размера окна
 │       │
 │       └── delegates/              # Делегаты по доменам
-│           ├── BaseDelegate.js     # Абстрактный базовый класс
+│           ├── BaseDelegate.js         # Абстрактный базовый класс
 │           ├── NavigationDelegate.js   # Логика перелистывания
-│           ├── DragDelegate.js     # Touch-перетаскивание страниц
-│           ├── SettingsDelegate.js # UI настроек
-│           ├── ChapterDelegate.js  # Переключение глав
+│           ├── DragDelegate.js         # Touch-перетаскивание страниц
+│           ├── DragAnimator.js         # Анимация угла поворота при drag
+│           ├── DragShadowRenderer.js   # Рендеринг теней при drag
+│           ├── SettingsDelegate.js     # UI настроек
+│           ├── ChapterDelegate.js      # Переключение глав
 │           └── LifecycleDelegate.js    # Открытие/закрытие книги
 │
 ├── css/                            # Модульная CSS-архитектура
 │   ├── index.css                   # Входная точка (импорты)
 │   ├── variables.css               # Design tokens (CSS Custom Properties)
+│   ├── reset.css                   # Сброс браузерных стилей
 │   ├── themes.css                  # Светлая / тёмная / ч/б темы
+│   ├── layout.css                  # Grid/flex разметка
 │   ├── book.css                    # 3D-контейнер книги
+│   ├── pages.css                   # Стили страниц
+│   ├── cover.css                   # Обложка книги
 │   ├── sheet.css                   # Анимированный лист
+│   ├── typography.css              # Типографика
+│   ├── images.css                  # Стили изображений в контенте
+│   ├── loading.css                 # Индикатор загрузки
+│   ├── debug.css                   # Панель отладки (dev)
 │   ├── animations.css              # Keyframe-анимации
 │   ├── drag.css                    # Стили drag-взаимодействия
 │   └── responsive.css              # Адаптивность
@@ -167,10 +181,13 @@ npm run dev
 
 | Команда | Описание |
 |---------|----------|
-| `npm run dev` | Запуск dev-сервера (порт 3000) |
+| `npm run dev` | Запуск dev-сервера (порт 3000, авто-открытие браузера) |
 | `npm run build` | Production-сборка в `dist/` |
 | `npm run build:prod` | Полная очистка + сборка |
-| `npm run preview` | Превью production-сборки |
+| `npm run build:analyze` | Сборка с анализом бандла |
+| `npm run preview` | Превью production-сборки (порт 4173) |
+| `npm run serve` | Запуск статик-сервера для `dist/` |
+| `npm run size` | Проверка размера файлов в `dist/` |
 
 ---
 
@@ -185,6 +202,9 @@ npm run dev
 | **AsyncPaginator** | `managers/AsyncPaginator.js` | Разбивка контента на страницы |
 | **EventController** | `core/EventController.js` | Клики, свайпы, клавиатура |
 | **NavigationDelegate** | `core/delegates/NavigationDelegate.js` | Логика навигации по страницам |
+| **DragDelegate** | `core/delegates/DragDelegate.js` | Touch-перетаскивание страниц |
+| **DragAnimator** | `core/delegates/DragAnimator.js` | Анимация угла поворота при drag |
+| **DragShadowRenderer** | `core/delegates/DragShadowRenderer.js` | Рендеринг теней при drag |
 
 ---
 
