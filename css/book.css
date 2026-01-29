@@ -1,12 +1,13 @@
 /**
  * BOOK STYLES
- * 
+ *
  * Обёртка и контейнер книги с 3D-эффектами.
- * 
+ * Состояния книги, курсоры и края страниц.
  */
 
 /* ═══════════════════════════════════════════
    ОБЁРТКА КНИГИ
+   Управляет перспективой и шириной контейнера
    ═══════════════════════════════════════════ */
 
 .book-wrap {
@@ -18,16 +19,18 @@
   -webkit-perspective: var(--perspective); /* Safari */
 }
 
+/* Закрытая книга занимает половину ширины */
 .book-wrap[data-state="closed"] {
   width: 50%;
 }
 
+/* Открытая книга занимает всю ширину */
 .book-wrap[data-state="opened"] {
   width: 100%;
 }
 
 /* ═══════════════════════════════════════════
-   КНИГА
+   КНИГА (основной контейнер)
    ═══════════════════════════════════════════ */
 
 .book {
@@ -38,13 +41,13 @@
   background-color: var(--bg-book);
   border-radius: 12px;
   box-shadow: var(--shadow-book);
-  
+
+  /* 3D контекст для анимаций переворота */
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
-  
   transform-origin: left;
-  
-  /* УЛУЧШЕНИЕ: Добавлены transitions для @property переменных */
+
+  /* Плавные переходы включая animatable CSS properties */
   transition:
     background-color var(--timing-transition),
     box-shadow var(--timing-transition),
@@ -53,6 +56,10 @@
     --spine-shadow-alpha 0.2s ease-out;
 }
 
+/* ═══════════════════════════════════════════
+   СОСТОЯНИЯ КНИГИ
+   ═══════════════════════════════════════════ */
+
 /* Уменьшаем тени во время переворота */
 .book[data-state="flipping"] {
   --spine-shadow-size: 14px;
@@ -60,34 +67,39 @@
   --spine-shadow-alpha: 0.24;
 }
 
+/* При закрытии убираем фон */
 .book[data-state="closing"] {
   background: transparent;
   box-shadow: none;
 }
 
+/* Скрываем страницы когда книга закрыта */
 .book[data-state="closed"] .page,
 .book[data-state="closed"] .sheet {
   visibility: hidden !important;
   opacity: 0 !important;
 }
 
+/* Открытая обложка не кликабельна */
 .book[data-state="opened"] .cover {
   pointer-events: none;
 }
 
+/* Скрываем левый край когда книга закрыта */
 .book-wrap[data-state="closed"] .book::before {
   display: none;
 }
 
 /* ═══════════════════════════════════════════
-   CURSOR HINTS ДЛЯ УЛУЧШЕННОГО UX
+   CURSOR HINTS
+   Визуальные подсказки для пользователя
    ═══════════════════════════════════════════ */
 
 .book {
   cursor: default;
 }
 
-/* Закрытая книга - можно открыть */
+/* Закрытая книга - обложка кликабельна */
 .book[data-state="closed"] .cover {
   cursor: pointer;
 }
@@ -96,29 +108,32 @@
   filter: brightness(1.05);
 }
 
-/* Открытая книга в режиме ожидания */
+/* Во время переворота - курсор ожидания */
 .book[data-state="flipping"] {
   cursor: wait;
 }
 
 /* Зоны клика на страницах (только на десктопе) */
 @media (min-width: 769px) {
+  /* Левая страница - перелистывание назад */
   .book[data-state="opened"] .page[data-side="left"]:hover {
     cursor: w-resize;
   }
-  
+
+  /* Правая страница - перелистывание вперёд */
   .book[data-state="opened"] .page[data-side="right"]:hover {
     cursor: e-resize;
   }
-  
-  /* Исключаем TOC из зон клика - там уже свой cursor */
+
+  /* TOC имеет свой курсор, не перекрываем */
   .book[data-state="opened"] .page:has(.toc):hover {
     cursor: default;
   }
 }
 
 /* ═══════════════════════════════════════════
-   КРАЯ СТРАНИЦ (псевдоэлементы)
+   КРАЯ СТРАНИЦ (::before и ::after)
+   Декоративные элементы слева и справа от книги
    ═══════════════════════════════════════════ */
 
 .book::before,
@@ -132,10 +147,11 @@
   filter: blur(0.35px);
 }
 
-/* Левый край */
+/* Левый край страниц */
 .book::before {
   left: calc(-1 * var(--pages-depth));
   background:
+    /* Горизонтальные линии - текстура страниц */
     repeating-linear-gradient(
       to bottom,
       rgba(0, 0, 0, 0.1) 0,
@@ -143,6 +159,7 @@
       transparent 2px,
       transparent 4px
     ),
+    /* Неровности края - 4 точки */
     radial-gradient(
       circle at 100% 10%,
       transparent 0,
@@ -167,14 +184,16 @@
       transparent calc(100% - var(--page-edge-noise)),
       var(--page-edge-contrast) 100%
     ),
+    /* Тень от корешка */
     linear-gradient(to right, rgba(0, 0, 0, 0.25), transparent);
   border-radius: 6px 0 0 6px;
 }
 
-/* Правый край */
+/* Правый край страниц */
 .book::after {
   right: calc(-1 * var(--pages-depth));
   background:
+    /* Горизонтальные линии - текстура страниц */
     repeating-linear-gradient(
       to bottom,
       rgba(0, 0, 0, 0.08) 0,
@@ -182,6 +201,7 @@
       transparent 2px,
       transparent 4px
     ),
+    /* Неровности края - 4 точки */
     radial-gradient(
       circle at 0% 12%,
       transparent 0,
@@ -206,6 +226,7 @@
       transparent calc(100% - var(--page-edge-noise)),
       var(--page-edge-contrast) 100%
     ),
+    /* Тень от края */
     linear-gradient(to left, rgba(0, 0, 0, 0.22), transparent);
   border-radius: 0 6px 6px 0;
 }

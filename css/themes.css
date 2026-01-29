@@ -1,11 +1,12 @@
 /**
  * THEMES
- * 
+ *
  * Переопределение CSS-переменных для разных тем.
+ * Централизованное место для всех тематических стилей.
  */
 
 /* ═══════════════════════════════════════════
-   ТЁМНАЯ ТЕМА
+   ТЁМНАЯ ТЕМА - ПЕРЕМЕННЫЕ
    ═══════════════════════════════════════════ */
 
 html[data-theme="dark"] {
@@ -29,13 +30,17 @@ html[data-theme="dark"] {
   --paper-highlight: rgba(255, 255, 255, 0.08);
 }
 
-/* Убираем текстуру в тёмной теме */
+/* ═══════════════════════════════════════════
+   ТЁМНАЯ ТЕМА - КОМПОНЕНТЫ
+   ═══════════════════════════════════════════ */
+
+/* Страницы - убираем текстуру */
 html[data-theme="dark"] .page,
 html[data-theme="dark"] .side {
   background-image: none;
 }
 
-/* Затемняем фоны и изображения */
+/* Фоны и изображения - затемняем */
 html[data-theme="dark"] .bg {
   filter: brightness(50%);
 }
@@ -44,8 +49,23 @@ html[data-theme="dark"] img {
   filter: brightness(50%);
 }
 
+/* Индикатор загрузки */
+html[data-theme="dark"] .loading-overlay {
+  background: rgba(30, 25, 20, 0.75);
+}
+
+html[data-theme="dark"] .loading-spinner::before,
+html[data-theme="dark"] .loading-spinner::after,
+html[data-theme="dark"] .loading-spinner span {
+  background: rgba(200, 150, 100, 0.7);
+}
+
+html[data-theme="dark"] .loading-progress {
+  color: rgba(200, 150, 100, 0.8);
+}
+
 /* ═══════════════════════════════════════════
-   ЧЁРНО-БЕЛАЯ ТЕМА
+   ЧЁРНО-БЕЛАЯ ТЕМА - ПЕРЕМЕННЫЕ
    ═══════════════════════════════════════════ */
 
 html[data-theme="bw"] {
@@ -65,15 +85,36 @@ html[data-theme="bw"] {
   --cover-back-bg: #fff;
 }
 
+/* ═══════════════════════════════════════════
+   ЧЁРНО-БЕЛАЯ ТЕМА - КОМПОНЕНТЫ
+   ═══════════════════════════════════════════ */
+
+/* Страницы - убираем текстуру */
 html[data-theme="bw"] .page,
 html[data-theme="bw"] .side {
   background-image: none;
 }
 
+/* Фоны и изображения - grayscale */
 html[data-theme="bw"] .bg {
   filter: grayscale(100%);
 }
 
 html[data-theme="bw"] img {
   filter: grayscale(100%);
+}
+
+/* Индикатор загрузки */
+html[data-theme="bw"] .loading-overlay {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+html[data-theme="bw"] .loading-spinner::before,
+html[data-theme="bw"] .loading-spinner::after,
+html[data-theme="bw"] .loading-spinner span {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="bw"] .loading-progress {
+  color: rgba(0, 0, 0, 0.6);
 }

@@ -1,0 +1,322 @@
+/**
+ * SETTINGS POD
+ *
+ * Панель настроек: размер шрифта, тема, выбор шрифта.
+ */
+
+/* ═══════════════════════════════════════════
+   КОНТЕЙНЕР
+   ═══════════════════════════════════════════ */
+
+.settings-pod {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 12px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-section:not(:last-child) {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(139, 69, 19, 0.2);
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.settings-icon {
+  opacity: 0.7;
+}
+
+/* ═══════════════════════════════════════════
+   FONT SIZE STEPPER
+   ═══════════════════════════════════════════ */
+
+.font-size-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.stepper-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2em;
+  font-weight: 600;
+  background: rgba(139, 69, 19, 0.15);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: inherit;
+}
+
+.stepper-btn:hover {
+  background: rgba(139, 69, 19, 0.25);
+  transform: scale(1.05);
+}
+
+.stepper-btn:active {
+  transform: scale(0.95);
+}
+
+.stepper-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 36px;
+  padding: 0 8px;
+  font-size: 1em;
+  font-weight: 700;
+  background: rgba(139, 69, 19, 0.1);
+  border-radius: 8px;
+}
+
+/* ═══════════════════════════════════════════
+   THEME SEGMENTED CONTROL
+   ═══════════════════════════════════════════ */
+
+.theme-segmented {
+  display: flex;
+  gap: 4px;
+  background: rgba(139, 69, 19, 0.1);
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.theme-segment {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  font-size: 0.7em;
+  font-weight: 500;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.theme-segment svg {
+  transition: transform 0.2s ease;
+}
+
+.theme-segment:hover {
+  opacity: 1;
+  background: rgba(139, 69, 19, 0.1);
+}
+
+.theme-segment:hover svg {
+  transform: scale(1.1);
+}
+
+.theme-segment[data-active="true"] {
+  opacity: 1;
+  background: rgba(139, 69, 19, 0.25);
+  border-color: rgba(139, 69, 19, 0.4);
+  box-shadow: 0 2px 6px rgba(139, 69, 19, 0.15);
+}
+
+/* ═══════════════════════════════════════════
+   FONT SELECT
+   ═══════════════════════════════════════════ */
+
+.font-select-modern {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.9em;
+  font-weight: 500;
+  color: inherit;
+  background: rgba(139, 69, 19, 0.1);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%238b4513' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.font-select-modern:hover {
+  background-color: rgba(139, 69, 19, 0.15);
+}
+
+.font-select-modern:focus {
+  outline: none;
+  border-color: rgba(139, 69, 19, 0.4);
+  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+}
+
+/* ═══════════════════════════════════════════
+   DARK THEME
+   ═══════════════════════════════════════════ */
+
+html[data-theme="dark"] .settings-pod {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .settings-section:not(:last-child) {
+  border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+
+html[data-theme="dark"] .stepper-btn {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"] .stepper-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+html[data-theme="dark"] .stepper-value {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .theme-segmented {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .theme-segment:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"] .theme-segment[data-active="true"] {
+  background: rgba(200, 150, 100, 0.25);
+  border-color: rgba(200, 150, 100, 0.4);
+}
+
+html[data-theme="dark"] .font-select-modern {
+  background-color: rgba(255, 255, 255, 0.08);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23c8966d' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+}
+
+html[data-theme="dark"] .font-select-modern:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme="dark"] .font-select-modern:focus {
+  border-color: rgba(200, 150, 100, 0.4);
+}
+
+/* ═══════════════════════════════════════════
+   B&W THEME
+   ═══════════════════════════════════════════ */
+
+html[data-theme="bw"] .settings-pod {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid #000;
+}
+
+html[data-theme="bw"] .stepper-btn {
+  background: transparent;
+  border: 1px solid #000;
+}
+
+html[data-theme="bw"] .stepper-value {
+  background: transparent;
+  border: 1px solid #000;
+}
+
+html[data-theme="bw"] .theme-segmented {
+  background: transparent;
+  border: 1px solid #000;
+}
+
+html[data-theme="bw"] .theme-segment {
+  border-color: transparent;
+}
+
+html[data-theme="bw"] .theme-segment[data-active="true"] {
+  background: #000;
+  color: #fff;
+}
+
+html[data-theme="bw"] .font-select-modern {
+  background-color: transparent;
+  border: 1px solid #000;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE (Desktop)
+   ═══════════════════════════════════════════ */
+
+@media (min-width: 801px) {
+  .settings-pod {
+    max-width: 240px;
+    min-width: 200px;
+    margin-bottom: 0;
+  }
+
+  .settings-section:not(:last-child) {
+    padding-bottom: 10px;
+  }
+
+  .settings-section-header {
+    font-size: 0.8em;
+  }
+
+  .font-size-stepper {
+    gap: 2px;
+  }
+
+  .stepper-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1em;
+  }
+
+  .stepper-value {
+    min-width: 40px;
+    height: 32px;
+    font-size: 0.9em;
+  }
+
+  .theme-segmented {
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .theme-segment {
+    padding: 6px 4px;
+    font-size: 0.65em;
+  }
+
+  .theme-segment svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .font-select-modern {
+    padding: 8px 10px;
+    font-size: 0.85em;
+    padding-right: 32px;
+  }
+}

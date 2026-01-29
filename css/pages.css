@@ -1,9 +1,13 @@
 /**
  * PAGE STYLES
- * 
+ *
  * Статические страницы с двойной буферизацией.
- * 
+ * Левая и правая страницы книги, их состояния и тени.
  */
+
+/* ═══════════════════════════════════════════
+   БАЗОВЫЕ СТИЛИ СТРАНИЦЫ
+   ═══════════════════════════════════════════ */
 
 .page {
   position: absolute;
@@ -18,18 +22,22 @@
   background-image: url("/images/backgrounds/bg-page.webp");
   background-blend-mode: multiply;
   overflow: hidden;
-  
+
   /*
    * FIREFOX FIX: Убран contain: layout style paint
    * Firefox "оптимизирует" рендеринг содержимого внутри contain-контейнера
    * и не отображает некоторые элементы (h2) до перерисовки при анимации.
    */
-  
+
   transition:
     background-color var(--timing-transition),
     opacity var(--timing-transition),
     visibility 0s var(--timing-transition);
 }
+
+/* ═══════════════════════════════════════════
+   ПОЗИЦИОНИРОВАНИЕ (левая/правая)
+   ═══════════════════════════════════════════ */
 
 .page[data-side="left"] {
   left: 0;
@@ -42,12 +50,17 @@
   transform-origin: left center;
 }
 
-/* Состояния видимости */
+/* ═══════════════════════════════════════════
+   СОСТОЯНИЯ ВИДИМОСТИ
+   ═══════════════════════════════════════════ */
+
+/* По умолчанию страницы скрыты */
 .page {
   visibility: hidden;
   opacity: 0;
 }
 
+/* Активная страница видима */
 .page[data-active="true"] {
   visibility: visible;
   opacity: 1;
@@ -57,6 +70,7 @@
     visibility 0s;
 }
 
+/* Буферная страница полностью скрыта */
 .page[data-buffer="true"] {
   visibility: hidden !important;
   opacity: 0 !important;
@@ -69,6 +83,7 @@
   visibility: hidden;
 }
 
+/* Активная страница поднимается при перелистывании */
 .book[data-state="flipping"] .page[data-active="true"] {
   z-index: 5;
 }
@@ -89,7 +104,8 @@
 }
 
 /* ═══════════════════════════════════════════
-   ТЕНИ СТРАНИЦ
+   ТЕНИ СТРАНИЦ (inset shadows)
+   Создают эффект объёма у корешка книги
    ═══════════════════════════════════════════ */
 
 .page[data-side="left"] {
@@ -103,6 +119,11 @@
     inset 1px 0 0 var(--paper-highlight),
     inset 10px 0 18px var(--spine-soft);
 }
+
+/* ═══════════════════════════════════════════
+   ТЕНЬ КОРЕШКА (::after pseudo-element)
+   Градиентная тень для реалистичности
+   ═══════════════════════════════════════════ */
 
 .page::after {
   content: "";
@@ -140,6 +161,7 @@
 
 /* ═══════════════════════════════════════════
    КРАЙ СТРАНИЦ (закрытая книга)
+   Визуальный эффект стопки страниц справа
    ═══════════════════════════════════════════ */
 
 .pages-edge {
@@ -164,7 +186,10 @@
   pointer-events: none;
 }
 
-/* Firefox: фикс для видимости заголовков */
+/* ═══════════════════════════════════════════
+   FIREFOX FIXES
+   ═══════════════════════════════════════════ */
+
 @supports (-moz-appearance: none) {
   .page-content h2 {
     display: block;
