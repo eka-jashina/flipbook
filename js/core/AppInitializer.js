@@ -198,7 +198,8 @@ export class AppInitializer {
       nextBtn, prevBtn, tocBtn, continueBtn, cover,
       increaseBtn, decreaseBtn, fontSizeValue, fontSelect, themeSegmented, debugToggle,
       soundToggle, volumeSlider, pageVolumeControl,
-      ambientPills, ambientVolume, ambientVolumeWrapper
+      ambientPills, ambientVolume, ambientVolumeWrapper,
+      fullscreenBtn
     } = this.dom.elements;
 
     this.eventController.bind({
@@ -206,7 +207,8 @@ export class AppInitializer {
       coverEl: cover,
       increaseBtn, decreaseBtn, fontSizeValue, fontSelect, themeSegmented, debugToggle,
       soundToggle, volumeSlider, pageVolumeControl,
-      ambientPills, ambientVolume, ambientVolumeWrapper
+      ambientPills, ambientVolume, ambientVolumeWrapper,
+      fullscreenBtn
     });
 
     this.dragDelegate.bind();
