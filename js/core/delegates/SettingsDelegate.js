@@ -121,6 +121,9 @@ export class SettingsDelegate extends BaseDelegate {
       case "ambientVolume":
         this._handleAmbientVolume(value);
         break;
+      case "fullscreen":
+        this._handleFullscreen();
+        break;
     }
 
     // Уведомляем контроллер об обновлении
@@ -273,6 +276,24 @@ export class SettingsDelegate extends BaseDelegate {
   _handleAmbientVolume(volume) {
     if (this.ambientManager) {
       this.ambientManager.setVolume(volume);
+    }
+  }
+
+  /**
+   * Переключить полноэкранный режим
+   * @private
+   */
+  _handleFullscreen() {
+    if (!document.fullscreenElement) {
+      // Входим в полноэкранный режим
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.warn("Не удалось войти в полноэкранный режим:", err.message);
+      });
+    } else {
+      // Выходим из полноэкранного режима
+      document.exitFullscreen().catch((err) => {
+        console.warn("Не удалось выйти из полноэкранного режима:", err.message);
+      });
     }
   }
 
