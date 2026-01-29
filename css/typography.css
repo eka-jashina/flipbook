@@ -1,9 +1,12 @@
 /**
  * TYPOGRAPHY
- * 
- * Стили текста, заголовков и контента.
- * 
+ *
+ * Стили текста, заголовков и типографики контента.
  */
+
+/* ═══════════════════════════════════════════
+   ЗАГОЛОВКИ
+   ═══════════════════════════════════════════ */
 
 h1 {
   display: flex;
@@ -28,6 +31,10 @@ h2 {
   font-size: 250%;
 }
 
+/* ═══════════════════════════════════════════
+   ПАРАГРАФЫ
+   ═══════════════════════════════════════════ */
+
 p {
   text-align: justify;
   text-indent: 1em;
@@ -37,7 +44,10 @@ p {
   user-select: none;
 }
 
-/* Буквица */
+/* ═══════════════════════════════════════════
+   БУКВИЦА (Drop Cap)
+   ═══════════════════════════════════════════ */
+
 h2 + p::first-letter {
   font-family: "TolkienCyr", sans-serif;
   font-size: 130%;
@@ -57,6 +67,10 @@ h2 + p::first-letter {
   }
 }
 
+/* ═══════════════════════════════════════════
+   СТРУКТУРА СТАТЕЙ
+   ═══════════════════════════════════════════ */
+
 /* Запрет разрыва статей между колонками */
 article,
 .toc {
@@ -71,7 +85,7 @@ article h2,
 }
 
 /* ═══════════════════════════════════════════
-   TOC ИНТЕРАКТИВНЫЕ ЭФФЕКТЫ (УЛУЧШЕНИЕ)
+   TOC (Table of Contents)
    ═══════════════════════════════════════════ */
 
 .toc li {
@@ -108,14 +122,17 @@ article h2,
   background: rgba(139, 69, 19, 0.18);
 }
 
-/* Плавная анимация при фокусе (клавиатурная навигация) */
+/* Клавиатурная навигация */
 .toc li:focus-visible {
   outline: 2px solid rgba(139, 69, 19, 0.5);
   outline-offset: 2px;
   background: rgba(139, 69, 19, 0.08);
 }
 
-/* Темная тема */
+/* ═══════════════════════════════════════════
+   TOC - DARK THEME
+   ═══════════════════════════════════════════ */
+
 html[data-theme="dark"] .toc li:hover {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -129,7 +146,10 @@ html[data-theme="dark"] .toc li:focus-visible {
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* Ч/б тема */
+/* ═══════════════════════════════════════════
+   TOC - B&W THEME
+   ═══════════════════════════════════════════ */
+
 html[data-theme="bw"] .toc li:hover {
   background: rgba(0, 0, 0, 0.1);
 }
@@ -139,58 +159,14 @@ html[data-theme="bw"] .toc li:active {
 }
 
 /* ═══════════════════════════════════════════
-   ИЗОБРАЖЕНИЯ
+   FIREFOX FIXES
    ═══════════════════════════════════════════ */
 
-/* Изображения - базовые стили */
-img {
-  display: block;
-  width: 100%;
-  height: 75vh;
-  margin-bottom: 0.3em;
-  object-fit: cover;
-  object-position: left center;
-  transition: filter var(--timing-transition);
-}
-
-/* Картинка В ТЕКСТЕ (после параграфа) - обтекание */
-p + img,
-p ~ img {
-  float: left;
-}
-
-/* Картинка ПЕРЕД заголовком - БЕЗ float */
-article > img:first-child,
-img + h2 {
-  float: none;
-}
-
-/* Заголовок после картинки - очищаем float */
-img + h2 {
-  clear: both;
-  display: block;
-}
-
-/* Firefox: специфичные фиксы */
 @supports (-moz-appearance: none) {
-  /* Картинка перед заголовком - точно без float */
-  article > img:first-child {
-    float: none !important;
-  }
-  
-  /* Заголовок после картинки - принудительный clearing */
-  img + h2 {
-    clear: both !important;
-    display: flow-root;
-    /* Принудительный rendering */
-    contain: layout;
-  }
-  
-  /* Картинка в тексте - используем shape-outside для надёжности */
-  p + img,
-  p ~ img {
-    float: left;
-    shape-outside: inset(0);
-    shape-margin: 0.3em;
+  .page-content h2 {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    isolation: isolate;
   }
 }

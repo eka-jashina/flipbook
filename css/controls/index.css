@@ -1,0 +1,183 @@
+/**
+ * CONTROLS - Module Index
+ *
+ * Импортирует все модули панели управления.
+ * Базовые стили контейнера .controls.
+ */
+
+@import url('./navigation-pod.css');
+@import url('./settings-pod.css');
+@import url('./audio-pod.css');
+
+/* ═══════════════════════════════════════════
+   БАЗОВЫЙ КОНТЕЙНЕР CONTROLS
+   ═══════════════════════════════════════════ */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 0.7em;
+  font-family: "TolkienCyr", sans-serif;
+  font-size: 18px;
+  color: var(--cover-front-text);
+  background: var(--cover-front-bg);
+  transition:
+    background var(--timing-transition),
+    color var(--timing-transition);
+}
+
+/* ═══════════════════════════════════════════
+   ОБЩИЕ СТИЛИ ЭЛЕМЕНТОВ УПРАВЛЕНИЯ
+   ═══════════════════════════════════════════ */
+
+.controls button,
+.controls select,
+.controls label {
+  padding: 0.3em;
+  font-family: "TolkienCyr", sans-serif;
+  font-size: 100%;
+  font-weight: 700;
+  line-height: 1;
+  color: brown;
+  background-color: var(--cover-front-text);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    transform var(--timing-transition) ease-in-out,
+    outline var(--timing-transition) ease-in-out;
+}
+
+.controls button:hover,
+.controls button:focus-visible,
+.controls label:hover,
+.controls label:focus-within {
+  outline: 1px solid brown;
+  transform: scale(1.2);
+  transform-origin: center;
+}
+
+/* ═══════════════════════════════════════════
+   ПАНЕЛЬ НАСТРОЕК (toggle container)
+   ═══════════════════════════════════════════ */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  max-height: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--timing-transition) ease-in-out,
+    max-height var(--timing-transition) ease-in-out;
+}
+
+.settings div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: space-between;
+}
+
+/* Показываем через :has() */
+.controls:has(.settings-checkbox:checked) .settings {
+  opacity: 1;
+  min-height: auto;
+  max-height: 500px;
+  visibility: visible;
+}
+
+/* Скрытый чекбокс для toggle */
+.settings-checkbox {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  border: 0;
+  padding: 0;
+  white-space: nowrap;
+  clip-path: inset(100%);
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   COPYRIGHT
+   ═══════════════════════════════════════════ */
+
+.copyright {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+.copyright a {
+  color: currentColor;
+  text-decoration: none;
+}
+
+/* ═══════════════════════════════════════════
+   СООБЩЕНИЕ ОБ ОШИБКЕ
+   ═══════════════════════════════════════════ */
+
+.error-message {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff4444;
+  color: white;
+  padding: 1em 2em;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  animation: slideDown 0.3s ease-out;
+}
+
+/* ═══════════════════════════════════════════
+   DESKTOP HORIZONTAL LAYOUT
+   ═══════════════════════════════════════════ */
+
+@media (min-width: 801px) {
+  .controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .settings {
+    flex-direction: row;
+    gap: 16px;
+    align-items: flex-start;
+    max-height: 0;
+    overflow: hidden;
+    width: 0;
+    padding: 0;
+    transition:
+      opacity var(--timing-transition) ease-in-out,
+      max-height var(--timing-transition) ease-in-out,
+      width var(--timing-transition) ease-in-out;
+  }
+
+  .controls:has(.settings-checkbox:checked) .settings {
+    width: auto;
+    max-height: 500px;
+  }
+
+  .copyright {
+    width: 100%;
+    flex-direction: row;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 8px;
+    font-size: 0.85em;
+  }
+}

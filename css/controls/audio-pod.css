@@ -1,0 +1,423 @@
+/**
+ * AUDIO POD
+ *
+ * Панель аудио-контроля: звуки переворота, фоновая музыка,
+ * переключатели и слайдеры громкости.
+ */
+
+/* ═══════════════════════════════════════════
+   КОНТЕЙНЕР
+   ═══════════════════════════════════════════ */
+
+.audio-pod {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.audio-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audio-section:not(:last-child) {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(139, 69, 19, 0.2);
+}
+
+.audio-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.audio-icon {
+  opacity: 0.7;
+}
+
+.audio-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ═══════════════════════════════════════════
+   TOGGLE SWITCH (iOS Style)
+   ═══════════════════════════════════════════ */
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: rgba(139, 69, 19, 0.3);
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--cover-front-text);
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: rgba(139, 69, 19, 0.8);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.toggle-switch input:focus + .toggle-slider {
+  box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.4);
+}
+
+.toggle-switch:hover {
+  transform: none;
+  outline: none;
+}
+
+/* ═══════════════════════════════════════════
+   VOLUME CONTROL (Slider with Icons)
+   ═══════════════════════════════════════════ */
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.vol-icon {
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.volume-control:hover .vol-icon {
+  opacity: 0.9;
+}
+
+.volume-slider {
+  flex: 1;
+  height: 6px;
+  background: rgba(139, 69, 19, 0.2);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #8b4513, #5d3a1a);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #8b4513, #5d3a1a);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.volume-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Disabled state */
+.volume-control.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════
+   AMBIENT PILLS (выбор фона)
+   ═══════════════════════════════════════════ */
+
+.ambient-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ambient-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  background: rgba(139, 69, 19, 0.15);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.75em;
+  min-width: 56px;
+}
+
+.ambient-pill:hover {
+  background: rgba(139, 69, 19, 0.25);
+  transform: translateY(-1px);
+}
+
+.ambient-pill[data-active="true"] {
+  background: rgba(139, 69, 19, 0.35);
+  border-color: rgba(139, 69, 19, 0.6);
+  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.2);
+}
+
+.ambient-pill-icon {
+  font-size: 1.4em;
+  line-height: 1;
+}
+
+.ambient-pill-label {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* Ambient volume row */
+.ambient-volume-row {
+  display: none;
+  margin-top: 4px;
+}
+
+.ambient-volume-row.visible {
+  display: flex;
+}
+
+/* ═══════════════════════════════════════════
+   AMBIENT PILL LOADING STATE
+   ═══════════════════════════════════════════ */
+
+.ambient-pill[data-loading="true"] {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.ambient-pill[data-loading="true"] .ambient-pill-icon {
+  position: relative;
+}
+
+.ambient-pill[data-loading="true"] .ambient-pill-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid transparent;
+  border-top-color: rgba(139, 69, 19, 0.8);
+  border-radius: 50%;
+  animation: pill-spin 0.8s linear infinite;
+}
+
+@keyframes pill-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   DARK THEME
+   ═══════════════════════════════════════════ */
+
+html[data-theme="dark"] .audio-pod {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .audio-section:not(:last-child) {
+  border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+
+html[data-theme="dark"] .toggle-slider {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+html[data-theme="dark"] .toggle-switch input:checked + .toggle-slider {
+  background-color: rgba(200, 150, 100, 0.7);
+}
+
+html[data-theme="dark"] .volume-slider {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+html[data-theme="dark"] .volume-slider::-webkit-slider-thumb {
+  background: linear-gradient(135deg, #c8966d, #a07850);
+}
+
+html[data-theme="dark"] .volume-slider::-moz-range-thumb {
+  background: linear-gradient(135deg, #c8966d, #a07850);
+}
+
+html[data-theme="dark"] .ambient-pill {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"] .ambient-pill:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+html[data-theme="dark"] .ambient-pill[data-active="true"] {
+  background: rgba(200, 150, 100, 0.3);
+  border-color: rgba(200, 150, 100, 0.5);
+}
+
+html[data-theme="dark"] .ambient-pill[data-loading="true"] .ambient-pill-icon::after {
+  border-top-color: rgba(200, 150, 100, 0.9);
+}
+
+/* ═══════════════════════════════════════════
+   B&W THEME
+   ═══════════════════════════════════════════ */
+
+html[data-theme="bw"] .audio-pod {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid #000;
+}
+
+html[data-theme="bw"] .toggle-slider {
+  background-color: #ccc;
+}
+
+html[data-theme="bw"] .toggle-switch input:checked + .toggle-slider {
+  background-color: #000;
+}
+
+html[data-theme="bw"] .toggle-slider::before {
+  background-color: #fff;
+}
+
+html[data-theme="bw"] .volume-slider {
+  background: #ccc;
+}
+
+html[data-theme="bw"] .volume-slider::-webkit-slider-thumb {
+  background: #000;
+}
+
+html[data-theme="bw"] .volume-slider::-moz-range-thumb {
+  background: #000;
+}
+
+html[data-theme="bw"] .ambient-pill {
+  background: transparent;
+  border: 1px solid #000;
+}
+
+html[data-theme="bw"] .ambient-pill[data-active="true"] {
+  background: #000;
+  color: #fff;
+}
+
+html[data-theme="bw"] .ambient-pill[data-loading="true"] .ambient-pill-icon::after {
+  border-top-color: #000;
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+
+@media (max-width: 600px) {
+  .audio-pod {
+    max-width: 100%;
+  }
+
+  .ambient-pills {
+    justify-content: center;
+  }
+
+  .ambient-pill {
+    flex: 1;
+    min-width: 60px;
+    max-width: 80px;
+  }
+}
+
+@media (min-width: 801px) {
+  .audio-pod {
+    max-width: 260px;
+    min-width: 220px;
+  }
+
+  .audio-section:not(:last-child) {
+    padding-bottom: 10px;
+  }
+
+  .audio-section-header {
+    font-size: 0.8em;
+  }
+
+  .toggle-switch {
+    width: 40px;
+    height: 22px;
+  }
+
+  .toggle-slider::before {
+    height: 16px;
+    width: 16px;
+  }
+
+  .toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+  }
+
+  .ambient-pill {
+    padding: 6px 8px;
+    font-size: 0.7em;
+    min-width: 48px;
+  }
+
+  .ambient-pill-icon {
+    font-size: 1.2em;
+  }
+}

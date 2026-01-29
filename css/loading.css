@@ -1,7 +1,13 @@
 /**
  * LOADING INDICATOR
- * Мягкий, ненавязчивый индикатор загрузки
+ *
+ * Мягкий, ненавязчивый индикатор загрузки.
+ * Тематические стили находятся в themes.css.
  */
+
+/* ═══════════════════════════════════════════
+   OVERLAY
+   ═══════════════════════════════════════════ */
 
 .loading-overlay {
   position: absolute;
@@ -24,7 +30,10 @@
   display: none;
 }
 
-/* Мягкий пульсирующий спиннер - три точки */
+/* ═══════════════════════════════════════════
+   SPINNER (три пульсирующие точки)
+   ═══════════════════════════════════════════ */
+
 .loading-spinner {
   display: flex;
   align-items: center;
@@ -66,46 +75,14 @@
   }
 }
 
+/* ═══════════════════════════════════════════
+   PROGRESS TEXT
+   ═══════════════════════════════════════════ */
+
 .loading-progress {
   margin-top: 16px;
   font-size: 13px;
   font-weight: 500;
   color: rgba(139, 69, 19, 0.7);
   letter-spacing: 0.02em;
-}
-
-/* ═══════════════════════════════════════════
-   DARK THEME
-   ═══════════════════════════════════════════ */
-
-html[data-theme="dark"] .loading-overlay {
-  background: rgba(30, 25, 20, 0.75);
-}
-
-html[data-theme="dark"] .loading-spinner::before,
-html[data-theme="dark"] .loading-spinner::after,
-html[data-theme="dark"] .loading-spinner span {
-  background: rgba(200, 150, 100, 0.7);
-}
-
-html[data-theme="dark"] .loading-progress {
-  color: rgba(200, 150, 100, 0.8);
-}
-
-/* ═══════════════════════════════════════════
-   B&W THEME
-   ═══════════════════════════════════════════ */
-
-html[data-theme="bw"] .loading-overlay {
-  background: rgba(255, 255, 255, 0.85);
-}
-
-html[data-theme="bw"] .loading-spinner::before,
-html[data-theme="bw"] .loading-spinner::after,
-html[data-theme="bw"] .loading-spinner span {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-html[data-theme="bw"] .loading-progress {
-  color: rgba(0, 0, 0, 0.6);
 }
