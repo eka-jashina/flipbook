@@ -2,22 +2,27 @@
  * DRAG DELEGATE
  * Управление drag-перелистыванием страниц.
  *
+ * Использует вспомогательные классы:
+ * - DragShadowRenderer — рендеринг теней
+ * - DragAnimator — анимация угла поворота
+ *
  * Жизненный цикл drag-операции:
  * 1. _startDrag()     → Инициализация: проверка возможности, захват координат
  * 2. _prepareFlip()   → Подготовка DOM: буфер, sheet, отключение transitions
  * 3. _showUnderPage() → Показ страницы "под" текущей (целевая страница)
  * 4. _updateAngle()   → Цикл: обновление угла по позиции курсора/пальца
  * 5. _render()        → Цикл: применение угла к CSS-переменным
- * 6. _updateShadows() → Цикл: расчёт и применение теней
- * 7. _endDrag()       → Решение: завершить (>90°) или отменить (<90°)
- * 8. _animateTo()     → Анимация до целевого угла (0° или 180°)
- * 9. _finish()        → Очистка CSS-переменных и состояния sheet
- * 10. _completeFlip() → При успехе: swap буферов, обновление индекса
- *     _cancelFlip()   → При отмене: возврат видимости страниц
+ * 6. _endDrag()       → Решение: завершить (>90°) или отменить (<90°)
+ * 7. animator.animate → Анимация до целевого угла (0° или 180°)
+ * 8. _finish()        → Очистка CSS-переменных и состояния sheet
+ * 9. _completeFlip()  → При успехе: swap буферов, обновление индекса
+ *    _cancelFlip()    → При отмене: возврат видимости страниц
  */
 
 import { cssVars } from "../../utils/CSSVariables.js";
 import { BaseDelegate } from './BaseDelegate.js';
+import { DragShadowRenderer } from './DragShadowRenderer.js';
+import { DragAnimator } from './DragAnimator.js';
 
 export class DragDelegate extends BaseDelegate {
   /**
@@ -38,6 +43,10 @@ export class DragDelegate extends BaseDelegate {
     this.eventManager = deps.eventManager;
     this.onIndexChange = deps.onIndexChange;
     this.onChapterUpdate = deps.onChapterUpdate;
+
+    // Вспомогательные классы
+    this.shadowRenderer = new DragShadowRenderer(this.dom);
+    this.animator = new DragAnimator();
 
     // Состояние drag
     this.isDragging = false;
@@ -177,13 +186,7 @@ export class DragDelegate extends BaseDelegate {
     this.bookWidth = this.bookRect.width;
 
     this._prepareFlip();
-
-    const flipShadow = this.dom.get("flipShadow");
-    if (flipShadow) {
-      flipShadow.classList.add("active");
-      flipShadow.dataset.direction = this.direction;
-    }
-
+    this.shadowRenderer.activate(this.direction);
     this._updateAngleFromEvent(e);
   }
 
@@ -295,7 +298,7 @@ export class DragDelegate extends BaseDelegate {
   }
 
   /**
-   * Применить текущий угол к CSS-переменным sheet
+   * Применить текущий угол к CSS-переменным sheet и теням
    * @private
    */
   _render() {
@@ -306,40 +309,7 @@ export class DragDelegate extends BaseDelegate {
       sheet.style.setProperty("--sheet-angle", `${angle}deg`);
     }
 
-    this._updateShadows();
-  }
-
-  /**
-   * Обновить тени в зависимости от угла поворота.
-   * Тени максимальны при 90° (sin(π/2) = 1) и минимальны при 0°/180°.
-   * @private
-   */
-  _updateShadows() {
-    const progress = this.currentAngle / 180;
-    const shadowOpacity = Math.sin(progress * Math.PI) * 0.35;
-    const shadowSize = Math.sin(progress * Math.PI) * 25;
-
-    const book = this.dom.get("book");
-    if (book) {
-      book.style.setProperty("--spine-shadow-alpha", shadowOpacity.toFixed(2));
-      book.style.setProperty("--spine-shadow-size", `${shadowSize}px`);
-    }
-
-    const flipShadow = this.dom.get("flipShadow");
-    if (!flipShadow) return;
-
-    const flipOpacity = Math.sin(progress * Math.PI) * 0.4;
-    const flipWidth = Math.sin(progress * Math.PI) * 120;
-    const spinePosition = this.isMobile ? "10%" : "50%";
-
-    // Позиционирование через CSS-переменные, градиент через data-direction в CSS
-    const leftPosition = this.direction === "next"
-      ? spinePosition
-      : `calc(${spinePosition} - ${flipWidth}px)`;
-
-    flipShadow.style.setProperty("--flip-shadow-opacity", flipOpacity.toFixed(2));
-    flipShadow.style.setProperty("--flip-shadow-width", `${flipWidth}px`);
-    flipShadow.style.setProperty("--flip-shadow-left", leftPosition);
+    this.shadowRenderer.update(this.currentAngle, this.direction, this.isMobile);
   }
 
   // ═══════════════════════════════════════════
@@ -368,39 +338,17 @@ export class DragDelegate extends BaseDelegate {
     this.isDragging = false;
 
     const willComplete = this.currentAngle > 90;
-    this._animateTo(willComplete ? 180 : 0, willComplete);
-  }
+    const targetAngle = willComplete ? 180 : 0;
 
-  /**
-   * Анимировать угол до целевого значения (0° или 180°)
-   * @private
-   * @param {number} targetAngle - Целевой угол
-   * @param {boolean} willComplete - Будет ли перелистывание завершено
-   */
-  _animateTo(targetAngle, willComplete) {
-    const startAngle = this.currentAngle;
-    const duration = Math.max(
-      150,
-      (cssVars.getTime("--timing-rotate", 350) * Math.abs(targetAngle - startAngle)) / 180,
+    this.animator.animate(
+      this.currentAngle,
+      targetAngle,
+      (angle) => {
+        this.currentAngle = angle;
+        this._render();
+      },
+      () => this._finish(willComplete)
     );
-    const startTime = performance.now();
-
-    const animate = (now) => {
-      const elapsed = now - startTime;
-      const t = Math.min(elapsed / duration, 1);
-      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-
-      this.currentAngle = startAngle + (targetAngle - startAngle) * eased;
-      this._render();
-
-      if (t < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        this._finish(willComplete);
-      }
-    };
-
-    requestAnimationFrame(animate);
   }
 
   /**
@@ -412,10 +360,8 @@ export class DragDelegate extends BaseDelegate {
   _finish(completed) {
     const direction = this.direction;
 
+    // Очистка sheet
     const sheet = this.dom.get("sheet");
-    const book = this.dom.get("book");
-    const flipShadow = this.dom.get("flipShadow");
-
     if (sheet) {
       sheet.classList.remove("no-transition");
       sheet.style.removeProperty("--sheet-angle");
@@ -423,18 +369,8 @@ export class DragDelegate extends BaseDelegate {
       delete sheet.dataset.direction;
     }
 
-    if (book) {
-      book.style.removeProperty("--spine-shadow-alpha");
-      book.style.removeProperty("--spine-shadow-size");
-    }
-
-    if (flipShadow) {
-      flipShadow.classList.remove("active");
-      delete flipShadow.dataset.direction;
-      flipShadow.style.removeProperty("--flip-shadow-opacity");
-      flipShadow.style.removeProperty("--flip-shadow-width");
-      flipShadow.style.removeProperty("--flip-shadow-left");
-    }
+    // Очистка теней через shadowRenderer
+    this.shadowRenderer.reset();
 
     if (completed) {
       this._completeFlip(direction);
@@ -533,6 +469,13 @@ export class DragDelegate extends BaseDelegate {
    * Очистка
    */
   destroy() {
+    // Отменяем текущую анимацию
+    this.animator.cancel();
+
+    // Очищаем вспомогательные классы
+    this.shadowRenderer.destroy();
+    this.animator.destroy();
+
     this.isDragging = false;
     this.direction = null;
     this.currentAngle = 0;
@@ -543,6 +486,8 @@ export class DragDelegate extends BaseDelegate {
     this.eventManager = null;
     this.onIndexChange = null;
     this.onChapterUpdate = null;
+    this.shadowRenderer = null;
+    this.animator = null;
     super.destroy();
   }
 }
