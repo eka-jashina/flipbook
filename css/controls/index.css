@@ -5,6 +5,7 @@
  * Базовые стили контейнера .controls.
  */
 
+@import url('./pod-variables.css');
 @import url('./navigation-pod.css');
 @import url('./settings-pod.css');
 @import url('./audio-pod.css');

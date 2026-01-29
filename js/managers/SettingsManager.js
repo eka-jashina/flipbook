@@ -50,4 +50,13 @@ export class SettingsManager extends EventEmitter {
     this.emit("change", { key, value, oldValue });
     this.emit(`change:${key}`, { value, oldValue });
   }
+
+  /**
+   * Освободить ресурсы
+   */
+  destroy() {
+    super.destroy();
+    this.storage = null;
+    this.settings = null;
+  }
 }
