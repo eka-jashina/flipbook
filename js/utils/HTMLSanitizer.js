@@ -67,7 +67,22 @@ export class HTMLSanitizer {
    */
   sanitize(html) {
     if (!html || typeof html !== "string") return "";
-    const doc = new DOMParser().parseFromString(html, "text/html");
+
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(html, "text/html");
+
+      // Проверяем на ошибку парсинга (DOMParser возвращает документ с parsererror)
+      const parserError = doc.querySelector("parsererror");
+      if (parserError) {
+        console.warn("HTMLSanitizer: parser error detected, returning empty string");
+        return "";
+      }
+    } catch (error) {
+      console.error("HTMLSanitizer: failed to parse HTML", error);
+      return "";
+    }
+
     this._sanitizeNode(doc.body);
     return doc.body.innerHTML;
   }
