@@ -1,6 +1,6 @@
 /**
  * ANIMATIONS
- * 
+ *
  * Keyframe анимации.
  */
 
@@ -30,5 +30,29 @@
   }
   to {
     opacity: 0;
+  }
+}
+
+/**
+ * Accessibility: отключение анимаций для пользователей,
+ * предпочитающих уменьшенное движение.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Сохраняем видимость элементов, но убираем анимацию */
+  .book-wrap,
+  .book,
+  .cover,
+  .sheet,
+  .page {
+    transition: none !important;
   }
 }
