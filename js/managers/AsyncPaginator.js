@@ -1,21 +1,74 @@
 /**
  * ASYNC PAGINATOR
  * Разбивает HTML-контент на страницы с использованием CSS Multi-column layout.
+ *
+ * Алгоритм работы:
+ * 1. Санитизация HTML (защита от XSS)
+ * 2. Парсинг и извлечение статей (article)
+ * 3. Создание скрытого контейнера с CSS multi-column
+ * 4. Добавление оглавления (TOC) и контента по чанкам
+ * 5. Выравнивание глав по чётным страницам (desktop)
+ * 6. Нарезка на отдельные страницы
+ *
+ * @fires AsyncPaginator#start - Начало пагинации
+ * @fires AsyncPaginator#progress - Прогресс {phase, progress}
+ * @fires AsyncPaginator#complete - Завершение {pages, chapterStarts}
+ * @fires AsyncPaginator#abort - Отмена операции
+ * @fires AsyncPaginator#error - Ошибка
+ *
+ * @extends EventEmitter
  */
 
 import { EventEmitter } from '../utils/EventEmitter.js';
 import { sanitizer } from '../utils/HTMLSanitizer.js';
 import { mediaQueries } from '../utils/MediaQueryManager.js';
 
+/**
+ * @typedef {Object} PaginationResult
+ * @property {string[]} pages - HTML-строки для каждой страницы
+ * @property {number[]} chapterStarts - Индексы страниц, с которых начинаются главы
+ */
+
+/**
+ * @typedef {Object} PaginatorOptions
+ * @property {Object} [sanitizer] - Кастомный санитайзер HTML
+ * @property {number} [chunkSize=5] - Количество статей, обрабатываемых за один yield
+ * @property {number} [yieldInterval=16] - Интервал yield в мс (~1 кадр при 60fps)
+ */
+
 export class AsyncPaginator extends EventEmitter {
+  /**
+   * Создаёт асинхронный пагинатор
+   * @param {PaginatorOptions} [options={}] - Опции конфигурации
+   */
   constructor(options = {}) {
     super();
+    /** @type {Object} Санитайзер для HTML */
     this.sanitizer = options.sanitizer || sanitizer;
+    /** @type {number} Размер чанка для обработки */
     this.chunkSize = options.chunkSize || 5;
+    /** @type {number} Интервал yield для UI responsiveness */
     this.yieldInterval = options.yieldInterval || 16;
+    /** @type {AbortController|null} Контроллер для отмены операции */
     this.abortController = null;
   }
 
+  /**
+   * Разбить HTML-контент на страницы
+   *
+   * Асинхронно обрабатывает HTML, периодически возвращая управление
+   * браузеру для поддержания отзывчивости UI.
+   *
+   * @param {string} html - HTML-контент для пагинации (должен содержать article элементы)
+   * @param {HTMLElement} measureElement - Элемент для измерения размеров страницы
+   * @returns {Promise<PaginationResult>} Результат пагинации
+   * @throws {Error} При ошибке обработки (кроме AbortError)
+   *
+   * @example
+   * const paginator = new AsyncPaginator();
+   * paginator.on('progress', ({phase, progress}) => updateUI(progress));
+   * const {pages, chapterStarts} = await paginator.paginate(html, pageElement);
+   */
   async paginate(html, measureElement) {
     this.abort();
     this.abortController = new AbortController();
@@ -108,6 +161,11 @@ export class AsyncPaginator extends EventEmitter {
     }
   }
 
+  /**
+   * Отменить текущую операцию пагинации
+   *
+   * Если пагинация выполняется, она будет прервана и вызовет событие 'abort'.
+   */
   abort() {
     if (this.abortController) {
       this.abortController.abort();
@@ -115,6 +173,17 @@ export class AsyncPaginator extends EventEmitter {
     }
   }
 
+  /**
+   * Передать управление браузеру для обновления UI
+   *
+   * Используется для предотвращения блокировки главного потока
+   * при длительных операциях.
+   *
+   * @param {AbortSignal} [signal] - Сигнал для отмены
+   * @returns {Promise<void>}
+   * @throws {DOMException} AbortError при отмене
+   * @private
+   */
   async _yieldToUI(signal) {
     return new Promise((resolve, reject) => {
       if (signal?.aborted) {
@@ -131,6 +200,16 @@ export class AsyncPaginator extends EventEmitter {
     });
   }
 
+  /**
+   * Создать контейнер для измерения пагинации
+   *
+   * Создаёт скрытый off-screen контейнер с CSS multi-column layout
+   * для расчёта разбиения контента на страницы.
+   *
+   * @param {HTMLElement} measureElement - Элемент-образец для размеров страницы
+   * @returns {{container: HTMLDivElement, cols: HTMLDivElement, pageContent: HTMLDivElement, pageWidth: number, pageHeight: number}}
+   * @private
+   */
   _createPaginationContainer(measureElement) {
     const pageWidth = measureElement.clientWidth;
     const pageHeight = measureElement.clientHeight;
@@ -164,6 +243,16 @@ export class AsyncPaginator extends EventEmitter {
     return { container, cols, pageContent, pageWidth, pageHeight };
   }
 
+  /**
+   * Добавить оглавление (Table of Contents)
+   *
+   * Создаёт секцию с заголовками всех глав в виде нумерованного списка.
+   * Оглавление занимает отдельную колонку (страницу).
+   *
+   * @param {HTMLElement} pageContent - Контейнер для контента
+   * @param {HTMLElement[]} articles - Массив статей (глав)
+   * @private
+   */
   _addTOC(pageContent, articles) {
     const toc = document.createElement("section");
     toc.className = "toc";
@@ -189,6 +278,17 @@ export class AsyncPaginator extends EventEmitter {
     pageContent.appendChild(toc);
   }
 
+  /**
+   * Добавить чанк статей в контейнер
+   *
+   * Каждая статья предваряется маркером начала главы для последующего
+   * расчёта позиций глав. Статьи клонируются для изоляции от оригинала.
+   *
+   * @param {HTMLElement} pageContent - Контейнер для контента
+   * @param {HTMLElement[]} articles - Чанк статей для добавления
+   * @param {number} startIndex - Индекс первой статьи в общем массиве
+   * @private
+   */
   _addArticlesChunk(pageContent, articles, startIndex) {
     articles.forEach((article, i) => {
       const marker = document.createElement("div");
@@ -203,6 +303,18 @@ export class AsyncPaginator extends EventEmitter {
     });
   }
 
+  /**
+   * Выровнять главы по чётным страницам (левым в развороте)
+   *
+   * На desktop книга показывает разворот из двух страниц.
+   * Главы должны начинаться с левой страницы (чётный индекс).
+   * Если глава попадает на нечётную страницу - вставляется пустой спейсер.
+   *
+   * @param {HTMLElement} container - Контейнер пагинации
+   * @param {HTMLElement} cols - Элемент с колонками
+   * @param {number} pageWidth - Ширина одной страницы
+   * @private
+   */
   _alignChapters(container, cols, pageWidth) {
     const markers = [...container.querySelectorAll("[data-chapter-start]")];
     const colsRect = cols.getBoundingClientRect();
@@ -220,11 +332,37 @@ export class AsyncPaginator extends EventEmitter {
     });
   }
 
+  /**
+   * Рассчитать индексы страниц начала глав
+   *
+   * Находит все маркеры глав и вычисляет их позиции
+   * на основе горизонтального смещения.
+   *
+   * @param {HTMLElement} container - Контейнер пагинации
+   * @param {number} pageWidth - Ширина одной страницы
+   * @returns {number[]} Массив индексов страниц начала глав
+   * @private
+   */
   _calculateChapterStarts(container, pageWidth) {
     const markers = [...container.querySelectorAll("[data-chapter-start]")];
     return markers.map(m => Math.floor(m.offsetLeft / pageWidth));
   }
 
+  /**
+   * Асинхронно нарезать контент на отдельные страницы
+   *
+   * Создаёт HTML-строку для каждой страницы путём клонирования
+   * контейнера колонок и применения translateX для "окна просмотра".
+   *
+   * @param {HTMLElement} cols - Элемент с колонками
+   * @param {HTMLElement} pageContent - Контейнер контента
+   * @param {number} pageWidth - Ширина страницы
+   * @param {number} pageHeight - Высота страницы
+   * @param {AbortSignal} [signal] - Сигнал для отмены
+   * @returns {Promise<string[]>} Массив HTML-строк страниц
+   * @throws {DOMException} AbortError при отмене
+   * @private
+   */
   async _slicePagesAsync(cols, pageContent, pageWidth, pageHeight, signal) {
     const probe = document.createElement("div");
     probe.style.width = "1px";
@@ -266,6 +404,11 @@ export class AsyncPaginator extends EventEmitter {
     return result;
   }
 
+  /**
+   * Уничтожить пагинатор и освободить ресурсы
+   *
+   * Отменяет текущую операцию (если есть) и очищает подписки EventEmitter.
+   */
   destroy() {
     this.abort();
     super.destroy();
