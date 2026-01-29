@@ -23,12 +23,6 @@
   background-blend-mode: multiply;
   overflow: hidden;
 
-  /*
-   * FIREFOX FIX: Убран contain: layout style paint
-   * Firefox "оптимизирует" рендеринг содержимого внутри contain-контейнера
-   * и не отображает некоторые элементы (h2) до перерисовки при анимации.
-   */
-
   transition:
     background-color var(--timing-transition),
     opacity var(--timing-transition),

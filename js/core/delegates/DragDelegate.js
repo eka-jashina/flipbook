@@ -46,7 +46,7 @@ export class DragDelegate extends BaseDelegate {
 
     // Вспомогательные классы
     this.shadowRenderer = new DragShadowRenderer(this.dom);
-    this.animator = new DragAnimator();
+    this.dragAnimator = new DragAnimator();
 
     // Состояние drag
     this.isDragging = false;
@@ -340,7 +340,7 @@ export class DragDelegate extends BaseDelegate {
     const willComplete = this.currentAngle > 90;
     const targetAngle = willComplete ? 180 : 0;
 
-    this.animator.animate(
+    this.dragAnimator.animate(
       this.currentAngle,
       targetAngle,
       (angle) => {
@@ -470,11 +470,11 @@ export class DragDelegate extends BaseDelegate {
    */
   destroy() {
     // Отменяем текущую анимацию
-    this.animator.cancel();
+    this.dragAnimator.cancel();
 
     // Очищаем вспомогательные классы
     this.shadowRenderer.destroy();
-    this.animator.destroy();
+    this.dragAnimator.destroy();
 
     this.isDragging = false;
     this.direction = null;
@@ -487,7 +487,7 @@ export class DragDelegate extends BaseDelegate {
     this.onIndexChange = null;
     this.onChapterUpdate = null;
     this.shadowRenderer = null;
-    this.animator = null;
+    this.dragAnimator = null;
     super.destroy();
   }
 }
