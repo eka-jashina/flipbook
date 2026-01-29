@@ -192,4 +192,13 @@
     /* Принудительная композиция слоя */
     isolation: isolate;
   }
+
+  /* Firefox: контейнер колонок должен обрезать содержимое */
+  .cols {
+    contain: paint;
+  }
+
+  .page-content {
+    contain: layout;
+  }
 }
