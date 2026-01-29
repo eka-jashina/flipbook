@@ -16,7 +16,16 @@ img {
   margin-bottom: 0.3em;
   object-fit: cover;
   object-position: left center;
-  transition: filter var(--timing-transition);
+  transition: filter var(--timing-blur) ease-out;
+}
+
+/* Blur placeholder при загрузке изображения */
+img[data-loading="true"] {
+  filter: blur(15px);
+}
+
+img[data-loading="false"] {
+  filter: blur(0);
 }
 
 /* ═══════════════════════════════════════════
