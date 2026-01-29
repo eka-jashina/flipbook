@@ -78,6 +78,9 @@ export class DOMManager {
       ambientPills: document.querySelector(".ambient-pills"),
       ambientVolume: $("ambient-volume"),
       ambientVolumeWrapper: $("ambient-volume-wrapper"),
+
+      // Fullscreen control
+      fullscreenBtn: $("fullscreen-btn"),
       
       // Debug panel
       debugInfo: $("debugInfo"),

@@ -148,7 +148,8 @@ export class EventController {
       pageVolumeControl,
       ambientPills,
       ambientVolume,
-      ambientVolumeWrapper
+      ambientVolumeWrapper,
+      fullscreenBtn
     } = elements;
 
     // Font size stepper - с обновлением отображаемого значения
@@ -237,6 +238,19 @@ export class EventController {
       this.eventManager.add(ambientVolume, "input", (e) => {
         const volume = parseFloat(e.target.value) / 100;
         this.onSettings("ambientVolume", volume);
+      });
+    }
+
+    // Fullscreen toggle
+    if (fullscreenBtn) {
+      this.eventManager.add(fullscreenBtn, "click", () => {
+        this.onSettings("fullscreen", "toggle");
+      });
+
+      // Слушаем изменение состояния fullscreen для обновления UI
+      this.eventManager.add(document, "fullscreenchange", () => {
+        const isFullscreen = !!document.fullscreenElement;
+        fullscreenBtn.classList.toggle("is-fullscreen", isFullscreen);
       });
     }
   }
