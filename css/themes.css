@@ -45,8 +45,16 @@ html[data-theme="dark"] .bg {
   filter: brightness(50%);
 }
 
+html[data-theme="dark"] .bg[data-loading="true"] {
+  filter: brightness(50%) blur(20px);
+}
+
 html[data-theme="dark"] img {
   filter: brightness(50%);
+}
+
+html[data-theme="dark"] img[data-loading="true"] {
+  filter: brightness(50%) blur(15px);
 }
 
 /* Индикатор загрузки */
@@ -100,8 +108,16 @@ html[data-theme="bw"] .bg {
   filter: grayscale(100%);
 }
 
+html[data-theme="bw"] .bg[data-loading="true"] {
+  filter: grayscale(100%) blur(20px);
+}
+
 html[data-theme="bw"] img {
   filter: grayscale(100%);
+}
+
+html[data-theme="bw"] img[data-loading="true"] {
+  filter: grayscale(100%) blur(15px);
 }
 
 /* Индикатор загрузки */

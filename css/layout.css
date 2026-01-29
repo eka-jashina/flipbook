@@ -23,9 +23,21 @@
   background-repeat: no-repeat;
   transition:
     opacity var(--timing-transition) ease-in-out,
-    filter var(--timing-transition);
-  will-change: opacity;
+    filter var(--timing-blur) ease-out,
+    transform var(--timing-blur) ease-out;
+  will-change: opacity, filter, transform;
   contain: strict;
+}
+
+/* Blur placeholder при загрузке изображения */
+.bg[data-loading="true"] {
+  filter: blur(20px);
+  transform: scale(1.05); /* Компенсация blur-краёв */
+}
+
+.bg[data-loading="false"] {
+  filter: blur(0);
+  transform: scale(1);
 }
 
 .bg[data-active="true"] {

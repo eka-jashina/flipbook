@@ -81,9 +81,40 @@ export class BookRenderer {
 
     if (dom) {
       container.replaceChildren(dom);
+      this._setupImageBlurPlaceholders(container);
     } else {
       container.replaceChildren();
     }
+  }
+
+  /**
+   * Настроить blur placeholder для изображений в контейнере
+   * @param {HTMLElement} container - Контейнер с контентом
+   * @private
+   */
+  _setupImageBlurPlaceholders(container) {
+    const images = container.querySelectorAll("img");
+
+    images.forEach((img) => {
+      // Если изображение уже загружено (из кэша браузера)
+      if (img.complete && img.naturalWidth > 0) {
+        img.dataset.loading = "false";
+        return;
+      }
+
+      // Показываем blur placeholder
+      img.dataset.loading = "true";
+
+      // Убираем blur после загрузки
+      img.addEventListener("load", () => {
+        img.dataset.loading = "false";
+      }, { once: true });
+
+      // При ошибке тоже убираем blur
+      img.addEventListener("error", () => {
+        img.dataset.loading = "false";
+      }, { once: true });
+    });
   }
 
   /**

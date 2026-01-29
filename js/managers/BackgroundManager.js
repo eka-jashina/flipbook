@@ -30,10 +30,11 @@ export class BackgroundManager {
   }
 
   /**
-   * Установить фон с кроссфейд-эффектом
+   * Установить фон с кроссфейд-эффектом и blur placeholder
    *
    * Использует двойную буферизацию: новый фон загружается в неактивный элемент,
    * затем элементы меняются местами через data-active атрибут (CSS transition).
+   * Пока изображение загружается, показывается размытый placeholder.
    *
    * @param {string} url - URL изображения фона
    */
@@ -45,11 +46,48 @@ export class BackgroundManager {
     const incoming = this.backgrounds[nextIndex];
     const outgoing = this.backgrounds[this.activeIndex];
 
+    // Если изображение уже предзагружено - показываем сразу без blur
+    const isPreloaded = this.preloadedUrls.has(url);
+
     incoming.style.backgroundImage = `url(${url})`;
+    incoming.dataset.loading = isPreloaded ? "false" : "true";
     incoming.dataset.active = "true";
     outgoing.dataset.active = "false";
 
     this.activeIndex = nextIndex;
+
+    // Если не предзагружено - загружаем и убираем blur
+    if (!isPreloaded) {
+      this._loadAndReveal(url, incoming);
+    }
+  }
+
+  /**
+   * Загрузить изображение и убрать blur placeholder
+   *
+   * @param {string} url - URL изображения
+   * @param {HTMLElement} element - Элемент фона для обновления
+   * @private
+   */
+  _loadAndReveal(url, element) {
+    const img = new Image();
+
+    img.onload = () => {
+      this.preloadedUrls.add(url);
+      // Убираем blur только если это всё ещё текущий фон
+      if (element.style.backgroundImage.includes(url)) {
+        element.dataset.loading = "false";
+      }
+    };
+
+    img.onerror = () => {
+      // При ошибке тоже убираем blur чтобы не застрять
+      if (element.style.backgroundImage.includes(url)) {
+        element.dataset.loading = "false";
+      }
+    };
+
+    img.src = url;
   }
 
   /**
