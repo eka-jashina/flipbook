@@ -10,7 +10,25 @@ export class EventListenerManager {
   }
 
   /**
+   * Создать уникальный ключ для listener с учётом options.
+   * Важно для корректного удаления: removeEventListener требует те же options.
+   * @private
+   * @param {Function} handler
+   * @param {Object} options
+   * @returns {string}
+   */
+  _createKey(handler, options) {
+    // Нормализуем options для сравнения
+    const capture = typeof options === 'boolean' ? options : !!options.capture;
+    return `${capture}`;
+  }
+
+  /**
    * Добавить event listener
+   * @param {EventTarget} element
+   * @param {string} eventType
+   * @param {Function} handler
+   * @param {Object|boolean} options
    */
   add(element, eventType, handler, options = {}) {
     if (!element) return;
@@ -21,28 +39,48 @@ export class EventListenerManager {
     }
     const elementListeners = this.listeners.get(element);
     if (!elementListeners.has(eventType)) {
-      elementListeners.set(eventType, new Set());
+      elementListeners.set(eventType, new Map());
     }
-    elementListeners.get(eventType).add({ handler, options });
+
+    const handlersMap = elementListeners.get(eventType);
+    const key = this._createKey(handler, options);
+
+    // Храним по ключу: Map<key, Set<{handler, options}>>
+    if (!handlersMap.has(key)) {
+      handlersMap.set(key, new Set());
+    }
+    handlersMap.get(key).add({ handler, options });
     this.listenerCount++;
   }
 
   /**
    * Удалить конкретный listener
+   * @param {EventTarget} element
+   * @param {string} eventType
+   * @param {Function} handler
+   * @param {Object|boolean} options - Должны совпадать с options при add()
    */
-  remove(element, eventType, handler) {
+  remove(element, eventType, handler, options = {}) {
     if (!element) return;
-    element.removeEventListener(eventType, handler);
+    element.removeEventListener(eventType, handler, options);
 
     const elementListeners = this.listeners.get(element);
-    if (elementListeners?.has(eventType)) {
-      const handlers = elementListeners.get(eventType);
-      for (const item of handlers) {
-        if (item.handler === handler) {
-          handlers.delete(item);
-          this.listenerCount--;
-          break;
+    if (!elementListeners?.has(eventType)) return;
+
+    const handlersMap = elementListeners.get(eventType);
+    const key = this._createKey(handler, options);
+
+    if (!handlersMap.has(key)) return;
+
+    const handlers = handlersMap.get(key);
+    for (const item of handlers) {
+      if (item.handler === handler) {
+        handlers.delete(item);
+        this.listenerCount--;
+        if (handlers.size === 0) {
+          handlersMap.delete(key);
         }
+        break;
       }
     }
   }
@@ -52,9 +90,11 @@ export class EventListenerManager {
    */
   clear() {
     for (const [element, eventMap] of this.listeners) {
-      for (const [eventType, handlers] of eventMap) {
-        for (const { handler, options } of handlers) {
-          element.removeEventListener(eventType, handler, options);
+      for (const [eventType, handlersMap] of eventMap) {
+        for (const [, handlers] of handlersMap) {
+          for (const { handler, options } of handlers) {
+            element.removeEventListener(eventType, handler, options);
+          }
         }
       }
     }

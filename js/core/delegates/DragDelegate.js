@@ -59,6 +59,10 @@ export class DragDelegate extends BaseDelegate {
     this.bookRect = null;
     this._pageRefs = null;
 
+    // RAF throttling для move-событий
+    this._rafId = null;
+    this._pendingEvent = null;
+
     // Привязанные обработчики для корректного удаления
     this._boundHandlers = {
       onMouseMove: this._onMouseMove.bind(this),
@@ -262,17 +266,37 @@ export class DragDelegate extends BaseDelegate {
   // ДВИЖЕНИЕ
   // ═══════════════════════════════════════════
 
+  /**
+   * Запланировать обновление угла через RAF (throttling).
+   * Ограничивает частоту обновлений до частоты обновления экрана.
+   * @private
+   * @param {MouseEvent|Touch} e - Событие с координатами
+   */
+  _scheduleUpdate(e) {
+    this._pendingEvent = e;
+
+    if (this._rafId !== null) return;
+
+    this._rafId = requestAnimationFrame(() => {
+      this._rafId = null;
+      if (this._pendingEvent && this.isDragging) {
+        this._updateAngleFromEvent(this._pendingEvent);
+        this._pendingEvent = null;
+      }
+    });
+  }
+
   /** @private Обработчик движения мыши */
   _onMouseMove(e) {
     if (!this.isDragging) return;
-    this._updateAngleFromEvent(e);
+    this._scheduleUpdate(e);
   }
 
   /** @private Обработчик движения touch */
   _onTouchMove(e) {
     if (!this.isDragging) return;
     e.preventDefault();
-    this._updateAngleFromEvent(e.touches[0]);
+    this._scheduleUpdate(e.touches[0]);
   }
 
   /**
@@ -469,6 +493,13 @@ export class DragDelegate extends BaseDelegate {
    * Очистка
    */
   destroy() {
+    // Отменяем RAF throttling
+    if (this._rafId !== null) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+    this._pendingEvent = null;
+
     // Отменяем текущую анимацию
     this.dragAnimator.cancel();
 
