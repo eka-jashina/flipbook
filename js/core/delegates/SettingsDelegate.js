@@ -220,6 +220,14 @@ export class SettingsDelegate extends BaseDelegate {
   _handleSoundVolume(action) {
     if (!this.soundManager) return;
 
+    // Для числовых значений - сразу применяем (уже сохранено в handleChange)
+    if (typeof action === "number") {
+      const volume = Math.max(0, Math.min(action, 1));
+      this.soundManager.setVolume(volume);
+      return;
+    }
+
+    // Для increase/decrease - вычисляем и сохраняем
     const current = this.settings.get("soundVolume");
     const step = 0.1;
     let newVolume = current;
@@ -228,8 +236,6 @@ export class SettingsDelegate extends BaseDelegate {
       newVolume = Math.min(current + step, 1);
     } else if (action === "decrease") {
       newVolume = Math.max(current - step, 0);
-    } else if (typeof action === "number") {
-      newVolume = Math.max(0, Math.min(action, 1));
     }
 
     if (newVolume !== current) {
