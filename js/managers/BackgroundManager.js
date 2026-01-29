@@ -1,20 +1,41 @@
 /**
  * BACKGROUND MANAGER
  * Управление фоновыми изображениями с кроссфейдом и предзагрузкой.
+ *
+ * Использует технику двойного буфера для плавного кроссфейда между фонами.
+ * Два элемента .bg чередуются: один активный (видимый), другой подготавливается.
+ *
+ * @example
+ * const bgManager = new BackgroundManager();
+ * await bgManager.preload('chapter2.webp'); // Предзагрузка
+ * bgManager.setBackground('chapter2.webp'); // Плавный переход
  */
-
 export class BackgroundManager {
+  /**
+   * Создаёт менеджер фоновых изображений
+   *
+   * Ожидает наличие элементов `.chapter-bg .bg` в DOM (минимум 2 для кроссфейда).
+   */
   constructor() {
+    /** @type {NodeListOf<HTMLElement>} Элементы для фона (чередуются) */
     this.backgrounds = document.querySelectorAll(".chapter-bg .bg");
+    /** @type {string|null} URL текущего фона */
     this.currentBg = null;
+    /** @type {number} Индекс активного элемента фона */
     this.activeIndex = 0;
+    /** @type {Set<string>} Множество уже загруженных URL */
     this.preloadedUrls = new Set();
+    /** @type {Array<{url: string, promise: Promise}>} Очередь загрузки */
     this.preloadQueue = [];
   }
 
   /**
-   * Установить фон
-   * @param {string} url - URL изображения
+   * Установить фон с кроссфейд-эффектом
+   *
+   * Использует двойную буферизацию: новый фон загружается в неактивный элемент,
+   * затем элементы меняются местами через data-active атрибут (CSS transition).
+   *
+   * @param {string} url - URL изображения фона
    */
   setBackground(url) {
     if (this.currentBg === url) return;
@@ -32,10 +53,14 @@ export class BackgroundManager {
   }
 
   /**
-   * Предзагрузить изображение
-   * @param {string} url - URL изображения
-   * @param {boolean} highPriority - Высокий приоритет загрузки
-   * @returns {Promise<void>}
+   * Предзагрузить изображение в кэш браузера
+   *
+   * Использует `<link rel="preload">` для интеграции с HTTP/2 push
+   * и оптимальной приоритизации браузером.
+   *
+   * @param {string} url - URL изображения для предзагрузки
+   * @param {boolean} [highPriority=false] - Использовать fetchPriority="high"
+   * @returns {Promise<void>} Резолвится при успешной загрузке (ошибки подавляются)
    */
   async preload(url, highPriority = false) {
     if (!url || this.preloadedUrls.has(url)) {
@@ -80,7 +105,9 @@ export class BackgroundManager {
   }
 
   /**
-   * Удалить из очереди загрузки
+   * Удалить элемент из очереди загрузки
+   *
+   * @param {string} url - URL для удаления из очереди
    * @private
    */
   _removeFromQueue(url) {
@@ -90,6 +117,11 @@ export class BackgroundManager {
     }
   }
 
+  /**
+   * Освободить ресурсы и очистить ссылки
+   *
+   * Обнуляет ссылки на DOM-элементы и очищает очереди.
+   */
   destroy() {
     this.backgrounds = null;
     this.currentBg = null;

@@ -1,18 +1,46 @@
 /**
  * EVENT EMITTER
  * Простая реализация паттерна Observer/PubSub.
+ *
+ * Позволяет компонентам подписываться на именованные события
+ * и реагировать на них без прямой связи между издателем и подписчиком.
+ *
+ * @example
+ * class MyComponent extends EventEmitter {
+ *   doSomething() {
+ *     this.emit('done', { result: 42 });
+ *   }
+ * }
+ *
+ * const component = new MyComponent();
+ * const unsubscribe = component.on('done', (data) => console.log(data.result));
+ * // Позже: unsubscribe();
  */
-
 export class EventEmitter {
+  /**
+   * Создаёт новый EventEmitter
+   */
   constructor() {
+    /**
+     * Хранилище обработчиков событий
+     * @type {Map<string, Set<Function>>}
+     * @private
+     */
     this._events = new Map();
   }
 
   /**
    * Подписаться на событие
+   *
    * @param {string} event - Имя события
-   * @param {Function} handler - Обработчик
-   * @returns {Function} Функция отписки
+   * @param {Function} handler - Функция-обработчик
+   * @returns {Function} Функция отписки (вызов удаляет подписку)
+   *
+   * @example
+   * const unsubscribe = emitter.on('change', (data) => {
+   *   console.log('Changed:', data);
+   * });
+   * // Позже: unsubscribe();
    */
   on(event, handler) {
     if (!this._events.has(event)) {
@@ -24,6 +52,9 @@ export class EventEmitter {
 
   /**
    * Отписаться от события
+   *
+   * @param {string} event - Имя события
+   * @param {Function} handler - Функция-обработчик для удаления
    */
   off(event, handler) {
     const handlers = this._events.get(event);
@@ -31,7 +62,13 @@ export class EventEmitter {
   }
 
   /**
-   * Вызвать событие
+   * Вызвать событие (уведомить всех подписчиков)
+   *
+   * Обработчики вызываются синхронно в порядке подписки.
+   * Ошибки в обработчиках логируются, но не прерывают вызов остальных.
+   *
+   * @param {string} event - Имя события
+   * @param {...*} args - Аргументы для передачи обработчикам
    */
   emit(event, ...args) {
     const handlers = this._events.get(event);
@@ -46,6 +83,11 @@ export class EventEmitter {
     }
   }
 
+  /**
+   * Удалить все подписки
+   *
+   * Используется при уничтожении компонента для предотвращения утечек памяти.
+   */
   destroy() {
     this._events.clear();
   }
