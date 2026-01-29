@@ -103,7 +103,9 @@ export class EventController {
   _bindBookInteractions() {
     const isMobile = mediaQueries.get("mobile");
 
-    this.eventManager.add(this.book, "click", (e) => {
+    // pointerup вместо click — Firefox Mobile не генерирует
+    // synthetic click если элемент сдвинулся (transform) при :active
+    this.eventManager.add(this.book, "pointerup", (e) => {
       const li = e.target.closest(".toc li");
       if (!li) return;
       e.preventDefault();

@@ -93,8 +93,11 @@ article h2,
   padding: 0.4em 0.6em;
   margin: 0 -0.6em;
   border-radius: 6px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  touch-action: manipulation;
 }
 
 .toc li::before {
@@ -118,8 +121,15 @@ article h2,
 }
 
 .toc li:active {
-  transform: translateX(10px) scale(0.98);
   background: rgba(139, 69, 19, 0.18);
+}
+
+/* Transform при :active только для мышки — на тач-устройствах
+   Firefox теряет target из-за сдвига элемента */
+@media (hover: hover) {
+  .toc li:active {
+    transform: translateX(10px) scale(0.98);
+  }
 }
 
 /* Клавиатурная навигация */
