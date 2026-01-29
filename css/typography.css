@@ -111,8 +111,6 @@ article h2,
 
 .toc li:hover {
   background: rgba(139, 69, 19, 0.12);
-  transform: translateX(10px);
-  padding-left: 1.2em;
 }
 
 .toc li:hover::before {
@@ -124,9 +122,14 @@ article h2,
   background: rgba(139, 69, 19, 0.18);
 }
 
-/* Transform при :active только для мышки — на тач-устройствах
-   Firefox теряет target из-за сдвига элемента */
+/* Transform и padding-left при hover/active только для мышки —
+   на тач-устройствах Firefox теряет target из-за сдвига элемента */
 @media (hover: hover) {
+  .toc li:hover {
+    transform: translateX(10px);
+    padding-left: 1.2em;
+  }
+
   .toc li:active {
     transform: translateX(10px) scale(0.98);
   }
