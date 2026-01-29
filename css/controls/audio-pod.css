@@ -3,6 +3,8 @@
  *
  * Панель аудио-контроля: звуки переворота, фоновая музыка,
  * переключатели и слайдеры громкости.
+ *
+ * Темы определяются через CSS-переменные в pod-variables.css
  */
 
 /* ═══════════════════════════════════════════
@@ -14,7 +16,8 @@
   flex-direction: column;
   gap: 12px;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--pod-bg);
+  border: var(--pod-border);
   border-radius: 12px;
   width: 100%;
   max-width: 320px;
@@ -28,7 +31,7 @@
 
 .audio-section:not(:last-child) {
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(139, 69, 19, 0.2);
+  border-bottom: 1px solid var(--pod-divider);
 }
 
 .audio-section-header {
@@ -75,7 +78,7 @@
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background-color: rgba(139, 69, 19, 0.3);
+  background-color: var(--pod-btn-bg);
   transition: 0.3s;
   border-radius: 24px;
 }
@@ -94,7 +97,7 @@
 }
 
 .toggle-switch input:checked + .toggle-slider {
-  background-color: rgba(139, 69, 19, 0.8);
+  background-color: var(--pod-accent);
 }
 
 .toggle-switch input:checked + .toggle-slider::before {
@@ -102,7 +105,7 @@
 }
 
 .toggle-switch input:focus + .toggle-slider {
-  box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.4);
+  box-shadow: 0 0 0 2px var(--pod-input-focus-border);
 }
 
 .toggle-switch:hover {
@@ -134,7 +137,7 @@
 .volume-slider {
   flex: 1;
   height: 6px;
-  background: rgba(139, 69, 19, 0.2);
+  background: var(--pod-btn-bg);
   border-radius: 3px;
   outline: none;
   cursor: pointer;
@@ -148,7 +151,7 @@
   appearance: none;
   width: 16px;
   height: 16px;
-  background: linear-gradient(135deg, #8b4513, #5d3a1a);
+  background: var(--pod-slider-thumb);
   border-radius: 50%;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -163,7 +166,7 @@
 .volume-slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  background: linear-gradient(135deg, #8b4513, #5d3a1a);
+  background: var(--pod-slider-thumb);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -198,7 +201,7 @@
   align-items: center;
   gap: 2px;
   padding: 8px 12px;
-  background: rgba(139, 69, 19, 0.15);
+  background: var(--pod-btn-bg);
   border: 2px solid transparent;
   border-radius: 10px;
   cursor: pointer;
@@ -208,14 +211,15 @@
 }
 
 .ambient-pill:hover {
-  background: rgba(139, 69, 19, 0.25);
+  background: var(--pod-btn-bg-hover);
+  color: var(--pod-btn-color-hover, inherit);
   transform: translateY(-1px);
 }
 
 .ambient-pill[data-active="true"] {
-  background: rgba(139, 69, 19, 0.35);
-  border-color: rgba(139, 69, 19, 0.6);
-  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.2);
+  background: var(--pod-btn-bg-active);
+  border-color: var(--pod-btn-border-active);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .ambient-pill-icon {
@@ -256,7 +260,7 @@
   position: absolute;
   inset: -2px;
   border: 2px solid transparent;
-  border-top-color: rgba(139, 69, 19, 0.8);
+  border-top-color: var(--pod-accent);
   border-radius: 50%;
   animation: pill-spin 0.8s linear infinite;
 }
@@ -265,102 +269,6 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-/* ═══════════════════════════════════════════
-   DARK THEME
-   ═══════════════════════════════════════════ */
-
-html[data-theme="dark"] .audio-pod {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-html[data-theme="dark"] .audio-section:not(:last-child) {
-  border-bottom-color: rgba(255, 255, 255, 0.15);
-}
-
-html[data-theme="dark"] .toggle-slider {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-html[data-theme="dark"] .toggle-switch input:checked + .toggle-slider {
-  background-color: rgba(200, 150, 100, 0.7);
-}
-
-html[data-theme="dark"] .volume-slider {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-html[data-theme="dark"] .volume-slider::-webkit-slider-thumb {
-  background: linear-gradient(135deg, #c8966d, #a07850);
-}
-
-html[data-theme="dark"] .volume-slider::-moz-range-thumb {
-  background: linear-gradient(135deg, #c8966d, #a07850);
-}
-
-html[data-theme="dark"] .ambient-pill {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-html[data-theme="dark"] .ambient-pill:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-
-html[data-theme="dark"] .ambient-pill[data-active="true"] {
-  background: rgba(200, 150, 100, 0.3);
-  border-color: rgba(200, 150, 100, 0.5);
-}
-
-html[data-theme="dark"] .ambient-pill[data-loading="true"] .ambient-pill-icon::after {
-  border-top-color: rgba(200, 150, 100, 0.9);
-}
-
-/* ═══════════════════════════════════════════
-   B&W THEME
-   ═══════════════════════════════════════════ */
-
-html[data-theme="bw"] .audio-pod {
-  background: rgba(0, 0, 0, 0.05);
-  border: 1px solid #000;
-}
-
-html[data-theme="bw"] .toggle-slider {
-  background-color: #ccc;
-}
-
-html[data-theme="bw"] .toggle-switch input:checked + .toggle-slider {
-  background-color: #000;
-}
-
-html[data-theme="bw"] .toggle-slider::before {
-  background-color: #fff;
-}
-
-html[data-theme="bw"] .volume-slider {
-  background: #ccc;
-}
-
-html[data-theme="bw"] .volume-slider::-webkit-slider-thumb {
-  background: #000;
-}
-
-html[data-theme="bw"] .volume-slider::-moz-range-thumb {
-  background: #000;
-}
-
-html[data-theme="bw"] .ambient-pill {
-  background: transparent;
-  border: 1px solid #000;
-}
-
-html[data-theme="bw"] .ambient-pill[data-active="true"] {
-  background: #000;
-  color: #fff;
-}
-
-html[data-theme="bw"] .ambient-pill[data-loading="true"] .ambient-pill-icon::after {
-  border-top-color: #000;
 }
 
 /* ═══════════════════════════════════════════

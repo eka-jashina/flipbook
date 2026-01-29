@@ -2,6 +2,8 @@
  * SETTINGS POD
  *
  * Панель настроек: размер шрифта, тема, выбор шрифта.
+ *
+ * Темы определяются через CSS-переменные в pod-variables.css
  */
 
 /* ═══════════════════════════════════════════
@@ -13,7 +15,8 @@
   flex-direction: column;
   gap: 12px;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--pod-bg);
+  border: var(--pod-border);
   border-radius: 12px;
   width: 100%;
   max-width: 320px;
@@ -28,7 +31,7 @@
 
 .settings-section:not(:last-child) {
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(139, 69, 19, 0.2);
+  border-bottom: 1px solid var(--pod-divider);
 }
 
 .settings-section-header {
@@ -63,8 +66,8 @@
   height: 36px;
   font-size: 1.2em;
   font-weight: 600;
-  background: rgba(139, 69, 19, 0.15);
-  border: 2px solid transparent;
+  background: var(--pod-btn-bg);
+  border: var(--pod-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -72,7 +75,8 @@
 }
 
 .stepper-btn:hover {
-  background: rgba(139, 69, 19, 0.25);
+  background: var(--pod-btn-bg-hover);
+  color: var(--pod-btn-color-hover, inherit);
   transform: scale(1.05);
 }
 
@@ -89,7 +93,8 @@
   padding: 0 8px;
   font-size: 1em;
   font-weight: 700;
-  background: rgba(139, 69, 19, 0.1);
+  background: var(--pod-input-bg);
+  border: var(--pod-border);
   border-radius: 8px;
 }
 
@@ -100,7 +105,8 @@
 .theme-segmented {
   display: flex;
   gap: 4px;
-  background: rgba(139, 69, 19, 0.1);
+  background: var(--pod-input-bg);
+  border: var(--pod-border);
   padding: 4px;
   border-radius: 10px;
 }
@@ -129,7 +135,7 @@
 
 .theme-segment:hover {
   opacity: 1;
-  background: rgba(139, 69, 19, 0.1);
+  background: var(--pod-btn-bg);
 }
 
 .theme-segment:hover svg {
@@ -138,9 +144,9 @@
 
 .theme-segment[data-active="true"] {
   opacity: 1;
-  background: rgba(139, 69, 19, 0.25);
-  border-color: rgba(139, 69, 19, 0.4);
-  box-shadow: 0 2px 6px rgba(139, 69, 19, 0.15);
+  background: var(--pod-btn-bg-active);
+  border-color: var(--pod-btn-border-active);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* ═══════════════════════════════════════════
@@ -153,115 +159,26 @@
   font-size: 0.9em;
   font-weight: 500;
   color: inherit;
-  background: rgba(139, 69, 19, 0.1);
-  border: 2px solid transparent;
+  background-color: var(--pod-input-bg);
+  border: var(--pod-border);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%238b4513' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-image: var(--pod-select-arrow);
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 36px;
 }
 
 .font-select-modern:hover {
-  background-color: rgba(139, 69, 19, 0.15);
+  background-color: var(--pod-input-bg-hover);
 }
 
 .font-select-modern:focus {
   outline: none;
-  border-color: rgba(139, 69, 19, 0.4);
-  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
-}
-
-/* ═══════════════════════════════════════════
-   DARK THEME
-   ═══════════════════════════════════════════ */
-
-html[data-theme="dark"] .settings-pod {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-html[data-theme="dark"] .settings-section:not(:last-child) {
-  border-bottom-color: rgba(255, 255, 255, 0.15);
-}
-
-html[data-theme="dark"] .stepper-btn {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-html[data-theme="dark"] .stepper-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-
-html[data-theme="dark"] .stepper-value {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-html[data-theme="dark"] .theme-segmented {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-html[data-theme="dark"] .theme-segment:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-html[data-theme="dark"] .theme-segment[data-active="true"] {
-  background: rgba(200, 150, 100, 0.25);
-  border-color: rgba(200, 150, 100, 0.4);
-}
-
-html[data-theme="dark"] .font-select-modern {
-  background-color: rgba(255, 255, 255, 0.08);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23c8966d' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
-}
-
-html[data-theme="dark"] .font-select-modern:hover {
-  background-color: rgba(255, 255, 255, 0.12);
-}
-
-html[data-theme="dark"] .font-select-modern:focus {
-  border-color: rgba(200, 150, 100, 0.4);
-}
-
-/* ═══════════════════════════════════════════
-   B&W THEME
-   ═══════════════════════════════════════════ */
-
-html[data-theme="bw"] .settings-pod {
-  background: rgba(0, 0, 0, 0.05);
-  border: 1px solid #000;
-}
-
-html[data-theme="bw"] .stepper-btn {
-  background: transparent;
-  border: 1px solid #000;
-}
-
-html[data-theme="bw"] .stepper-value {
-  background: transparent;
-  border: 1px solid #000;
-}
-
-html[data-theme="bw"] .theme-segmented {
-  background: transparent;
-  border: 1px solid #000;
-}
-
-html[data-theme="bw"] .theme-segment {
-  border-color: transparent;
-}
-
-html[data-theme="bw"] .theme-segment[data-active="true"] {
-  background: #000;
-  color: #fff;
-}
-
-html[data-theme="bw"] .font-select-modern {
-  background-color: transparent;
-  border: 1px solid #000;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  border-color: var(--pod-input-focus-border);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
 
 /* ═══════════════════════════════════════════
