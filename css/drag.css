@@ -197,10 +197,24 @@
   pointer-events: none;
   z-index: 15;
   display: none;
+
+  /* Динамические значения через CSS-переменные */
+  width: var(--flip-shadow-width, 0);
+  left: var(--flip-shadow-left, 50%);
 }
 
 .flip-shadow.active {
   display: block;
+}
+
+/* Направление "вперёд" - градиент справа налево */
+.flip-shadow.active[data-direction="next"] {
+  background: linear-gradient(to right, rgba(0,0,0,var(--flip-shadow-opacity, 0)), transparent);
+}
+
+/* Направление "назад" - градиент слева направо */
+.flip-shadow.active[data-direction="prev"] {
+  background: linear-gradient(to left, rgba(0,0,0,var(--flip-shadow-opacity, 0)), transparent);
 }
 
 /* ═══════════════════════════════════════════
@@ -229,6 +243,8 @@
   opacity: 1;
   visibility: visible;
   z-index: 20;
+  /* Угол поворота управляется через CSS-переменную из JS */
+  transform: translateZ(1px) rotateY(var(--sheet-angle, 0deg));
 }
 
 /* Тени во время drag */

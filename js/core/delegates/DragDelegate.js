@@ -153,7 +153,10 @@ export class DragDelegate extends BaseDelegate {
     this._prepareFlip();
 
     const flipShadow = this.dom.get("flipShadow");
-    if (flipShadow) flipShadow.classList.add("active");
+    if (flipShadow) {
+      flipShadow.classList.add("active");
+      flipShadow.dataset.direction = this.direction;
+    }
 
     this._updateAngleFromEvent(e);
   }
@@ -250,7 +253,7 @@ export class DragDelegate extends BaseDelegate {
 
     const sheet = this.dom.get("sheet");
     if (sheet) {
-      sheet.style.transform = `translateZ(1px) rotateY(${angle}deg)`;
+      sheet.style.setProperty("--sheet-angle", `${angle}deg`);
     }
 
     this._updateShadows();
@@ -274,21 +277,14 @@ export class DragDelegate extends BaseDelegate {
     const flipWidth = Math.sin(progress * Math.PI) * 120;
     const spinePosition = this.isMobile ? "10%" : "50%";
 
-    if (this.direction === "next") {
-      flipShadow.style.cssText = `
-        display: block;
-        left: ${spinePosition};
-        width: ${flipWidth}px;
-        background: linear-gradient(to right, rgba(0,0,0,${flipOpacity}), transparent);
-      `;
-    } else {
-      flipShadow.style.cssText = `
-        display: block;
-        left: calc(${spinePosition} - ${flipWidth}px);
-        width: ${flipWidth}px;
-        background: linear-gradient(to left, rgba(0,0,0,${flipOpacity}), transparent);
-      `;
-    }
+    // Позиционирование через CSS-переменные, градиент через data-direction в CSS
+    const leftPosition = this.direction === "next"
+      ? spinePosition
+      : `calc(${spinePosition} - ${flipWidth}px)`;
+
+    flipShadow.style.setProperty("--flip-shadow-opacity", flipOpacity.toFixed(2));
+    flipShadow.style.setProperty("--flip-shadow-width", `${flipWidth}px`);
+    flipShadow.style.setProperty("--flip-shadow-left", leftPosition);
   }
 
   // ═══════════════════════════════════════════
@@ -348,7 +344,7 @@ export class DragDelegate extends BaseDelegate {
 
     if (sheet) {
       sheet.style.transition = "";
-      sheet.style.transform = "";
+      sheet.style.removeProperty("--sheet-angle");
       delete sheet.dataset.phase;
       delete sheet.dataset.direction;
     }
@@ -360,7 +356,10 @@ export class DragDelegate extends BaseDelegate {
 
     if (flipShadow) {
       flipShadow.classList.remove("active");
-      flipShadow.style.cssText = "";
+      delete flipShadow.dataset.direction;
+      flipShadow.style.removeProperty("--flip-shadow-opacity");
+      flipShadow.style.removeProperty("--flip-shadow-width");
+      flipShadow.style.removeProperty("--flip-shadow-left");
     }
 
     if (completed) {
