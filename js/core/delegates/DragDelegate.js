@@ -184,7 +184,7 @@ export class DragDelegate extends BaseDelegate {
     if (sheet) {
       sheet.dataset.direction = this.direction;
       sheet.dataset.phase = "drag";
-      sheet.style.transition = "none";
+      sheet.classList.add("no-transition");
     }
 
     if (book) {
@@ -201,19 +201,19 @@ export class DragDelegate extends BaseDelegate {
         rightBuffer.dataset.buffer = "false";
         rightBuffer.dataset.dragVisible = "true";
       }
-      if (rightActive) rightActive.style.display = "none";
+      if (rightActive) rightActive.dataset.dragHidden = "true";
     } else if (this.direction === "next") {
       if (rightBuffer) {
         rightBuffer.dataset.buffer = "false";
         rightBuffer.dataset.dragVisible = "true";
       }
-      if (rightActive) rightActive.style.display = "none";
+      if (rightActive) rightActive.dataset.dragHidden = "true";
     } else {
       if (leftBuffer) {
         leftBuffer.dataset.buffer = "false";
         leftBuffer.dataset.dragVisible = "true";
       }
-      if (leftActive) leftActive.style.display = "none";
+      if (leftActive) leftActive.dataset.dragHidden = "true";
     }
   }
 
@@ -343,7 +343,7 @@ export class DragDelegate extends BaseDelegate {
     const flipShadow = this.dom.get("flipShadow");
 
     if (sheet) {
-      sheet.style.transition = "";
+      sheet.classList.remove("no-transition");
       sheet.style.removeProperty("--sheet-angle");
       delete sheet.dataset.phase;
       delete sheet.dataset.direction;
@@ -414,9 +414,9 @@ export class DragDelegate extends BaseDelegate {
     if (this._pageRefs) {
       const { leftActive, rightActive, leftBuffer, rightBuffer } = this._pageRefs;
 
-      // Восстанавливаем display для скрытых элементов
-      if (leftActive) leftActive.style.display = "";
-      if (rightActive) rightActive.style.display = "";
+      // Убираем скрытие для страниц
+      if (leftActive) delete leftActive.dataset.dragHidden;
+      if (rightActive) delete rightActive.dataset.dragHidden;
 
       // Удаляем dragVisible
       if (leftBuffer) delete leftBuffer.dataset.dragVisible;

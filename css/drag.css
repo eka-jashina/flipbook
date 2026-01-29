@@ -227,6 +227,11 @@
   z-index: 2;
 }
 
+/* Скрытие активной страницы во время drag */
+.page[data-drag-hidden="true"] {
+  display: none;
+}
+
 /* Отключаем transition на время swap чтобы не было мигания */
 .book[data-no-transition="true"] .page,
 .book[data-no-transition="true"] .page[data-active="true"],

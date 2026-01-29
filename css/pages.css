@@ -64,6 +64,11 @@
   z-index: 0;
 }
 
+/* Скрытие страницы при закрытии книги */
+.page.closing-hidden {
+  visibility: hidden;
+}
+
 .book[data-state="flipping"] .page[data-active="true"] {
   z-index: 5;
 }

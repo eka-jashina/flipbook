@@ -294,7 +294,7 @@ export class BookController {
     const progressBar = this.dom.get('readingProgress');
     if (progressBar && totalPages > 0) {
       const progress = (currentPage / totalPages) * 100;
-      progressBar.style.width = `${progress}%`;
+      progressBar.style.setProperty("--progress-width", `${progress}%`);
     }
   }
 
