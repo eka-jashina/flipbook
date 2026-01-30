@@ -141,22 +141,6 @@ export class AppInitializer {
   _populateAmbientPills(container) {
     container.innerHTML = '';
 
-    // Иконки для каждого типа ambient
-    const icons = {
-      none: '✕',
-      rain: '🌧️',
-      fireplace: '🔥',
-      cafe: '☕'
-    };
-
-    // Короткие лейблы
-    const labels = {
-      none: 'Нет',
-      rain: 'Дождь',
-      fireplace: 'Камин',
-      cafe: 'Кафе'
-    };
-
     for (const [type, config] of Object.entries(CONFIG.AMBIENT)) {
       const pill = document.createElement('button');
       pill.type = 'button';
@@ -166,8 +150,8 @@ export class AppInitializer {
       pill.setAttribute('aria-label', config.label);
 
       pill.innerHTML = `
-        <span class="ambient-pill-icon">${icons[type] || '🎵'}</span>
-        <span class="ambient-pill-label">${labels[type] || config.label}</span>
+        <span class="ambient-pill-icon">${config.icon || '🎵'}</span>
+        <span class="ambient-pill-label">${config.shortLabel || config.label}</span>
       `;
 
       container.appendChild(pill);

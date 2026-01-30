@@ -51,10 +51,10 @@ export const CONFIG = Object.freeze({
   // Конфигурация ambient звуков
   // Для добавления нового типа достаточно добавить запись сюда
   AMBIENT: {
-    none: { label: "Без звука", file: null },
-    rain: { label: "🌧️ Дождь", file: `${BASE_URL}sounds/ambient/rain.mp3` },
-    fireplace: { label: "🔥 Камин", file: `${BASE_URL}sounds/ambient/fireplace.mp3` },
-    cafe: { label: "☕ Кафе", file: `${BASE_URL}sounds/ambient/cafe.mp3` },
+    none: { label: "Без звука", shortLabel: "Нет", icon: "✕", file: null },
+    rain: { label: "Дождь", shortLabel: "Дождь", icon: "🌧️", file: `${BASE_URL}sounds/ambient/rain.mp3` },
+    fireplace: { label: "Камин", shortLabel: "Камин", icon: "🔥", file: `${BASE_URL}sounds/ambient/fireplace.mp3` },
+    cafe: { label: "Кафе", shortLabel: "Кафе", icon: "☕", file: `${BASE_URL}sounds/ambient/cafe.mp3` },
   },
 
  DEFAULT_SETTINGS: {
