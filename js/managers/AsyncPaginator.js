@@ -370,7 +370,10 @@ export class AsyncPaginator extends EventEmitter {
     probe.style.breakBefore = "column";
     pageContent.appendChild(probe);
 
-    const totalCols = Math.max(1, Math.ceil(cols.scrollWidth / pageWidth));
+    const measuredCols = Math.max(1, Math.ceil(cols.scrollWidth / pageWidth));
+    // Убираем probe-колонку из подсчёта — она нужна только для измерения,
+    // но не содержит реального контента
+    const totalCols = Math.max(1, measuredCols - 1);
     const result = [];
 
     for (let i = 0; i < totalCols; i++) {
