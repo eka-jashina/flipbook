@@ -67,8 +67,6 @@ export const CONFIG = Object.freeze({
 
   VIRTUALIZATION: {
     cacheLimit: 12,
-    preloadWindow: 4,
-    observerRootMargin: "200px",
   },
 
   LAYOUT: {

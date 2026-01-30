@@ -189,13 +189,8 @@ export class BookRenderer {
     const { sheetFront, sheetBack } = this.elements;
 
     if (isMobile) {
-      if (direction === "next") {
-        this.fill(sheetFront, currentIndex);
-        this.fill(sheetBack, nextIndex);
-      } else {
-        this.fill(sheetFront, currentIndex);
-        this.fill(sheetBack, nextIndex);
-      }
+      this.fill(sheetFront, currentIndex);
+      this.fill(sheetBack, nextIndex);
     } else {
       // Desktop: sheet содержит правую страницу текущего разворота
       // и левую страницу следующего/предыдущего
@@ -233,19 +228,6 @@ export class BookRenderer {
     this.elements.leftBuffer = leftActive;
     this.elements.rightActive = rightBuffer;
     this.elements.rightBuffer = rightActive;
-  }
-
-  /**
-   * Предзагрузить страницу в кэш
-   * @param {number} pageIndex - Индекс страницы
-   */
-  preloadPage(pageIndex) {
-    if (!this.cache.has(pageIndex) && this.pageContents[pageIndex]) {
-      const wrapper = document.createElement("div");
-      wrapper.innerHTML = this.pageContents[pageIndex];
-      const dom = wrapper.firstElementChild || wrapper;
-      this.cache.set(pageIndex, dom);
-    }
   }
 
   /**

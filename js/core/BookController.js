@@ -61,10 +61,6 @@ export class BookController {
     return mediaQueries.get("mobile");
   }
   
-  get pagesPerFlip() {
-    return cssVars.getNumber("--pages-per-flip", this.isMobile ? 1 : 2);
-  }
-
   // Удобные геттеры для совместимости с существующим кодом
   get index() { return this.state.index; }
   set index(value) { this.state.index = value; }
@@ -357,29 +353,6 @@ export class BookController {
     
     this.resizeHandler.bind();
     this._updateDebug();
-  }
-
-  /**
-   * Публичные методы для обратной совместимости
-   */
-  flip(direction) {
-    return this.navigationDelegate.flip(direction);
-  }
-
-  handleTOCNavigation(chapter) {
-    return this.navigationDelegate.handleTOCNavigation(chapter);
-  }
-
-  openBook(startIndex = 0) {
-    return this.lifecycleDelegate.open(startIndex);
-  }
-
-  closeBook() {
-    return this.lifecycleDelegate.close();
-  }
-
-  handleSettingsChange(key, value) {
-    return this.settingsDelegate.handleChange(key, value);
   }
 
   /**
