@@ -12,7 +12,8 @@
     />
 
     <!-- Предзагрузка -->
-    <link rel="preload" fetchpriority="high" as="image" href="images/backgrounds/bg-cover.webp" type="image/webp">
+    <link rel="preload" fetchpriority="high" as="image" href="images/backgrounds/bg-cover.webp" type="image/webp" media="(min-width: 769px)">
+    <link rel="preload" fetchpriority="high" as="image" href="images/backgrounds/bg-cover-mobile.webp" type="image/webp" media="(max-width: 768px)">
     <link rel="preload" href="fonts/tolkiencyr.woff2" as="font" crossorigin="anonymous">
 
     <!-- Главный CSS (импортирует все модули) -->

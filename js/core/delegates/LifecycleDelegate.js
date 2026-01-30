@@ -67,8 +67,9 @@ export class LifecycleDelegate extends BaseDelegate {
    * Инициализация - предзагрузка обложки и звуков
    */
   async init() {
+    const coverBg = this.isMobile ? CONFIG.COVER_BG_MOBILE : CONFIG.COVER_BG;
     await Promise.all([
-      this.backgroundManager.preload(CONFIG.COVER_BG, true),
+      this.backgroundManager.preload(coverBg, true),
       this.soundManager ? this.soundManager.preload() : Promise.resolve(),
     ]);
   }
