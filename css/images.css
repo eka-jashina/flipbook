@@ -54,8 +54,9 @@ p ~ img {
   float: left;
 }
 
-/* Картинка перед заголовком - без float */
+/* Картинка перед заголовком или в конце статьи - без float */
 article > img:first-child,
+article > img:last-child,
 img + h2 {
   float: none;
 }
@@ -78,8 +79,9 @@ img + h2 {
     contain: paint;
   }
 
-  /* Картинка перед заголовком - точно без float */
-  article > img:first-child {
+  /* Картинка перед заголовком или в конце статьи - точно без float */
+  article > img:first-child,
+  article > img:last-child {
     float: none !important;
   }
 
