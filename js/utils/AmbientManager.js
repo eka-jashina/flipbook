@@ -215,30 +215,6 @@ export class AmbientManager {
   }
 
   /**
-   * Получить текущий тип
-   * @returns {string}
-   */
-  getType() {
-    return this.currentType;
-  }
-
-  /**
-   * Получить текущую громкость
-   * @returns {number}
-   */
-  getVolume() {
-    return this.volume;
-  }
-
-  /**
-   * Проверить, воспроизводится ли звук
-   * @returns {boolean}
-   */
-  getIsPlaying() {
-    return this.isPlaying && this.audio && !this.audio.paused;
-  }
-
-  /**
    * Плавное увеличение громкости
    * @private
    */

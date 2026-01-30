@@ -1,23 +1,19 @@
 /**
  * SETTINGS MANAGER
- * Управление настройками с персистентностью и событиями.
+ * Управление настройками с персистентностью.
  *
  * Особенности:
  * - Автоматическое сохранение в localStorage
- * - Событийная модель (change, change:key)
  * - Слияние defaults с сохранёнными настройками
- * - Предотвращение лишних событий при одинаковых значениях
+ * - Предотвращение лишних сохранений при одинаковых значениях
  */
 
-import { EventEmitter } from '../utils/EventEmitter.js';
-
-export class SettingsManager extends EventEmitter {
+export class SettingsManager {
   /**
    * @param {StorageManager} storage - Менеджер хранилища
    * @param {Object} defaults - Значения по умолчанию
    */
   constructor(storage, defaults) {
-    super();
     this.storage = storage;
     // Сохранённые настройки перезаписывают defaults
     this.settings = { ...defaults, ...storage.load() };
@@ -34,7 +30,7 @@ export class SettingsManager extends EventEmitter {
 
   /**
    * Установить значение настройки
-   * Автоматически сохраняет в storage и эмитит события
+   * Автоматически сохраняет в storage
    * @param {string} key - Ключ настройки
    * @param {*} value - Новое значение
    */
@@ -45,17 +41,12 @@ export class SettingsManager extends EventEmitter {
 
     this.settings[key] = value;
     this.storage.save({ [key]: value });
-
-    // Эмитим общее событие и событие для конкретного ключа
-    this.emit("change", { key, value, oldValue });
-    this.emit(`change:${key}`, { value, oldValue });
   }
 
   /**
    * Освободить ресурсы
    */
   destroy() {
-    super.destroy();
     this.storage = null;
     this.settings = null;
   }

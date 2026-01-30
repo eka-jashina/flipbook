@@ -73,10 +73,4 @@ export class SubscriptionManager {
     this.subscriptions = [];
   }
 
-  /**
-   * Получить количество активных подписок
-   */
-  get count() {
-    return this.subscriptions.length;
-  }
 }

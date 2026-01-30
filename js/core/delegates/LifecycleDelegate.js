@@ -10,7 +10,6 @@
 
 import { CONFIG, BookState } from '../../config.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
-import { AmbientManager } from '../../utils/AmbientManager.js';
 import { BaseDelegate } from './BaseDelegate.js';
 
 export class LifecycleDelegate extends BaseDelegate {

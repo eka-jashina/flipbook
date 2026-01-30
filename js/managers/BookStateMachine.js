@@ -69,12 +69,6 @@ export class BookStateMachine {
   get isClosed() { return this._state === BookState.CLOSED; }
 
   /**
-   * Книга открывается (анимация)
-   * @returns {boolean}
-   */
-  get isOpening() { return this._state === BookState.OPENING; }
-
-  /**
    * Книга открыта и готова к взаимодействию
    * @returns {boolean}
    */
@@ -85,12 +79,6 @@ export class BookStateMachine {
    * @returns {boolean}
    */
   get isFlipping() { return this._state === BookState.FLIPPING; }
-
-  /**
-   * Книга закрывается (анимация)
-   * @returns {boolean}
-   */
-  get isClosing() { return this._state === BookState.CLOSING; }
 
   /**
    * Книга занята анимацией (opening/flipping/closing)
