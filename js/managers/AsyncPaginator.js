@@ -321,7 +321,7 @@ export class AsyncPaginator extends EventEmitter {
 
     markers.forEach((marker) => {
       const markerRect = marker.getBoundingClientRect();
-      const colIndex = Math.floor((markerRect.left - colsRect.left) / pageWidth);
+      const colIndex = Math.round((markerRect.left - colsRect.left) / pageWidth);
 
       if (colIndex % 2 !== 0) {
         const spacer = document.createElement("div");
@@ -345,7 +345,7 @@ export class AsyncPaginator extends EventEmitter {
    */
   _calculateChapterStarts(container, pageWidth) {
     const markers = [...container.querySelectorAll("[data-chapter-start]")];
-    return markers.map(m => Math.floor(m.offsetLeft / pageWidth));
+    return markers.map(m => Math.round(m.offsetLeft / pageWidth));
   }
 
   /**
