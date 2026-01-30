@@ -42,7 +42,7 @@
   font-size: 100%;
   font-weight: 700;
   line-height: 1;
-  color: brown;
+  color: #a52a2a;
   background-color: var(--cover-front-text);
   border: none;
   border-radius: 10px;
@@ -56,7 +56,7 @@
 .controls button:focus-visible,
 .controls label:hover,
 .controls label:focus-within {
-  outline: 1px solid brown;
+  outline: 1px solid #a52a2a;
   transform: scale(1.2);
   transform-origin: center;
 }
@@ -133,7 +133,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: #ff4444;
-  color: white;
+  color: #ffffff;
   padding: 1em 2em;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);

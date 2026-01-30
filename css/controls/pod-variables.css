@@ -72,26 +72,26 @@ html[data-theme="dark"] {
 
 html[data-theme="bw"] {
   --pod-bg: rgba(0, 0, 0, 0.05);
-  --pod-border: 1px solid #000;
+  --pod-border: 1px solid #000000;
 
-  --pod-divider: #000;
+  --pod-divider: #000000;
 
   --pod-btn-bg: transparent;
-  --pod-btn-bg-hover: #000;
-  --pod-btn-bg-active: #000;
-  --pod-btn-border-active: #000;
+  --pod-btn-bg-hover: #000000;
+  --pod-btn-bg-active: #000000;
+  --pod-btn-border-active: #000000;
 
   /* В B&W теме hover/active меняет цвет текста */
-  --pod-btn-color-hover: #fff;
+  --pod-btn-color-hover: #ffffff;
 
-  --pod-accent: #000;
-  --pod-accent-gradient: #000;
+  --pod-accent: #000000;
+  --pod-accent-gradient: #000000;
 
   --pod-input-bg: transparent;
   --pod-input-bg-hover: transparent;
-  --pod-input-focus-border: #000;
+  --pod-input-focus-border: #000000;
 
-  --pod-slider-thumb: #000;
+  --pod-slider-thumb: #000000;
 
   --pod-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
 }
