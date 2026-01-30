@@ -199,7 +199,7 @@ export class AppInitializer {
       increaseBtn, decreaseBtn, fontSizeValue, fontSelect, themeSegmented, debugToggle,
       soundToggle, volumeSlider, pageVolumeControl,
       ambientPills, ambientVolume, ambientVolumeWrapper,
-      fullscreenBtn
+      fullscreenBtn, settingsCheckbox
     } = this.dom.elements;
 
     this.eventController.bind({
@@ -208,7 +208,7 @@ export class AppInitializer {
       increaseBtn, decreaseBtn, fontSizeValue, fontSelect, themeSegmented, debugToggle,
       soundToggle, volumeSlider, pageVolumeControl,
       ambientPills, ambientVolume, ambientVolumeWrapper,
-      fullscreenBtn
+      fullscreenBtn, settingsCheckbox
     });
 
     this.dragDelegate.bind();
