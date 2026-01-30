@@ -33,6 +33,7 @@ export class AmbientManager {
     this.onLoadEnd = options.onLoadEnd ?? (() => {});
 
     this.audio = null;
+    this.audioCache = new Map(); // Кэш загруженных Audio объектов по типу
     this.isPlaying = false;
     this.isLoading = false;
     this.fadeInterval = null;
@@ -94,23 +95,53 @@ export class AmbientManager {
       await this.stop(fade);
     }
 
-    // Начинаем загрузку
+    // Проверяем кэш
+    const cached = this.audioCache.get(type);
+
+    if (cached) {
+      // Используем кэшированный Audio объект
+      this.audio = cached;
+      this.audio.volume = fade ? 0 : this.volume;
+      this.audio.currentTime = 0;
+
+      try {
+        await this.audio.play();
+        this.isPlaying = true;
+        this.currentType = type;
+
+        if (fade) {
+          await this._fadeIn();
+        }
+      } catch (error) {
+        if (error.name !== 'NotAllowedError') {
+          console.warn('Failed to play ambient sound:', error);
+        }
+        this.isPlaying = false;
+      }
+      return;
+    }
+
+    // Первая загрузка — создаём новый Audio и кэшируем
     this.isLoading = true;
     this.onLoadStart(type);
 
     try {
-      this.audio = new Audio(url);
-      this.audio.loop = true;
-      this.audio.volume = fade ? 0 : this.volume;
-      this.audio.preload = 'auto';
+      const audio = new Audio(url);
+      audio.loop = true;
+      audio.volume = fade ? 0 : this.volume;
+      audio.preload = 'auto';
 
       // Ждём загрузки
       await new Promise((resolve, reject) => {
-        this.audio.addEventListener('canplaythrough', resolve, { once: true });
-        this.audio.addEventListener('error', (e) => {
+        audio.addEventListener('canplaythrough', resolve, { once: true });
+        audio.addEventListener('error', (e) => {
           reject(new Error(`Failed to load ambient sound: ${e.message}`));
         }, { once: true });
       });
+
+      // Кэшируем загруженный элемент
+      this.audioCache.set(type, audio);
+      this.audio = audio;
 
       // Запускаем воспроизведение
       await this.audio.play();
@@ -147,7 +178,7 @@ export class AmbientManager {
 
     this.audio.pause();
     this.audio.currentTime = 0;
-    this.audio = null;
+    this.audio = null; // Убираем ссылку, но объект остаётся в audioCache
     this.isPlaying = false;
   }
 
@@ -306,10 +337,16 @@ export class AmbientManager {
     
     if (this.audio) {
       this.audio.pause();
-      this.audio.src = '';
       this.audio = null;
     }
-    
+
+    // Очищаем кэш Audio объектов
+    for (const audio of this.audioCache.values()) {
+      audio.pause();
+      audio.src = '';
+    }
+    this.audioCache.clear();
+
     this.isPlaying = false;
     this.sounds = {};
   }
