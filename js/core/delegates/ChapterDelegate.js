@@ -71,9 +71,20 @@ export class ChapterDelegate extends BaseDelegate {
    * @param {boolean} isMobile - Мобильный режим
    */
   updateBackground(pageIndex, isMobile) {
+    // Страницы до первой главы (оглавление) используют фон обложки
+    const firstChapterStart = this.chapterStarts[0] ?? 0;
+    if (pageIndex < firstChapterStart) {
+      const body = this.dom.get('body');
+      if (body) {
+        body.dataset.chapter = 'cover';
+      }
+      this.backgroundManager.setBackground(CONFIG.COVER_BG);
+      return;
+    }
+
     const currentChapter = this.getCurrentChapter(pageIndex);
     const chapterInfo = CONFIG.CHAPTERS[currentChapter];
-    
+
     if (!chapterInfo) return;
 
     // Обновить data-атрибут для стилей
