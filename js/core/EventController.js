@@ -66,34 +66,43 @@ export class EventController {
   _bindNavigationButtons(elements) {
     const { nextBtn, prevBtn, tocBtn, continueBtn, coverEl } = elements;
 
-    this.eventManager.add(nextBtn, "pointerdown", (e) => {
-      e.preventDefault();
-      if (this.isBusy()) return;
-      this.onFlip("next");
-    });
-
-    this.eventManager.add(prevBtn, "pointerdown", (e) => {
-      e.preventDefault();
-      if (this.isBusy()) return;
-      this.onFlip("prev");
-    });
-
-    this.eventManager.add(tocBtn, "click", () => {
-      this.onTOCClick();
-    });
-
-    this.eventManager.add(continueBtn, "click", () => {
-      if (this.isBusy()) return;
-      this.onOpen(true);
-      continueBtn.hidden = true;
-    });
-
-    // Клик по обложке открывает книгу
-    this.eventManager.add(coverEl, "click", () => {
-      if (!this.isOpened() && !this.isBusy()) {
+    if (nextBtn) {
+      this.eventManager.add(nextBtn, "pointerdown", (e) => {
+        e.preventDefault();
+        if (this.isBusy()) return;
         this.onFlip("next");
-      }
-    });
+      });
+    }
+
+    if (prevBtn) {
+      this.eventManager.add(prevBtn, "pointerdown", (e) => {
+        e.preventDefault();
+        if (this.isBusy()) return;
+        this.onFlip("prev");
+      });
+    }
+
+    if (tocBtn) {
+      this.eventManager.add(tocBtn, "click", () => {
+        this.onTOCClick();
+      });
+    }
+
+    if (continueBtn) {
+      this.eventManager.add(continueBtn, "click", () => {
+        if (this.isBusy()) return;
+        this.onOpen(true);
+        continueBtn.hidden = true;
+      });
+    }
+
+    if (coverEl) {
+      this.eventManager.add(coverEl, "click", () => {
+        if (!this.isOpened() && !this.isBusy()) {
+          this.onFlip("next");
+        }
+      });
+    }
   }
 
   /**
@@ -169,19 +178,25 @@ export class EventController {
     }
 
     // Font size stepper - с обновлением отображаемого значения
-    this.eventManager.add(increaseBtn, "click", () => {
-      this.onSettings("fontSize", "increase");
-      this._updateFontSizeDisplay(fontSizeValue, 1);
-    });
+    if (increaseBtn) {
+      this.eventManager.add(increaseBtn, "click", () => {
+        this.onSettings("fontSize", "increase");
+        this._updateFontSizeDisplay(fontSizeValue, 1);
+      });
+    }
 
-    this.eventManager.add(decreaseBtn, "click", () => {
-      this.onSettings("fontSize", "decrease");
-      this._updateFontSizeDisplay(fontSizeValue, -1);
-    });
+    if (decreaseBtn) {
+      this.eventManager.add(decreaseBtn, "click", () => {
+        this.onSettings("fontSize", "decrease");
+        this._updateFontSizeDisplay(fontSizeValue, -1);
+      });
+    }
 
-    this.eventManager.add(fontSelect, "change", (e) => {
-      this.onSettings("font", e.target.value);
-    });
+    if (fontSelect) {
+      this.eventManager.add(fontSelect, "change", (e) => {
+        this.onSettings("font", e.target.value);
+      });
+    }
 
     // Theme segmented control - клик по сегментам
     if (themeSegmented) {
@@ -202,9 +217,11 @@ export class EventController {
       });
     }
 
-    this.eventManager.add(debugToggle, "click", () => {
-      this.onSettings("debug", "toggle");
-    });
+    if (debugToggle) {
+      this.eventManager.add(debugToggle, "click", () => {
+        this.onSettings("debug", "toggle");
+      });
+    }
 
     // Sound toggle - также обновляет состояние volume control
     if (soundToggle) {
