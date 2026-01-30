@@ -97,10 +97,19 @@ export class LifecycleDelegate extends BaseDelegate {
       this.loadingIndicator.show();
 
       // ─── Этап 3: Параллельная загрузка (анимация + контент) ───
+      // Связываем операции: если одна упадёт — отменяем вторую,
+      // чтобы избежать рассогласования состояния.
       const chapterUrls = CONFIG.CHAPTERS.map(c => c.file);
+
+      const animationPromise = this.animator.runOpenAnimation()
+        .catch((err) => { this.contentLoader.abort(); throw err; });
+
+      const contentPromise = this.contentLoader.load(chapterUrls)
+        .catch((err) => { this.animator.abort(); throw err; });
+
       const [signal, html] = await Promise.all([
-        this.animator.runOpenAnimation(),
-        this.contentLoader.load(chapterUrls),
+        animationPromise,
+        contentPromise,
       ]);
 
       if (!signal || !html) {
