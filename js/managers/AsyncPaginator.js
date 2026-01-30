@@ -291,11 +291,14 @@ export class AsyncPaginator extends EventEmitter {
    */
   _addArticlesChunk(pageContent, articles, startIndex) {
     articles.forEach((article, i) => {
+      const marker = document.createElement("div");
+      marker.dataset.chapterStart = startIndex + i;
+      marker.style.breakBefore = "column";
+      pageContent.appendChild(marker);
+
       const clone = article.cloneNode(true);
       clone.removeAttribute("id");
       clone.style.margin = "0";
-      clone.style.breakBefore = "column";
-      clone.dataset.chapterStart = startIndex + i;
       pageContent.appendChild(clone);
     });
   }
@@ -341,10 +344,8 @@ export class AsyncPaginator extends EventEmitter {
    * @private
    */
   _calculateChapterStarts(container, pageWidth) {
-    const cols = container.querySelector(".cols");
-    const colsLeft = cols.getBoundingClientRect().left;
     const markers = [...container.querySelectorAll("[data-chapter-start]")];
-    return markers.map(m => Math.round((m.getBoundingClientRect().left - colsLeft) / pageWidth));
+    return markers.map(m => Math.round(m.offsetLeft / pageWidth));
   }
 
   /**
