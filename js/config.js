@@ -10,22 +10,26 @@ const BASE_URL = import.meta.env.BASE_URL || '/';
 export const CONFIG = Object.freeze({
   STORAGE_KEY: "reader-settings",
   COVER_BG: `${BASE_URL}images/backgrounds/bg-cover.webp`,
+  COVER_BG_MOBILE: `${BASE_URL}images/backgrounds/bg-cover-mobile.webp`,
 
   CHAPTERS: [
-    { 
-      id: "part_1", 
-      file: `${BASE_URL}content/part_1.html`, 
-      bg: `${BASE_URL}images/backgrounds/part_1.webp` 
+    {
+      id: "part_1",
+      file: `${BASE_URL}content/part_1.html`,
+      bg: `${BASE_URL}images/backgrounds/part_1.webp`,
+      bgMobile: `${BASE_URL}images/backgrounds/part_1-mobile.webp`,
     },
-    { 
-      id: "part_2", 
-      file: `${BASE_URL}content/part_2.html`, 
-      bg: `${BASE_URL}images/backgrounds/part_2.webp` 
+    {
+      id: "part_2",
+      file: `${BASE_URL}content/part_2.html`,
+      bg: `${BASE_URL}images/backgrounds/part_2.webp`,
+      bgMobile: `${BASE_URL}images/backgrounds/part_2-mobile.webp`,
     },
-    { 
-      id: "part_3", 
-      file: `${BASE_URL}content/part_3.html`, 
-      bg: `${BASE_URL}images/backgrounds/part_3.webp` 
+    {
+      id: "part_3",
+      file: `${BASE_URL}content/part_3.html`,
+      bg: `${BASE_URL}images/backgrounds/part_3.webp`,
+      bgMobile: `${BASE_URL}images/backgrounds/part_3-mobile.webp`,
     },
   ],
 

@@ -78,7 +78,8 @@ export class ChapterDelegate extends BaseDelegate {
       if (body) {
         body.dataset.chapter = 'cover';
       }
-      this.backgroundManager.setBackground(CONFIG.COVER_BG);
+      const coverBg = isMobile ? CONFIG.COVER_BG_MOBILE : CONFIG.COVER_BG;
+      this.backgroundManager.setBackground(coverBg);
       return;
     }
 
@@ -93,9 +94,10 @@ export class ChapterDelegate extends BaseDelegate {
       body.dataset.chapter = chapterInfo.id;
     }
 
-    // Установить фон главы
-    if (chapterInfo.bg) {
-      this.backgroundManager.setBackground(chapterInfo.bg);
+    // Установить фон главы (мобильная или полная версия)
+    const bgUrl = isMobile ? chapterInfo.bgMobile : chapterInfo.bg;
+    if (bgUrl) {
+      this.backgroundManager.setBackground(bgUrl);
     }
 
     // Предзагрузить следующую главу

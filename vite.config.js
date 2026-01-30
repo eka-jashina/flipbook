@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import viteCompression from 'vite-plugin-compression';
 import viteImagemin from 'vite-plugin-imagemin';
 import autoprefixer from 'autoprefixer';
+import mobileBackgrounds from './vite-plugin-mobile-backgrounds.js';
 
 /**
  * VITE CONFIG С ПОДДЕРЖКОЙ GITHUB PAGES
@@ -123,6 +124,9 @@ export default defineConfig(({ command, mode }) => {
     },
 
     plugins: [
+      // Генерация мобильных фоновых изображений (960px)
+      mobileBackgrounds(),
+
       // Gzip сжатие
       viteCompression({
         verbose: true,

@@ -23,12 +23,13 @@
     "size": "du -sh dist/*"
   },
   "devDependencies": {
-    "vite": "^5.0.0",
-    "vite-plugin-compression": "^0.5.1",
-    "vite-plugin-imagemin": "^0.6.1",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32",
-    "terser": "^5.26.0"
+    "sharp": "^0.34.5",
+    "terser": "^5.26.0",
+    "vite": "^5.0.0",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-imagemin": "^0.6.1"
   },
   "engines": {
     "node": ">=18.0.0",
