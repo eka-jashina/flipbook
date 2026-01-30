@@ -193,11 +193,9 @@
     isolation: isolate;
   }
 
-  /* Firefox: контейнер колонок должен обрезать содержимое,
-     но contain: paint / contain: layout ломают hit-testing
-     для кликабельных элементов (TOC). Используем overflow: clip
-     как безопасную альтернативу */
-  .cols {
-    overflow: clip;
+  /* Firefox: изоляция каждой статьи предотвращает наложение картинок
+     между главами, не затрагивая TOC (section.toc) */
+  .page-content article {
+    contain: paint layout;
   }
 }
