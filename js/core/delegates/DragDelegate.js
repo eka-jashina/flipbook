@@ -229,6 +229,7 @@ export class DragDelegate extends BaseDelegate {
 
     if (book) {
       book.dataset.state = "flipping";
+      book.dataset.dragging = "";
     }
   }
 
@@ -392,6 +393,10 @@ export class DragDelegate extends BaseDelegate {
       delete sheet.dataset.phase;
       delete sheet.dataset.direction;
     }
+
+    // Очистка data-dragging на book
+    const book = this.dom.get("book");
+    if (book) delete book.dataset.dragging;
 
     // Очистка теней через shadowRenderer
     this.shadowRenderer.reset();

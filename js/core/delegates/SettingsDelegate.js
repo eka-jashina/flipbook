@@ -284,16 +284,23 @@ export class SettingsDelegate extends BaseDelegate {
    * @private
    */
   _handleFullscreen() {
-    if (!document.fullscreenElement) {
-      // Входим в полноэкранный режим
-      document.documentElement.requestFullscreen().catch((err) => {
-        console.warn("Не удалось войти в полноэкранный режим:", err.message);
-      });
+    const el = document.documentElement;
+    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+
+    if (!isFullscreen) {
+      const request = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (request) {
+        request.call(el).catch((err) => {
+          console.warn("Не удалось войти в полноэкранный режим:", err.message);
+        });
+      }
     } else {
-      // Выходим из полноэкранного режима
-      document.exitFullscreen().catch((err) => {
-        console.warn("Не удалось выйти из полноэкранного режима:", err.message);
-      });
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) {
+        exit.call(document).catch((err) => {
+          console.warn("Не удалось выйти из полноэкранного режима:", err.message);
+        });
+      }
     }
   }
 

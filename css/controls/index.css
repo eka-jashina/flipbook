@@ -86,8 +86,8 @@
   justify-content: space-between;
 }
 
-/* Показываем через :has() */
-.controls:has(.settings-checkbox:checked) .settings {
+/* Показываем через data-атрибут (Safari-совместимо) */
+.controls[data-settings-open] .settings {
   opacity: 1;
   min-height: auto;
   max-height: 500px;
@@ -168,7 +168,7 @@
       width var(--timing-transition) ease-in-out;
   }
 
-  .controls:has(.settings-checkbox:checked) .settings {
+  .controls[data-settings-open] .settings {
     width: auto;
     max-height: 500px;
   }

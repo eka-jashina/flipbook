@@ -88,6 +88,12 @@ export class BookRenderer {
     } else {
       container.replaceChildren();
     }
+
+    // Пометить страницу с оглавлением (Safari-совместимая замена :has(.toc))
+    const page = container.closest(".page");
+    if (page) {
+      page.classList.toggle("page--toc", !!container.querySelector(".toc"));
+    }
   }
 
   /**
