@@ -17,7 +17,7 @@
   align-items: center;
   justify-content: center;
   /* Полупрозрачный фон с размытием */
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 100;

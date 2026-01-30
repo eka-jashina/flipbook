@@ -20,7 +20,6 @@
   background-position: center;
   background-size: cover;
   background-image: url("/images/backgrounds/bg-page.webp");
-  background-blend-mode: multiply;
   overflow: hidden;
 
   transition:

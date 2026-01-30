@@ -86,7 +86,7 @@
   justify-content: space-between;
 }
 
-/* Показываем через data-атрибут (Safari-совместимо) */
+/* Показываем через data-атрибут */
 .controls[data-settings-open] .settings {
   opacity: 1;
   min-height: auto;

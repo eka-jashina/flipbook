@@ -89,7 +89,7 @@ export class BookRenderer {
       container.replaceChildren();
     }
 
-    // Пометить страницу с оглавлением (Safari-совместимая замена :has(.toc))
+    // Пометить страницу с оглавлением
     const page = container.closest(".page");
     if (page) {
       page.classList.toggle("page--toc", !!container.querySelector(".toc"));

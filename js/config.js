@@ -9,7 +9,6 @@ const BASE_URL = import.meta.env.BASE_URL || '/';
 
 export const CONFIG = Object.freeze({
   STORAGE_KEY: "reader-settings",
-  // Используем BASE_URL для правильных путей на GitHub Pages
   COVER_BG: `${BASE_URL}images/backgrounds/bg-cover.webp`,
 
   CHAPTERS: [
