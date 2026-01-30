@@ -212,7 +212,7 @@
   transition: transform 0.3s ease;
 }
 
-.settings-toggle:has(.settings-checkbox:checked) svg {
+.settings-checkbox:checked ~ svg {
   transform: rotate(90deg);
 }
 

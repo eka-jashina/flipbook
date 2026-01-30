@@ -152,8 +152,21 @@ export class EventController {
       ambientPills,
       ambientVolume,
       ambientVolumeWrapper,
-      fullscreenBtn
+      fullscreenBtn,
+      settingsCheckbox
     } = elements;
+
+    // Settings toggle — синхронизируем data-атрибут для Safari (замена :has())
+    if (settingsCheckbox) {
+      const controls = settingsCheckbox.closest(".controls");
+      this.eventManager.add(settingsCheckbox, "change", () => {
+        if (settingsCheckbox.checked) {
+          controls?.setAttribute("data-settings-open", "");
+        } else {
+          controls?.removeAttribute("data-settings-open");
+        }
+      });
+    }
 
     // Font size stepper - с обновлением отображаемого значения
     this.eventManager.add(increaseBtn, "click", () => {

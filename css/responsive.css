@@ -49,6 +49,7 @@
   img {
     object-position: center;
     height: 72vh;
+    height: 72dvh;
   }
 
   /* Жесты */
@@ -76,6 +77,7 @@
 
   .book {
     height: 75vh;
+    height: 75dvh;
   }
 }
 
@@ -86,5 +88,6 @@
 @media (min-width: 1440px) {
   .book {
     height: 85vh;
+    height: 85dvh;
   }
 }

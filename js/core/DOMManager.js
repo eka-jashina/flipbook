@@ -79,6 +79,9 @@ export class DOMManager {
       ambientVolume: $("ambient-volume"),
       ambientVolumeWrapper: $("ambient-volume-wrapper"),
 
+      // Settings toggle checkbox (Safari fallback for :has())
+      settingsCheckbox: $("settings-checkbox"),
+
       // Fullscreen control
       fullscreenBtn: $("fullscreen-btn"),
       

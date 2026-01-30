@@ -249,8 +249,8 @@
   transform: translateZ(1px) rotateY(var(--sheet-angle, 0deg));
 }
 
-/* Тени во время drag */
-.book:has(.sheet[data-phase="drag"]) {
+/* Тени во время drag (data-dragging ставится из JS для Safari-совместимости) */
+.book[data-dragging] {
   --spine-shadow-size: 22px;
   --spine-shadow-blur-amount: 18px;
 }
