@@ -107,6 +107,7 @@ article h2,
   opacity: 0;
   transform: translateX(-10px);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
 }
 
 .toc li:hover {
@@ -122,16 +123,16 @@ article h2,
   background: rgba(139, 69, 19, 0.18);
 }
 
-/* Transform и padding-left при hover/active только для мышки —
-   на тач-устройствах Firefox теряет target из-за сдвига элемента */
+/* Дополнительная визуальная обратная связь только для мышки.
+   transform: translateX сдвигает элемент и Firefox теряет click target,
+   поэтому используем только padding для индентации */
 @media (hover: hover) {
   .toc li:hover {
-    transform: translateX(10px);
     padding-left: 1.2em;
   }
 
   .toc li:active {
-    transform: translateX(10px) scale(0.98);
+    transform: scale(0.98);
   }
 }
 
@@ -181,5 +182,11 @@ html[data-theme="bw"] .toc li:active {
     visibility: visible;
     opacity: 1;
     isolation: isolate;
+  }
+
+  /* Гарантируем кликабельность TOC в Firefox */
+  .toc {
+    position: relative;
+    z-index: 1;
   }
 }
