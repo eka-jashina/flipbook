@@ -378,23 +378,24 @@ export class AsyncPaginator extends EventEmitter {
     const totalCols = Math.max(1, measuredCols - 1);
     const result = [];
 
+    // Один клон вместо N: переиспользуем snap/clone, меняя только translateX
+    const snap = document.createElement("div");
+    snap.style.cssText = `
+      width: ${pageWidth}px;
+      height: ${pageHeight}px;
+      overflow: hidden;
+    `;
+
+    const clone = cols.cloneNode(true);
+    clone.style.width = `${totalCols * pageWidth}px`;
+    snap.appendChild(clone);
+
     for (let i = 0; i < totalCols; i++) {
       if (signal?.aborted) {
         throw new DOMException("Aborted", "AbortError");
       }
 
-      const snap = document.createElement("div");
-      snap.style.cssText = `
-        width: ${pageWidth}px;
-        height: ${pageHeight}px;
-        overflow: hidden;
-      `;
-
-      const clone = cols.cloneNode(true);
-      clone.style.width = `${totalCols * pageWidth}px`;
       clone.style.transform = `translateX(${-i * pageWidth}px)`;
-
-      snap.appendChild(clone);
       result.push(snap.innerHTML);
 
       if (i % this.chunkSize === 0) {
