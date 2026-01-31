@@ -96,7 +96,7 @@
   /* Обе версии для кросс-браузерности */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  transition: background-color var(--timing-transition), opacity 80ms linear;
+  transition: background-color var(--timing-transition);
 }
 
 .side[data-face="back"] {
