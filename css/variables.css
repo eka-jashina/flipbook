@@ -1,9 +1,9 @@
 /**
  * CSS CUSTOM PROPERTIES (Design Tokens)
- * 
+ *
  * Централизованное хранилище всех настраиваемых значений.
  * JavaScript читает эти значения через getComputedStyle.
- * 
+ *
  */
 
 /* ═══════════════════════════════════════════
@@ -52,7 +52,7 @@
   --font-default: 18px;
   --swipe-threshold: 20px;        /* Мин. расстояние свайпа */
   --swipe-vertical-limit: 30px;   /* Макс. вертикальное отклонение */
-  
+
   /* ═══════════════════════════════════════════
      3D И ТЕНИ
      ═══════════════════════════════════════════ */
@@ -73,24 +73,24 @@
   --text-main: #1f1f1f;
   --text-muted: #555555;
   --border-page: rgba(0, 0, 0, 0.08);
-  
+
   /* Край страниц */
   --page-edge-base: #f3f1ea;
   --page-edge-alt: #e6e3dc;
   --page-edge-contrast: rgba(0, 0, 0, 0.18);
   --pages-color: #f3f2ed;
   --pages-shadow: rgba(0, 0, 0, 0.18);
-  
+
   /* Тени */
   --shadow-book: 0 30px 60px rgba(0, 0, 0, 0.35);
   --shadow-page: rgba(0, 0, 0, 0.18);
-  
+
   /* Корешок */
   --spine-dark: rgba(0, 0, 0, 0.45);
   --spine-mid: rgba(0, 0, 0, 0.22);
   --spine-soft: rgba(0, 0, 0, 0.08);
   --paper-highlight: rgba(255, 255, 255, 0.35);
-  
+
   /* Обложка */
   --cover-front-bg: linear-gradient(135deg, #3a2d1f, #2a2016);
   --cover-front-text: #f2e9d8;
