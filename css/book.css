@@ -11,12 +11,14 @@
    ═══════════════════════════════════════════ */
 
 .book-wrap {
-  width: 100%;
-  transition: width var(--timing-wrap) ease-in-out;
   display: flex;
   justify-content: flex-end;
+  width: 100%;
+
   perspective: var(--perspective);
   -webkit-perspective: var(--perspective); /* Safari */
+
+  transition: width var(--timing-wrap) ease-in-out;
 }
 
 /* Закрытая книга занимает половину ширины */
@@ -35,10 +37,12 @@
 
 .book {
   position: relative;
+
   width: 100%;
   height: 80vh;
   height: 80dvh;
   margin: 0 auto;
+
   background-color: var(--bg-book);
   border-radius: 12px;
   box-shadow: var(--shadow-book);
@@ -47,7 +51,6 @@
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
   transform-origin: left;
-
   /* Плавные переходы включая animatable CSS properties */
   transition:
     background-color var(--timing-transition),
@@ -139,13 +142,16 @@
 
 .book::before,
 .book::after {
-  content: "";
   position: absolute;
   top: 8px;
   bottom: 8px;
-  width: var(--pages-depth);
   z-index: 0;
+
+  width: var(--pages-depth);
+
   filter: blur(0.35px);
+
+  content: "";
 }
 
 /* Левый край страниц */

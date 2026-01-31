@@ -21,10 +21,13 @@
   gap: 10px;
   margin-top: 16px;
   padding: 0.7em;
+
   font-family: "TolkienCyr", sans-serif;
   font-size: 18px;
   color: var(--cover-front-text);
+
   background: var(--cover-front-bg);
+
   transition:
     background var(--timing-transition),
     color var(--timing-transition);
@@ -38,18 +41,22 @@
 .controls select,
 .controls label {
   padding: 0.3em;
+
   font-family: "TolkienCyr", sans-serif;
   font-size: 100%;
   font-weight: 700;
   line-height: 1;
   color: #a52a2a;
+
   background-color: var(--cover-front-text);
   border: none;
   border-radius: 10px;
-  cursor: pointer;
+
   transition:
     transform var(--timing-transition) ease-in-out,
     outline var(--timing-transition) ease-in-out;
+
+  cursor: pointer;
 }
 
 .controls button:hover,
@@ -57,6 +64,7 @@
 .controls label:hover,
 .controls label:focus-within {
   outline: 1px solid #a52a2a;
+
   transform: scale(1.2);
   transform-origin: center;
 }
@@ -71,12 +79,15 @@
   gap: 5px;
   justify-content: center;
   align-items: center;
-  opacity: 0;
   max-height: 0;
-  visibility: hidden;
+
+  opacity: 0;
+
   transition:
     opacity var(--timing-transition) ease-in-out,
     max-height var(--timing-transition) ease-in-out;
+
+  visibility: hidden;
 }
 
 .settings div {
@@ -131,13 +142,17 @@
   position: fixed;
   top: 20px;
   left: 50%;
-  transform: translateX(-50%);
-  background: #ff4444;
-  color: #ffffff;
+  z-index: 9999;
+
   padding: 1em 2em;
+
+  color: #ffffff;
+
+  background: #ff4444;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 9999;
+
+  transform: translateX(-50%);
   animation: slideDown 0.3s ease-out;
 }
 

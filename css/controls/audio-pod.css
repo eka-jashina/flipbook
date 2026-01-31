@@ -15,12 +15,13 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
+  max-width: 320px;
   padding: 12px;
+
   background: var(--pod-bg);
   border: var(--pod-border);
   border-radius: 12px;
-  width: 100%;
-  max-width: 320px;
 }
 
 .audio-section {
@@ -38,8 +39,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
+
   font-size: 0.9em;
   font-weight: 600;
+
   opacity: 0.9;
 }
 
@@ -59,11 +62,13 @@
 
 .toggle-switch {
   position: relative;
+
   display: inline-block;
+  flex-shrink: 0;
   width: 44px;
   height: 24px;
-  flex-shrink: 0;
   padding: 0;
+
   background: transparent;
   border-radius: 0;
 }
@@ -76,24 +81,31 @@
 
 .toggle-slider {
   position: absolute;
-  cursor: pointer;
   inset: 0;
+
   background-color: var(--pod-btn-bg);
-  transition: 0.3s;
   border-radius: 24px;
+
+  transition: 0.3s;
+
+  cursor: pointer;
 }
 
 .toggle-slider::before {
   position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
   left: 3px;
   bottom: 3px;
+
+  width: 18px;
+  height: 18px;
+
   background-color: var(--cover-front-text);
-  transition: 0.3s;
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  transition: 0.3s;
+
+  content: "";
 }
 
 .toggle-switch input:checked + .toggle-slider {
@@ -125,8 +137,10 @@
 }
 
 .vol-icon {
-  opacity: 0.6;
   flex-shrink: 0;
+
+  opacity: 0.6;
+
   transition: opacity 0.2s;
 }
 
@@ -137,25 +151,30 @@
 .volume-slider {
   flex: 1;
   height: 6px;
+  padding: 0;
+
   background: var(--pod-btn-bg);
   border-radius: 3px;
   outline: none;
+
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
-  padding: 0;
 }
 
 .volume-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
   width: 16px;
   height: 16px;
+
   background: var(--pod-slider-thumb);
   border-radius: 50%;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .volume-slider::-webkit-slider-thumb:hover {
@@ -166,12 +185,15 @@
 .volume-slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
+
   background: var(--pod-slider-thumb);
   border: none;
   border-radius: 50%;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  cursor: pointer;
 }
 
 .volume-slider::-moz-range-thumb:hover {
@@ -200,14 +222,18 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  min-width: 56px;
   padding: 8px 12px;
+
+  font-size: 0.75em;
+
   background: var(--pod-btn-bg);
   border: 2px solid transparent;
   border-radius: 10px;
-  cursor: pointer;
+
   transition: all 0.2s ease;
-  font-size: 0.75em;
-  min-width: 56px;
+
+  cursor: pointer;
 }
 
 .ambient-pill:hover {
@@ -229,6 +255,7 @@
 
 .ambient-pill-label {
   font-weight: 500;
+
   opacity: 0.8;
 }
 
@@ -247,8 +274,9 @@
    ═══════════════════════════════════════════ */
 
 .ambient-pill[data-loading="true"] {
-  pointer-events: none;
   opacity: 0.7;
+
+  pointer-events: none;
 }
 
 .ambient-pill[data-loading="true"] .ambient-pill-icon {
@@ -256,13 +284,16 @@
 }
 
 .ambient-pill[data-loading="true"] .ambient-pill-icon::after {
-  content: '';
   position: absolute;
   inset: -2px;
+
   border: 2px solid transparent;
   border-top-color: var(--pod-accent);
   border-radius: 50%;
+
   animation: pill-spin 0.8s linear infinite;
+
+  content: '';
 }
 
 @keyframes pill-spin {

@@ -27,8 +27,10 @@
   /* Левая страница минимальна */
   .page[data-side="left"] {
     width: 10%;
-    pointer-events: none;
+
     filter: brightness(0.95);
+
+    pointer-events: none;
   }
 
   .page[data-side="right"] {

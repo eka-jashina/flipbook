@@ -16,11 +16,13 @@ img {
   height: 75dvh;
   max-height: 100%;
   margin-bottom: 0.3em;
+
   object-fit: cover;
   object-position: left center;
-  transition: opacity var(--timing-blur) ease-out;
   background: linear-gradient(135deg, #d4cfc7 0%, #e8e4dc 50%, #d4cfc7 100%);
   background-size: 200% 200%;
+
+  transition: opacity var(--timing-blur) ease-out;
 }
 
 /* Пока изображение загружается - скрываем и показываем placeholder */
@@ -63,8 +65,8 @@ img + h2 {
 
 /* Заголовок после картинки - очищаем float */
 img + h2 {
-  clear: both;
   display: block;
+  clear: both;
 }
 
 /* ═══════════════════════════════════════════
@@ -74,8 +76,9 @@ img + h2 {
 @supports (-moz-appearance: none) {
   /* Firefox: изображения не должны выходить за границы колонки */
   img {
-    break-inside: avoid;
     overflow: hidden;
+    break-inside: avoid;
+
     contain: paint;
   }
 
@@ -87,8 +90,9 @@ img + h2 {
 
   /* Заголовок после картинки - принудительный clearing */
   img + h2 {
-    clear: both !important;
     display: flow-root;
+    clear: both !important;
+
     contain: layout;
   }
 
