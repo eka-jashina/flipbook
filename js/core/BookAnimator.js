@@ -20,6 +20,8 @@ export class BookAnimator {
    * @param {HTMLElement} options.bookWrap - Внешняя обёртка книги
    * @param {HTMLElement} options.cover - Обложка книги
    * @param {HTMLElement} options.sheet - Перелистываемый лист
+   * @param {HTMLElement} options.sheetFront - Лицевая сторона листа
+   * @param {HTMLElement} options.sheetBack - Оборотная сторона листа
    * @param {TimerManager} options.timerManager - Менеджер таймеров
    */
   constructor(options) {
@@ -28,6 +30,8 @@ export class BookAnimator {
       bookWrap: options.bookWrap,
       cover: options.cover,
       sheet: options.sheet,
+      sheetFront: options.sheetFront,
+      sheetBack: options.sheetBack,
     };
 
     this.timerManager = options.timerManager;
@@ -112,6 +116,10 @@ export class BookAnimator {
         }
       }, swapDelay);
 
+      // Переключаем стороны листа в середине поворота (на ~90°),
+      // чтобы избежать зеркального отражения из-за ненадёжного backface-visibility
+      this._scheduleSideSwitch(timings.rotate, signal);
+
       await TransitionHelper.waitFor(
         sheet, "transform", timings.rotate + safetyMargin, signal
       );
@@ -127,6 +135,7 @@ export class BookAnimator {
       // Очистка data-атрибутов независимо от результата
       delete sheet.dataset.phase;
       delete sheet.dataset.direction;
+      this._resetSideStyles();
     }
   }
 
@@ -206,6 +215,53 @@ export class BookAnimator {
       delete cover.dataset.animation;
     } catch (error) {
       if (error.name !== "AbortError") throw error;
+    }
+  }
+
+  /**
+   * Запланировать переключение сторон листа в середине поворота.
+   * Отключает backface-visibility и переключает opacity front/back,
+   * чтобы избежать зеркального отражения при CSS-анимации.
+   * @private
+   * @param {number} rotateDuration - Длительность фазы rotate (мс)
+   * @param {AbortSignal} signal
+   */
+  _scheduleSideSwitch(rotateDuration, signal) {
+    const { sheetFront, sheetBack } = this.elements;
+    if (!sheetFront || !sheetBack) return;
+
+    // Отключаем backface-visibility — будем управлять видимостью вручную
+    sheetFront.style.backfaceVisibility = "visible";
+    sheetFront.style.webkitBackfaceVisibility = "visible";
+    sheetBack.style.backfaceVisibility = "visible";
+    sheetBack.style.webkitBackfaceVisibility = "visible";
+
+    // Изначально: front видим, back скрыт
+    sheetBack.style.opacity = "0";
+
+    // В середине поворота (~90°): переключаем
+    const midpoint = rotateDuration * 0.45;
+    this.timerManager.setTimeout(() => {
+      if (!signal.aborted) {
+        sheetFront.style.opacity = "0";
+        sheetBack.style.opacity = "1";
+      }
+    }, midpoint);
+  }
+
+  /**
+   * Сбросить inline-стили сторон листа после анимации
+   * @private
+   */
+  _resetSideStyles() {
+    const { sheetFront, sheetBack } = this.elements;
+    const props = ["opacity", "backface-visibility", "-webkit-backface-visibility"];
+    for (const el of [sheetFront, sheetBack]) {
+      if (el) {
+        for (const prop of props) {
+          el.style.removeProperty(prop);
+        }
+      }
     }
   }
 
