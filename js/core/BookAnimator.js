@@ -79,7 +79,9 @@ export class BookAnimator {
    * Запустить анимацию перелистывания страницы
    * Фазы: lift (поднятие) → rotate (поворот) → drop (опускание)
    * @param {'next'|'prev'} direction - Направление перелистывания
-   * @param {Function} onSwap - Коллбэк для подмены буферов (вызывается во время rotate)
+   * @param {Object} onSwap - Коллбэки для подмены буферов
+   * @param {Function} onSwap.left - Подмена левой страницы
+   * @param {Function} onSwap.right - Подмена правой страницы
    */
   async runFlip(direction, onSwap) {
     const signal = this.createSignal();
@@ -106,15 +108,24 @@ export class BookAnimator {
       // Фаза 2: Rotate (поворот страницы на 180°)
       sheet.dataset.phase = "rotate";
 
-      // Подмена буферов происходит в середине поворота.
-      // Проверяем signal.aborted перед вызовом, чтобы избежать
-      // неконсистентного состояния при отмене операции.
-      const swapDelay = direction === "next" ? timings.swapNext : timings.swapPrev;
+      // Подмена буферов разделена на две стороны.
+      // Каждую сторону меняем, пока лист её закрывает:
+      // - "next": лист уходит вправо→влево, закрывает правую (0°–90°), потом левую (90°–180°)
+      // - "prev": лист уходит влево→вправо, закрывает левую (0°–90°), потом правую (90°–180°)
+      const earlyDelay = direction === "next" ? timings.swapNext : timings.swapPrev;
+      const lateDelay = timings.rotate * 0.55;
+
+      // Закрытая сторона меняется рано, открытая — после ~90°
+      const earlySwap = direction === "next" ? onSwap.right : onSwap.left;
+      const lateSwap = direction === "next" ? onSwap.left : onSwap.right;
+
       this.timerManager.setTimeout(() => {
-        if (!signal.aborted) {
-          onSwap();
-        }
-      }, swapDelay);
+        if (!signal.aborted) earlySwap();
+      }, earlyDelay);
+
+      this.timerManager.setTimeout(() => {
+        if (!signal.aborted) lateSwap();
+      }, lateDelay);
 
       // Переключаем стороны листа в середине поворота (на ~90°),
       // чтобы избежать зеркального отражения из-за ненадёжного backface-visibility
