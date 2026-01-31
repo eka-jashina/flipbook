@@ -93,8 +93,6 @@
   background-position: center;
   background-size: cover;
 
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
   /* Обе версии для кросс-браузерности */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
