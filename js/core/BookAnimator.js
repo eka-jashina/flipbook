@@ -79,9 +79,7 @@ export class BookAnimator {
    * Запустить анимацию перелистывания страницы
    * Фазы: lift (поднятие) → rotate (поворот) → drop (опускание)
    * @param {'next'|'prev'} direction - Направление перелистывания
-   * @param {Object} onSwap - Коллбэки для подмены буферов
-   * @param {Function} onSwap.left - Подмена левой страницы
-   * @param {Function} onSwap.right - Подмена правой страницы
+   * @param {Function} onSwap - Коллбэк для подмены буферов (вызывается на ~90° поворота)
    */
   async runFlip(direction, onSwap) {
     const signal = this.createSignal();
@@ -108,31 +106,21 @@ export class BookAnimator {
       // Фаза 2: Rotate (поворот страницы на 180°)
       sheet.dataset.phase = "rotate";
 
-      // Подмена буферов разделена на две стороны.
-      // Каждую сторону меняем, пока лист её закрывает:
-      // - "next": лист уходит вправо→влево, закрывает правую (0°–90°), потом левую (90°–180°)
-      // - "prev": лист уходит влево→вправо, закрывает левую (0°–90°), потом правую (90°–180°)
-      const earlyDelay = direction === "next" ? timings.swapNext : timings.swapPrev;
-
-      // Закрытая сторона меняется рано (лист лежит на ней), открытая — в конце поворота
-      const earlySwap = direction === "next" ? onSwap.right : onSwap.left;
-      const lateSwap = direction === "next" ? onSwap.left : onSwap.right;
-
+      // Подмена буферов на ~90° (40% от длительности с учётом easing),
+      // когда лист стоит ребром и ни одна сторона книги не видна чётко.
+      // Одновременно скрываем лицевую сторону листа, чтобы не было
+      // зеркального отражения из-за ненадёжного backface-visibility.
+      const midpoint = timings.rotate * 0.4;
       this.timerManager.setTimeout(() => {
-        if (!signal.aborted) earlySwap();
-      }, earlyDelay);
-
-      // Переключаем стороны листа в середине поворота (на ~90°),
-      // чтобы избежать зеркального отражения из-за ненадёжного backface-visibility
-      this._scheduleSideSwitch(timings.rotate, signal);
+        if (!signal.aborted) {
+          this.elements.sheetFront.style.opacity = "0";
+          onSwap();
+        }
+      }, midpoint);
 
       await TransitionHelper.waitFor(
         sheet, "transform", timings.rotate + safetyMargin, signal
       );
-
-      // Поздний свап: лист полностью лёг на целевую сторону (180°),
-      // подменяем контент под ним перед фазой drop
-      if (!signal.aborted) lateSwap();
 
       // Фаза 3: Drop (опускание страницы)
       sheet.dataset.phase = "drop";
@@ -226,28 +214,6 @@ export class BookAnimator {
     } catch (error) {
       if (error.name !== "AbortError") throw error;
     }
-  }
-
-  /**
-   * Скрыть лицевую сторону листа перед серединой поворота,
-   * чтобы её задняя грань не просвечивала зеркальным отражением.
-   * backface-visibility остаётся hidden — opacity лишь подстраховка.
-   * @private
-   * @param {number} rotateDuration - Длительность фазы rotate (мс)
-   * @param {AbortSignal} signal
-   */
-  _scheduleSideSwitch(rotateDuration, signal) {
-    const { sheetFront } = this.elements;
-    if (!sheetFront) return;
-
-    // Скрываем front чуть раньше 90° (40% длительности с учётом easing),
-    // чтобы гарантированно успеть до момента, когда задняя грань видна
-    const midpoint = rotateDuration * 0.4;
-    this.timerManager.setTimeout(() => {
-      if (!signal.aborted) {
-        sheetFront.style.opacity = "0";
-      }
-    }, midpoint);
   }
 
   /**

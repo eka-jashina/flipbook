@@ -177,9 +177,8 @@ export class NavigationDelegate extends BaseDelegate {
 
     try {
       // Запускаем анимацию с коллбэком для swapBuffers
-      await this.animator.runFlip(direction, {
-        left: () => this.renderer.swapLeft(),
-        right: () => this.renderer.swapRight(),
+      await this.animator.runFlip(direction, () => {
+        this.renderer.swapBuffers();
       });
 
       // Возвращаемся в состояние OPENED
