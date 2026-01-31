@@ -10,11 +10,13 @@
 
 .corner-zone {
   position: absolute;
+  z-index: 100;
+
   width: 80px;
   height: 80px;
-  cursor: grab;
-  z-index: 100;
   overflow: visible;
+
+  cursor: grab;
 }
 
 .corner-zone:active {
@@ -48,12 +50,15 @@
 
 /* Подсветка зоны при hover */
 .corner-zone::before {
-  content: "";
   position: absolute;
   inset: 0;
+
   opacity: 0;
+
   transition: opacity 0.3s ease;
+
   pointer-events: none;
+  content: "";
 }
 
 /* Правые углы */
@@ -80,14 +85,18 @@
 
 /* Тень загиба */
 .corner-zone::after {
-  content: "";
   position: absolute;
+
   width: 0;
   height: 0;
-  opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
+
   border-style: solid;
+  opacity: 0;
+
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  pointer-events: none;
+  content: "";
 }
 
 /* Правый верхний угол */
@@ -190,14 +199,14 @@
 .flip-shadow {
   position: absolute;
   top: 0;
-  height: 100%;
-  pointer-events: none;
-  z-index: 15;
-  display: none;
-
-  /* Динамические значения через CSS-переменные */
-  width: var(--flip-shadow-width, 0);
   left: var(--flip-shadow-left, 50%);
+  z-index: 15;
+
+  display: none;
+  width: var(--flip-shadow-width, 0);
+  height: 100%;
+
+  pointer-events: none;
 }
 
 .flip-shadow.active {
@@ -219,9 +228,10 @@
    ═══════════════════════════════════════════ */
 
 .page[data-drag-visible="true"] {
-  visibility: visible !important;
-  opacity: 1 !important;
   z-index: 2;
+
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* Скрытие активной страницы во время drag */
@@ -242,9 +252,11 @@
    ═══════════════════════════════════════════ */
 
 .sheet[data-phase="drag"] {
+  z-index: 20;
+
   opacity: 1;
   visibility: visible;
-  z-index: 20;
+
   /* Угол поворота управляется через CSS-переменную из JS */
   transform: translateZ(1px) rotateY(var(--sheet-angle, 0deg));
 }

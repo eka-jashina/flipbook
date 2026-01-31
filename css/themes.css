@@ -15,13 +15,13 @@ html[data-theme="dark"] {
   --bg-page: #1e1e1e;
   --bg-page-alt: #242424;
   --text-main: #e6e6e6;
-  --text-muted: #aaa;
+  --text-muted: #aaaaaa;
   --border-page: rgba(255, 255, 255, 0.08);
   --page-edge-base: #2a2a2a;
   --page-edge-alt: #1f1f1f;
   --shadow-book: 0 30px 60px rgba(0, 0, 0, 0.7);
   --shadow-page: rgba(0, 0, 0, 0.6);
-  --cover-front-bg: linear-gradient(135deg, #111, #000);
+  --cover-front-bg: linear-gradient(135deg, #111111, #000000);
   --cover-front-text: #eaeaea;
   --cover-back-bg: #1b1b1b;
   --spine-dark: rgba(0, 0, 0, 0.9);
@@ -78,16 +78,16 @@ html[data-theme="bw"] {
   --bg-book: #ffffff;
   --bg-page: #ffffff;
   --bg-page-alt: #ffffff;
-  --text-main: #000;
-  --text-muted: #000;
-  --border-page: #000;
-  --page-edge-base: #fff;
-  --page-edge-alt: #000;
+  --text-main: #000000;
+  --text-muted: #000000;
+  --border-page: #000000;
+  --page-edge-base: #ffffff;
+  --page-edge-alt: #000000;
   --shadow-book: none;
-  --shadow-page: #000;
-  --cover-front-bg: #000;
-  --cover-front-text: #fff;
-  --cover-back-bg: #fff;
+  --shadow-page: #000000;
+  --cover-front-bg: #000000;
+  --cover-front-text: #ffffff;
+  --cover-back-bg: #ffffff;
 }
 
 /* ═══════════════════════════════════════════
@@ -111,7 +111,7 @@ html[data-theme="bw"] .bg[data-loading="true"] {
 
 html[data-theme="bw"] img {
   filter: grayscale(100%);
-  background: linear-gradient(135deg, #ccc 0%, #eee 50%, #ccc 100%);
+  background: linear-gradient(135deg, #cccccc 0%, #eeeeee 50%, #cccccc 100%);
 }
 
 /* Индикатор загрузки */

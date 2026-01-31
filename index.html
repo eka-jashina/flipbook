@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="ru">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8">
     <title>Book – Modular Architecture</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Google Fonts -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter&family=Roboto&family=Open+Sans&family=Merriweather&family=Libre+Baskerville&display=swap"
       rel="stylesheet"
-    />
+    >
 
     <!-- Предзагрузка -->
     <link rel="preload" fetchpriority="high" as="image" href="images/backgrounds/bg-cover.webp" type="image/webp" media="(min-width: 769px)">
@@ -17,10 +17,10 @@
     <link rel="preload" href="fonts/tolkiencyr.woff2" as="font" crossorigin="anonymous">
 
     <!-- Главный CSS (импортирует все модули) -->
-    <link rel="stylesheet" href="css/index.css" />
+    <link rel="stylesheet" href="css/index.css">
   </head>
 
-<body data-debug="false">
+  <body data-debug="false">
     <!-- Фоновые изображения глав (два слоя для кроссфейда) -->
     <div class="chapter-bg">
       <div class="bg" data-active="false"></div>
@@ -145,7 +145,7 @@
               Продолжить
             </button>
             <label class="settings-toggle">
-              <input class="settings-checkbox" type="checkbox" id="settings-checkbox" />
+              <input class="settings-checkbox" type="checkbox" id="settings-checkbox">
               <svg viewBox="0 0 24 24" width="18" height="18">
                 <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
               </svg>
@@ -247,7 +247,7 @@
               </div>
               <div class="audio-row">
                 <label class="toggle-switch">
-                  <input type="checkbox" id="sound-toggle" checked />
+                  <input type="checkbox" id="sound-toggle" checked>
                   <span class="toggle-slider"></span>
                 </label>
                 <div class="volume-control" id="page-volume-control">
@@ -261,7 +261,7 @@
                     max="100"
                     value="30"
                     class="volume-slider"
-                  />
+                  >
                   <svg class="vol-icon vol-max" viewBox="0 0 24 24" width="16" height="16">
                     <path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                   </svg>
@@ -291,7 +291,7 @@
                   max="100"
                   value="50"
                   class="volume-slider"
-                />
+                >
                 <svg class="vol-icon vol-max" viewBox="0 0 24 24" width="16" height="16">
                   <path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                 </svg>
@@ -308,5 +308,5 @@
 
     <!-- ES Module entry point -->
     <script type="module" src="js/index.js"></script>
-</body>
+  </body>
 </html>
