@@ -107,17 +107,17 @@ export class BookAnimator {
       // Фаза 2: Rotate (поворот страницы на 180°)
       sheet.dataset.phase = "rotate";
 
-      // Подмена буферов на ~90° (40% от длительности с учётом easing),
-      // когда лист стоит ребром и ни одна сторона книги не видна чётко.
-      // Одновременно скрываем лицевую сторону листа, чтобы не было
-      // зеркального отражения из-за ненадёжного backface-visibility.
-      const midpoint = timings.rotate * 0.4;
+      // Подмена буферов в начале поворота, пока лист закрывает исходную сторону
+      const swapDelay = direction === "next" ? timings.swapNext : timings.swapPrev;
       this.timerManager.setTimeout(() => {
         if (!signal.aborted) {
-          this.elements.sheetFront.style.opacity = "0";
           onSwap();
         }
-      }, midpoint);
+      }, swapDelay);
+
+      // Скрываем лицевую сторону листа перед ~90° (40% с учётом easing),
+      // чтобы backface-visibility не дал зеркальное отражение
+      this._scheduleSideSwitch(timings.rotate, signal);
 
       await TransitionHelper.waitFor(
         sheet, "transform", timings.rotate + safetyMargin, signal
@@ -215,6 +215,25 @@ export class BookAnimator {
     } catch (error) {
       if (error.name !== "AbortError") throw error;
     }
+  }
+
+  /**
+   * Скрыть лицевую сторону листа перед серединой поворота,
+   * чтобы её задняя грань не просвечивала зеркальным отражением.
+   * @private
+   * @param {number} rotateDuration - Длительность фазы rotate (мс)
+   * @param {AbortSignal} signal
+   */
+  _scheduleSideSwitch(rotateDuration, signal) {
+    const { sheetFront } = this.elements;
+    if (!sheetFront) return;
+
+    const midpoint = rotateDuration * 0.4;
+    this.timerManager.setTimeout(() => {
+      if (!signal.aborted) {
+        sheetFront.style.opacity = "0";
+      }
+    }, midpoint);
   }
 
   /**
