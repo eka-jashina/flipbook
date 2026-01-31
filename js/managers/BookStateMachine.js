@@ -143,6 +143,30 @@ export class BookStateMachine {
   }
 
   /**
+   * Принудительно перейти в состояние (без валидации переходов)
+   *
+   * Используется для восстановления после ошибок, когда нормальный
+   * переход невозможен (например, OPENED → OPENED).
+   * Уведомляет подписчиков, если состояние изменилось.
+   *
+   * @param {string} newState - Целевое состояние
+   */
+  forceTransitionTo(newState) {
+    const oldState = this._state;
+    if (oldState === newState) return;
+
+    this._state = newState;
+
+    for (const listener of this._listeners) {
+      try {
+        listener(newState, oldState);
+      } catch (e) {
+        console.error("State listener error:", e);
+      }
+    }
+  }
+
+  /**
    * Принудительно установить состояние (без валидации)
    *
    * Используется для инициализации или восстановления состояния.
