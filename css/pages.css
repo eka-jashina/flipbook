@@ -111,12 +111,14 @@
 .page[data-side="left"] {
   box-shadow:
     inset -1px 0 0 var(--paper-highlight),
+    inset -4px 0 6px rgba(0, 0, 0, 0.04),
     inset -10px 0 18px var(--spine-soft);
 }
 
 .page[data-side="right"] {
   box-shadow:
     inset 1px 0 0 var(--paper-highlight),
+    inset 4px 0 6px rgba(0, 0, 0, 0.04),
     inset 10px 0 18px var(--spine-soft);
 }
 
@@ -141,9 +143,10 @@
   background: linear-gradient(
     to right,
     var(--spine-dark) 0%,
-    var(--spine-mid) 20%,
-    var(--spine-soft) 45%,
-    transparent 100%
+    var(--spine-mid) 15%,
+    var(--spine-soft) 40%,
+    transparent 75%,
+    var(--paper-highlight) 100%
   );
   filter: blur(var(--spine-shadow-blur));
 }
@@ -154,9 +157,10 @@
   background: linear-gradient(
     to left,
     var(--spine-dark) 0%,
-    var(--spine-mid) 20%,
-    var(--spine-soft) 45%,
-    transparent 100%
+    var(--spine-mid) 15%,
+    var(--spine-soft) 40%,
+    transparent 75%,
+    var(--paper-highlight) 100%
   );
   filter: blur(var(--spine-shadow-blur));
 }
