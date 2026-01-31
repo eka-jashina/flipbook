@@ -192,7 +192,9 @@ export class NavigationDelegate extends BaseDelegate {
 
     } catch (error) {
       console.error('Navigation flip error:', error);
-      this.stateMachine.transitionTo(BookState.OPENED);
+      // Используем forceTransitionTo — состояние может уже быть OPENED
+      // если ошибка произошла после успешного transitionTo(OPENED)
+      this.stateMachine.forceTransitionTo(BookState.OPENED);
     }
   }
 

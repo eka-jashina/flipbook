@@ -19,6 +19,7 @@
  *    _cancelFlip()    → При отмене: возврат видимости страниц
  */
 
+import { BookState } from "../../config.js";
 import { cssVars } from "../../utils/CSSVariables.js";
 import { BaseDelegate } from './BaseDelegate.js';
 import { DragShadowRenderer } from './DragShadowRenderer.js';
@@ -178,6 +179,10 @@ export class DragDelegate extends BaseDelegate {
     if (dir === "next" && !this.canFlipNext()) return;
     if (dir === "prev" && !this.canFlipPrev()) return;
 
+    // Переходим в FLIPPING через state machine, чтобы заблокировать
+    // конкурентные операции (навигация, другой drag)
+    if (!this.stateMachine.transitionTo(BookState.FLIPPING)) return;
+
     this.isDragging = true;
     this.direction = dir;
     this.startX = e.clientX;
@@ -237,7 +242,6 @@ export class DragDelegate extends BaseDelegate {
     }
 
     if (book) {
-      book.dataset.state = "flipping";
       book.dataset.dragging = "";
     }
   }
@@ -441,6 +445,9 @@ export class DragDelegate extends BaseDelegate {
     // Очистка теней через shadowRenderer
     this.shadowRenderer.reset();
 
+    // Возвращаемся в OPENED через state machine
+    this.stateMachine.transitionTo(BookState.OPENED);
+
     if (completed) {
       this._completeFlip(direction);
     } else {
@@ -505,8 +512,6 @@ export class DragDelegate extends BaseDelegate {
    * @param {boolean} completed - Было ли перелистывание успешным
    */
   _cleanupAfterFlip(book, completed = false) {
-    if (book) book.dataset.state = "opened";
-
     if (this._pageRefs) {
       const { leftActive, rightActive, leftBuffer, rightBuffer } = this._pageRefs;
 
