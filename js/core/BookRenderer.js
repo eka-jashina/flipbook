@@ -209,23 +209,40 @@ export class BookRenderer {
    * Вызывается в середине анимации перелистывания
    */
   swapBuffers() {
-    const { leftActive, rightActive, leftBuffer, rightBuffer } = this.elements;
+    this.swapLeft();
+    this.swapRight();
+  }
 
-    // Текущие active становятся buffer
+  /**
+   * Поменять местами только левую active/buffer страницу
+   * Вызывается когда лист закрывает левую сторону (после ~90°)
+   */
+  swapLeft() {
+    const { leftActive, leftBuffer } = this.elements;
+
     leftActive.dataset.buffer = "true";
-    rightActive.dataset.buffer = "true";
     leftActive.dataset.active = "false";
-    rightActive.dataset.active = "false";
 
-    // Текущие buffer становятся active
     leftBuffer.dataset.buffer = "false";
-    rightBuffer.dataset.buffer = "false";
     leftBuffer.dataset.active = "true";
-    rightBuffer.dataset.active = "true";
 
-    // Обновляем ссылки
     this.elements.leftActive = leftBuffer;
     this.elements.leftBuffer = leftActive;
+  }
+
+  /**
+   * Поменять местами только правую active/buffer страницу
+   * Вызывается когда лист закрывает правую сторону (до ~90°)
+   */
+  swapRight() {
+    const { rightActive, rightBuffer } = this.elements;
+
+    rightActive.dataset.buffer = "true";
+    rightActive.dataset.active = "false";
+
+    rightBuffer.dataset.buffer = "false";
+    rightBuffer.dataset.active = "true";
+
     this.elements.rightActive = rightBuffer;
     this.elements.rightBuffer = rightActive;
   }
