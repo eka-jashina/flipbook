@@ -113,19 +113,14 @@ export class BookAnimator {
       // - "next": лист уходит вправо→влево, закрывает правую (0°–90°), потом левую (90°–180°)
       // - "prev": лист уходит влево→вправо, закрывает левую (0°–90°), потом правую (90°–180°)
       const earlyDelay = direction === "next" ? timings.swapNext : timings.swapPrev;
-      const lateDelay = timings.rotate * 0.55;
 
-      // Закрытая сторона меняется рано, открытая — после ~90°
+      // Закрытая сторона меняется рано (лист лежит на ней), открытая — в конце поворота
       const earlySwap = direction === "next" ? onSwap.right : onSwap.left;
       const lateSwap = direction === "next" ? onSwap.left : onSwap.right;
 
       this.timerManager.setTimeout(() => {
         if (!signal.aborted) earlySwap();
       }, earlyDelay);
-
-      this.timerManager.setTimeout(() => {
-        if (!signal.aborted) lateSwap();
-      }, lateDelay);
 
       // Переключаем стороны листа в середине поворота (на ~90°),
       // чтобы избежать зеркального отражения из-за ненадёжного backface-visibility
@@ -134,6 +129,10 @@ export class BookAnimator {
       await TransitionHelper.waitFor(
         sheet, "transform", timings.rotate + safetyMargin, signal
       );
+
+      // Поздний свап: лист полностью лёг на целевую сторону (180°),
+      // подменяем контент под ним перед фазой drop
+      if (!signal.aborted) lateSwap();
 
       // Фаза 3: Drop (опускание страницы)
       sheet.dataset.phase = "drop";
