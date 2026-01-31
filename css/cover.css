@@ -1,6 +1,6 @@
 /**
  * COVER STYLES
- * 
+ *
  * Двусторонняя обложка с 3D-трансформацией.
  */
 
@@ -25,10 +25,10 @@
 .cover-back {
   position: absolute;
   inset: 0;
-  
+
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  
+
   border-radius: 12px 0 0 12px;
   transition:
     background-color var(--timing-transition),
