@@ -122,7 +122,6 @@
 
 .toggle-switch:hover {
   transform: none;
-  outline: none;
 }
 
 /* ═══════════════════════════════════════════
@@ -155,7 +154,6 @@
 
   background: var(--pod-btn-bg);
   border-radius: 3px;
-  outline: none;
 
   cursor: pointer;
   -webkit-appearance: none;

@@ -58,7 +58,6 @@
   color: var(--pod-btn-color-hover, inherit);
 
   background: var(--pod-btn-bg-hover);
-  outline: none;
 
   transform: scale(1.08);
 }
@@ -141,7 +140,6 @@
   color: var(--pod-btn-color-hover, inherit);
 
   background: var(--pod-btn-bg-hover);
-  outline: none;
   opacity: 1;
 
   transform: scale(1.05);
@@ -206,7 +204,6 @@
   color: var(--pod-btn-color-hover, inherit);
 
   background: var(--pod-btn-bg-hover);
-  outline: none;
 
   transform: scale(1.02);
 }
@@ -234,7 +231,6 @@
   color: var(--pod-btn-color-hover, inherit);
 
   background: var(--pod-btn-bg-hover);
-  outline: none;
 
   transform: scale(1.02);
 }

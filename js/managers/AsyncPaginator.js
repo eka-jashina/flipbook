@@ -269,6 +269,8 @@ export class AsyncPaginator extends EventEmitter {
       const li = document.createElement("li");
       li.textContent = h.textContent;
       li.dataset.chapter = i;
+      li.setAttribute("tabindex", "0");
+      li.setAttribute("role", "button");
       tocList.appendChild(li);
     });
 
