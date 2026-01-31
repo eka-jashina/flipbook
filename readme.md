@@ -152,7 +152,13 @@ flipbook/
 │   ├── debug.css                   # Панель отладки (dev)
 │   ├── animations.css              # Keyframe-анимации
 │   ├── drag.css                    # Стили drag-взаимодействия
-│   └── responsive.css              # Адаптивность
+│   ├── responsive.css              # Адаптивность
+│   └── controls/                   # Стили UI-контролов
+│       ├── index.css               # Входная точка + общие стили
+│       ├── pod-variables.css       # CSS-переменные контролов
+│       ├── navigation-pod.css      # Навигация и прогресс-бар
+│       ├── settings-pod.css        # Панель настроек
+│       └── audio-pod.css           # Аудио-контролы
 │
 └── public/                         # Статические ресурсы
     ├── content/                    # HTML-контент глав
@@ -188,6 +194,10 @@ npm run dev
 | `npm run preview` | Превью production-сборки (порт 4173) |
 | `npm run serve` | Запуск статик-сервера для `dist/` |
 | `npm run size` | Проверка размера файлов в `dist/` |
+| `npm run clean` | Удаление папки `dist/` |
+| `npm run deploy` | Сборка + деплой на Netlify |
+| `npm run deploy:netlify` | Деплой `dist/` на Netlify |
+| `npm run deploy:vercel` | Деплой на Vercel |
 
 ---
 
