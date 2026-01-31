@@ -334,7 +334,27 @@ export class DragDelegate extends BaseDelegate {
       sheet.style.setProperty("--sheet-angle", `${angle}deg`);
     }
 
+    // Явно переключаем видимость сторон листа по углу,
+    // чтобы не зависеть от backface-visibility при JS-управляемых трансформах
+    this._updateSideVisibility();
+
     this.shadowRenderer.update(this.currentAngle, this.direction, this.isMobile);
+  }
+
+  /**
+   * Переключить видимость front/back сторон листа в зависимости от угла.
+   * При углах > 90° лицевая сторона повёрнута задом — скрываем её,
+   * показываем оборотную (и наоборот).
+   * @private
+   */
+  _updateSideVisibility() {
+    const { sheetFront, sheetBack } = this.renderer.elements;
+    if (!sheetFront || !sheetBack) return;
+
+    const pastHalf = this.currentAngle > 90;
+
+    sheetFront.style.visibility = pastHalf ? "hidden" : "visible";
+    sheetBack.style.visibility = pastHalf ? "visible" : "hidden";
   }
 
   // ═══════════════════════════════════════════
@@ -393,6 +413,11 @@ export class DragDelegate extends BaseDelegate {
       delete sheet.dataset.phase;
       delete sheet.dataset.direction;
     }
+
+    // Очистка inline-visibility на сторонах листа
+    const { sheetFront, sheetBack } = this.renderer.elements;
+    if (sheetFront) sheetFront.style.removeProperty("visibility");
+    if (sheetBack) sheetBack.style.removeProperty("visibility");
 
     // Очистка data-dragging на book
     const book = this.dom.get("book");
