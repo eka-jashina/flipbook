@@ -67,16 +67,14 @@ export class EventController {
     const { nextBtn, prevBtn, tocBtn, continueBtn, coverEl } = elements;
 
     if (nextBtn) {
-      this.eventManager.add(nextBtn, "pointerdown", (e) => {
-        e.preventDefault();
+      this.eventManager.add(nextBtn, "click", () => {
         if (this.isBusy()) return;
         this.onFlip("next");
       });
     }
 
     if (prevBtn) {
-      this.eventManager.add(prevBtn, "pointerdown", (e) => {
-        e.preventDefault();
+      this.eventManager.add(prevBtn, "click", () => {
         if (this.isBusy()) return;
         this.onFlip("prev");
       });
@@ -116,6 +114,17 @@ export class EventController {
     // поэтому на тач-устройствах элемент не сдвигается и click генерируется корректно.
     // pointerup не подходит: touch-action: pan-y на .book вызывает pointercancel в Firefox
     this.eventManager.add(this.book, "click", (e) => {
+      const li = e.target.closest(".toc li");
+      if (!li) return;
+      e.preventDefault();
+
+      const chapter = +li.dataset.chapter;
+      this.onTOCClick(chapter);
+    });
+
+    // Клавиатурная навигация для TOC items (Enter/Space)
+    this.eventManager.add(this.book, "keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
       const li = e.target.closest(".toc li");
       if (!li) return;
       e.preventDefault();
@@ -296,6 +305,10 @@ export class EventController {
   _bindKeyboard() {
     this._boundHandlers.keydown = (e) => {
       if (this.isBusy()) return;
+
+      // Не перехватываем клавиши, когда фокус на элементах форм
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
 
       switch (e.key) {
         case "ArrowLeft":

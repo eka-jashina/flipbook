@@ -301,8 +301,15 @@ export class BookController {
     // Обновить прогресс-бар
     const progressBar = this.dom.get('readingProgress');
     if (progressBar && totalPages > 0) {
-      const progress = (currentPage / totalPages) * 100;
+      const progress = Math.round((currentPage / totalPages) * 100);
       progressBar.style.setProperty("--progress-width", `${progress}%`);
+      progressBar.setAttribute("aria-valuenow", progress);
+    }
+
+    // Обновить aria-label счётчика страниц
+    const pageCounter = currentPageEl?.closest('.page-counter');
+    if (pageCounter) {
+      pageCounter.setAttribute('aria-label', `Страница ${currentPage} из ${totalPages}`);
     }
   }
 
