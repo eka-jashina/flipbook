@@ -227,20 +227,9 @@ export class DragDelegate extends BaseDelegate {
       sheet.classList.add("no-transition");
     }
 
-    // Отключаем backface-visibility на сторонах листа при drag:
-    // при JS-управляемых трансформах оно ненадёжно и вызывает зеркальное отражение.
-    // Вместо этого переключаем opacity в _updateSideVisibility().
-    const { sheetFront, sheetBack } = this.renderer.elements;
-    if (sheetFront) {
-      sheetFront.style.backfaceVisibility = "visible";
-      sheetFront.style.webkitBackfaceVisibility = "visible";
-      sheetFront.style.opacity = "1";
-    }
-    if (sheetBack) {
-      sheetBack.style.backfaceVisibility = "visible";
-      sheetBack.style.webkitBackfaceVisibility = "visible";
-      sheetBack.style.opacity = "0";
-    }
+    // При drag backface-visibility может не успевать скрывать лицевую сторону,
+    // и она просвечивает зеркальным отражением. Управляем opacity front-стороны вручную.
+
 
     if (book) {
       book.dataset.state = "flipping";
@@ -363,13 +352,13 @@ export class DragDelegate extends BaseDelegate {
    * @private
    */
   _updateSideVisibility() {
-    const { sheetFront, sheetBack } = this.renderer.elements;
-    if (!sheetFront || !sheetBack) return;
+    const { sheetFront } = this.renderer.elements;
+    if (!sheetFront) return;
 
-    const pastHalf = this.currentAngle > 90;
-
-    sheetFront.style.opacity = pastHalf ? "0" : "1";
-    sheetBack.style.opacity = pastHalf ? "1" : "0";
+    // Скрываем front когда он повёрнут задом (>90°),
+    // чтобы его задняя грань не просвечивала зеркалом.
+    // back-сторону не трогаем — backface-visibility справляется с ней.
+    sheetFront.style.opacity = this.currentAngle > 90 ? "0" : "1";
   }
 
   // ═══════════════════════════════════════════
@@ -429,17 +418,10 @@ export class DragDelegate extends BaseDelegate {
       delete sheet.dataset.direction;
     }
 
-    // Очистка inline-стилей на сторонах листа
-    const { sheetFront, sheetBack } = this.renderer.elements;
+    // Очистка inline-opacity на лицевой стороне листа
+    const { sheetFront } = this.renderer.elements;
     if (sheetFront) {
       sheetFront.style.removeProperty("opacity");
-      sheetFront.style.removeProperty("backface-visibility");
-      sheetFront.style.removeProperty("-webkit-backface-visibility");
-    }
-    if (sheetBack) {
-      sheetBack.style.removeProperty("opacity");
-      sheetBack.style.removeProperty("backface-visibility");
-      sheetBack.style.removeProperty("-webkit-backface-visibility");
     }
 
     // Очистка data-dragging на book
