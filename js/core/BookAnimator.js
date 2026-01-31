@@ -219,32 +219,23 @@ export class BookAnimator {
   }
 
   /**
-   * Запланировать переключение сторон листа в середине поворота.
-   * Отключает backface-visibility и переключает opacity front/back,
-   * чтобы избежать зеркального отражения при CSS-анимации.
+   * Скрыть лицевую сторону листа перед серединой поворота,
+   * чтобы её задняя грань не просвечивала зеркальным отражением.
+   * backface-visibility остаётся hidden — opacity лишь подстраховка.
    * @private
    * @param {number} rotateDuration - Длительность фазы rotate (мс)
    * @param {AbortSignal} signal
    */
   _scheduleSideSwitch(rotateDuration, signal) {
-    const { sheetFront, sheetBack } = this.elements;
-    if (!sheetFront || !sheetBack) return;
+    const { sheetFront } = this.elements;
+    if (!sheetFront) return;
 
-    // Отключаем backface-visibility — будем управлять видимостью вручную
-    sheetFront.style.backfaceVisibility = "visible";
-    sheetFront.style.webkitBackfaceVisibility = "visible";
-    sheetBack.style.backfaceVisibility = "visible";
-    sheetBack.style.webkitBackfaceVisibility = "visible";
-
-    // Изначально: front видим, back скрыт
-    sheetBack.style.opacity = "0";
-
-    // В середине поворота (~90°): переключаем
-    const midpoint = rotateDuration * 0.45;
+    // Скрываем front чуть раньше 90° (40% длительности с учётом easing),
+    // чтобы гарантированно успеть до момента, когда задняя грань видна
+    const midpoint = rotateDuration * 0.4;
     this.timerManager.setTimeout(() => {
       if (!signal.aborted) {
         sheetFront.style.opacity = "0";
-        sheetBack.style.opacity = "1";
       }
     }, midpoint);
   }
@@ -254,14 +245,9 @@ export class BookAnimator {
    * @private
    */
   _resetSideStyles() {
-    const { sheetFront, sheetBack } = this.elements;
-    const props = ["opacity", "backface-visibility", "-webkit-backface-visibility"];
-    for (const el of [sheetFront, sheetBack]) {
-      if (el) {
-        for (const prop of props) {
-          el.style.removeProperty(prop);
-        }
-      }
+    const { sheetFront } = this.elements;
+    if (sheetFront) {
+      sheetFront.style.removeProperty("opacity");
     }
   }
 
