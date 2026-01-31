@@ -80,7 +80,7 @@ export class BookAnimator {
    * Запустить анимацию перелистывания страницы
    * Фазы: lift (поднятие) → rotate (поворот) → drop (опускание)
    * @param {'next'|'prev'} direction - Направление перелистывания
-   * @param {Function} onSwap - Коллбэк для подмены буферов (вызывается на ~90° поворота)
+   * @param {{left: Function, right: Function}} onSwap - Коллбэки для подмены каждой стороны
    */
   async runFlip(direction, onSwap) {
     const signal = this.createSignal();
@@ -107,13 +107,10 @@ export class BookAnimator {
       // Фаза 2: Rotate (поворот страницы на 180°)
       sheet.dataset.phase = "rotate";
 
-      // Подмена буферов в начале поворота, пока лист закрывает исходную сторону
-      const swapDelay = direction === "next" ? timings.swapNext : timings.swapPrev;
-      this.timerManager.setTimeout(() => {
-        if (!signal.aborted) {
-          onSwap();
-        }
-      }, swapDelay);
+      // Подмена буферов раздельно: каждую сторону меняем, пока лист её закрывает.
+      // "next": лист стартует справа → swapRight рано, swapLeft после ~90°
+      // "prev": лист стартует слева → swapLeft рано, swapRight после ~90°
+      this._scheduleSwaps(direction, timings, onSwap, signal);
 
       // Скрываем лицевую сторону листа перед ~90° (40% с учётом easing),
       // чтобы backface-visibility не дал зеркальное отражение
@@ -214,6 +211,40 @@ export class BookAnimator {
       delete cover.dataset.animation;
     } catch (error) {
       if (error.name !== "AbortError") throw error;
+    }
+  }
+
+  /**
+   * Запланировать раздельный свап левой и правой стороны.
+   * Каждая сторона меняется, пока лист её закрывает:
+   * - "next": лист идёт справа→налево, сначала swapRight (рано), потом swapLeft (после ~90°)
+   * - "prev": лист идёт слева→направо, сначала swapLeft (рано), потом swapRight (после ~90°)
+   * @private
+   */
+  _scheduleSwaps(direction, timings, onSwap, signal) {
+    const earlyDelay = direction === "next" ? timings.swapNext : timings.swapPrev;
+    // Поздний свап — после того как лист прошёл ~90° и закрыл противоположную сторону.
+    // 45% от rotate duration (чуть позже геометрических 90° с учётом easing).
+    const lateDelay = timings.rotate * 0.45;
+
+    if (direction === "next") {
+      // Лист закрывает правую сторону в начале
+      this.timerManager.setTimeout(() => {
+        if (!signal.aborted) onSwap.right();
+      }, earlyDelay);
+      // Лист закрывает левую сторону после ~90°
+      this.timerManager.setTimeout(() => {
+        if (!signal.aborted) onSwap.left();
+      }, lateDelay);
+    } else {
+      // Лист закрывает левую сторону в начале
+      this.timerManager.setTimeout(() => {
+        if (!signal.aborted) onSwap.left();
+      }, earlyDelay);
+      // Лист закрывает правую сторону после ~90°
+      this.timerManager.setTimeout(() => {
+        if (!signal.aborted) onSwap.right();
+      }, lateDelay);
     }
   }
 
