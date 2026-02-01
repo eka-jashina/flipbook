@@ -1,7 +1,9 @@
+import { cssVars } from '../../utils/CSSVariables.js';
+
 /**
  * BASE DELEGATE
  * Базовый класс для всех делегатов с общими зависимостями.
- * 
+ *
  * @abstract
  */
 
@@ -122,6 +124,25 @@ export class BaseDelegate {
   /** @returns {boolean} Занят ли state machine */
   get isBusy() {
     return this.stateMachine?.isBusy ?? false;
+  }
+
+  /**
+   * Количество страниц на переворот (зависит от режима desktop/mobile)
+   * @returns {number}
+   */
+  get pagesPerFlip() {
+    return cssVars.getNumber("--pages-per-flip", this.isMobile ? 1 : 2);
+  }
+
+  /**
+   * Воспроизвести звук перелистывания с небольшой вариацией скорости
+   * @protected
+   */
+  _playFlipSound() {
+    if (this.soundManager) {
+      const playbackRate = 0.9 + Math.random() * 0.2;
+      this.soundManager.play('pageFlip', { playbackRate });
+    }
   }
 
   // ═══════════════════════════════════════════

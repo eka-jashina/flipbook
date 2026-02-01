@@ -20,7 +20,6 @@
  */
 
 import { BookState } from "../../config.js";
-import { cssVars } from "../../utils/CSSVariables.js";
 import { BaseDelegate } from './BaseDelegate.js';
 import { DragShadowRenderer } from './DragShadowRenderer.js';
 import { DragAnimator } from './DragAnimator.js';
@@ -83,14 +82,6 @@ export class DragDelegate extends BaseDelegate {
       ['stateMachine', 'renderer', 'dom', 'eventManager', 'mediaQueries', 'state'],
       'DragDelegate'
     );
-  }
-
-  /**
-   * Количество страниц на переворот
-   * @returns {number}
-   */
-  get pagesPerFlip() {
-    return cssVars.getNumber("--pages-per-flip", this.isMobile ? 1 : 2);
   }
 
   /**
@@ -473,11 +464,7 @@ export class DragDelegate extends BaseDelegate {
         ? this.currentIndex + this.pagesPerFlip
         : this.currentIndex - this.pagesPerFlip;
 
-    // Воспроизводим звук
-    if (this.soundManager) {
-      const playbackRate = 0.9 + Math.random() * 0.2;
-      this.soundManager.play('pageFlip', { playbackRate });
-    }
+    this._playFlipSound();
 
     this.renderer.swapBuffers();
 
