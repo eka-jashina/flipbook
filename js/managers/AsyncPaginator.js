@@ -191,12 +191,17 @@ export class AsyncPaginator extends EventEmitter {
         return;
       }
 
-      const timeoutId = setTimeout(resolve, this.yieldInterval);
-
-      signal?.addEventListener("abort", () => {
+      const onAbort = () => {
         clearTimeout(timeoutId);
         reject(new DOMException("Aborted", "AbortError"));
-      }, { once: true });
+      };
+
+      const timeoutId = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, this.yieldInterval);
+
+      signal?.addEventListener("abort", onAbort, { once: true });
     });
   }
 
