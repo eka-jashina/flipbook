@@ -3,9 +3,8 @@
  * Управление навигацией по книге.
  */
 
-import { CONFIG, BookState } from '../../config.js';
+import { BookState } from '../../config.js';
 import { BaseDelegate } from './BaseDelegate.js';
-import { cssVars } from '../../utils/CSSVariables.js';
 
 export class NavigationDelegate extends BaseDelegate {
   /**
@@ -38,14 +37,6 @@ export class NavigationDelegate extends BaseDelegate {
       ['stateMachine', 'renderer', 'animator', 'settings', 'mediaQueries', 'state'],
       'NavigationDelegate'
     );
-  }
-
-  /**
-   * Получить количество страниц на переворот
-   * @returns {number}
-   */
-  get pagesPerFlip() {
-    return cssVars.getNumber("--pages-per-flip", this.isMobile ? 1 : 2);
   }
 
   // ═══════════════════════════════════════════
@@ -195,18 +186,6 @@ export class NavigationDelegate extends BaseDelegate {
       // Используем forceTransitionTo — состояние может уже быть OPENED
       // если ошибка произошла после успешного transitionTo(OPENED)
       this.stateMachine.forceTransitionTo(BookState.OPENED);
-    }
-  }
-
-  /**
-   * Воспроизвести звук перелистывания
-   * @private
-   */
-  _playFlipSound() {
-    if (this.soundManager) {
-      // Небольшая вариация в скорости для естественности
-      const playbackRate = 0.9 + Math.random() * 0.2;
-      this.soundManager.play('pageFlip', { playbackRate });
     }
   }
 
