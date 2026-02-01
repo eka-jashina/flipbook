@@ -25,7 +25,7 @@ import { mediaQueries } from '../utils/MediaQueryManager.js';
 
 /**
  * @typedef {Object} PaginationResult
- * @property {string[]} pages - HTML-строки для каждой страницы
+ * @property {HTMLElement[]} pages - DOM-элементы для каждой страницы
  * @property {number[]} chapterStarts - Индексы страниц, с которых начинаются главы
  */
 
@@ -361,7 +361,7 @@ export class AsyncPaginator extends EventEmitter {
    * @param {number} pageWidth - Ширина страницы
    * @param {number} pageHeight - Высота страницы
    * @param {AbortSignal} [signal] - Сигнал для отмены
-   * @returns {Promise<string[]>} Массив HTML-строк страниц
+   * @returns {Promise<HTMLElement[]>} Массив DOM-элементов страниц
    * @throws {DOMException} AbortError при отмене
    * @private
    */
@@ -396,7 +396,7 @@ export class AsyncPaginator extends EventEmitter {
       }
 
       clone.style.transform = `translateX(${-i * pageWidth}px)`;
-      result.push(snap.innerHTML);
+      result.push(snap.cloneNode(true));
 
       if (i % this.chunkSize === 0) {
         this.emit("progress", {

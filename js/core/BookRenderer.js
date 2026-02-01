@@ -24,7 +24,7 @@ export class BookRenderer {
    */
   constructor(options) {
     this.cache = new LRUCache(options.cacheLimit || 12);
-    /** @type {string[]} HTML-содержимое всех страниц */
+    /** @type {HTMLElement[]} DOM-элементы всех страниц */
     this.pageContents = [];
     /** @type {Set<string>} Уже загруженные URL изображений */
     this.loadedImageUrls = new Set();
@@ -41,7 +41,7 @@ export class BookRenderer {
 
   /**
    * Установить содержимое страниц (после пагинации)
-   * @param {string[]} contents - Массив HTML-строк для каждой страницы
+   * @param {HTMLElement[]} contents - Массив DOM-элементов страниц
    */
   setPageContents(contents) {
     this.pageContents = contents;
@@ -64,13 +64,12 @@ export class BookRenderer {
       return cached.cloneNode(true);
     }
 
-    // Парсим HTML и кэшируем
-    const wrapper = document.createElement("div");
-    wrapper.innerHTML = this.pageContents[index];
-    const dom = wrapper.firstElementChild || wrapper;
+    // Клонируем DOM-элемент напрямую (без innerHTML-парсинга)
+    const source = this.pageContents[index];
+    const dom = source.cloneNode(true);
 
-    this.cache.set(index, dom.cloneNode(true));
-    return dom;
+    this.cache.set(index, dom);
+    return dom.cloneNode(true);
   }
 
   /**
