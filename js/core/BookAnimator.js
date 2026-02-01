@@ -44,7 +44,6 @@ export class BookAnimator {
    * @returns {Object} Объект с таймингами в мс
    */
   getTimings() {
-    cssVars.invalidateCache();
     return {
       lift: cssVars.getTime("--timing-lift", 240),
       rotate: cssVars.getTime("--timing-rotate", 900),
