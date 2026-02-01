@@ -223,16 +223,8 @@ export class DragDelegate extends BaseDelegate {
       sheet.classList.add("no-transition");
     }
 
-    // При drag (JS-трансформы) backface-visibility ненадёжно для обеих сторон.
-    // Отключаем его на back и управляем видимостью обеих сторон через opacity.
-    const { sheetFront, sheetBack } = this.renderer.elements;
-    if (sheetBack) {
-      sheetBack.style.backfaceVisibility = "visible";
-      sheetBack.style.webkitBackfaceVisibility = "visible";
-      sheetBack.style.opacity = "0";
-    }
-
     if (book) {
+      book.dataset.state = "flipping";
       book.dataset.dragging = "";
     }
   }
@@ -338,29 +330,7 @@ export class DragDelegate extends BaseDelegate {
       sheet.style.setProperty("--sheet-angle", `${angle}deg`);
     }
 
-    // Явно переключаем видимость сторон листа по углу,
-    // чтобы не зависеть от backface-visibility при JS-управляемых трансформах
-    this._updateSideVisibility();
-
     this.shadowRenderer.update(this.currentAngle, this.direction, this.isMobile);
-  }
-
-  /**
-   * Переключить видимость front/back сторон листа в зависимости от угла.
-   * При углах > 90° лицевая сторона повёрнута задом — скрываем её,
-   * показываем оборотную (и наоборот).
-   * @private
-   */
-  _updateSideVisibility() {
-    const { sheetFront, sheetBack } = this.renderer.elements;
-    if (!sheetFront || !sheetBack) return;
-
-    const pastHalf = this.currentAngle > 90;
-
-    // При JS-управляемых трансформах backface-visibility ненадёжно
-    // для обеих сторон — управляем видимостью полностью через opacity
-    sheetFront.style.opacity = pastHalf ? "0" : "1";
-    sheetBack.style.opacity = pastHalf ? "1" : "0";
   }
 
   // ═══════════════════════════════════════════
@@ -418,15 +388,6 @@ export class DragDelegate extends BaseDelegate {
       sheet.style.removeProperty("--sheet-angle");
       delete sheet.dataset.phase;
       delete sheet.dataset.direction;
-    }
-
-    // Очистка inline-стилей на сторонах листа
-    const { sheetFront, sheetBack } = this.renderer.elements;
-    if (sheetFront) sheetFront.style.removeProperty("opacity");
-    if (sheetBack) {
-      sheetBack.style.removeProperty("opacity");
-      sheetBack.style.removeProperty("backface-visibility");
-      sheetBack.style.removeProperty("-webkit-backface-visibility");
     }
 
     // Очистка data-dragging на book
@@ -499,6 +460,8 @@ export class DragDelegate extends BaseDelegate {
    * @param {boolean} completed - Было ли перелистывание успешным
    */
   _cleanupAfterFlip(book, completed = false) {
+    if (book) book.dataset.state = "opened";
+
     if (this._pageRefs) {
       const { leftActive, rightActive, leftBuffer, rightBuffer } = this._pageRefs;
 
