@@ -63,12 +63,12 @@
 }
 
 .sheet[data-phase="drop"][data-direction="next"] {
-  transition: transform var(--timing-drop) cubic-bezier(0.0, 0.0, 0.2, 1);
+  transition: transform var(--timing-drop) ease-in;
   transform: translateZ(0) rotateY(-180deg);
 }
 
 .sheet[data-phase="drop"][data-direction="prev"] {
-  transition: transform var(--timing-drop) cubic-bezier(0.0, 0.0, 0.2, 1);
+  transition: transform var(--timing-drop) ease-in;
   transform: translateZ(0) rotateY(180deg);
 }
 
@@ -93,6 +93,8 @@
   background-position: center;
   background-size: cover;
 
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   /* Обе версии для кросс-браузерности */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;

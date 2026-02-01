@@ -86,8 +86,6 @@
 /* Активная страница поднимается при перелистывании */
 .book[data-state="flipping"] .page[data-active="true"] {
   z-index: 5;
-  /* Мгновенная смена при свапе буферов — без fade-in */
-  transition: background-color var(--timing-transition);
 }
 
 /* ═══════════════════════════════════════════

@@ -131,13 +131,11 @@ export class ComponentFactory {
    * @returns {BookAnimator}
    */
   createAnimator() {
-    const { book, bookWrap, cover, sheet, sheetFront, sheetBack } = this.dom.getMultiple(
+    const { book, bookWrap, cover, sheet } = this.dom.getMultiple(
       "book",
       "bookWrap",
       "cover",
       "sheet",
-      "sheetFront",
-      "sheetBack",
     );
 
     return new BookAnimator({
@@ -145,8 +143,6 @@ export class ComponentFactory {
       bookWrap,
       cover,
       sheet,
-      sheetFront,
-      sheetBack,
       timerManager: this.timerManager,
     });
   }
