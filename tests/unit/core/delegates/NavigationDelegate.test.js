@@ -25,6 +25,10 @@ vi.mock('../../../../js/config.js', () => ({
     FLIPPING: 'FLIPPING',
     CLOSING: 'CLOSING',
   },
+  Direction: {
+    NEXT: "next",
+    PREV: "prev",
+  },
 }));
 
 const { NavigationDelegate } = await import('../../../../js/core/delegates/NavigationDelegate.js');

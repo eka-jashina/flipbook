@@ -27,11 +27,25 @@ vi.mock('../../../../js/core/delegates/DragAnimator.js', () => ({
 
 vi.mock('../../../../js/config.js', () => ({
   BookState: {
-    CLOSED: 'CLOSED',
-    OPENING: 'OPENING',
-    OPENED: 'OPENED',
-    FLIPPING: 'FLIPPING',
-    CLOSING: 'CLOSING',
+    CLOSED: 'closed',
+    OPENING: 'opening',
+    OPENED: 'opened',
+    FLIPPING: 'flipping',
+    CLOSING: 'closing',
+  },
+  FlipPhase: {
+    LIFT: "lift",
+    ROTATE: "rotate",
+    DROP: "drop",
+    DRAG: "drag",
+  },
+  Direction: {
+    NEXT: "next",
+    PREV: "prev",
+  },
+  BoolStr: {
+    TRUE: "true",
+    FALSE: "false",
   },
 }));
 
@@ -267,7 +281,7 @@ describe('DragDelegate', () => {
     it('should transition to FLIPPING', () => {
       delegate._startDrag({ clientX: 500 }, 'next');
 
-      expect(mockDeps.stateMachine.transitionTo).toHaveBeenCalledWith('FLIPPING');
+      expect(mockDeps.stateMachine.transitionTo).toHaveBeenCalledWith('flipping');
     });
 
     it('should set drag state', () => {
@@ -487,7 +501,7 @@ describe('DragDelegate', () => {
     it('should transition back to OPENED', () => {
       delegate._finish(true);
 
-      expect(mockDeps.stateMachine.transitionTo).toHaveBeenCalledWith('OPENED');
+      expect(mockDeps.stateMachine.transitionTo).toHaveBeenCalledWith('opened');
     });
 
     it('should call _completeFlip when completed is true', () => {

@@ -36,6 +36,10 @@ vi.mock('../../../../js/config.js', () => ({
     FLIPPING: 'FLIPPING',
     CLOSING: 'CLOSING',
   },
+  Direction: {
+    NEXT: "next",
+    PREV: "prev",
+  },
 }));
 
 const { LifecycleDelegate } = await import('../../../../js/core/delegates/LifecycleDelegate.js');
