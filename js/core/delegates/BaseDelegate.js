@@ -14,9 +14,8 @@ export class BaseDelegate {
   constructor(deps) {
     this._validateRequiredDependencies(deps);
     this._deps = deps;
-
-    /** @type {boolean} Флаг уничтожения делегата */
-    this.isDestroyed = false;
+    /** @type {boolean} Флаг уничтожения компонента */
+    this._isDestroyed = false;
   }
 
   /**
@@ -129,6 +128,11 @@ export class BaseDelegate {
     return this.stateMachine?.isBusy ?? false;
   }
 
+  /** @returns {boolean} Уничтожен ли делегат */
+  get isDestroyed() {
+    return this._isDestroyed;
+  }
+
   /**
    * Количество страниц на переворот (зависит от режима desktop/mobile)
    * @returns {number}
@@ -157,7 +161,7 @@ export class BaseDelegate {
    * Переопределяется в дочерних классах при необходимости
    */
   destroy() {
-    this.isDestroyed = true;
+    this._isDestroyed = true;
     this._deps = null;
   }
 }
