@@ -112,12 +112,17 @@ export class LifecycleDelegate extends BaseDelegate {
         contentPromise,
       ]);
 
+      // Проверка после await: делегат мог быть уничтожен
+      if (this.isDestroyed) return;
+
       if (!signal || !html) {
         return; // Анимация была отменена
       }
 
       // ─── Этап 4: Ожидание стабилизации layout ───
       await this._waitForLayout();
+
+      if (this.isDestroyed) return;
 
       const rightA = this.dom.get('rightA');
       if (!rightA) {
@@ -126,6 +131,8 @@ export class LifecycleDelegate extends BaseDelegate {
 
       // ─── Этап 5: Пагинация контента ───
       const { pages, chapterStarts } = await this.paginator.paginate(html, rightA);
+
+      if (this.isDestroyed) return;
 
       if (this.onPaginationComplete) {
         this.onPaginationComplete(pages, chapterStarts);
@@ -147,6 +154,9 @@ export class LifecycleDelegate extends BaseDelegate {
 
       // ─── Этап 7: Завершение анимации и переход в OPENED ───
       await this.animator.finishOpenAnimation(signal);
+
+      if (this.isDestroyed) return;
+
       this.stateMachine.transitionTo(BookState.OPENED);
 
       // ─── Этап 8: Запуск ambient звука ───
@@ -154,12 +164,17 @@ export class LifecycleDelegate extends BaseDelegate {
       this._startAmbientIfNeeded();
 
     } catch (error) {
+      // Не обрабатываем ошибки, если делегат был уничтожен
+      if (this.isDestroyed) return;
+
       if (error.name !== "AbortError") {
         ErrorHandler.handle(error, "Ошибка при открытии книги");
       }
       this.stateMachine.reset(BookState.CLOSED);
     } finally {
-      this.loadingIndicator.hide();
+      if (!this.isDestroyed) {
+        this.loadingIndicator.hide();
+      }
     }
   }
 
@@ -199,6 +214,9 @@ export class LifecycleDelegate extends BaseDelegate {
       // ─── Этап 4: Анимация закрытия ───
       await this.animator.runCloseAnimation();
 
+      // Проверка после await: делегат мог быть уничтожен
+      if (this.isDestroyed) return;
+
       // ─── Этап 5: Восстановление и очистка ───
       if (leftA) leftA.classList.remove("closing-hidden");
       if (rightA) rightA.classList.remove("closing-hidden");
@@ -213,6 +231,9 @@ export class LifecycleDelegate extends BaseDelegate {
       this.stateMachine.transitionTo(BookState.CLOSED);
 
     } catch (error) {
+      // Не обрабатываем ошибки, если делегат был уничтожен
+      if (this.isDestroyed) return;
+
       if (error.name !== "AbortError") {
         ErrorHandler.handle(error, "Ошибка при закрытии книги");
       }
@@ -241,12 +262,17 @@ export class LifecycleDelegate extends BaseDelegate {
       const chapterUrls = CONFIG.CHAPTERS.map(c => c.file);
       const html = await this.contentLoader.load(chapterUrls);
 
+      // Проверка после await: делегат мог быть уничтожен
+      if (this.isDestroyed) return;
+
       if (!html) {
         throw new Error('LifecycleDelegate: Failed to load content during repagination');
       }
 
       // ─── Этап 3: Пагинация ───
       const { pages, chapterStarts } = await this.paginator.paginate(html, rightA);
+
+      if (this.isDestroyed) return;
 
       if (this.onPaginationComplete) {
         this.onPaginationComplete(pages, chapterStarts);
@@ -267,9 +293,14 @@ export class LifecycleDelegate extends BaseDelegate {
       }
 
     } catch (error) {
+      // Не обрабатываем ошибки, если делегат был уничтожен
+      if (this.isDestroyed) return;
+
       ErrorHandler.handle(error, "Ошибка при репагинации");
     } finally {
-      this.loadingIndicator.hide();
+      if (!this.isDestroyed) {
+        this.loadingIndicator.hide();
+      }
     }
   }
 

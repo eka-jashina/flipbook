@@ -14,6 +14,9 @@ export class BaseDelegate {
   constructor(deps) {
     this._validateRequiredDependencies(deps);
     this._deps = deps;
+
+    /** @type {boolean} Флаг уничтожения делегата */
+    this.isDestroyed = false;
   }
 
   /**
@@ -154,6 +157,7 @@ export class BaseDelegate {
    * Переопределяется в дочерних классах при необходимости
    */
   destroy() {
+    this.isDestroyed = true;
     this._deps = null;
   }
 }
