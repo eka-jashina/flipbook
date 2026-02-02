@@ -35,6 +35,7 @@
 | **Delegate** | `delegates/` | Разделение ответственности по доменам |
 | **Double Buffering** | `BookRenderer` | Плавные переходы между страницами |
 | **LRU Cache** | `LRUCache` | Оптимизация производительности пагинации |
+| **Service Groups** | `services/` | Группировка связанных зависимостей для DI |
 
 ### Конечный автомат состояний
 
@@ -126,6 +127,12 @@ flipbook/
 │       ├── SubscriptionManager.js  # Управление подписками на события
 │       ├── ResizeHandler.js        # Обработка изменения размера окна
 │       │
+│       ├── services/               # Сервисные группы (DI)
+│       │   ├── CoreServices.js         # DOM, события, таймеры, storage
+│       │   ├── AudioServices.js        # Звуки и ambient
+│       │   ├── RenderServices.js       # Рендеринг и анимации
+│       │   └── ContentServices.js      # Загрузка и пагинация контента
+│       │
 │       └── delegates/              # Делегаты по доменам
 │           ├── BaseDelegate.js         # Абстрактный базовый класс
 │           ├── NavigationDelegate.js   # Логика перелистывания
@@ -152,6 +159,7 @@ flipbook/
 │   ├── debug.css                   # Панель отладки (dev)
 │   ├── animations.css              # Keyframe-анимации
 │   ├── drag.css                    # Стили drag-взаимодействия
+│   ├── accessibility.css           # Стили доступности (skip-link, focus)
 │   ├── responsive.css              # Адаптивность
 │   └── controls/                   # Стили UI-контролов
 │       ├── index.css               # Входная точка + общие стили
@@ -160,11 +168,19 @@ flipbook/
 │       ├── settings-pod.css        # Панель настроек
 │       └── audio-pod.css           # Аудио-контролы
 │
-└── public/                         # Статические ресурсы
-    ├── content/                    # HTML-контент глав
-    ├── images/                     # Фоны и иллюстрации (.webp)
-    ├── fonts/                      # Кастомные шрифты (.woff2)
-    └── sounds/                     # Аудио (перелистывание, ambient)
+├── public/                         # Статические ресурсы
+│   ├── content/                    # HTML-контент глав
+│   ├── images/                     # Фоны и иллюстрации (.webp)
+│   ├── fonts/                      # Кастомные шрифты (.woff2)
+│   └── sounds/                     # Аудио (перелистывание, ambient)
+│
+└── tests/                          # Тесты (Vitest)
+    ├── setup.js                    # Настройка тестового окружения
+    ├── helpers/                    # Вспомогательные утилиты для тестов
+    └── unit/                       # Юнит-тесты
+        ├── utils/                  # Тесты утилит
+        ├── managers/               # Тесты менеджеров
+        └── core/                   # Тесты ядра
 ```
 
 ---
@@ -198,6 +214,11 @@ npm run dev
 | `npm run deploy` | Сборка + деплой на Netlify |
 | `npm run deploy:netlify` | Деплой `dist/` на Netlify |
 | `npm run deploy:vercel` | Деплой на Vercel |
+| `npm run test` | Запуск тестов (vitest) |
+| `npm run test:run` | Однократный запуск тестов |
+| `npm run test:watch` | Тесты в watch-режиме |
+| `npm run test:coverage` | Тесты с отчётом покрытия |
+| `npm run test:ui` | Тесты с UI-интерфейсом |
 
 ---
 
@@ -215,6 +236,10 @@ npm run dev
 | **DragDelegate** | `core/delegates/DragDelegate.js` | Touch-перетаскивание страниц |
 | **DragAnimator** | `core/delegates/DragAnimator.js` | Анимация угла поворота при drag |
 | **DragShadowRenderer** | `core/delegates/DragShadowRenderer.js` | Рендеринг теней при drag |
+| **CoreServices** | `core/services/CoreServices.js` | Группа: DOM, события, таймеры, storage |
+| **AudioServices** | `core/services/AudioServices.js` | Группа: звуки и ambient |
+| **RenderServices** | `core/services/RenderServices.js` | Группа: рендеринг и анимации |
+| **ContentServices** | `core/services/ContentServices.js` | Группа: загрузка и пагинация |
 
 ---
 
