@@ -22,6 +22,9 @@ export class BookRenderer {
    * @param {HTMLElement} options.sheetFront - Лицевая сторона перелистываемого листа
    * @param {HTMLElement} options.sheetBack - Оборотная сторона перелистываемого листа
    */
+  /** @type {number} Максимальный размер кэша загруженных URL изображений */
+  static MAX_LOADED_IMAGES = 100;
+
   constructor(options) {
     this.cache = new LRUCache(options.cacheLimit || 12);
     /** @type {HTMLElement[]} DOM-элементы всех страниц */
@@ -46,7 +49,9 @@ export class BookRenderer {
   setPageContents(contents) {
     this.pageContents = contents;
     this.cache.clear();
-    // Не очищаем loadedImageUrls - изображения остаются в кэше браузера
+    // Очищаем loadedImageUrls при смене контента для предотвращения утечки памяти
+    // Браузер всё равно кэширует изображения, поэтому placeholder покажется кратко
+    this.loadedImageUrls.clear();
   }
 
   /**
@@ -114,7 +119,7 @@ export class BookRenderer {
 
       // Если изображение уже загружено (из кэша браузера)
       if (img.complete && img.naturalWidth > 0) {
-        this.loadedImageUrls.add(src);
+        this._trackLoadedImage(src);
         img.dataset.loading = "false";
         return;
       }
@@ -124,7 +129,7 @@ export class BookRenderer {
 
       // Убираем placeholder после загрузки
       img.addEventListener("load", () => {
-        this.loadedImageUrls.add(src);
+        this._trackLoadedImage(src);
         img.dataset.loading = "false";
       }, { once: true });
 
@@ -133,6 +138,19 @@ export class BookRenderer {
         img.dataset.loading = "false";
       }, { once: true });
     });
+  }
+
+  /**
+   * Добавить URL в список загруженных изображений с ограничением размера
+   * @param {string} src - URL изображения
+   * @private
+   */
+  _trackLoadedImage(src) {
+    // Если кэш переполнен, очищаем его для предотвращения утечки памяти
+    if (this.loadedImageUrls.size >= BookRenderer.MAX_LOADED_IMAGES) {
+      this.loadedImageUrls.clear();
+    }
+    this.loadedImageUrls.add(src);
   }
 
   /**
@@ -253,5 +271,15 @@ export class BookRenderer {
     const total = this.pageContents.length;
     // На desktop последняя страница = total - 2 (левая страница последнего разворота)
     return isMobile ? total - 1 : Math.max(0, total - 2);
+  }
+
+  /**
+   * Очистка ресурсов
+   */
+  destroy() {
+    this.cache.clear();
+    this.loadedImageUrls.clear();
+    this.pageContents = [];
+    this.elements = null;
   }
 }
