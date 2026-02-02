@@ -109,6 +109,7 @@ describe('LifecycleDelegate', () => {
       },
       mediaQueries: {
         get: vi.fn((key) => key === 'mobile' ? false : null),
+        get isMobile() { return this.get("mobile"); }
       },
       dom: {
         get: vi.fn((key) => {

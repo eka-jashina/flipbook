@@ -68,6 +68,7 @@ describe('NavigationDelegate', () => {
       },
       mediaQueries: {
         get: vi.fn((key) => key === 'mobile' ? false : null),
+        get isMobile() { return this.get("mobile"); }
       },
       state: {
         index: 0,

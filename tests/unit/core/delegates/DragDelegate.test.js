@@ -127,6 +127,7 @@ describe('DragDelegate', () => {
       },
       mediaQueries: {
         get: vi.fn((key) => key === 'mobile' ? false : null),
+        get isMobile() { return this.get("mobile"); }
       },
       state: {
         index: 50, // Middle of book

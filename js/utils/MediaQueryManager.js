@@ -44,6 +44,14 @@ class MediaQueryManager {
   }
 
   /**
+   * Проверить, активен ли мобильный режим
+   * @returns {boolean} true если ширина экрана <= 768px
+   */
+  get isMobile() {
+    return this.get("mobile");
+  }
+
+  /**
    * Подписаться на изменения любого media query
    * @param {Function} listener - Функция-обработчик
    * @returns {Function} Функция отписки

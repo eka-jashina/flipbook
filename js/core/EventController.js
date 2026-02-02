@@ -109,7 +109,7 @@ export class EventController {
    * @private
    */
   _bindBookInteractions() {
-    const isMobile = mediaQueries.get("mobile");
+    const isMobile = mediaQueries.isMobile;
 
     // click для TOC — transform при hover/active вынесен за @media (hover: hover),
     // поэтому на тач-устройствах элемент не сдвигается и click генерируется корректно.

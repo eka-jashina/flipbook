@@ -57,7 +57,7 @@ export class BookController {
   // ═══════════════════════════════════════════
 
   get isMobile() {
-    return mediaQueries.get("mobile");
+    return mediaQueries.isMobile;
   }
 
   // Удобные геттеры для совместимости с существующим кодом

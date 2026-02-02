@@ -105,7 +105,7 @@ export class BaseDelegate {
 
   /** @returns {boolean} Мобильный ли режим */
   get isMobile() {
-    return this.mediaQueries?.get("mobile") ?? false;
+    return this.mediaQueries?.isMobile ?? false;
   }
 
   /** @returns {number} Текущий индекс страницы */

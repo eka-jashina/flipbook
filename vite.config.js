@@ -53,7 +53,7 @@ export default defineConfig(({ command, mode }) => {
         compress: {
           drop_console: true,
           drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info'],
+          pure_funcs: ['console.log', 'console.info', 'console.warn', 'console.error'],
         },
         format: {
           comments: false,
