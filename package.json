@@ -20,16 +20,24 @@
     "deploy": "npm run build:prod && npm run deploy:netlify",
     "deploy:netlify": "netlify deploy --prod --dir=dist",
     "deploy:vercel": "vercel --prod",
-    "size": "du -sh dist/*"
+    "size": "du -sh dist/*",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
     "autoprefixer": "^10.4.16",
+    "jsdom": "^27.4.0",
     "postcss": "^8.4.32",
     "sharp": "^0.34.5",
     "terser": "^5.26.0",
     "vite": "^5.0.0",
     "vite-plugin-compression": "^0.5.1",
-    "vite-plugin-imagemin": "^0.6.1"
+    "vite-plugin-imagemin": "^0.6.1",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=18.0.0",

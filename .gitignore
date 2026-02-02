@@ -35,5 +35,8 @@ lerna-debug.log*
 .parcel-cache/
 .eslintcache
 
+# Test coverage
+coverage/
+
 # OS
 Thumbs.db
