@@ -172,6 +172,11 @@ export class NavigationDelegate extends BaseDelegate {
         this.renderer.swapBuffers();
       });
 
+      // Проверяем, не был ли компонент уничтожен во время анимации
+      if (this.isDestroyed) {
+        return;
+      }
+
       // Возвращаемся в состояние OPENED
       this.stateMachine.transitionTo(BookState.OPENED);
 
@@ -181,6 +186,10 @@ export class NavigationDelegate extends BaseDelegate {
       }
 
     } catch (error) {
+      // Игнорируем ошибки если компонент уничтожен
+      if (this.isDestroyed) {
+        return;
+      }
       console.error('Navigation flip error:', error);
       // Используем forceTransitionTo — состояние может уже быть OPENED
       // если ошибка произошла после успешного transitionTo(OPENED)
