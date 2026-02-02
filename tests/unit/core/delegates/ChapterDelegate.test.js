@@ -166,10 +166,11 @@ describe('ChapterDelegate', () => {
         expect(delegate.lastPreloadedChapter).toBe(1);
       });
 
-      it('should not preload on mobile', () => {
-        delegate.updateBackground(25, true);
+      it('should preload mobile background on mobile', () => {
+        delegate.updateBackground(25, true); // In chapter 0
 
-        expect(mockDeps.backgroundManager.preload).not.toHaveBeenCalled();
+        expect(mockDeps.backgroundManager.preload).toHaveBeenCalledWith('images/bg2_m.webp');
+        expect(delegate.lastPreloadedChapter).toBe(1);
       });
 
       it('should not preload same chapter twice', () => {

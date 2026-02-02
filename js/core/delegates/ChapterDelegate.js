@@ -101,24 +101,24 @@ export class ChapterDelegate extends BaseDelegate {
     }
 
     // Предзагрузить следующую главу
-    if (!isMobile) {
-      this._preloadNextChapter(currentChapter);
-    }
+    this._preloadNextChapter(currentChapter, isMobile);
   }
 
   /**
    * Предзагрузить фон следующей главы
    * @private
    * @param {number} currentChapter
+   * @param {boolean} isMobile - Мобильный режим
    */
-  _preloadNextChapter(currentChapter) {
+  _preloadNextChapter(currentChapter, isMobile) {
     const nextChapter = this.getNextChapter(currentChapter);
-    
+
     if (nextChapter !== null && nextChapter !== this.lastPreloadedChapter) {
       const nextChapterInfo = CONFIG.CHAPTERS[nextChapter];
-      
-      if (nextChapterInfo?.bg) {
-        this.backgroundManager.preload(nextChapterInfo.bg);
+      const bgUrl = isMobile ? nextChapterInfo?.bgMobile : nextChapterInfo?.bg;
+
+      if (bgUrl) {
+        this.backgroundManager.preload(bgUrl);
         this.lastPreloadedChapter = nextChapter;
       }
     }
