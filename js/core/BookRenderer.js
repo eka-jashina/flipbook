@@ -11,6 +11,9 @@
 
 import { LRUCache } from '../utils/LRUCache.js';
 
+/** @constant {number} Максимальное количество URL изображений в кэше */
+const IMAGE_URL_CACHE_LIMIT = 50;
+
 export class BookRenderer {
   /**
    * @param {Object} options - Конфигурация рендерера
@@ -29,8 +32,10 @@ export class BookRenderer {
     this.cache = new LRUCache(options.cacheLimit || 12);
     /** @type {HTMLElement[]} DOM-элементы всех страниц */
     this.pageContents = [];
-    /** @type {Set<string>} Уже загруженные URL изображений */
+    /** @type {Set<string>} Уже загруженные URL изображений (ограниченный размер) */
     this.loadedImageUrls = new Set();
+    /** @type {number} Лимит кэша URL изображений */
+    this._imageUrlCacheLimit = IMAGE_URL_CACHE_LIMIT;
 
     this.elements = {
       leftActive: options.leftActive,
@@ -98,6 +103,27 @@ export class BookRenderer {
     if (page) {
       page.classList.toggle("page--toc", !!container.querySelector(".toc"));
     }
+  }
+
+  /**
+   * Добавить URL изображения в кэш с ограничением размера.
+   * При превышении лимита удаляет самый старый URL (FIFO).
+   * @param {string} url - URL изображения
+   * @private
+   */
+  _addLoadedImageUrl(url) {
+    // Если URL уже есть - ничего не делаем (Set не добавит дубликат)
+    if (this.loadedImageUrls.has(url)) {
+      return;
+    }
+
+    // Удаляем старые записи при превышении лимита
+    if (this.loadedImageUrls.size >= this._imageUrlCacheLimit) {
+      const firstUrl = this.loadedImageUrls.values().next().value;
+      this.loadedImageUrls.delete(firstUrl);
+    }
+
+    this.loadedImageUrls.add(url);
   }
 
   /**
