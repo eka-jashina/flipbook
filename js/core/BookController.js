@@ -3,27 +3,26 @@
  * Главный координатор приложения с Dependency Injection.
  *
  * Архитектура:
+ * - Сервисные группы для логического объединения зависимостей
  * - Централизованное состояние (state)
  * - Делегаты для разделения ответственности
- * - Фабрика для создания компонентов
  * - Подписки на события через SubscriptionManager
  *
+ * Сервисные группы:
+ * - core:    DOM, EventManager, TimerManager, Storage
+ * - audio:   SoundManager, AmbientManager
+ * - render:  Renderer, Animator, Paginator, LoadingIndicator
+ * - content: ContentLoader, BackgroundManager
+ *
  * Порядок инициализации (критичен!):
- * 1. Core       → DOM, EventManager, TimerManager, Storage
- * 2. Components → StateMachine, Managers, Renderer, Animator
+ * 1. Services  → CoreServices, затем остальные сервисы
+ * 2. Components → StateMachine, Settings, DebugPanel
  * 3. Delegates  → Navigation, Lifecycle, Settings, Chapter, Drag
  * 4. Managers   → Subscriptions, ResizeHandler
  */
 
-import { 
-  cssVars, 
-  mediaQueries, 
-  EventListenerManager, 
-  TimerManager, 
-  StorageManager 
-} from '../utils/index.js';
+import { mediaQueries } from '../utils/index.js';
 import { CONFIG } from '../config.js';
-import { DOMManager } from './DOMManager.js';
 import { ComponentFactory } from './ComponentFactory.js';
 import { AppInitializer } from './AppInitializer.js';
 import { SubscriptionManager } from './SubscriptionManager.js';
@@ -39,16 +38,16 @@ import {
 export class BookController {
   constructor() {
     this.isDestroyed = false;
-    
+
     // Централизованное состояние (модифицируется только контроллером)
     this.state = {
       index: 0,
       chapterStarts: []
     };
-    
+
     // ВАЖНО: Порядок инициализации критичен!
-    this._initializeCore();       // 1. DOM, events, storage
-    this._createComponents();     // 2. State, renderers, etc
+    this._createServices();       // 1. Сервисные группы
+    this._createComponents();     // 2. StateMachine, Settings, DebugPanel
     this._createDelegates();      // 3. Delegates с зависимостями
     this._setupManagers();        // 4. Subscriptions, handlers
   }
@@ -56,15 +55,15 @@ export class BookController {
   // ═══════════════════════════════════════════
   // COMPUTED PROPERTIES
   // ═══════════════════════════════════════════
-  
+
   get isMobile() {
     return mediaQueries.get("mobile");
   }
-  
+
   // Удобные геттеры для совместимости с существующим кодом
   get index() { return this.state.index; }
   set index(value) { this.state.index = value; }
-  
+
   get chapterStarts() { return this.state.chapterStarts; }
   set chapterStarts(value) { this.state.chapterStarts = value; }
 
@@ -72,52 +71,60 @@ export class BookController {
   // ИНИЦИАЛИЗАЦИЯ
   // ═══════════════════════════════════════════
 
-  _initializeCore() {
-    this.dom = new DOMManager();
-    this.eventManager = new EventListenerManager();
-    this.timerManager = new TimerManager();
-    this.storage = new StorageManager(CONFIG.STORAGE_KEY);
+  /**
+   * Создать сервисные группы
+   * @private
+   */
+  _createServices() {
+    // CoreServices создается статическим методом (не требует зависимостей)
+    this.core = ComponentFactory.createCoreServices();
+
+    // Фабрика использует CoreServices
+    this.factory = new ComponentFactory(this.core);
+
+    // Settings нужен для AudioServices, создаём первым
+    this.settings = this.factory.createSettingsManager();
+
+    // Остальные сервисные группы
+    this.audio = this.factory.createAudioServices(this.settings);
+    this.render = this.factory.createRenderServices();
+    this.content = this.factory.createContentServices();
+
+    // Настройка ambient loading callbacks
+    this.audio.setupAmbientLoadingCallbacks(this.core.dom.get('ambientPills'));
   }
 
+  /**
+   * Создать отдельные компоненты (не входящие в сервисные группы)
+   * @private
+   */
   _createComponents() {
-    // Фабрика создается ОДИН РАЗ
-    this.factory = new ComponentFactory({
-      dom: this.dom,
-      eventManager: this.eventManager,
-      timerManager: this.timerManager,
-      storage: this.storage,
-    });
-
     this.stateMachine = this.factory.createStateMachine();
-    this.settings = this.factory.createSettingsManager();
-    this.soundManager = this.factory.createSoundManager(this.settings);
-    this.ambientManager = this.factory.createAmbientManager(this.settings);
-    this._setupAmbientLoadingCallbacks();
-    this.backgroundManager = this.factory.createBackgroundManager();
-    this.contentLoader = this.factory.createContentLoader();
-    this.paginator = this.factory.createPaginator();
-    this.renderer = this.factory.createRenderer();
-    this.animator = this.factory.createAnimator();
-    this.loadingIndicator = this.factory.createLoadingIndicator();
     this.debugPanel = this.factory.createDebugPanel();
   }
 
   _createDelegates() {
+    // Извлекаем компоненты из сервисных групп для делегатов
+    const { dom, eventManager } = this.core;
+    const { soundManager, ambientManager } = this.audio;
+    const { renderer, animator, paginator, loadingIndicator } = this.render;
+    const { contentLoader, backgroundManager } = this.content;
+
     // ChapterDelegate
     this.chapterDelegate = new ChapterDelegate({
-      backgroundManager: this.backgroundManager,
-      dom: this.dom,
+      backgroundManager,
+      dom,
       state: this.state,
     });
 
     // NavigationDelegate
     this.navigationDelegate = new NavigationDelegate({
       stateMachine: this.stateMachine,
-      renderer: this.renderer,
-      animator: this.animator,
+      renderer,
+      animator,
       settings: this.settings,
-      soundManager: this.soundManager,
-      mediaQueries: mediaQueries,
+      soundManager,
+      mediaQueries,
       state: this.state,
       onIndexChange: (newIndex) => this._handleIndexChange(newIndex),
       onBookOpen: () => this._handleBookOpen(),
@@ -127,17 +134,17 @@ export class BookController {
     // LifecycleDelegate
     this.lifecycleDelegate = new LifecycleDelegate({
       stateMachine: this.stateMachine,
-      backgroundManager: this.backgroundManager,
-      contentLoader: this.contentLoader,
-      paginator: this.paginator,
-      renderer: this.renderer,
-      animator: this.animator,
-      loadingIndicator: this.loadingIndicator,
-      soundManager: this.soundManager,
-      dom: this.dom,
-      mediaQueries: mediaQueries,
+      backgroundManager,
+      contentLoader,
+      paginator,
+      renderer,
+      animator,
+      loadingIndicator,
+      soundManager,
+      dom,
+      mediaQueries,
       state: this.state,
-      onPaginationComplete: (pages, chapterStarts) => 
+      onPaginationComplete: (pages, chapterStarts) =>
         this._handlePaginationComplete(pages, chapterStarts),
       onIndexChange: (newIndex) => this._handleIndexChange(newIndex),
       onChapterUpdate: () => this._updateChapterBackground(),
@@ -145,13 +152,13 @@ export class BookController {
 
     // SettingsDelegate
     this.settingsDelegate = new SettingsDelegate({
-      dom: this.dom,
+      dom,
       settings: this.settings,
-      soundManager: this.soundManager,
-      ambientManager: this.ambientManager,
+      soundManager,
+      ambientManager,
       debugPanel: this.debugPanel,
       stateMachine: this.stateMachine,
-      mediaQueries: mediaQueries,
+      mediaQueries,
       state: this.state,
       onUpdate: () => this._updateDebug(),
       onRepaginate: (keepIndex) => this._repaginate(keepIndex),
@@ -160,12 +167,12 @@ export class BookController {
     // DragDelegate
     this.dragDelegate = new DragDelegate({
       stateMachine: this.stateMachine,
-      renderer: this.renderer,
-      animator: this.animator,
-      soundManager: this.soundManager,
-      dom: this.dom,
-      eventManager: this.eventManager,
-      mediaQueries: mediaQueries,
+      renderer,
+      animator,
+      soundManager,
+      dom,
+      eventManager,
+      mediaQueries,
       state: this.state,
       onIndexChange: (newIndex) => this._handleIndexChange(newIndex),
       onChapterUpdate: () => this._updateChapterBackground(),
@@ -183,10 +190,10 @@ export class BookController {
 
     // AppInitializer
     this.initializer = new AppInitializer({
-      dom: this.dom,
+      dom,
       settings: this.settings,
       settingsDelegate: this.settingsDelegate,
-      backgroundManager: this.backgroundManager,
+      backgroundManager,
       eventController: this.eventController,
       dragDelegate: this.dragDelegate,
       lifecycleDelegate: this.lifecycleDelegate,
@@ -196,8 +203,8 @@ export class BookController {
   _setupManagers() {
     this.subscriptions = new SubscriptionManager();
     this.resizeHandler = new ResizeHandler({
-      eventManager: this.eventManager,
-      timerManager: this.timerManager,
+      eventManager: this.core.eventManager,
+      timerManager: this.core.timerManager,
       repaginateFn: (keepIndex) => this._repaginate(keepIndex),
       isOpenedFn: () => this.stateMachine.isOpened,
       isDestroyedFn: () => this.isDestroyed,
@@ -228,7 +235,7 @@ export class BookController {
    * @param {number[]} chapterStarts
    */
   _handlePaginationComplete(pages, chapterStarts) {
-    this.renderer.setPageContents(pages);
+    this.render.renderer.setPageContents(pages);
     this.state.chapterStarts = chapterStarts;
     this._updateNavigationUI();
   }
@@ -273,13 +280,14 @@ export class BookController {
    * @private
    */
   _updateDebug() {
+    const { renderer } = this.render;
     this.debugPanel.update({
       state: this.stateMachine.state,
-      totalPages: this.renderer.pageContents.length,
+      totalPages: renderer.pageContents.length,
       currentPage: this.state.index,
-      cacheSize: this.renderer.cacheSize,
+      cacheSize: renderer.cacheSize,
       cacheLimit: CONFIG.VIRTUALIZATION.cacheLimit,
-      listenerCount: this.eventManager.count,
+      listenerCount: this.core.eventManager.count,
     });
   }
 
@@ -288,18 +296,19 @@ export class BookController {
    * @private
    */
   _updateNavigationUI() {
-    const totalPages = this.renderer.pageContents.length;
+    const { dom } = this.core;
+    const totalPages = this.render.renderer.pageContents.length;
     const currentPage = this.state.index + 1; // 1-based для отображения
 
     // Обновить счётчик страниц
-    const currentPageEl = this.dom.get('currentPage');
-    const totalPagesEl = this.dom.get('totalPages');
+    const currentPageEl = dom.get('currentPage');
+    const totalPagesEl = dom.get('totalPages');
 
     if (currentPageEl) currentPageEl.textContent = currentPage;
     if (totalPagesEl) totalPagesEl.textContent = totalPages;
 
     // Обновить прогресс-бар
-    const progressBar = this.dom.get('readingProgress');
+    const progressBar = dom.get('readingProgress');
     if (progressBar && totalPages > 0) {
       const progress = Math.round((currentPage / totalPages) * 100);
       progressBar.style.setProperty("--progress-width", `${progress}%`);
@@ -313,51 +322,31 @@ export class BookController {
     }
   }
 
-  /**
-   * Настроить коллбэки загрузки для ambient pills
-   * @private
-   */
-  _setupAmbientLoadingCallbacks() {
-    const ambientPills = this.dom.get('ambientPills');
-    if (!ambientPills) return;
-
-    // Функция для установки состояния загрузки на pill
-    const setPillLoading = (type, isLoading) => {
-      const pill = ambientPills.querySelector(`[data-type="${type}"]`);
-      if (pill) {
-        pill.dataset.loading = isLoading;
-      }
-    };
-
-    this.ambientManager.onLoadStart = (type) => setPillLoading(type, true);
-    this.ambientManager.onLoadEnd = (type) => setPillLoading(type, false);
-  }
-
   // ═══════════════════════════════════════════
   // ПУБЛИЧНЫЙ API
   // ═══════════════════════════════════════════
 
   async init() {
     if (this.isDestroyed) return;
-    
+
     await this.initializer.initialize();
-    
+
     this.subscriptions.subscribeToState(
       this.stateMachine,
-      this.dom,
+      this.core.dom,
       () => this._updateDebug()
     );
-    
+
     this.subscriptions.subscribeToPagination(
-      this.paginator,
-      this.loadingIndicator
+      this.render.paginator,
+      this.render.loadingIndicator
     );
-    
+
     this.subscriptions.subscribeToMediaQueries(
       (keepIndex) => this._repaginate(keepIndex),
       () => this.stateMachine.isOpened
     );
-    
+
     this.resizeHandler.bind();
     this._updateDebug();
   }
@@ -373,36 +362,33 @@ export class BookController {
     this.subscriptions.unsubscribeAll();
     this.resizeHandler.destroy();
 
-    // Уничтожаем компоненты
-    const components = [
-      this.animator,
-      this.paginator,
-      this.contentLoader,
-      this.backgroundManager,
-      this.eventController,
-      this.stateMachine,
-      this.settings,
-      this.soundManager,
-      this.ambientManager,
+    // Уничтожаем делегаты
+    const delegates = [
       this.navigationDelegate,
       this.settingsDelegate,
       this.lifecycleDelegate,
       this.chapterDelegate,
       this.dragDelegate,
+      this.eventController,
     ];
+    delegates.forEach((d) => d?.destroy?.());
 
-    components.forEach((component) => component?.destroy?.());
+    // Уничтожаем отдельные компоненты
+    this.stateMachine?.destroy?.();
+    this.settings?.destroy?.();
 
-    // Очищаем менеджеры
-    this.eventManager.clear();
-    this.timerManager.clear();
-
-    // Очищаем DOM
-    this.dom.clearPages();
+    // Уничтожаем сервисные группы
+    this.audio?.destroy();
+    this.render?.destroy();
+    this.content?.destroy();
+    this.core?.destroy();
 
     // Зануляем ссылки
     this.state = null;
-    this.dom = null;
+    this.core = null;
+    this.audio = null;
+    this.render = null;
+    this.content = null;
     this.factory = null;
   }
 }
