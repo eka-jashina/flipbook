@@ -111,7 +111,9 @@ export class LifecycleDelegate extends BaseDelegate {
       if (this.isDestroyed) return;
 
       if (!signal || !html) {
-        return; // Анимация была отменена
+        // Анимация была отменена — восстанавливаем состояние
+        this._recoverToSafeState();
+        return;
       }
 
       // ─── Этап 4: Ожидание стабилизации layout ───
@@ -158,7 +160,7 @@ export class LifecycleDelegate extends BaseDelegate {
       if (error.name !== "AbortError") {
         ErrorHandler.handle(error, "Ошибка при открытии книги");
       }
-      this.stateMachine.reset(BookState.CLOSED);
+      this._recoverToSafeState();
     } finally {
       if (!this.isDestroyed) {
         this.loadingIndicator.hide();
@@ -223,7 +225,12 @@ export class LifecycleDelegate extends BaseDelegate {
       if (error.name !== "AbortError") {
         ErrorHandler.handle(error, "Ошибка при закрытии книги");
       }
-      this.stateMachine.reset(BookState.OPENED);
+
+      // Восстанавливаем DOM: убираем классы скрытия
+      if (leftA) leftA.classList.remove("closing-hidden");
+      if (rightA) rightA.classList.remove("closing-hidden");
+
+      this._recoverToSafeState();
     }
   }
 
@@ -232,6 +239,9 @@ export class LifecycleDelegate extends BaseDelegate {
    * @param {boolean} keepIndex - Сохранить текущую позицию
    */
   async repaginate(keepIndex = false) {
+    // Сохраняем состояние для возможного recovery
+    const stateBeforeRepaginate = this.stateMachine.state;
+
     try {
       // ─── Этап 1: Подготовка ───
       this.loadingIndicator.show();
@@ -276,10 +286,43 @@ export class LifecycleDelegate extends BaseDelegate {
       if (this.isDestroyed) return;
 
       ErrorHandler.handle(error, "Ошибка при репагинации");
+
+      // Восстанавливаем состояние, которое было до репагинации
+      this._recoverToSafeState(stateBeforeRepaginate);
     } finally {
       if (!this.isDestroyed) {
         this.loadingIndicator.hide();
       }
+    }
+  }
+
+  /**
+   * Восстановить state machine в безопасное состояние после ошибки
+   *
+   * Определяет целевое состояние на основе текущего:
+   * - OPENING → CLOSED (откат открытия)
+   * - CLOSING → OPENED (откат закрытия)
+   * - Иначе → переданное состояние или без изменений
+   *
+   * @private
+   * @param {string} [fallbackState] - Состояние по умолчанию, если не удалось определить
+   */
+  _recoverToSafeState(fallbackState) {
+    const currentState = this.stateMachine.state;
+
+    // Определяем безопасное состояние на основе текущего
+    const recoveryMap = {
+      [BookState.OPENING]: BookState.CLOSED,
+      [BookState.CLOSING]: BookState.OPENED,
+    };
+
+    const targetState = recoveryMap[currentState] || fallbackState;
+
+    if (targetState && currentState !== targetState) {
+      console.warn(
+        `LifecycleDelegate: recovering state machine from ${currentState} to ${targetState}`
+      );
+      this.stateMachine.reset(targetState);
     }
   }
 

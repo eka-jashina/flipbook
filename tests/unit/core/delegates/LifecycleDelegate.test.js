@@ -63,6 +63,7 @@ describe('LifecycleDelegate', () => {
     mockDeps = {
       stateMachine: {
         current: 'CLOSED',
+        get state() { return this.current; },
         get isClosed() { return this.current === 'CLOSED'; },
         get isOpened() { return this.current === 'OPENED'; },
         get isBusy() { return ['OPENING', 'CLOSING', 'FLIPPING'].includes(this.current); },
