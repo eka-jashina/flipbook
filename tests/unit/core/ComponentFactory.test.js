@@ -1,6 +1,6 @@
 /**
  * Тесты для ComponentFactory
- * Фабрика для создания компонентов приложения
+ * Фабрика для создания компонентов приложения (сервисные группы)
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFactory } from '../../../js/core/ComponentFactory.js';
@@ -32,48 +32,10 @@ vi.mock('../../../js/config.js', () => ({
   },
 }));
 
-vi.mock('../../../js/utils/HTMLSanitizer.js', () => ({
-  sanitizer: { sanitize: vi.fn() },
-}));
-
 vi.mock('../../../js/managers/index.js', () => {
   const BookStateMachine = vi.fn(function() { this.type = 'stateMachine'; });
   const SettingsManager = vi.fn(function() { this.type = 'settingsManager'; });
-  const BackgroundManager = vi.fn(function() { this.type = 'backgroundManager'; });
-  const ContentLoader = vi.fn(function() { this.type = 'contentLoader'; });
-  const AsyncPaginator = vi.fn(function() { this.type = 'paginator'; });
-  return { BookStateMachine, SettingsManager, BackgroundManager, ContentLoader, AsyncPaginator };
-});
-
-vi.mock('../../../js/utils/SoundManager.js', () => {
-  const SoundManager = vi.fn(function() {
-    this.type = 'soundManager';
-    this.register = vi.fn().mockReturnThis();
-  });
-  return { SoundManager };
-});
-
-vi.mock('../../../js/utils/AmbientManager.js', () => {
-  const AmbientManager = vi.fn(function() {
-    this.type = 'ambientManager';
-    this.register = vi.fn().mockReturnThis();
-  });
-  return { AmbientManager };
-});
-
-vi.mock('../../../js/core/BookRenderer.js', () => {
-  const BookRenderer = vi.fn(function() { this.type = 'renderer'; });
-  return { BookRenderer };
-});
-
-vi.mock('../../../js/core/BookAnimator.js', () => {
-  const BookAnimator = vi.fn(function() { this.type = 'animator'; });
-  return { BookAnimator };
-});
-
-vi.mock('../../../js/core/LoadingIndicator.js', () => {
-  const LoadingIndicator = vi.fn(function() { this.type = 'loadingIndicator'; });
-  return { LoadingIndicator };
+  return { BookStateMachine, SettingsManager };
 });
 
 vi.mock('../../../js/core/DebugPanel.js', () => {
@@ -86,38 +48,30 @@ vi.mock('../../../js/core/EventController.js', () => {
   return { EventController };
 });
 
-import { BookStateMachine, SettingsManager, BackgroundManager, ContentLoader, AsyncPaginator } from '../../../js/managers/index.js';
-import { SoundManager } from '../../../js/utils/SoundManager.js';
-import { AmbientManager } from '../../../js/utils/AmbientManager.js';
-import { BookRenderer } from '../../../js/core/BookRenderer.js';
-import { BookAnimator } from '../../../js/core/BookAnimator.js';
-import { LoadingIndicator } from '../../../js/core/LoadingIndicator.js';
+vi.mock('../../../js/core/services/index.js', () => {
+  const CoreServices = vi.fn(function() { this.type = 'coreServices'; });
+  const AudioServices = vi.fn(function() { this.type = 'audioServices'; });
+  const RenderServices = vi.fn(function() { this.type = 'renderServices'; });
+  const ContentServices = vi.fn(function() { this.type = 'contentServices'; });
+  return { CoreServices, AudioServices, RenderServices, ContentServices };
+});
+
+import { BookStateMachine, SettingsManager } from '../../../js/managers/index.js';
 import { DebugPanel } from '../../../js/core/DebugPanel.js';
 import { EventController } from '../../../js/core/EventController.js';
+import { CoreServices, AudioServices, RenderServices, ContentServices } from '../../../js/core/services/index.js';
 
 describe('ComponentFactory', () => {
   let factory;
-  let mockContext;
+  let mockCore;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockContext = {
+    mockCore = {
       dom: {
         get: vi.fn().mockReturnValue(document.createElement('div')),
         getMultiple: vi.fn().mockReturnValue({
-          leftA: document.createElement('div'),
-          rightA: document.createElement('div'),
-          leftB: document.createElement('div'),
-          rightB: document.createElement('div'),
-          sheetFront: document.createElement('div'),
-          sheetBack: document.createElement('div'),
-          book: document.createElement('div'),
-          bookWrap: document.createElement('div'),
-          cover: document.createElement('div'),
-          sheet: document.createElement('div'),
-          loadingOverlay: document.createElement('div'),
-          loadingProgress: document.createElement('div'),
           debugInfo: document.createElement('div'),
           debugState: document.createElement('div'),
           debugTotal: document.createElement('div'),
@@ -132,24 +86,49 @@ describe('ComponentFactory', () => {
       storage: { load: vi.fn(), save: vi.fn() },
     };
 
-    factory = new ComponentFactory(mockContext);
+    factory = new ComponentFactory(mockCore);
   });
 
   describe('constructor', () => {
-    it('should store dom reference', () => {
-      expect(factory.dom).toBe(mockContext.dom);
+    it('should store core reference', () => {
+      expect(factory.core).toBe(mockCore);
     });
+  });
 
-    it('should store eventManager reference', () => {
-      expect(factory.eventManager).toBe(mockContext.eventManager);
+  describe('static createCoreServices', () => {
+    it('should create CoreServices', () => {
+      const result = ComponentFactory.createCoreServices();
+
+      expect(CoreServices).toHaveBeenCalled();
+      expect(result.type).toBe('coreServices');
     });
+  });
 
-    it('should store timerManager reference', () => {
-      expect(factory.timerManager).toBe(mockContext.timerManager);
+  describe('createAudioServices', () => {
+    it('should create AudioServices with settings', () => {
+      const mockSettings = { type: 'settings' };
+      const result = factory.createAudioServices(mockSettings);
+
+      expect(AudioServices).toHaveBeenCalledWith(mockSettings);
+      expect(result.type).toBe('audioServices');
     });
+  });
 
-    it('should store storage reference', () => {
-      expect(factory.storage).toBe(mockContext.storage);
+  describe('createRenderServices', () => {
+    it('should create RenderServices with core', () => {
+      const result = factory.createRenderServices();
+
+      expect(RenderServices).toHaveBeenCalledWith(mockCore);
+      expect(result.type).toBe('renderServices');
+    });
+  });
+
+  describe('createContentServices', () => {
+    it('should create ContentServices', () => {
+      const result = factory.createContentServices();
+
+      expect(ContentServices).toHaveBeenCalled();
+      expect(result.type).toBe('contentServices');
     });
   });
 
@@ -167,149 +146,10 @@ describe('ComponentFactory', () => {
       const result = factory.createSettingsManager();
 
       expect(SettingsManager).toHaveBeenCalledWith(
-        mockContext.storage,
+        mockCore.storage,
         expect.objectContaining({ font: 'georgia' })
       );
       expect(result.type).toBe('settingsManager');
-    });
-  });
-
-  describe('createSoundManager', () => {
-    it('should create SoundManager with settings', () => {
-      const mockSettings = {
-        get: vi.fn((key) => {
-          if (key === 'soundEnabled') return true;
-          if (key === 'soundVolume') return 0.5;
-          return null;
-        }),
-      };
-
-      const result = factory.createSoundManager(mockSettings);
-
-      expect(SoundManager).toHaveBeenCalledWith({
-        enabled: true,
-        volume: 0.5,
-      });
-      expect(result.type).toBe('soundManager');
-    });
-
-    it('should register sounds', () => {
-      const mockSettings = {
-        get: vi.fn().mockReturnValue(true),
-      };
-
-      const result = factory.createSoundManager(mockSettings);
-
-      expect(result.register).toHaveBeenCalledWith(
-        'pageFlip',
-        '/sounds/page-flip.mp3',
-        expect.any(Object)
-      );
-      expect(result.register).toHaveBeenCalledWith(
-        'bookOpen',
-        '/sounds/cover-flip.mp3',
-        expect.any(Object)
-      );
-    });
-  });
-
-  describe('createBackgroundManager', () => {
-    it('should create BackgroundManager', () => {
-      const result = factory.createBackgroundManager();
-
-      expect(BackgroundManager).toHaveBeenCalled();
-      expect(result.type).toBe('backgroundManager');
-    });
-  });
-
-  describe('createContentLoader', () => {
-    it('should create ContentLoader', () => {
-      const result = factory.createContentLoader();
-
-      expect(ContentLoader).toHaveBeenCalled();
-      expect(result.type).toBe('contentLoader');
-    });
-  });
-
-  describe('createPaginator', () => {
-    it('should create AsyncPaginator with sanitizer', () => {
-      const result = factory.createPaginator();
-
-      expect(AsyncPaginator).toHaveBeenCalledWith(
-        expect.objectContaining({ sanitizer: expect.any(Object) })
-      );
-      expect(result.type).toBe('paginator');
-    });
-  });
-
-  describe('createRenderer', () => {
-    it('should create BookRenderer with DOM elements', () => {
-      const result = factory.createRenderer();
-
-      expect(mockContext.dom.getMultiple).toHaveBeenCalledWith(
-        'leftA', 'rightA', 'leftB', 'rightB', 'sheetFront', 'sheetBack'
-      );
-      expect(BookRenderer).toHaveBeenCalledWith(
-        expect.objectContaining({ cacheLimit: 12 })
-      );
-      expect(result.type).toBe('renderer');
-    });
-  });
-
-  describe('createAnimator', () => {
-    it('should create BookAnimator with DOM elements', () => {
-      const result = factory.createAnimator();
-
-      expect(mockContext.dom.getMultiple).toHaveBeenCalledWith(
-        'book', 'bookWrap', 'cover', 'sheet'
-      );
-      expect(BookAnimator).toHaveBeenCalledWith(
-        expect.objectContaining({ timerManager: mockContext.timerManager })
-      );
-      expect(result.type).toBe('animator');
-    });
-  });
-
-  describe('createAmbientManager', () => {
-    it('should create AmbientManager with settings', () => {
-      const mockSettings = {
-        get: vi.fn((key) => {
-          if (key === 'ambientType') return 'rain';
-          if (key === 'ambientVolume') return 0.7;
-          return null;
-        }),
-      };
-
-      const result = factory.createAmbientManager(mockSettings);
-
-      expect(AmbientManager).toHaveBeenCalledWith({
-        currentType: 'rain',
-        volume: 0.7,
-      });
-      expect(result.type).toBe('ambientManager');
-    });
-
-    it('should register ambient sounds from config', () => {
-      const mockSettings = {
-        get: vi.fn().mockReturnValue('none'),
-      };
-
-      const result = factory.createAmbientManager(mockSettings);
-
-      // Should register rain (has file), but not none (no file)
-      expect(result.register).toHaveBeenCalledWith('rain', '/sounds/ambient/rain.mp3');
-    });
-  });
-
-  describe('createLoadingIndicator', () => {
-    it('should create LoadingIndicator with DOM elements', () => {
-      const result = factory.createLoadingIndicator();
-
-      expect(mockContext.dom.getMultiple).toHaveBeenCalledWith(
-        'loadingOverlay', 'loadingProgress'
-      );
-      expect(LoadingIndicator).toHaveBeenCalled();
-      expect(result.type).toBe('loadingIndicator');
     });
   });
 
@@ -317,7 +157,7 @@ describe('ComponentFactory', () => {
     it('should create DebugPanel with DOM elements', () => {
       const result = factory.createDebugPanel();
 
-      expect(mockContext.dom.getMultiple).toHaveBeenCalledWith(
+      expect(mockCore.dom.getMultiple).toHaveBeenCalledWith(
         'debugInfo', 'debugState', 'debugTotal', 'debugCurrent',
         'debugCache', 'debugMemory', 'debugListeners'
       );
@@ -339,11 +179,11 @@ describe('ComponentFactory', () => {
 
       const result = factory.createEventController(handlers);
 
-      expect(mockContext.dom.get).toHaveBeenCalledWith('book');
+      expect(mockCore.dom.get).toHaveBeenCalledWith('book');
       expect(EventController).toHaveBeenCalledWith(
         expect.objectContaining({
           book: expect.any(Object),
-          eventManager: mockContext.eventManager,
+          eventManager: mockCore.eventManager,
           ...handlers,
         })
       );
