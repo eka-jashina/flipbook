@@ -27,23 +27,44 @@ vi.mock('../../../../js/core/delegates/DragAnimator.js', () => ({
 
 vi.mock('../../../../js/config.js', () => ({
   BookState: {
-    CLOSED: 'CLOSED',
-    OPENING: 'OPENING',
-    OPENED: 'OPENED',
-    FLIPPING: 'FLIPPING',
-    CLOSING: 'CLOSING',
+    CLOSED: 'closed',
+    OPENING: 'opening',
+    OPENED: 'opened',
+    FLIPPING: 'flipping',
+    CLOSING: 'closing',
+  },
+  FlipPhase: {
+    LIFT: "lift",
+    ROTATE: "rotate",
+    DROP: "drop",
+    DRAG: "drag",
+  },
+  Direction: {
+    NEXT: "next",
+    PREV: "prev",
+  },
+  BoolStr: {
+    TRUE: "true",
+    FALSE: "false",
   },
 }));
 
 const { DragDelegate } = await import('../../../../js/core/delegates/DragDelegate.js');
+const { DelegateEvents } = await import('../../../../js/core/delegates/BaseDelegate.js');
 
 describe('DragDelegate', () => {
   let delegate;
   let mockDeps;
   let mockBook;
   let mockSheet;
+  let eventHandlers;
 
   beforeEach(() => {
+    // Event handlers to capture emitted events
+    eventHandlers = {
+      onIndexChange: vi.fn(),
+      onChapterUpdate: vi.fn(),
+    };
     // Create mock elements
     mockBook = document.createElement('div');
     mockBook.style.width = '1000px';
@@ -113,16 +134,19 @@ describe('DragDelegate', () => {
       },
       mediaQueries: {
         get: vi.fn((key) => key === 'mobile' ? false : null),
+        get isMobile() { return this.get("mobile"); }
       },
       state: {
         index: 50, // Middle of book
         chapterStarts: [0, 50, 100],
       },
-      onIndexChange: vi.fn(),
-      onChapterUpdate: vi.fn(),
     };
 
     delegate = new DragDelegate(mockDeps);
+
+    // Subscribe to delegate events
+    delegate.on(DelegateEvents.INDEX_CHANGE, eventHandlers.onIndexChange);
+    delegate.on(DelegateEvents.CHAPTER_UPDATE, eventHandlers.onChapterUpdate);
   });
 
   afterEach(() => {
@@ -267,7 +291,7 @@ describe('DragDelegate', () => {
     it('should transition to FLIPPING', () => {
       delegate._startDrag({ clientX: 500 }, 'next');
 
-      expect(mockDeps.stateMachine.transitionTo).toHaveBeenCalledWith('FLIPPING');
+      expect(mockDeps.stateMachine.transitionTo).toHaveBeenCalledWith('flipping');
     });
 
     it('should set drag state', () => {
@@ -487,7 +511,7 @@ describe('DragDelegate', () => {
     it('should transition back to OPENED', () => {
       delegate._finish(true);
 
-      expect(mockDeps.stateMachine.transitionTo).toHaveBeenCalledWith('OPENED');
+      expect(mockDeps.stateMachine.transitionTo).toHaveBeenCalledWith('opened');
     });
 
     it('should call _completeFlip when completed is true', () => {
@@ -540,24 +564,24 @@ describe('DragDelegate', () => {
       expect(mockDeps.renderer.swapBuffers).toHaveBeenCalled();
     });
 
-    it('should call onIndexChange with new index (next)', () => {
+    it('should emit indexChange event with new index (next)', () => {
       delegate._completeFlip('next');
 
       // 50 + 2 (desktop pagesPerFlip) = 52
-      expect(mockDeps.onIndexChange).toHaveBeenCalledWith(52);
+      expect(eventHandlers.onIndexChange).toHaveBeenCalledWith(52);
     });
 
-    it('should call onIndexChange with new index (prev)', () => {
+    it('should emit indexChange event with new index (prev)', () => {
       delegate._completeFlip('prev');
 
       // 50 - 2 = 48
-      expect(mockDeps.onIndexChange).toHaveBeenCalledWith(48);
+      expect(eventHandlers.onIndexChange).toHaveBeenCalledWith(48);
     });
 
-    it('should call onChapterUpdate', () => {
+    it('should emit chapterUpdate event', () => {
       delegate._completeFlip('next');
 
-      expect(mockDeps.onChapterUpdate).toHaveBeenCalled();
+      expect(eventHandlers.onChapterUpdate).toHaveBeenCalled();
     });
   });
 
@@ -635,8 +659,17 @@ describe('DragDelegate', () => {
       delegate.destroy();
 
       expect(delegate.eventManager).toBeNull();
-      expect(delegate.onIndexChange).toBeNull();
-      expect(delegate.onChapterUpdate).toBeNull();
+    });
+
+    it('should remove all event listeners', () => {
+      delegate.destroy();
+
+      // Emitting events after destroy should not call handlers
+      delegate.emit(DelegateEvents.INDEX_CHANGE, 5);
+      delegate.emit(DelegateEvents.CHAPTER_UPDATE);
+
+      expect(eventHandlers.onIndexChange).not.toHaveBeenCalled();
+      expect(eventHandlers.onChapterUpdate).not.toHaveBeenCalled();
     });
   });
 });

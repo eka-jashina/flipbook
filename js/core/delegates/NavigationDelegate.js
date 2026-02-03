@@ -3,8 +3,8 @@
  * Управление навигацией по книге.
  */
 
-import { BookState } from '../../config.js';
-import { BaseDelegate } from './BaseDelegate.js';
+import { BookState, Direction } from '../../config.js';
+import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 
 export class NavigationDelegate extends BaseDelegate {
   /**
@@ -16,15 +16,9 @@ export class NavigationDelegate extends BaseDelegate {
    * @param {SoundManager} deps.soundManager
    * @param {MediaQueryManager} deps.mediaQueries
    * @param {Object} deps.state - Объект состояния контроллера
-   * @param {Function} deps.onIndexChange - Коллбэк при изменении индекса
-   * @param {Function} deps.onBookOpen - Коллбэк для открытия книги
-   * @param {Function} deps.onBookClose - Коллбэк для закрытия книги
    */
   constructor(deps) {
     super(deps);
-    this.onIndexChange = deps.onIndexChange;
-    this.onBookOpen = deps.onBookOpen;
-    this.onBookClose = deps.onBookClose;
   }
 
   /**
@@ -49,18 +43,14 @@ export class NavigationDelegate extends BaseDelegate {
    */
   async flip(direction) {
     // Открываем книгу если закрыта и направление "next"
-    if (!this.isOpened && direction === "next") {
-      if (this.onBookOpen) {
-        await this.onBookOpen();
-      }
+    if (!this.isOpened && direction === Direction.NEXT) {
+      this.emit(DelegateEvents.BOOK_OPEN);
       return;
     }
 
     // Закрываем если на первой странице и направление "prev"
-    if (this.isOpened && direction === "prev" && this.currentIndex === 0) {
-      if (this.onBookClose) {
-        await this.onBookClose();
-      }
+    if (this.isOpened && direction === Direction.PREV && this.currentIndex === 0) {
+      this.emit(DelegateEvents.BOOK_CLOSE);
       return;
     }
 
@@ -70,8 +60,8 @@ export class NavigationDelegate extends BaseDelegate {
     }
 
     const step = this.pagesPerFlip;
-    const nextIndex = direction === "next" 
-      ? this.currentIndex + step 
+    const nextIndex = direction === Direction.NEXT
+      ? this.currentIndex + step
       : this.currentIndex - step;
     
     const maxIndex = this.renderer.getMaxIndex(this.isMobile);
@@ -90,20 +80,20 @@ export class NavigationDelegate extends BaseDelegate {
   async handleTOCNavigation(chapter) {
     // Если книга закрыта - просто открываем
     if (!this.isOpened) {
-      await this.flip("next");
+      await this.flip(Direction.NEXT);
       return;
     }
 
     // Переход к началу книги
     if (chapter === undefined) {
-      await this.flipToPage(0, "prev");
+      await this.flipToPage(0, Direction.PREV);
       return;
     }
 
     // Переход к концу книги
     if (chapter === -1) {
       const maxIndex = this.renderer.getMaxIndex(this.isMobile);
-      await this.flipToPage(maxIndex, "next");
+      await this.flipToPage(maxIndex, Direction.NEXT);
       return;
     }
 
@@ -113,8 +103,8 @@ export class NavigationDelegate extends BaseDelegate {
 
     // Выравниваем по развороту для десктопа
     const targetIndex = this.isMobile ? pageIndex : pageIndex - (pageIndex % 2);
-    const direction = targetIndex > this.currentIndex ? "next" : "prev";
-    
+    const direction = targetIndex > this.currentIndex ? Direction.NEXT : Direction.PREV;
+
     await this.flipToPage(targetIndex, direction);
   }
 
@@ -181,9 +171,7 @@ export class NavigationDelegate extends BaseDelegate {
       this.stateMachine.transitionTo(BookState.OPENED);
 
       // Уведомляем контроллер об изменении индекса
-      if (this.onIndexChange) {
-        this.onIndexChange(nextIndex);
-      }
+      this.emit(DelegateEvents.INDEX_CHANGE, nextIndex);
 
     } catch (error) {
       // Игнорируем ошибки если компонент уничтожен
@@ -201,9 +189,6 @@ export class NavigationDelegate extends BaseDelegate {
    * Очистка
    */
   destroy() {
-    this.onIndexChange = null;
-    this.onBookOpen = null;
-    this.onBookClose = null;
     super.destroy();
   }
 }

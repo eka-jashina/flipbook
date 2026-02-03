@@ -29,6 +29,23 @@ vi.mock('../../../js/config.js', () => ({
   CONFIG: {
     TIMING_SAFETY_MARGIN: 50,
   },
+  BookState: {
+    CLOSED: "closed",
+    OPENING: "opening",
+    OPENED: "opened",
+    FLIPPING: "flipping",
+    CLOSING: "closing",
+  },
+  FlipPhase: {
+    LIFT: "lift",
+    ROTATE: "rotate",
+    DROP: "drop",
+    DRAG: "drag",
+  },
+  Direction: {
+    NEXT: "next",
+    PREV: "prev",
+  },
 }));
 
 const { BookAnimator } = await import('../../../js/core/BookAnimator.js');

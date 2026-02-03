@@ -11,7 +11,7 @@
 
 import { cssVars } from '../utils/CSSVariables.js';
 import { TransitionHelper } from '../utils/TransitionHelper.js';
-import { CONFIG } from '../config.js';
+import { CONFIG, BookState, FlipPhase, Direction } from '../config.js';
 
 export class BookAnimator {
   /**
@@ -83,7 +83,7 @@ export class BookAnimator {
     const { book, sheet } = this.elements;
     const safetyMargin = CONFIG.TIMING_SAFETY_MARGIN;
 
-    book.dataset.state = "flipping";
+    book.dataset.state = BookState.FLIPPING;
     sheet.dataset.direction = direction;
     delete sheet.dataset.phase;
 
@@ -91,7 +91,7 @@ export class BookAnimator {
       // Фаза 1: Lift (поднятие страницы)
       this.timerManager.requestAnimationFrame(() => {
         if (!signal.aborted) {
-          sheet.dataset.phase = "lift";
+          sheet.dataset.phase = FlipPhase.LIFT;
         }
       });
 
@@ -100,12 +100,12 @@ export class BookAnimator {
       );
 
       // Фаза 2: Rotate (поворот страницы на 180°)
-      sheet.dataset.phase = "rotate";
+      sheet.dataset.phase = FlipPhase.ROTATE;
 
       // Подмена буферов происходит в середине поворота.
       // Проверяем signal.aborted перед вызовом, чтобы избежать
       // неконсистентного состояния при отмене операции.
-      const swapDelay = direction === "next" ? timings.swapNext : timings.swapPrev;
+      const swapDelay = direction === Direction.NEXT ? timings.swapNext : timings.swapPrev;
       this.timerManager.setTimeout(() => {
         if (!signal.aborted) {
           onSwap();
@@ -117,7 +117,7 @@ export class BookAnimator {
       );
 
       // Фаза 3: Drop (опускание страницы)
-      sheet.dataset.phase = "drop";
+      sheet.dataset.phase = FlipPhase.DROP;
 
       await TransitionHelper.waitFor(
         sheet, "transform", timings.drop + safetyMargin, signal
@@ -141,8 +141,8 @@ export class BookAnimator {
     const safetyMargin = CONFIG.TIMING_SAFETY_MARGIN;
 
     // Устанавливаем начальные состояния
-    bookWrap.dataset.state = "opened";
-    book.dataset.state = "opening";
+    bookWrap.dataset.state = BookState.OPENED;
+    book.dataset.state = BookState.OPENING;
     cover.dataset.animation = "opening";
 
     try {
@@ -192,8 +192,8 @@ export class BookAnimator {
     const safetyMargin = CONFIG.TIMING_SAFETY_MARGIN;
 
     // Устанавливаем состояния закрытия
-    bookWrap.dataset.state = "closed";
-    book.dataset.state = "closing";
+    bookWrap.dataset.state = BookState.CLOSED;
+    book.dataset.state = BookState.CLOSING;
     cover.dataset.animation = "closing";
 
     try {

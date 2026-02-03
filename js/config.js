@@ -91,3 +91,29 @@ export const BookState = Object.freeze({
   FLIPPING: "flipping",
   CLOSING: "closing",
 });
+
+/**
+ * Фазы анимации перелистывания страницы
+ */
+export const FlipPhase = Object.freeze({
+  LIFT: "lift",
+  ROTATE: "rotate",
+  DROP: "drop",
+  DRAG: "drag",
+});
+
+/**
+ * Направления перелистывания
+ */
+export const Direction = Object.freeze({
+  NEXT: "next",
+  PREV: "prev",
+});
+
+/**
+ * Строковые булевы значения для data-атрибутов
+ */
+export const BoolStr = Object.freeze({
+  TRUE: "true",
+  FALSE: "false",
+});

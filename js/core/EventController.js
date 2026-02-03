@@ -11,6 +11,7 @@
 
 import { cssVars } from "../utils/CSSVariables.js";
 import { mediaQueries } from "../utils/MediaQueryManager.js";
+import { Direction, BoolStr } from "../config.js";
 
 export class EventController {
   /**
@@ -69,14 +70,14 @@ export class EventController {
     if (nextBtn) {
       this.eventManager.add(nextBtn, "click", () => {
         if (this.isBusy()) return;
-        this.onFlip("next");
+        this.onFlip(Direction.NEXT);
       });
     }
 
     if (prevBtn) {
       this.eventManager.add(prevBtn, "click", () => {
         if (this.isBusy()) return;
-        this.onFlip("prev");
+        this.onFlip(Direction.PREV);
       });
     }
 
@@ -97,7 +98,7 @@ export class EventController {
     if (coverEl) {
       this.eventManager.add(coverEl, "click", () => {
         if (!this.isOpened() && !this.isBusy()) {
-          this.onFlip("next");
+          this.onFlip(Direction.NEXT);
         }
       });
     }
@@ -108,7 +109,7 @@ export class EventController {
    * @private
    */
   _bindBookInteractions() {
-    const isMobile = mediaQueries.get("mobile");
+    const isMobile = mediaQueries.isMobile;
 
     // click для TOC — transform при hover/active вынесен за @media (hover: hover),
     // поэтому на тач-устройствах элемент не сдвигается и click генерируется корректно.
@@ -146,7 +147,7 @@ export class EventController {
         const x = e.clientX - rect.left;
 
         // Левая половина = prev, правая = next
-        this.onFlip(x < rect.width / 2 ? "prev" : "next");
+        this.onFlip(x < rect.width / 2 ? Direction.PREV : Direction.NEXT);
       });
     }
   }
@@ -313,11 +314,11 @@ export class EventController {
       switch (e.key) {
         case "ArrowLeft":
           e.preventDefault();
-          this.onFlip("prev");
+          this.onFlip(Direction.PREV);
           break;
         case "ArrowRight":
           e.preventDefault();
-          this.onFlip("next");
+          this.onFlip(Direction.NEXT);
           break;
         case "Home":
           e.preventDefault();
@@ -374,7 +375,7 @@ export class EventController {
       if (Math.abs(dy) > swipeVerticalLimit) return;
       if (Math.abs(dx) < swipeThreshold) return;
 
-      this.onFlip(dx < 0 ? "next" : "prev");
+      this.onFlip(dx < 0 ? Direction.NEXT : Direction.PREV);
     };
 
     this.eventManager.add(

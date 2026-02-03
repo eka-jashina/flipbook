@@ -1,17 +1,33 @@
 import { cssVars } from '../../utils/CSSVariables.js';
+import { EventEmitter } from '../../utils/EventEmitter.js';
+
+/**
+ * Типы событий делегатов для коммуникации с контроллером
+ */
+export const DelegateEvents = Object.freeze({
+  INDEX_CHANGE: 'indexChange',
+  CHAPTER_UPDATE: 'chapterUpdate',
+  BOOK_OPEN: 'bookOpen',
+  BOOK_CLOSE: 'bookClose',
+  PAGINATION_COMPLETE: 'paginationComplete',
+  SETTINGS_UPDATE: 'settingsUpdate',
+  REPAGINATE: 'repaginate',
+});
 
 /**
  * BASE DELEGATE
  * Базовый класс для всех делегатов с общими зависимостями.
+ * Наследует EventEmitter для event-based коммуникации с контроллером.
  *
  * @abstract
+ * @extends EventEmitter
  */
-
-export class BaseDelegate {
+export class BaseDelegate extends EventEmitter {
   /**
    * @param {Object} deps - Объект зависимостей
    */
   constructor(deps) {
+    super();
     this._validateRequiredDependencies(deps);
     this._deps = deps;
     /** @type {boolean} Флаг уничтожения компонента */
@@ -105,7 +121,7 @@ export class BaseDelegate {
 
   /** @returns {boolean} Мобильный ли режим */
   get isMobile() {
-    return this.mediaQueries?.get("mobile") ?? false;
+    return this.mediaQueries?.isMobile ?? false;
   }
 
   /** @returns {number} Текущий индекс страницы */
@@ -163,5 +179,6 @@ export class BaseDelegate {
   destroy() {
     this._isDestroyed = true;
     this._deps = null;
+    this.removeAllListeners();
   }
 }

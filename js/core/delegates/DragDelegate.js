@@ -19,8 +19,8 @@
  *    _cancelFlip()    → При отмене: возврат видимости страниц
  */
 
-import { BookState } from "../../config.js";
-import { BaseDelegate } from './BaseDelegate.js';
+import { BookState, FlipPhase, Direction, BoolStr } from "../../config.js";
+import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 import { DragShadowRenderer } from './DragShadowRenderer.js';
 import { DragAnimator } from './DragAnimator.js';
 
@@ -35,14 +35,10 @@ export class DragDelegate extends BaseDelegate {
    * @param {EventListenerManager} deps.eventManager
    * @param {MediaQueryManager} deps.mediaQueries
    * @param {Object} deps.state
-   * @param {Function} deps.onIndexChange - Коллбэк при изменении индекса
-   * @param {Function} deps.onChapterUpdate - Коллбэк для обновления UI главы
    */
   constructor(deps) {
     super(deps);
     this.eventManager = deps.eventManager;
-    this.onIndexChange = deps.onIndexChange;
-    this.onChapterUpdate = deps.onChapterUpdate;
 
     // Вспомогательные классы
     this.shadowRenderer = new DragShadowRenderer(this.dom);
@@ -167,8 +163,8 @@ export class DragDelegate extends BaseDelegate {
   _startDrag(e, dir) {
     if (this.isBusy) return;
 
-    if (dir === "next" && !this.canFlipNext()) return;
-    if (dir === "prev" && !this.canFlipPrev()) return;
+    if (dir === Direction.NEXT && !this.canFlipNext()) return;
+    if (dir === Direction.PREV && !this.canFlipPrev()) return;
 
     // Переходим в FLIPPING через state machine, чтобы заблокировать
     // конкурентные операции (навигация, другой drag)
@@ -199,7 +195,7 @@ export class DragDelegate extends BaseDelegate {
    */
   _prepareFlip() {
     const nextIndex =
-      this.direction === "next"
+      this.direction === Direction.NEXT
         ? this.currentIndex + this.pagesPerFlip
         : this.currentIndex - this.pagesPerFlip;
 
@@ -208,7 +204,7 @@ export class DragDelegate extends BaseDelegate {
     // Отключаем transitions ДО изменения видимости страниц,
     // чтобы избежать мигания белого фона на мобильных
     if (book) {
-      book.dataset.noTransition = "true";
+      book.dataset.noTransition = BoolStr.TRUE;
     }
 
     this.renderer.prepareBuffer(nextIndex, this.isMobile);
@@ -219,12 +215,12 @@ export class DragDelegate extends BaseDelegate {
 
     if (sheet) {
       sheet.dataset.direction = this.direction;
-      sheet.dataset.phase = "drag";
+      sheet.dataset.phase = FlipPhase.DRAG;
       sheet.classList.add("no-transition");
     }
 
     if (book) {
-      book.dataset.state = "flipping";
+      book.dataset.state = BookState.FLIPPING;
       book.dataset.dragging = "";
     }
   }
@@ -240,22 +236,22 @@ export class DragDelegate extends BaseDelegate {
 
     if (this.isMobile) {
       if (rightBuffer) {
-        rightBuffer.dataset.buffer = "false";
-        rightBuffer.dataset.dragVisible = "true";
+        rightBuffer.dataset.buffer = BoolStr.FALSE;
+        rightBuffer.dataset.dragVisible = BoolStr.TRUE;
       }
-      if (rightActive) rightActive.dataset.dragHidden = "true";
-    } else if (this.direction === "next") {
+      if (rightActive) rightActive.dataset.dragHidden = BoolStr.TRUE;
+    } else if (this.direction === Direction.NEXT) {
       if (rightBuffer) {
-        rightBuffer.dataset.buffer = "false";
-        rightBuffer.dataset.dragVisible = "true";
+        rightBuffer.dataset.buffer = BoolStr.FALSE;
+        rightBuffer.dataset.dragVisible = BoolStr.TRUE;
       }
-      if (rightActive) rightActive.dataset.dragHidden = "true";
+      if (rightActive) rightActive.dataset.dragHidden = BoolStr.TRUE;
     } else {
       if (leftBuffer) {
-        leftBuffer.dataset.buffer = "false";
-        leftBuffer.dataset.dragVisible = "true";
+        leftBuffer.dataset.buffer = BoolStr.FALSE;
+        leftBuffer.dataset.dragVisible = BoolStr.TRUE;
       }
-      if (leftActive) leftActive.dataset.dragHidden = "true";
+      if (leftActive) leftActive.dataset.dragHidden = BoolStr.TRUE;
     }
   }
 
@@ -307,7 +303,7 @@ export class DragDelegate extends BaseDelegate {
 
     const x = e.clientX - this.bookRect.left;
 
-    if (this.direction === "next") {
+    if (this.direction === Direction.NEXT) {
       const progress = 1 - x / this.bookWidth;
       this.currentAngle = Math.max(0, Math.min(180, progress * 180));
     } else {
@@ -323,7 +319,7 @@ export class DragDelegate extends BaseDelegate {
    * @private
    */
   _render() {
-    const angle = this.direction === "next" ? -this.currentAngle : this.currentAngle;
+    const angle = this.direction === Direction.NEXT ? -this.currentAngle : this.currentAngle;
 
     const sheet = this.dom.get("sheet");
     if (sheet) {
@@ -418,10 +414,10 @@ export class DragDelegate extends BaseDelegate {
    */
   _completeFlip(direction) {
     const book = this.dom.get("book");
-    if (book) book.dataset.noTransition = "true";
+    if (book) book.dataset.noTransition = BoolStr.TRUE;
 
     const newIndex =
-      direction === "next"
+      direction === Direction.NEXT
         ? this.currentIndex + this.pagesPerFlip
         : this.currentIndex - this.pagesPerFlip;
 
@@ -429,15 +425,9 @@ export class DragDelegate extends BaseDelegate {
 
     this.renderer.swapBuffers();
 
-    // Обновляем индекс через коллбэк
-    if (this.onIndexChange) {
-      this.onIndexChange(newIndex);
-    }
-
-    // Обновляем UI главы
-    if (this.onChapterUpdate) {
-      this.onChapterUpdate();
-    }
+    // Уведомляем контроллер об изменении индекса и главы
+    this.emit(DelegateEvents.INDEX_CHANGE, newIndex);
+    this.emit(DelegateEvents.CHAPTER_UPDATE);
 
     this._cleanupAfterFlip(book, true);
   }
@@ -460,7 +450,7 @@ export class DragDelegate extends BaseDelegate {
    * @param {boolean} completed - Было ли перелистывание успешным
    */
   _cleanupAfterFlip(book, completed = false) {
-    if (book) book.dataset.state = "opened";
+    if (book) book.dataset.state = BookState.OPENED;
 
     if (this._pageRefs) {
       const { leftActive, rightActive, leftBuffer, rightBuffer } = this._pageRefs;
@@ -477,8 +467,8 @@ export class DragDelegate extends BaseDelegate {
       // При успешном флипе swapBuffers() уже корректно настроил атрибуты,
       // и изменение их по старым ссылкам скроет активную страницу.
       if (!completed) {
-        if (leftBuffer) leftBuffer.dataset.buffer = "true";
-        if (rightBuffer) rightBuffer.dataset.buffer = "true";
+        if (leftBuffer) leftBuffer.dataset.buffer = BoolStr.TRUE;
+        if (rightBuffer) rightBuffer.dataset.buffer = BoolStr.TRUE;
       }
     }
 
@@ -515,8 +505,6 @@ export class DragDelegate extends BaseDelegate {
     this._pageRefs = null;
     this._boundHandlers = null;
     this.eventManager = null;
-    this.onIndexChange = null;
-    this.onChapterUpdate = null;
     this.shadowRenderer = null;
     this.dragAnimator = null;
     super.destroy();

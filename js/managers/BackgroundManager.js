@@ -1,3 +1,5 @@
+import { BoolStr } from '../config.js';
+
 /**
  * BACKGROUND MANAGER
  * Управление фоновыми изображениями с кроссфейдом и предзагрузкой.
@@ -50,9 +52,9 @@ export class BackgroundManager {
     const isPreloaded = this.preloadedUrls.has(url);
 
     incoming.style.backgroundImage = `url(${url})`;
-    incoming.dataset.loading = isPreloaded ? "false" : "true";
-    incoming.dataset.active = "true";
-    outgoing.dataset.active = "false";
+    incoming.dataset.loading = isPreloaded ? BoolStr.FALSE : BoolStr.TRUE;
+    incoming.dataset.active = BoolStr.TRUE;
+    outgoing.dataset.active = BoolStr.FALSE;
 
     this.activeIndex = nextIndex;
 
@@ -76,14 +78,14 @@ export class BackgroundManager {
       this.preloadedUrls.add(url);
       // Убираем blur только если это всё ещё текущий фон
       if (element.style.backgroundImage.includes(url)) {
-        element.dataset.loading = "false";
+        element.dataset.loading = BoolStr.FALSE;
       }
     };
 
     img.onerror = () => {
       // При ошибке тоже убираем blur чтобы не застрять
       if (element.style.backgroundImage.includes(url)) {
-        element.dataset.loading = "false";
+        element.dataset.loading = BoolStr.FALSE;
       }
     };
 

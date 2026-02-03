@@ -10,6 +10,7 @@
  */
 
 import { LRUCache } from '../utils/LRUCache.js';
+import { BoolStr } from '../config.js';
 
 /** @constant {number} Максимальное количество URL изображений в кэше */
 const IMAGE_URL_CACHE_LIMIT = 50;
@@ -255,16 +256,16 @@ export class BookRenderer {
     const { leftActive, rightActive, leftBuffer, rightBuffer } = this.elements;
 
     // Текущие active становятся buffer
-    leftActive.dataset.buffer = "true";
-    rightActive.dataset.buffer = "true";
-    leftActive.dataset.active = "false";
-    rightActive.dataset.active = "false";
+    leftActive.dataset.buffer = BoolStr.TRUE;
+    rightActive.dataset.buffer = BoolStr.TRUE;
+    leftActive.dataset.active = BoolStr.FALSE;
+    rightActive.dataset.active = BoolStr.FALSE;
 
     // Текущие buffer становятся active
-    leftBuffer.dataset.buffer = "false";
-    rightBuffer.dataset.buffer = "false";
-    leftBuffer.dataset.active = "true";
-    rightBuffer.dataset.active = "true";
+    leftBuffer.dataset.buffer = BoolStr.FALSE;
+    rightBuffer.dataset.buffer = BoolStr.FALSE;
+    leftBuffer.dataset.active = BoolStr.TRUE;
+    rightBuffer.dataset.active = BoolStr.TRUE;
 
     // Обновляем ссылки
     this.elements.leftActive = leftBuffer;

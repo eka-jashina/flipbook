@@ -92,10 +92,10 @@ describe('BookRenderer', () => {
       expect(renderer.cacheSize).toBe(0);
     });
 
-    it('should not clear loadedImageUrls', () => {
+    it('should clear loadedImageUrls to prevent memory leaks', () => {
       renderer.loadedImageUrls.add('http://example.com/image.jpg');
       renderer.setPageContents([]);
-      expect(renderer.loadedImageUrls.has('http://example.com/image.jpg')).toBe(true);
+      expect(renderer.loadedImageUrls.size).toBe(0);
     });
   });
 

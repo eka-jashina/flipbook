@@ -31,7 +31,10 @@ describe('BaseDelegate', () => {
       settings: { get: vi.fn() },
       soundManager: { play: vi.fn() },
       ambientManager: { play: vi.fn() },
-      mediaQueries: { get: vi.fn().mockReturnValue(false) },
+      mediaQueries: {
+        get: vi.fn().mockReturnValue(false),
+        get isMobile() { return this.get("mobile"); }
+      },
       dom: { get: vi.fn() },
       backgroundManager: { setBackground: vi.fn() },
       state: {
@@ -140,12 +143,12 @@ describe('BaseDelegate', () => {
   describe('computed properties', () => {
     describe('isMobile', () => {
       it('should return false when not mobile', () => {
-        mockDeps.mediaQueries.get.mockReturnValue(false);
+        mockDeps.mediaQueries.get.mockImplementation((key) => key === "mobile" ? false : null);
         expect(delegate.isMobile).toBe(false);
       });
 
       it('should return true when mobile', () => {
-        mockDeps.mediaQueries.get.mockReturnValue(true);
+        mockDeps.mediaQueries.get.mockImplementation((key) => key === "mobile" ? true : null);
         expect(delegate.isMobile).toBe(true);
       });
 
@@ -248,9 +251,17 @@ describe('BaseDelegate', () => {
   });
 
   describe('destroy', () => {
-    it('should null out deps', () => {
+    it('should null out deps and remove listeners', () => {
+      const handler = vi.fn();
+      delegate.on('testEvent', handler);
+
       delegate.destroy();
+
       expect(delegate._deps).toBeNull();
+
+      // Listeners should be removed
+      delegate.emit('testEvent');
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 });

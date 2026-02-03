@@ -10,7 +10,7 @@
 
 import { CONFIG, BookState } from '../../config.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
-import { BaseDelegate } from './BaseDelegate.js';
+import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 
 export class LifecycleDelegate extends BaseDelegate {
   /**
@@ -26,18 +26,12 @@ export class LifecycleDelegate extends BaseDelegate {
    * @param {MediaQueryManager} deps.mediaQueries
    * @param {DOMManager} deps.dom
    * @param {Object} deps.state
-   * @param {Function} deps.onPaginationComplete - Коллбэк с результатами пагинации
-   * @param {Function} deps.onIndexChange - Коллбэк при изменении индекса
-   * @param {Function} deps.onChapterUpdate - Коллбэк для обновления UI главы
    */
   constructor(deps) {
     super(deps);
     this.contentLoader = deps.contentLoader;
     this.paginator = deps.paginator;
     this.loadingIndicator = deps.loadingIndicator;
-    this.onPaginationComplete = deps.onPaginationComplete;
-    this.onIndexChange = deps.onIndexChange;
-    this.onChapterUpdate = deps.onChapterUpdate;
   }
 
   /**
@@ -134,9 +128,7 @@ export class LifecycleDelegate extends BaseDelegate {
 
       if (this.isDestroyed) return;
 
-      if (this.onPaginationComplete) {
-        this.onPaginationComplete(pages, chapterStarts);
-      }
+      this.emit(DelegateEvents.PAGINATION_COMPLETE, { pages, chapterStarts });
 
       // ─── Этап 6: Рендеринг начального разворота ───
       const maxIndex = this.renderer.getMaxIndex(this.isMobile);
@@ -144,13 +136,8 @@ export class LifecycleDelegate extends BaseDelegate {
 
       this.renderer.renderSpread(safeStartIndex, this.isMobile);
 
-      if (this.onIndexChange) {
-        this.onIndexChange(safeStartIndex);
-      }
-
-      if (this.onChapterUpdate) {
-        this.onChapterUpdate();
-      }
+      this.emit(DelegateEvents.INDEX_CHANGE, safeStartIndex);
+      this.emit(DelegateEvents.CHAPTER_UPDATE);
 
       // ─── Этап 7: Завершение анимации и переход в OPENED ───
       await this.animator.finishOpenAnimation(signal);
@@ -221,9 +208,7 @@ export class LifecycleDelegate extends BaseDelegate {
       if (leftA) leftA.classList.remove("closing-hidden");
       if (rightA) rightA.classList.remove("closing-hidden");
 
-      if (this.onIndexChange) {
-        this.onIndexChange(0);
-      }
+      this.emit(DelegateEvents.INDEX_CHANGE, 0);
 
       this.renderer.clearCache();
 
@@ -274,9 +259,7 @@ export class LifecycleDelegate extends BaseDelegate {
 
       if (this.isDestroyed) return;
 
-      if (this.onPaginationComplete) {
-        this.onPaginationComplete(pages, chapterStarts);
-      }
+      this.emit(DelegateEvents.PAGINATION_COMPLETE, { pages, chapterStarts });
 
       // ─── Этап 4: Рендеринг с сохранением позиции ───
       const maxIndex = this.renderer.getMaxIndex(this.isMobile);
@@ -284,13 +267,8 @@ export class LifecycleDelegate extends BaseDelegate {
 
       this.renderer.renderSpread(newIndex, this.isMobile);
 
-      if (this.onIndexChange) {
-        this.onIndexChange(newIndex);
-      }
-
-      if (this.onChapterUpdate) {
-        this.onChapterUpdate();
-      }
+      this.emit(DelegateEvents.INDEX_CHANGE, newIndex);
+      this.emit(DelegateEvents.CHAPTER_UPDATE);
 
     } catch (error) {
       // Не обрабатываем ошибки, если делегат был уничтожен
@@ -357,9 +335,6 @@ export class LifecycleDelegate extends BaseDelegate {
     this.contentLoader = null;
     this.paginator = null;
     this.loadingIndicator = null;
-    this.onPaginationComplete = null;
-    this.onIndexChange = null;
-    this.onChapterUpdate = null;
     super.destroy();
   }
 }

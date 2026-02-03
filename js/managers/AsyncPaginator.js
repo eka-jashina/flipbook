@@ -109,7 +109,7 @@ export class AsyncPaginator extends EventEmitter {
         await this._yieldToUI(signal);
 
         // Статьи
-        const isMobile = mediaQueries.get("mobile");
+        const isMobile = mediaQueries.isMobile;
         const totalArticles = articles.length;
 
         for (let i = 0; i < totalArticles; i += this.chunkSize) {
