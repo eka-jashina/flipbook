@@ -174,13 +174,41 @@ flipbook/
 │   ├── fonts/                      # Кастомные шрифты (.woff2)
 │   └── sounds/                     # Аудио (перелистывание, ambient)
 │
-└── tests/                          # Тесты (Vitest)
+└── tests/                          # Тесты
     ├── setup.js                    # Настройка тестового окружения
     ├── helpers/                    # Вспомогательные утилиты для тестов
-    └── unit/                       # Юнит-тесты
-        ├── utils/                  # Тесты утилит
-        ├── managers/               # Тесты менеджеров
-        └── core/                   # Тесты ядра
+    │   ├── testUtils.js            # Утилиты для юнит-тестов
+    │   └── integrationUtils.js     # Утилиты для интеграционных тестов
+    ├── unit/                       # Юнит-тесты (Vitest)
+    │   ├── utils/                  # Тесты утилит
+    │   ├── managers/               # Тесты менеджеров
+    │   └── core/                   # Тесты ядра
+    ├── integration/                # Интеграционные тесты (Vitest)
+    │   ├── smoke.test.js           # Smoke-тесты
+    │   ├── flows/                  # Тесты пользовательских сценариев
+    │   │   ├── navigation.test.js  # Навигация по страницам
+    │   │   ├── settings.test.js    # Работа с настройками
+    │   │   ├── chapters.test.js    # Переключение глав
+    │   │   ├── drag.test.js        # Drag-взаимодействие
+    │   │   └── events.test.js      # Обработка событий
+    │   ├── lifecycle/              # Тесты жизненного цикла
+    │   │   ├── bookLifecycle.test.js   # Жизненный цикл книги
+    │   │   └── stateMachine.test.js    # Конечный автомат
+    │   └── services/               # Тесты сервисов
+    │       └── contentLoader.test.js   # Загрузка контента
+    └── e2e/                        # E2E-тесты (Playwright)
+        ├── fixtures/               # Фикстуры для тестов
+        │   └── book.fixture.js     # Фикстура книги
+        ├── pages/                  # Page Object модели
+        │   ├── BookPage.js         # Страница книги
+        │   └── SettingsPanel.js    # Панель настроек
+        ├── flows/                  # Тестовые сценарии
+        │   ├── reading.spec.js     # Сценарии чтения
+        │   ├── navigation.spec.js  # Навигация
+        │   ├── settings.spec.js    # Настройки
+        │   └── responsive.spec.js  # Адаптивность
+        └── performance/            # Тесты производительности
+            └── loading.spec.js     # Производительность загрузки
 ```
 
 ---
@@ -214,11 +242,16 @@ npm run dev
 | `npm run deploy` | Сборка + деплой на Netlify |
 | `npm run deploy:netlify` | Деплой `dist/` на Netlify |
 | `npm run deploy:vercel` | Деплой на Vercel |
-| `npm run test` | Запуск тестов (vitest) |
+| `npm run test` | Запуск unit/integration тестов (Vitest) |
 | `npm run test:run` | Однократный запуск тестов |
 | `npm run test:watch` | Тесты в watch-режиме |
 | `npm run test:coverage` | Тесты с отчётом покрытия |
-| `npm run test:ui` | Тесты с UI-интерфейсом |
+| `npm run test:ui` | Тесты с UI-интерфейсом Vitest |
+| `npm run test:e2e` | Запуск E2E-тестов (Playwright) |
+| `npm run test:e2e:ui` | E2E-тесты с UI-интерфейсом |
+| `npm run test:e2e:debug` | E2E-тесты в режиме отладки |
+| `npm run test:e2e:headed` | E2E-тесты с видимым браузером |
+| `npm run test:e2e:report` | Показать отчёт E2E-тестов |
 
 ---
 
@@ -240,6 +273,46 @@ npm run dev
 | **AudioServices** | `core/services/AudioServices.js` | Группа: звуки и ambient |
 | **RenderServices** | `core/services/RenderServices.js` | Группа: рендеринг и анимации |
 | **ContentServices** | `core/services/ContentServices.js` | Группа: загрузка и пагинация |
+
+---
+
+## Тестирование
+
+### Стратегия тестирования
+
+Проект использует трёхуровневую стратегию тестирования:
+
+| Уровень | Инструмент | Назначение |
+|---------|------------|------------|
+| **Unit** | Vitest | Изолированное тестирование модулей |
+| **Integration** | Vitest + jsdom | Тестирование взаимодействия компонентов |
+| **E2E** | Playwright | Сквозное тестирование в реальных браузерах |
+
+### E2E-тестирование (Playwright)
+
+E2E-тесты запускаются в пяти окружениях:
+- Desktop Chrome, Firefox, Safari
+- Mobile Chrome (Pixel 5), Mobile Safari (iPhone 12)
+
+```bash
+# Запуск всех E2E-тестов
+npm run test:e2e
+
+# С UI-интерфейсом Playwright
+npm run test:e2e:ui
+
+# С видимым браузером
+npm run test:e2e:headed
+
+# Отладка
+npm run test:e2e:debug
+```
+
+### Page Object паттерн
+
+E2E-тесты используют Page Object модели для абстракции взаимодействия с UI:
+- `BookPage` — основная страница книги
+- `SettingsPanel` — панель настроек
 
 ---
 
@@ -356,7 +429,9 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 ## Требования
 
 - Node.js >= 18.0.0
+- npm >= 9.0.0
 - Современный браузер (ES Modules, CSS 3D Transforms)
+- Для E2E-тестов: Playwright (устанавливается автоматически)
 
 ---
 
