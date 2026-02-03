@@ -4,10 +4,12 @@
  *
  * Особенности:
  * - Показ ошибок пользователю через UI-элемент
- * - Автоматическое скрытие через 5 секунд
+ * - Автоматическое скрытие через настраиваемый таймаут
  * - Fallback на динамический элемент если UI недоступен
  * - Логирование в консоль для отладки
  */
+
+import { CONFIG } from '../config.js';
 
 export class ErrorHandler {
   /**
@@ -28,10 +30,10 @@ export class ErrorHandler {
     text.textContent = message;
     error.hidden = false;
 
-    // Автоматически скрываем через 5 секунд
+    // Автоматически скрываем через заданный таймаут
     setTimeout(() => {
       error.hidden = true;
-    }, 5000);
+    }, CONFIG.UI.ERROR_HIDE_TIMEOUT);
   }
 
   /**
@@ -56,6 +58,6 @@ export class ErrorHandler {
     errorDiv.textContent = message;
     errorDiv.setAttribute("role", "alert");
     document.body.appendChild(errorDiv);
-    setTimeout(() => errorDiv.remove(), 5000);
+    setTimeout(() => errorDiv.remove(), CONFIG.UI.ERROR_HIDE_TIMEOUT);
   }
 }

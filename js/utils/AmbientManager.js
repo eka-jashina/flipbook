@@ -1,13 +1,15 @@
 /**
  * AMBIENT MANAGER
  * Управление фоновыми звуками окружения.
- * 
+ *
  * Особенности:
  * - Зацикленное воспроизведение
  * - Автоматическая пауза при сворачивании вкладки
  * - Плавные переходы между треками
  * - Независимая регулировка громкости
  */
+
+import { CONFIG } from '../config.js';
 
 export class AmbientManager {
   /**
@@ -300,7 +302,7 @@ export class AmbientManager {
       this.pause();
     } else {
       // Небольшая задержка перед возобновлением
-      setTimeout(() => this.resume(), 100);
+      setTimeout(() => this.resume(), CONFIG.AUDIO.VISIBILITY_RESUME_DELAY);
     }
   }
 

@@ -5,6 +5,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AmbientManager } from '@utils/AmbientManager.js';
+import { CONFIG } from '../../../js/config.js';
+
+const VISIBILITY_RESUME_DELAY = CONFIG.AUDIO.VISIBILITY_RESUME_DELAY;
 
 // Фабрика для создания мок-аудио
 function createMockAudio() {
@@ -595,7 +598,7 @@ describe('AmbientManager', () => {
       manager._handleVisibilityChange();
 
       // Resume happens after delay
-      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(VISIBILITY_RESUME_DELAY);
 
       expect(resumeSpy).toHaveBeenCalled();
     });

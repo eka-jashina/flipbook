@@ -10,10 +10,7 @@
  * - Retry с exponential backoff при сетевых ошибках
  */
 
-/** @type {number} Максимальное количество попыток */
-const MAX_RETRIES = 3;
-/** @type {number} Начальная задержка перед retry (мс) */
-const INITIAL_DELAY = 1000;
+import { CONFIG } from '../config.js';
 
 export class ContentLoader {
   constructor() {
@@ -48,6 +45,7 @@ export class ContentLoader {
    * @returns {Promise<string>} HTML-контент
    */
   async _fetchWithRetry(url, signal) {
+    const { MAX_RETRIES, INITIAL_RETRY_DELAY } = CONFIG.NETWORK;
     let lastError;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -74,7 +72,7 @@ export class ContentLoader {
 
         // Последняя попытка — не ждём
         if (attempt < MAX_RETRIES - 1) {
-          const delay = INITIAL_DELAY * Math.pow(2, attempt);
+          const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
           await this._delay(delay, signal);
         }
       }
