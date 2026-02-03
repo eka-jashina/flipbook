@@ -51,9 +51,9 @@ export default defineConfig(({ command, mode }) => {
       minify: 'terser',
       terserOptions: {
         compress: {
-          drop_console: true,
           drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info', 'console.warn', 'console.error'],
+          // Удаляем только debug-логи, сохраняем error/warn для диагностики в production
+          pure_funcs: ['console.log', 'console.debug', 'console.info'],
         },
         format: {
           comments: false,
