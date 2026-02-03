@@ -29,6 +29,11 @@ vi.mock('../../../../js/config.js', () => ({
     NEXT: "next",
     PREV: "prev",
   },
+  CONFIG: {
+    TIMING: {
+      FLIP_THROTTLE: 100,
+    },
+  },
 }));
 
 const { NavigationDelegate } = await import('../../../../js/core/delegates/NavigationDelegate.js');

@@ -3,8 +3,11 @@
  * Управление навигацией по книге.
  */
 
-import { BookState, Direction } from '../../config.js';
+import { BookState, Direction, CONFIG } from '../../config.js';
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
+
+/** @constant {number} Минимальный интервал между перелистываниями (мс) */
+const FLIP_THROTTLE_MS = CONFIG.TIMING?.FLIP_THROTTLE ?? 100;
 
 export class NavigationDelegate extends BaseDelegate {
   /**
@@ -19,6 +22,8 @@ export class NavigationDelegate extends BaseDelegate {
    */
   constructor(deps) {
     super(deps);
+    /** @type {number} Timestamp последнего перелистывания */
+    this._lastFlipTime = 0;
   }
 
   /**
@@ -39,17 +44,28 @@ export class NavigationDelegate extends BaseDelegate {
 
   /**
    * Переворот страницы вперёд/назад
+   *
+   * Включает rate limiting для защиты от быстрых повторных кликов.
+   *
    * @param {'next'|'prev'} direction
    */
   async flip(direction) {
+    // Rate limiting: игнорируем слишком частые вызовы
+    const now = Date.now();
+    if (now - this._lastFlipTime < FLIP_THROTTLE_MS) {
+      return;
+    }
+
     // Открываем книгу если закрыта и направление "next"
     if (!this.isOpened && direction === Direction.NEXT) {
+      this._lastFlipTime = now;
       this.emit(DelegateEvents.BOOK_OPEN);
       return;
     }
 
     // Закрываем если на первой странице и направление "prev"
     if (this.isOpened && direction === Direction.PREV && this.currentIndex === 0) {
+      this._lastFlipTime = now;
       this.emit(DelegateEvents.BOOK_CLOSE);
       return;
     }
@@ -63,13 +79,14 @@ export class NavigationDelegate extends BaseDelegate {
     const nextIndex = direction === Direction.NEXT
       ? this.currentIndex + step
       : this.currentIndex - step;
-    
+
     const maxIndex = this.renderer.getMaxIndex(this.isMobile);
 
     if (nextIndex < 0 || nextIndex > maxIndex) {
       return;
     }
 
+    this._lastFlipTime = now;
     await this._executeFlip(direction, nextIndex);
   }
 

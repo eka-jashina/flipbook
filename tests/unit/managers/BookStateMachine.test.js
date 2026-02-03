@@ -275,13 +275,35 @@ describe('BookStateMachine', () => {
   });
 
   describe('reset', () => {
-    it('should set state without notifying', () => {
+    it('should notify listeners by default when state changes', () => {
       const listener = vi.fn();
       fsm.subscribe(listener);
       fsm.transitionTo(BookState.OPENING);
       listener.mockClear();
 
       fsm.reset();
+
+      expect(fsm.state).toBe(BookState.CLOSED);
+      expect(listener).toHaveBeenCalledWith(BookState.CLOSED, BookState.OPENING);
+    });
+
+    it('should not notify listeners when silent option is true', () => {
+      const listener = vi.fn();
+      fsm.subscribe(listener);
+      fsm.transitionTo(BookState.OPENING);
+      listener.mockClear();
+
+      fsm.reset(BookState.CLOSED, { silent: true });
+
+      expect(fsm.state).toBe(BookState.CLOSED);
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('should not notify listeners when state does not change', () => {
+      const listener = vi.fn();
+      fsm.subscribe(listener);
+
+      fsm.reset(BookState.CLOSED);
 
       expect(fsm.state).toBe(BookState.CLOSED);
       expect(listener).not.toHaveBeenCalled();

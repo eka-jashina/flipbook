@@ -24,6 +24,7 @@ export class EventController {
    * @param {Function} options.onSettings - Коллбэк изменения настроек
    * @param {Function} options.isBusy - Проверка занятости (анимация)
    * @param {Function} options.isOpened - Проверка открыта ли книга
+   * @param {Function} [options.getFontSize] - Получить текущий размер шрифта из настроек
    */
   constructor(options) {
     this.book = options.book;
@@ -38,6 +39,9 @@ export class EventController {
     // Функции проверки состояния
     this.isBusy = options.isBusy;
     this.isOpened = options.isOpened;
+
+    // Геттер для настроек (source of truth)
+    this.getFontSize = options.getFontSize || (() => 18);
 
     // Координаты начала touch для определения swipe
     this.touchStartX = 0;
@@ -389,6 +393,10 @@ export class EventController {
 
   /**
    * Обновить отображение размера шрифта
+   *
+   * Использует getFontSize() как source of truth вместо DOM,
+   * чтобы избежать рассинхронизации при программном изменении настроек.
+   *
    * @private
    * @param {HTMLElement} element - Элемент отображения значения
    * @param {number} delta - Изменение (+1 или -1)
@@ -398,7 +406,8 @@ export class EventController {
 
     const minSize = cssVars.getNumber("--font-min", 14);
     const maxSize = cssVars.getNumber("--font-max", 22);
-    const current = parseInt(element.textContent, 10) || 18;
+    // Source of truth — настройки, не DOM
+    const current = this.getFontSize();
     const newSize = Math.max(minSize, Math.min(maxSize, current + delta));
 
     element.textContent = newSize;

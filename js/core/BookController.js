@@ -21,7 +21,7 @@
  * 4. Managers   → Subscriptions, ResizeHandler
  */
 
-import { mediaQueries } from '../utils/index.js';
+import { mediaQueries, ErrorHandler } from '../utils/index.js';
 import { CONFIG } from '../config.js';
 import { ComponentFactory } from './ComponentFactory.js';
 import { AppInitializer } from './AppInitializer.js';
@@ -181,6 +181,7 @@ export class BookController {
       onSettings: (k, v) => this.settingsDelegate.handleChange(k, v),
       isBusy: () => this.stateMachine.isBusy || this.dragDelegate?.isActive,
       isOpened: () => this.stateMachine.isOpened,
+      getFontSize: () => this.settings.get("fontSize"),
     });
 
     // AppInitializer
@@ -368,26 +369,31 @@ export class BookController {
   async init() {
     if (this.isDestroyed) return;
 
-    await this.initializer.initialize();
+    try {
+      await this.initializer.initialize();
 
-    this.subscriptions.subscribeToState(
-      this.stateMachine,
-      this.core.dom,
-      () => this._updateDebug()
-    );
+      this.subscriptions.subscribeToState(
+        this.stateMachine,
+        this.core.dom,
+        () => this._updateDebug()
+      );
 
-    this.subscriptions.subscribeToPagination(
-      this.render.paginator,
-      this.render.loadingIndicator
-    );
+      this.subscriptions.subscribeToPagination(
+        this.render.paginator,
+        this.render.loadingIndicator
+      );
 
-    this.subscriptions.subscribeToMediaQueries(
-      (keepIndex) => this._repaginate(keepIndex),
-      () => this.stateMachine.isOpened
-    );
+      this.subscriptions.subscribeToMediaQueries(
+        (keepIndex) => this._repaginate(keepIndex),
+        () => this.stateMachine.isOpened
+      );
 
-    this.resizeHandler.bind();
-    this._updateDebug();
+      this.resizeHandler.bind();
+      this._updateDebug();
+    } catch (error) {
+      ErrorHandler.handle(error, "Не удалось инициализировать приложение");
+      throw error; // Re-throw для возможной обработки выше
+    }
   }
 
   /**
