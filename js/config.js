@@ -81,7 +81,28 @@ export const CONFIG = Object.freeze({
     SETTLE_DELAY: 100,
   },
 
-  TIMING_SAFETY_MARGIN: 100
+  TIMING_SAFETY_MARGIN: 100,
+
+  // Настройки UI
+  UI: {
+    // Время отображения сообщения об ошибке перед автоскрытием (мс)
+    ERROR_HIDE_TIMEOUT: 5000,
+  },
+
+  // Настройки сетевых операций
+  NETWORK: {
+    // Максимальное количество попыток загрузки
+    MAX_RETRIES: 3,
+    // Начальная задержка перед повторной попыткой (мс)
+    // Увеличивается экспоненциально: 1000 → 2000 → 4000
+    INITIAL_RETRY_DELAY: 1000,
+  },
+
+  // Настройки аудио
+  AUDIO: {
+    // Задержка перед возобновлением ambient при возврате на вкладку (мс)
+    VISIBILITY_RESUME_DELAY: 100,
+  },
 });
 
 export const BookState = Object.freeze({

@@ -4,6 +4,9 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ContentLoader } from '../../../js/managers/ContentLoader.js';
+import { CONFIG } from '../../../js/config.js';
+
+const { MAX_RETRIES, INITIAL_RETRY_DELAY } = CONFIG.NETWORK;
 
 describe('ContentLoader', () => {
   let loader;
@@ -88,9 +91,9 @@ describe('ContentLoader', () => {
       const expectPromise = expect(resultPromise)
         .rejects.toThrow('Failed to load notfound.html after 3 attempts');
 
-      // Wait for all retry delays (1000ms + 2000ms)
-      await vi.advanceTimersByTimeAsync(1000);
-      await vi.advanceTimersByTimeAsync(2000);
+      // Wait for all retry delays (exponential backoff)
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY);
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY * 2);
 
       await expectPromise;
 
@@ -112,10 +115,10 @@ describe('ContentLoader', () => {
 
       const resultPromise = loader._fetchWithRetry('test.html', null);
 
-      // First attempt fails, wait for retry delay (1000ms)
-      await vi.advanceTimersByTimeAsync(1000);
-      // Second attempt fails, wait for retry delay (2000ms)
-      await vi.advanceTimersByTimeAsync(2000);
+      // First attempt fails, wait for retry delay
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY);
+      // Second attempt fails, wait for retry delay (exponential)
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY * 2);
 
       const result = await resultPromise;
       expect(result).toBe('success');
@@ -134,9 +137,9 @@ describe('ContentLoader', () => {
       const expectPromise = expect(resultPromise)
         .rejects.toThrow('Failed to load test.html after 3 attempts');
 
-      // Wait for all retry delays
-      await vi.advanceTimersByTimeAsync(1000); // First retry
-      await vi.advanceTimersByTimeAsync(2000); // Second retry
+      // Wait for all retry delays (exponential backoff)
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY); // First retry
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY * 2); // Second retry
 
       await expectPromise;
     });
@@ -177,7 +180,7 @@ describe('ContentLoader', () => {
       });
 
       const resultPromise = loader._fetchWithRetry('test.html', null);
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY);
 
       const result = await resultPromise;
       expect(result).toBe('recovered');

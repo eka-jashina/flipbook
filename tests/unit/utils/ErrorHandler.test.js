@@ -5,6 +5,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ErrorHandler } from '@utils/ErrorHandler.js';
+import { CONFIG } from '../../../js/config.js';
+
+const ERROR_HIDE_TIMEOUT = CONFIG.UI.ERROR_HIDE_TIMEOUT;
 
 describe('ErrorHandler', () => {
   let errorElement;
@@ -56,7 +59,7 @@ describe('ErrorHandler', () => {
 
       expect(errorElement.hidden).toBe(false);
 
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(ERROR_HIDE_TIMEOUT);
 
       expect(errorElement.hidden).toBe(true);
     });
@@ -178,7 +181,7 @@ describe('ErrorHandler', () => {
 
       expect(document.querySelector('.error-message')).not.toBeNull();
 
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(ERROR_HIDE_TIMEOUT);
 
       expect(document.querySelector('.error-message')).toBeNull();
 
@@ -349,7 +352,7 @@ describe('ErrorHandler', () => {
 
       expect(document.querySelector('.error-message')).not.toBeNull();
 
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(ERROR_HIDE_TIMEOUT);
 
       expect(document.querySelector('.error-message')).toBeNull();
     });
@@ -362,7 +365,7 @@ describe('ErrorHandler', () => {
       const fallbacks = document.querySelectorAll('.error-message');
       expect(fallbacks.length).toBe(3);
 
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(ERROR_HIDE_TIMEOUT);
 
       expect(document.querySelectorAll('.error-message').length).toBe(0);
     });
@@ -381,7 +384,7 @@ describe('ErrorHandler', () => {
       ErrorHandler.show('Second');
       vi.advanceTimersByTime(2000);
 
-      // Первый таймер (5000ms) уже сработал и скрыл элемент
+      // Первый таймер (ERROR_HIDE_TIMEOUT) уже сработал и скрыл элемент
       expect(errorElement.hidden).toBe(true);
 
       // Но текст был обновлён вторым вызовом
@@ -397,8 +400,8 @@ describe('ErrorHandler', () => {
       expect(errorElement.hidden).toBe(false);
       expect(textElement.textContent).toBe('Error 2');
 
-      // После 5 секунд первый таймер скроет элемент
-      vi.advanceTimersByTime(5000);
+      // После ERROR_HIDE_TIMEOUT первый таймер скроет элемент
+      vi.advanceTimersByTime(ERROR_HIDE_TIMEOUT);
       expect(errorElement.hidden).toBe(true);
     });
   });
