@@ -261,6 +261,85 @@ npm run dev
 - XSS-защита через `HTMLSanitizer`
 - Загрузка контента только с того же origin
 
+### Content Security Policy (CSP)
+
+Рекомендуемые HTTP-заголовки безопасности для production-деплоя:
+
+```
+Content-Security-Policy:
+  default-src 'self';
+  script-src 'self';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data:;
+  font-src 'self';
+  media-src 'self';
+  connect-src 'self';
+  object-src 'none';
+  frame-ancestors 'none';
+  base-uri 'self';
+  form-action 'self'
+```
+
+| Директива | Значение | Причина |
+|-----------|----------|---------|
+| `script-src 'self'` | Только свои скрипты | ES Modules, нет inline-скриптов |
+| `style-src 'self' 'unsafe-inline'` | Свои + inline | CSS custom properties в JS |
+| `img-src 'self' data:` | Свои + data URI | WebP фоны + возможные base64 |
+| `media-src 'self'` | Только свои | MP3 звуки страниц и ambient |
+| `object-src 'none'` | Запрет плагинов | Защита от Flash/Java |
+| `frame-ancestors 'none'` | Запрет iframe | Защита от clickjacking |
+
+#### Настройка для хостингов
+
+<details>
+<summary><b>Netlify</b> (_headers файл)</summary>
+
+```
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+```
+
+</details>
+
+<details>
+<summary><b>Vercel</b> (vercel.json)</summary>
+
+```json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
+<summary><b>Nginx</b></summary>
+
+```nginx
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "DENY" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+```
+
+</details>
+
 ---
 
 ## Управление
