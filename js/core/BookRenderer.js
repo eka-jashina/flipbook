@@ -62,6 +62,10 @@ export class BookRenderer {
 
   /**
    * Получить DOM-элемент страницы (с кэшированием)
+   *
+   * Кэшируется оригинальный клон из pageContents.
+   * При каждом запросе возвращается новый клон из кэша.
+   *
    * @param {number} index - Индекс страницы
    * @returns {HTMLElement|null} Клон DOM-элемента или null
    */
@@ -75,12 +79,10 @@ export class BookRenderer {
       return cached.cloneNode(true);
     }
 
-    // Клонируем DOM-элемент напрямую (без innerHTML-парсинга)
+    // Кэшируем оригинал из pageContents, возвращаем его клон
     const source = this.pageContents[index];
-    const dom = source.cloneNode(true);
-
-    this.cache.set(index, dom);
-    return dom.cloneNode(true);
+    this.cache.set(index, source);
+    return source.cloneNode(true);
   }
 
   /**

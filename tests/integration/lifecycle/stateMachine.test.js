@@ -339,7 +339,7 @@ describe('State Machine Integration', () => {
       expect(stateMachine.state).toBe(BookState.OPENED);
     });
 
-    it('should not notify subscribers', () => {
+    it('should notify subscribers by default', () => {
       const listener = vi.fn();
       stateMachine.subscribe(listener);
 
@@ -347,6 +347,18 @@ describe('State Machine Integration', () => {
       listener.mockClear();
 
       stateMachine.reset(BookState.CLOSED);
+
+      expect(listener).toHaveBeenCalledWith(BookState.CLOSED, BookState.OPENING);
+    });
+
+    it('should not notify subscribers when silent option is true', () => {
+      const listener = vi.fn();
+      stateMachine.subscribe(listener);
+
+      stateMachine.transitionTo(BookState.OPENING);
+      listener.mockClear();
+
+      stateMachine.reset(BookState.CLOSED, { silent: true });
 
       expect(listener).not.toHaveBeenCalled();
     });

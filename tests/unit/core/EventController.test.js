@@ -85,6 +85,7 @@ describe('EventController', () => {
       onSettings: vi.fn(),
       isBusy: vi.fn(() => false),
       isOpened: vi.fn(() => true),
+      getFontSize: vi.fn(() => 18),
     };
 
     controller = new EventController({
@@ -656,7 +657,7 @@ describe('EventController', () => {
     });
 
     it('should not exceed max font size', () => {
-      elements.fontSizeValue.textContent = '22'; // max is 22
+      mockCallbacks.getFontSize.mockReturnValue(22); // max is 22
       controller._bindSettingsControls(elements);
 
       const handler = registeredListeners.find(
@@ -679,7 +680,7 @@ describe('EventController', () => {
     });
 
     it('should not go below min font size', () => {
-      elements.fontSizeValue.textContent = '14'; // min is 14
+      mockCallbacks.getFontSize.mockReturnValue(14); // min is 14
       controller._bindSettingsControls(elements);
 
       const handler = registeredListeners.find(
@@ -1343,7 +1344,7 @@ describe('EventController', () => {
   describe('_updateFontSizeDisplay', () => {
     it('should update element text content with clamped value', () => {
       const element = document.createElement('span');
-      element.textContent = '18';
+      mockCallbacks.getFontSize.mockReturnValue(18);
 
       controller._updateFontSizeDisplay(element, 1);
 
@@ -1352,7 +1353,7 @@ describe('EventController', () => {
 
     it('should not exceed max value', () => {
       const element = document.createElement('span');
-      element.textContent = '22'; // max
+      mockCallbacks.getFontSize.mockReturnValue(22); // max
 
       controller._updateFontSizeDisplay(element, 1);
 
@@ -1361,7 +1362,7 @@ describe('EventController', () => {
 
     it('should not go below min value', () => {
       const element = document.createElement('span');
-      element.textContent = '14'; // min
+      mockCallbacks.getFontSize.mockReturnValue(14); // min
 
       controller._updateFontSizeDisplay(element, -1);
 
@@ -1372,13 +1373,14 @@ describe('EventController', () => {
       expect(() => controller._updateFontSizeDisplay(null, 1)).not.toThrow();
     });
 
-    it('should handle invalid text content', () => {
+    it('should use getFontSize as source of truth', () => {
       const element = document.createElement('span');
-      element.textContent = 'invalid';
+      element.textContent = '20'; // This should be ignored
+      mockCallbacks.getFontSize.mockReturnValue(18); // This is the actual value
 
       controller._updateFontSizeDisplay(element, 1);
 
-      // Should use default value (18) when parsing fails
+      // Should use getFontSize() value (18) not DOM value (20)
       expect(element.textContent).toBe('19');
     });
   });

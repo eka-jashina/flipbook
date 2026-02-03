@@ -167,15 +167,29 @@ export class BookStateMachine {
   }
 
   /**
-   * Принудительно установить состояние (без валидации)
+   * Сбросить состояние машины (без валидации переходов)
    *
    * Используется для инициализации или восстановления состояния.
-   * Не вызывает уведомление подписчиков.
+   * По умолчанию уведомляет подписчиков об изменении.
    *
    * @param {string} [state=BookState.CLOSED] - Состояние для установки
+   * @param {Object} [options] - Опции
+   * @param {boolean} [options.silent=false] - Не уведомлять подписчиков
    */
-  reset(state = BookState.CLOSED) {
+  reset(state = BookState.CLOSED, { silent = false } = {}) {
+    const oldState = this._state;
     this._state = state;
+
+    // Уведомляем подписчиков если состояние изменилось и не silent-режим
+    if (!silent && oldState !== state) {
+      for (const listener of this._listeners) {
+        try {
+          listener(state, oldState);
+        } catch (e) {
+          console.error("State listener error:", e);
+        }
+      }
+    }
   }
 
   /**
