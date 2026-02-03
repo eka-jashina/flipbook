@@ -20,7 +20,7 @@
  */
 
 import { BookState, FlipPhase, Direction, BoolStr } from "../../config.js";
-import { BaseDelegate } from './BaseDelegate.js';
+import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 import { DragShadowRenderer } from './DragShadowRenderer.js';
 import { DragAnimator } from './DragAnimator.js';
 
@@ -35,14 +35,10 @@ export class DragDelegate extends BaseDelegate {
    * @param {EventListenerManager} deps.eventManager
    * @param {MediaQueryManager} deps.mediaQueries
    * @param {Object} deps.state
-   * @param {Function} deps.onIndexChange - Коллбэк при изменении индекса
-   * @param {Function} deps.onChapterUpdate - Коллбэк для обновления UI главы
    */
   constructor(deps) {
     super(deps);
     this.eventManager = deps.eventManager;
-    this.onIndexChange = deps.onIndexChange;
-    this.onChapterUpdate = deps.onChapterUpdate;
 
     // Вспомогательные классы
     this.shadowRenderer = new DragShadowRenderer(this.dom);
@@ -429,15 +425,9 @@ export class DragDelegate extends BaseDelegate {
 
     this.renderer.swapBuffers();
 
-    // Обновляем индекс через коллбэк
-    if (this.onIndexChange) {
-      this.onIndexChange(newIndex);
-    }
-
-    // Обновляем UI главы
-    if (this.onChapterUpdate) {
-      this.onChapterUpdate();
-    }
+    // Уведомляем контроллер об изменении индекса и главы
+    this.emit(DelegateEvents.INDEX_CHANGE, newIndex);
+    this.emit(DelegateEvents.CHAPTER_UPDATE);
 
     this._cleanupAfterFlip(book, true);
   }
@@ -515,8 +505,6 @@ export class DragDelegate extends BaseDelegate {
     this._pageRefs = null;
     this._boundHandlers = null;
     this.eventManager = null;
-    this.onIndexChange = null;
-    this.onChapterUpdate = null;
     this.shadowRenderer = null;
     this.dragAnimator = null;
     super.destroy();

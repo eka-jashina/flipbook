@@ -28,13 +28,21 @@ vi.mock('../../../../js/config.js', () => ({
 }));
 
 const { SettingsDelegate } = await import('../../../../js/core/delegates/SettingsDelegate.js');
+const { DelegateEvents } = await import('../../../../js/core/delegates/BaseDelegate.js');
 
 describe('SettingsDelegate', () => {
   let delegate;
   let mockDeps;
   let mockHtml;
+  let eventHandlers;
 
   beforeEach(() => {
+    // Event handlers to capture emitted events
+    eventHandlers = {
+      onSettingsUpdate: vi.fn(),
+      onRepaginate: vi.fn(),
+    };
+
     mockHtml = {
       style: {
         setProperty: vi.fn(),
@@ -86,11 +94,13 @@ describe('SettingsDelegate', () => {
         index: 0,
         chapterStarts: [],
       },
-      onUpdate: vi.fn(),
-      onRepaginate: vi.fn(),
     };
 
     delegate = new SettingsDelegate(mockDeps);
+
+    // Subscribe to delegate events
+    delegate.on(DelegateEvents.SETTINGS_UPDATE, eventHandlers.onSettingsUpdate);
+    delegate.on(DelegateEvents.REPAGINATE, eventHandlers.onRepaginate);
 
     // Reset mocks
     mockCssVars.invalidateCache.mockClear();
@@ -107,9 +117,9 @@ describe('SettingsDelegate', () => {
       expect(delegate.debugPanel).toBe(mockDeps.debugPanel);
     });
 
-    it('should store callbacks', () => {
-      expect(delegate.onUpdate).toBe(mockDeps.onUpdate);
-      expect(delegate.onRepaginate).toBe(mockDeps.onRepaginate);
+    it('should extend EventEmitter', () => {
+      expect(typeof delegate.on).toBe('function');
+      expect(typeof delegate.emit).toBe('function');
     });
 
     it('should throw error if required dependencies are missing', () => {
@@ -206,10 +216,10 @@ describe('SettingsDelegate', () => {
       expect(mockDeps.settings.set).not.toHaveBeenCalledWith('fontSize', 'increase');
     });
 
-    it('should call onUpdate callback', () => {
+    it('should emit settingsUpdate event', () => {
       delegate.handleChange('theme', 'dark');
 
-      expect(mockDeps.onUpdate).toHaveBeenCalled();
+      expect(eventHandlers.onSettingsUpdate).toHaveBeenCalled();
     });
 
     describe('fontSize handling', () => {
@@ -254,12 +264,12 @@ describe('SettingsDelegate', () => {
         expect(mockDeps.settings.set).not.toHaveBeenCalledWith('fontSize', 13);
       });
 
-      it('should trigger repagination when opened', () => {
+      it('should emit repaginate event when opened', () => {
         mockDeps.settings.get.mockImplementation((key) => key === 'fontSize' ? 18 : null);
 
         delegate.handleChange('fontSize', 'increase');
 
-        expect(mockDeps.onRepaginate).toHaveBeenCalledWith(true);
+        expect(eventHandlers.onRepaginate).toHaveBeenCalledWith(true);
       });
     });
 
@@ -273,10 +283,10 @@ describe('SettingsDelegate', () => {
         );
       });
 
-      it('should trigger repagination when opened', () => {
+      it('should emit repaginate event when opened', () => {
         delegate.handleChange('font', 'merriweather');
 
-        expect(mockDeps.onRepaginate).toHaveBeenCalledWith(true);
+        expect(eventHandlers.onRepaginate).toHaveBeenCalledWith(true);
       });
     });
 
@@ -395,8 +405,17 @@ describe('SettingsDelegate', () => {
       delegate.destroy();
 
       expect(delegate.debugPanel).toBeNull();
-      expect(delegate.onUpdate).toBeNull();
-      expect(delegate.onRepaginate).toBeNull();
+    });
+
+    it('should remove all event listeners', () => {
+      delegate.destroy();
+
+      // Emitting events after destroy should not call handlers
+      delegate.emit(DelegateEvents.SETTINGS_UPDATE);
+      delegate.emit(DelegateEvents.REPAGINATE, true);
+
+      expect(eventHandlers.onSettingsUpdate).not.toHaveBeenCalled();
+      expect(eventHandlers.onRepaginate).not.toHaveBeenCalled();
     });
   });
 });

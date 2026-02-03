@@ -32,7 +32,8 @@ import {
   SettingsDelegate,
   LifecycleDelegate,
   ChapterDelegate,
-  DragDelegate
+  DragDelegate,
+  DelegateEvents
 } from './delegates/index.js';
 
 export class BookController {
@@ -126,9 +127,6 @@ export class BookController {
       soundManager,
       mediaQueries,
       state: this.state,
-      onIndexChange: (newIndex) => this._handleIndexChange(newIndex),
-      onBookOpen: () => this._handleBookOpen(),
-      onBookClose: () => this._handleBookClose(),
     });
 
     // LifecycleDelegate
@@ -141,13 +139,11 @@ export class BookController {
       animator,
       loadingIndicator,
       soundManager,
+      ambientManager,
+      settings: this.settings,
       dom,
       mediaQueries,
       state: this.state,
-      onPaginationComplete: (pages, chapterStarts) =>
-        this._handlePaginationComplete(pages, chapterStarts),
-      onIndexChange: (newIndex) => this._handleIndexChange(newIndex),
-      onChapterUpdate: () => this._updateChapterBackground(),
     });
 
     // SettingsDelegate
@@ -160,8 +156,6 @@ export class BookController {
       stateMachine: this.stateMachine,
       mediaQueries,
       state: this.state,
-      onUpdate: () => this._updateDebug(),
-      onRepaginate: (keepIndex) => this._repaginate(keepIndex),
     });
 
     // DragDelegate
@@ -174,9 +168,10 @@ export class BookController {
       eventManager,
       mediaQueries,
       state: this.state,
-      onIndexChange: (newIndex) => this._handleIndexChange(newIndex),
-      onChapterUpdate: () => this._updateChapterBackground(),
     });
+
+    // Подписка на события делегатов
+    this._subscribeToDelegates();
 
     // EventController (переиспользуем фабрику)
     this.eventController = this.factory.createEventController({
@@ -211,8 +206,52 @@ export class BookController {
     });
   }
 
+  /**
+   * Подписаться на события делегатов
+   * @private
+   */
+  _subscribeToDelegates() {
+    // NavigationDelegate events
+    this.navigationDelegate.on(DelegateEvents.INDEX_CHANGE, (newIndex) => {
+      this._handleIndexChange(newIndex);
+    });
+    this.navigationDelegate.on(DelegateEvents.BOOK_OPEN, () => {
+      this._handleBookOpen();
+    });
+    this.navigationDelegate.on(DelegateEvents.BOOK_CLOSE, () => {
+      this._handleBookClose();
+    });
+
+    // LifecycleDelegate events
+    this.lifecycleDelegate.on(DelegateEvents.PAGINATION_COMPLETE, ({ pages, chapterStarts }) => {
+      this._handlePaginationComplete(pages, chapterStarts);
+    });
+    this.lifecycleDelegate.on(DelegateEvents.INDEX_CHANGE, (newIndex) => {
+      this._handleIndexChange(newIndex);
+    });
+    this.lifecycleDelegate.on(DelegateEvents.CHAPTER_UPDATE, () => {
+      this._updateChapterBackground();
+    });
+
+    // SettingsDelegate events
+    this.settingsDelegate.on(DelegateEvents.SETTINGS_UPDATE, () => {
+      this._updateDebug();
+    });
+    this.settingsDelegate.on(DelegateEvents.REPAGINATE, (keepIndex) => {
+      this._repaginate(keepIndex);
+    });
+
+    // DragDelegate events
+    this.dragDelegate.on(DelegateEvents.INDEX_CHANGE, (newIndex) => {
+      this._handleIndexChange(newIndex);
+    });
+    this.dragDelegate.on(DelegateEvents.CHAPTER_UPDATE, () => {
+      this._updateChapterBackground();
+    });
+  }
+
   // ═══════════════════════════════════════════
-  // ОБРАБОТЧИКИ КОЛЛБЭКОВ ОТ ДЕЛЕГАТОВ
+  // ОБРАБОТЧИКИ СОБЫТИЙ ОТ ДЕЛЕГАТОВ
   // ═══════════════════════════════════════════
 
   /**

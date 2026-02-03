@@ -5,7 +5,7 @@
 
 import { CONFIG } from "../../config.js";
 import { cssVars } from "../../utils/CSSVariables.js";
-import { BaseDelegate } from './BaseDelegate.js';
+import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 
 export class SettingsDelegate extends BaseDelegate {
   /**
@@ -15,14 +15,10 @@ export class SettingsDelegate extends BaseDelegate {
    * @param {SoundManager} deps.soundManager
    * @param {AmbientManager} deps.ambientManager
    * @param {DebugPanel} deps.debugPanel
-   * @param {Function} deps.onUpdate - Коллбэк для обновления UI после изменений
-   * @param {Function} deps.onRepaginate - Коллбэк для репагинации
    */
   constructor(deps) {
     super(deps);
     this.debugPanel = deps.debugPanel;
-    this.onUpdate = deps.onUpdate;
-    this.onRepaginate = deps.onRepaginate;
   }
 
   /**
@@ -127,9 +123,7 @@ export class SettingsDelegate extends BaseDelegate {
     }
 
     // Уведомляем контроллер об обновлении
-    if (this.onUpdate) {
-      this.onUpdate();
-    }
+    this.emit(DelegateEvents.SETTINGS_UPDATE);
   }
 
   // ═══════════════════════════════════════════
@@ -164,8 +158,8 @@ export class SettingsDelegate extends BaseDelegate {
       cssVars.invalidateCache();
       
       // Требуется репагинация
-      if (this.onRepaginate && this.isOpened) {
-        this.onRepaginate(true);
+      if (this.isOpened) {
+        this.emit(DelegateEvents.REPAGINATE, true);
       }
     }
   }
@@ -187,8 +181,8 @@ export class SettingsDelegate extends BaseDelegate {
     cssVars.invalidateCache();
 
     // Требуется репагинация
-    if (this.onRepaginate && this.isOpened) {
-      this.onRepaginate(true);
+    if (this.isOpened) {
+      this.emit(DelegateEvents.REPAGINATE, true);
     }
   }
 
@@ -309,8 +303,6 @@ export class SettingsDelegate extends BaseDelegate {
    */
   destroy() {
     this.debugPanel = null;
-    this.onUpdate = null;
-    this.onRepaginate = null;
     super.destroy();
   }
 }

@@ -91,4 +91,11 @@ export class EventEmitter {
   destroy() {
     this._events.clear();
   }
+
+  /**
+   * Удалить все подписки (алиас для совместимости с Node.js EventEmitter API)
+   */
+  removeAllListeners() {
+    this._events.clear();
+  }
 }

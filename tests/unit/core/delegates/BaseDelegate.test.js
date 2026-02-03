@@ -251,9 +251,17 @@ describe('BaseDelegate', () => {
   });
 
   describe('destroy', () => {
-    it('should null out deps', () => {
+    it('should null out deps and remove listeners', () => {
+      const handler = vi.fn();
+      delegate.on('testEvent', handler);
+
       delegate.destroy();
+
       expect(delegate._deps).toBeNull();
+
+      // Listeners should be removed
+      delegate.emit('testEvent');
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 });

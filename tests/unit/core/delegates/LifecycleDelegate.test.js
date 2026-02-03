@@ -43,13 +43,22 @@ vi.mock('../../../../js/config.js', () => ({
 }));
 
 const { LifecycleDelegate } = await import('../../../../js/core/delegates/LifecycleDelegate.js');
+const { DelegateEvents } = await import('../../../../js/core/delegates/BaseDelegate.js');
 
 describe('LifecycleDelegate', () => {
   let delegate;
   let mockDeps;
+  let eventHandlers;
 
   beforeEach(() => {
     vi.useFakeTimers();
+
+    // Event handlers to capture emitted events
+    eventHandlers = {
+      onPaginationComplete: vi.fn(),
+      onIndexChange: vi.fn(),
+      onChapterUpdate: vi.fn(),
+    };
 
     mockDeps = {
       stateMachine: {
@@ -131,12 +140,15 @@ describe('LifecycleDelegate', () => {
         index: 0,
         chapterStarts: [0],
       },
-      onPaginationComplete: vi.fn(),
-      onIndexChange: vi.fn(),
-      onChapterUpdate: vi.fn(),
     };
 
     delegate = new LifecycleDelegate(mockDeps);
+
+    // Subscribe to delegate events
+    delegate.on(DelegateEvents.PAGINATION_COMPLETE, eventHandlers.onPaginationComplete);
+    delegate.on(DelegateEvents.INDEX_CHANGE, eventHandlers.onIndexChange);
+    delegate.on(DelegateEvents.CHAPTER_UPDATE, eventHandlers.onChapterUpdate);
+
     mockErrorHandler.handle.mockClear();
   });
 
@@ -248,12 +260,12 @@ describe('LifecycleDelegate', () => {
       expect(mockDeps.paginator.paginate).toHaveBeenCalled();
     });
 
-    it('should call onPaginationComplete', async () => {
+    it('should emit paginationComplete event', async () => {
       const openPromise = delegate.open();
       await vi.runAllTimersAsync();
       await openPromise;
 
-      expect(mockDeps.onPaginationComplete).toHaveBeenCalled();
+      expect(eventHandlers.onPaginationComplete).toHaveBeenCalled();
     });
 
     it('should render initial spread', async () => {
@@ -400,7 +412,7 @@ describe('LifecycleDelegate', () => {
       await vi.runAllTimersAsync();
       await closePromise;
 
-      expect(mockDeps.onIndexChange).toHaveBeenCalledWith(0);
+      expect(eventHandlers.onIndexChange).toHaveBeenCalledWith(0);
     });
 
     it('should clear renderer cache', async () => {
@@ -522,9 +534,19 @@ describe('LifecycleDelegate', () => {
       expect(delegate.contentLoader).toBeNull();
       expect(delegate.paginator).toBeNull();
       expect(delegate.loadingIndicator).toBeNull();
-      expect(delegate.onPaginationComplete).toBeNull();
-      expect(delegate.onIndexChange).toBeNull();
-      expect(delegate.onChapterUpdate).toBeNull();
+    });
+
+    it('should remove all event listeners', () => {
+      delegate.destroy();
+
+      // Emitting events after destroy should not call handlers
+      delegate.emit(DelegateEvents.PAGINATION_COMPLETE, { pages: [], chapterStarts: [] });
+      delegate.emit(DelegateEvents.INDEX_CHANGE, 5);
+      delegate.emit(DelegateEvents.CHAPTER_UPDATE);
+
+      expect(eventHandlers.onPaginationComplete).not.toHaveBeenCalled();
+      expect(eventHandlers.onIndexChange).not.toHaveBeenCalled();
+      expect(eventHandlers.onChapterUpdate).not.toHaveBeenCalled();
     });
   });
 });

@@ -32,12 +32,21 @@ vi.mock('../../../../js/config.js', () => ({
 }));
 
 const { NavigationDelegate } = await import('../../../../js/core/delegates/NavigationDelegate.js');
+const { DelegateEvents } = await import('../../../../js/core/delegates/BaseDelegate.js');
 
 describe('NavigationDelegate', () => {
   let delegate;
   let mockDeps;
+  let eventHandlers;
 
   beforeEach(() => {
+    // Event handlers to capture emitted events
+    eventHandlers = {
+      onIndexChange: vi.fn(),
+      onBookOpen: vi.fn(),
+      onBookClose: vi.fn(),
+    };
+
     mockDeps = {
       stateMachine: {
         current: 'OPENED',
@@ -74,12 +83,14 @@ describe('NavigationDelegate', () => {
         index: 0,
         chapterStarts: [0, 50, 100],
       },
-      onIndexChange: vi.fn(),
-      onBookOpen: vi.fn().mockResolvedValue(undefined),
-      onBookClose: vi.fn().mockResolvedValue(undefined),
     };
 
     delegate = new NavigationDelegate(mockDeps);
+
+    // Subscribe to delegate events
+    delegate.on(DelegateEvents.INDEX_CHANGE, eventHandlers.onIndexChange);
+    delegate.on(DelegateEvents.BOOK_OPEN, eventHandlers.onBookOpen);
+    delegate.on(DelegateEvents.BOOK_CLOSE, eventHandlers.onBookClose);
   });
 
   afterEach(() => {
@@ -88,10 +99,9 @@ describe('NavigationDelegate', () => {
   });
 
   describe('constructor', () => {
-    it('should store callbacks', () => {
-      expect(delegate.onIndexChange).toBe(mockDeps.onIndexChange);
-      expect(delegate.onBookOpen).toBe(mockDeps.onBookOpen);
-      expect(delegate.onBookClose).toBe(mockDeps.onBookClose);
+    it('should extend EventEmitter', () => {
+      expect(typeof delegate.on).toBe('function');
+      expect(typeof delegate.emit).toBe('function');
     });
 
     it('should throw error if required dependencies are missing', () => {
@@ -108,13 +118,13 @@ describe('NavigationDelegate', () => {
       it('should open book when flipping next', async () => {
         await delegate.flip('next');
 
-        expect(mockDeps.onBookOpen).toHaveBeenCalled();
+        expect(eventHandlers.onBookOpen).toHaveBeenCalled();
       });
 
       it('should not flip when direction is prev', async () => {
         await delegate.flip('prev');
 
-        expect(mockDeps.onBookOpen).not.toHaveBeenCalled();
+        expect(eventHandlers.onBookOpen).not.toHaveBeenCalled();
         expect(mockDeps.animator.runFlip).not.toHaveBeenCalled();
       });
     });
@@ -129,7 +139,7 @@ describe('NavigationDelegate', () => {
 
         await delegate.flip('prev');
 
-        expect(mockDeps.onBookClose).toHaveBeenCalled();
+        expect(eventHandlers.onBookClose).toHaveBeenCalled();
       });
 
       it('should not close if not at first page', async () => {
@@ -137,7 +147,7 @@ describe('NavigationDelegate', () => {
 
         await delegate.flip('prev');
 
-        expect(mockDeps.onBookClose).not.toHaveBeenCalled();
+        expect(eventHandlers.onBookClose).not.toHaveBeenCalled();
         expect(mockDeps.stateMachine.transitionTo).toHaveBeenCalledWith('FLIPPING');
       });
 
@@ -162,11 +172,8 @@ describe('NavigationDelegate', () => {
       it('should not flip below 0', async () => {
         mockDeps.state.index = 0;
 
-        // Create delegate with no onBookClose to test boundary
-        const localDelegate = new NavigationDelegate({
-          ...mockDeps,
-          onBookClose: null,
-        });
+        // Create delegate without any listeners to test boundary
+        const localDelegate = new NavigationDelegate(mockDeps);
 
         await localDelegate.flip('prev');
 
@@ -272,7 +279,7 @@ describe('NavigationDelegate', () => {
 
         await delegate.handleTOCNavigation(0);
 
-        expect(mockDeps.onBookOpen).toHaveBeenCalled();
+        expect(eventHandlers.onBookOpen).toHaveBeenCalled();
       });
     });
 
@@ -380,12 +387,12 @@ describe('NavigationDelegate', () => {
       expect(mockDeps.stateMachine.transitionTo).toHaveBeenLastCalledWith('OPENED');
     });
 
-    it('should call onIndexChange after flip', async () => {
+    it('should emit indexChange event after flip', async () => {
       mockDeps.state.index = 10;
 
       await delegate.flip('next');
 
-      expect(mockDeps.onIndexChange).toHaveBeenCalledWith(12); // 10 + 2 on desktop
+      expect(eventHandlers.onIndexChange).toHaveBeenCalledWith(12); // 10 + 2 on desktop
     });
 
     it('should handle errors gracefully', async () => {
@@ -398,12 +405,18 @@ describe('NavigationDelegate', () => {
   });
 
   describe('destroy', () => {
-    it('should clear callbacks', () => {
+    it('should remove all event listeners', () => {
       delegate.destroy();
 
-      expect(delegate.onIndexChange).toBeNull();
-      expect(delegate.onBookOpen).toBeNull();
-      expect(delegate.onBookClose).toBeNull();
+      // Emitting events after destroy should not call handlers
+      delegate.emit(DelegateEvents.INDEX_CHANGE, 5);
+      delegate.emit(DelegateEvents.BOOK_OPEN);
+      delegate.emit(DelegateEvents.BOOK_CLOSE);
+
+      // Handlers should not be called after destroy
+      expect(eventHandlers.onIndexChange).not.toHaveBeenCalled();
+      expect(eventHandlers.onBookOpen).not.toHaveBeenCalled();
+      expect(eventHandlers.onBookClose).not.toHaveBeenCalled();
     });
   });
 });
