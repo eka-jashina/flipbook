@@ -5,9 +5,31 @@
  */
 
 import { BookController } from './core/BookController.js';
+import { registerSW } from 'virtual:pwa-register';
+import { offlineIndicator } from './utils/OfflineIndicator.js';
 
 // Глобальная ссылка на контроллер (для отладки)
 let app = null;
+
+// Регистрация Service Worker для PWA
+const updateSW = registerSW({
+  onNeedRefresh() {
+    // Показываем уведомление о доступном обновлении
+    const shouldUpdate = confirm('Доступна новая версия приложения. Обновить?');
+    if (shouldUpdate) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('Flipbook готов к работе offline');
+  },
+  onRegisteredSW(swUrl, registration) {
+    console.log('Service Worker зарегистрирован:', swUrl);
+  },
+  onRegisterError(error) {
+    console.error('Ошибка регистрации Service Worker:', error);
+  },
+});
 
 /**
  * Инициализация приложения
@@ -34,6 +56,7 @@ function cleanup() {
     app.destroy();
     app = null;
   }
+  offlineIndicator.destroy();
 }
 
 // Запуск после загрузки DOM
