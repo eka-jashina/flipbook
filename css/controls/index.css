@@ -101,7 +101,7 @@
 .controls[data-settings-open] .settings {
   opacity: 1;
   min-height: auto;
-  max-height: 500px;
+  max-height: 1000px;
   visibility: visible;
 }
 
@@ -185,7 +185,7 @@
 
   .controls[data-settings-open] .settings {
     width: auto;
-    max-height: 500px;
+    max-height: 1000px;
   }
 
   .copyright {
