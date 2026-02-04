@@ -54,7 +54,7 @@ export class BookController {
   }
 
   // ═══════════════════════════════════════════
-  // COMPUTED PROPERTIES
+  // ВЫЧИСЛЯЕМЫЕ СВОЙСТВА
   // ═══════════════════════════════════════════
 
   get isMobile() {
@@ -111,14 +111,14 @@ export class BookController {
     const { renderer, animator, paginator, loadingIndicator } = this.render;
     const { contentLoader, backgroundManager } = this.content;
 
-    // ChapterDelegate
+    // Делегат глав
     this.chapterDelegate = new ChapterDelegate({
       backgroundManager,
       dom,
       state: this.state,
     });
 
-    // NavigationDelegate
+    // Делегат навигации
     this.navigationDelegate = new NavigationDelegate({
       stateMachine: this.stateMachine,
       renderer,
@@ -129,7 +129,7 @@ export class BookController {
       state: this.state,
     });
 
-    // LifecycleDelegate
+    // Делегат жизненного цикла
     this.lifecycleDelegate = new LifecycleDelegate({
       stateMachine: this.stateMachine,
       backgroundManager,
@@ -146,7 +146,7 @@ export class BookController {
       state: this.state,
     });
 
-    // SettingsDelegate
+    // Делегат настроек
     this.settingsDelegate = new SettingsDelegate({
       dom,
       settings: this.settings,
@@ -158,7 +158,7 @@ export class BookController {
       state: this.state,
     });
 
-    // DragDelegate
+    // Делегат перетаскивания
     this.dragDelegate = new DragDelegate({
       stateMachine: this.stateMachine,
       renderer,
@@ -184,7 +184,7 @@ export class BookController {
       getFontSize: () => this.settings.get("fontSize"),
     });
 
-    // AppInitializer
+    // Инициализатор приложения
     this.initializer = new AppInitializer({
       dom,
       settings: this.settings,
@@ -212,7 +212,7 @@ export class BookController {
    * @private
    */
   _subscribeToDelegates() {
-    // NavigationDelegate events
+    // События делегата навигации
     this.navigationDelegate.on(DelegateEvents.INDEX_CHANGE, (newIndex) => {
       this._handleIndexChange(newIndex);
     });
@@ -223,7 +223,7 @@ export class BookController {
       this._handleBookClose();
     });
 
-    // LifecycleDelegate events
+    // События делегата жизненного цикла
     this.lifecycleDelegate.on(DelegateEvents.PAGINATION_COMPLETE, ({ pages, chapterStarts }) => {
       this._handlePaginationComplete(pages, chapterStarts);
     });
@@ -234,7 +234,7 @@ export class BookController {
       this._updateChapterBackground();
     });
 
-    // SettingsDelegate events
+    // События делегата настроек
     this.settingsDelegate.on(DelegateEvents.SETTINGS_UPDATE, () => {
       this._updateDebug();
     });
@@ -242,7 +242,7 @@ export class BookController {
       this._repaginate(keepIndex);
     });
 
-    // DragDelegate events
+    // События делегата перетаскивания
     this.dragDelegate.on(DelegateEvents.INDEX_CHANGE, (newIndex) => {
       this._handleIndexChange(newIndex);
     });

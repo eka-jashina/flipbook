@@ -104,7 +104,7 @@ export class AsyncPaginator extends EventEmitter {
       document.body.appendChild(container);
 
       try {
-        // TOC
+        // Оглавление
         this._addTOC(pageContent, articles);
         await this._yieldToUI(signal);
 

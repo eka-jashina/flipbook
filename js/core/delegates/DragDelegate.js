@@ -151,7 +151,7 @@ export class DragDelegate extends BaseDelegate {
   }
 
   // ═══════════════════════════════════════════
-  // DRAG LIFECYCLE
+  // ЖИЗНЕННЫЙ ЦИКЛ DRAG
   // ═══════════════════════════════════════════
 
   /**

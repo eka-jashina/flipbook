@@ -1,6 +1,6 @@
 /**
- * E2E TESTS: NAVIGATION
- * Keyboard, touch, click, and drag navigation tests
+ * E2E ТЕСТЫ: НАВИГАЦИЯ
+ * Тесты навигации клавиатурой, касанием, кликом и перетаскиванием
  */
 
 import { test, expect, clearStorage, viewports } from '../fixtures/book.fixture.js';
@@ -30,7 +30,7 @@ test.describe('Navigation', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // First go forward a bit
+      // Сначала переходим вперёд
       await bookPage.flipNext();
       await bookPage.flipNext();
       const pageBefore = await bookPage.getCurrentPageIndex();
@@ -45,7 +45,7 @@ test.describe('Navigation', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // Navigate away from start
+      // Отходим от начала
       await bookPage.flipNext();
       await bookPage.flipNext();
       await bookPage.flipNext();
@@ -72,14 +72,14 @@ test.describe('Navigation', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // Initially hidden
+      // Изначально скрыта
       expect(await settings.isDebugVisible()).toBe(false);
 
-      // Toggle on
+      // Включаем
       await settings.toggleDebug();
       expect(await settings.isDebugVisible()).toBe(true);
 
-      // Toggle off
+      // Выключаем
       await settings.toggleDebug();
       expect(await settings.isDebugVisible()).toBe(false);
     });
@@ -90,7 +90,7 @@ test.describe('Navigation', () => {
 
       const pageBefore = await bookPage.getCurrentPageIndex();
 
-      // Focus on an input element (font select)
+      // Фокус на элементе ввода (выбор шрифта)
       await page.locator('.font-select').focus();
       await page.keyboard.press('ArrowRight');
 
@@ -133,14 +133,14 @@ test.describe('Navigation', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // Click next without waiting
+      // Клик без ожидания
       await bookPage.btnNext.click();
 
-      // Immediately try to click again (should be ignored due to busy state)
+      // Сразу пробуем кликнуть снова (должно быть проигнорировано из-за занятого состояния)
       const stateDuringAnimation = await bookPage.getState();
       expect(['flipping', 'opened']).toContain(stateDuringAnimation);
 
-      // Wait for animation to complete
+      // Ждём завершения анимации
       await bookPage.waitForAnimation();
     });
   });
@@ -167,7 +167,7 @@ test.describe('Navigation', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // First go forward
+      // Сначала переходим вперёд
       await bookPage.flipNext();
       await bookPage.flipNext();
       const pageBefore = await bookPage.getCurrentPageIndex();
@@ -184,14 +184,14 @@ test.describe('Navigation', () => {
 
       const pageBefore = await bookPage.getCurrentPageIndex();
 
-      // Click on TOC area
+      // Клик по области оглавления
       const tocItem = page.locator('.toc li').first();
       if (await tocItem.isVisible()) {
         await tocItem.click();
-        // TOC click navigates to chapter, not flip
+        // Клик по оглавлению переходит к главе, а не перелистывает
       }
 
-      // Page should change due to chapter navigation, not half-click
+      // Страница должна измениться из-за навигации по главам, а не клика по половине
     });
   });
 
@@ -208,7 +208,7 @@ test.describe('Navigation', () => {
 
       const pageBefore = await bookPage.getCurrentPageIndex();
 
-      // Perform swipe
+      // Выполняем свайп
       const book = bookPage.book;
       const box = await book.boundingBox();
       const startX = box.x + box.width * 0.8;
@@ -230,12 +230,12 @@ test.describe('Navigation', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // Go forward first
+      // Сначала переходим вперёд
       await bookPage.flipNext();
       await bookPage.flipNext();
       const pageBefore = await bookPage.getCurrentPageIndex();
 
-      // Perform swipe right
+      // Выполняем свайп вправо
       const book = bookPage.book;
       const box = await book.boundingBox();
       const startX = box.x + box.width * 0.2;
@@ -259,7 +259,7 @@ test.describe('Navigation', () => {
 
       const pageBefore = await bookPage.getCurrentPageIndex();
 
-      // Small swipe (below threshold)
+      // Маленький свайп (ниже порога)
       const book = bookPage.book;
       const box = await book.boundingBox();
       const startX = box.x + box.width / 2;
@@ -283,7 +283,7 @@ test.describe('Navigation', () => {
 
       const pageBefore = await bookPage.getCurrentPageIndex();
 
-      // Vertical swipe
+      // Вертикальный свайп
       const book = bookPage.book;
       const box = await book.boundingBox();
       const x = box.x + box.width / 2;
@@ -313,11 +313,11 @@ test.describe('Navigation', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // Navigate away from TOC first
+      // Сначала уходим от оглавления
       await bookPage.flipNext();
       const pageBefore = await bookPage.getCurrentPageIndex();
 
-      // Check if corner zone exists
+      // Проверяем, существует ли угловая зона
       const cornerZone = page.locator('.corner-zone-br');
       if (await cornerZone.isVisible()) {
         const box = await cornerZone.boundingBox();
@@ -345,16 +345,16 @@ test.describe('Navigation', () => {
       if (await cornerZone.isVisible()) {
         const box = await cornerZone.boundingBox();
 
-        // Start drag but release early (not enough distance)
+        // Начинаем перетаскивание, но отпускаем рано (недостаточное расстояние)
         await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await page.mouse.down();
-        await page.mouse.move(box.x - 50, box.y, { steps: 10 }); // Small drag
+        await page.mouse.move(box.x - 50, box.y, { steps: 10 }); // Маленькое перетаскивание
         await page.mouse.up();
 
         await page.waitForTimeout(500);
         const pageAfter = await bookPage.getCurrentPageIndex();
 
-        // Page should not have changed (flip cancelled)
+        // Страница не должна измениться (перелистывание отменено)
         expect(pageAfter).toBe(pageBefore);
       }
     });
@@ -369,19 +369,19 @@ test.describe('Navigation', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // Rapid clicks
+      // Быстрые клики
       for (let i = 0; i < 5; i++) {
-        bookPage.btnNext.click(); // Don't await
+        bookPage.btnNext.click(); // Не ждём
       }
 
-      // Wait for things to settle
+      // Ждём стабилизации
       await page.waitForTimeout(3000);
 
-      // Book should be in valid state
+      // Книга должна быть в валидном состоянии
       const state = await bookPage.getState();
       expect(['opened', 'flipping']).toContain(state);
 
-      // Should eventually return to opened state
+      // В итоге должна вернуться в состояние opened
       await bookPage.waitForState('opened', 5000);
       expect(await bookPage.isOpened()).toBe(true);
     });
@@ -390,15 +390,15 @@ test.describe('Navigation', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // Go to end
+      // Переходим в конец
       await bookPage.flipByKey('end');
       const lastPage = await bookPage.getCurrentPageIndex();
 
-      // Try to flip forward
+      // Пробуем перелистнуть вперёд
       await bookPage.flipNext();
       const afterFlip = await bookPage.getCurrentPageIndex();
 
-      // Should still be at last page
+      // Должны остаться на последней странице
       expect(afterFlip).toBe(lastPage);
     });
 
@@ -406,10 +406,10 @@ test.describe('Navigation', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // Ensure at first page
+      // Убеждаемся, что на первой странице
       await bookPage.flipByKey('home');
 
-      // Flip backward to close
+      // Листаем назад для закрытия
       await bookPage.flipPrev();
       await bookPage.waitForState('closed', 5000);
 

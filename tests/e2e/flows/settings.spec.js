@@ -1,6 +1,6 @@
 /**
- * E2E TESTS: SETTINGS
- * Font, theme, sound, and ambient settings tests
+ * E2E ТЕСТЫ: НАСТРОЙКИ
+ * Тесты шрифтов, тем, звука и ambient настроек
  */
 
 import { test, expect, clearStorage, setStoredSettings, getStoredSettings, testData } from '../fixtures/book.fixture.js';
@@ -47,7 +47,7 @@ test.describe('Settings', () => {
 
       await settings.open();
 
-      // First increase to ensure we can decrease
+      // Сначала увеличиваем, чтобы можно было уменьшить
       await settings.increaseFontSize();
       const sizeBefore = await settings.getFontSize();
 
@@ -85,7 +85,7 @@ test.describe('Settings', () => {
 
       await settings.setFont('merriweather');
 
-      // Verify font is applied to content
+      // Проверяем, что шрифт применён к контенту
       const fontFamily = await page.locator('.page-content').evaluate(el =>
         getComputedStyle(el).fontFamily
       );
@@ -98,12 +98,12 @@ test.describe('Settings', () => {
 
       const pagesBefore = await bookPage.getTotalPages();
 
-      // Increase font size significantly
+      // Значительно увеличиваем размер шрифта
       await settings.setFontSize(testData.fontSizes.max);
 
       const pagesAfter = await bookPage.getTotalPages();
 
-      // More pages with larger font
+      // С большим шрифтом страниц больше
       expect(pagesAfter).toBeGreaterThanOrEqual(pagesBefore);
     });
 
@@ -114,7 +114,7 @@ test.describe('Settings', () => {
       await settings.setFont('literata');
       await settings.setFontSize(20);
 
-      // Reload
+      // Перезагрузка
       await page.reload();
       await page.waitForLoadState('networkidle');
       await bookPage.openByCover();
@@ -167,11 +167,11 @@ test.describe('Settings', () => {
 
       await settings.open();
 
-      // Initially light is active
+      // Изначально активна светлая тема
       expect(await settings.isThemeActive('light')).toBe(true);
       expect(await settings.isThemeActive('dark')).toBe(false);
 
-      // Switch to dark
+      // Переключаем на тёмную
       await settings.setTheme('dark');
       expect(await settings.isThemeActive('light')).toBe(false);
       expect(await settings.isThemeActive('dark')).toBe(true);
@@ -194,19 +194,19 @@ test.describe('Settings', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // Light theme
+      // Светлая тема
       await settings.setTheme('light');
       const lightBg = await page.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue('--bg-page').trim()
       );
 
-      // Dark theme
+      // Тёмная тема
       await settings.setTheme('dark');
       const darkBg = await page.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue('--bg-page').trim()
       );
 
-      // Colors should be different
+      // Цвета должны отличаться
       expect(lightBg).not.toBe(darkBg);
     });
   });
@@ -222,14 +222,14 @@ test.describe('Settings', () => {
 
       await settings.open();
 
-      // Initially enabled
+      // Изначально включён
       expect(await settings.isSoundEnabled()).toBe(true);
 
-      // Disable
+      // Выключаем
       await settings.toggleSound();
       expect(await settings.isSoundEnabled()).toBe(false);
 
-      // Enable again
+      // Включаем снова
       await settings.toggleSound();
       expect(await settings.isSoundEnabled()).toBe(true);
     });
@@ -292,11 +292,11 @@ test.describe('Settings', () => {
 
       await settings.open();
 
-      // Initially no ambient
+      // Изначально ambient выключен
       await settings.setAmbientType('none');
       expect(await settings.isAmbientVolumeVisible()).toBe(false);
 
-      // Select ambient
+      // Выбираем ambient
       await settings.setAmbientType('fireplace');
       expect(await settings.isAmbientVolumeVisible()).toBe(true);
     });
@@ -342,12 +342,12 @@ test.describe('Settings', () => {
 
       await settings.open();
 
-      // Select rain
+      // Выбираем дождь
       await settings.setAmbientType('rain');
       await expect(page.locator('[data-type="rain"]')).toHaveAttribute('data-active', 'true');
       await expect(page.locator('[data-type="fireplace"]')).toHaveAttribute('data-active', 'false');
 
-      // Switch to fireplace
+      // Переключаем на камин
       await settings.setAmbientType('fireplace');
       await expect(page.locator('[data-type="rain"]')).toHaveAttribute('data-active', 'false');
       await expect(page.locator('[data-type="fireplace"]')).toHaveAttribute('data-active', 'true');
@@ -363,19 +363,19 @@ test.describe('Settings', () => {
       await bookPage.goto();
       await bookPage.openByCover();
 
-      // Set all settings
+      // Устанавливаем все настройки
       await settings.setFont('lora');
       await settings.setFontSize(20);
       await settings.setTheme('dark');
       await settings.disableSound();
       await settings.setAmbientType('rain');
 
-      // Reload
+      // Перезагрузка
       await page.reload();
       await page.waitForLoadState('networkidle');
       await bookPage.openByCover();
 
-      // Verify all settings
+      // Проверяем все настройки
       await settings.open();
       expect(await settings.getFont()).toBe('lora');
       expect(await settings.getFontSize()).toBe(20);
@@ -385,14 +385,14 @@ test.describe('Settings', () => {
     });
 
     test('should handle corrupted localStorage gracefully', async ({ bookPage, page }) => {
-      // Set corrupted data
+      // Устанавливаем повреждённые данные
       await page.addInitScript(() => {
         localStorage.setItem('flipbook_settings', 'invalid{json');
       });
 
       await bookPage.goto();
 
-      // Should still load with defaults
+      // Должно загрузиться с настройками по умолчанию
       await expect(bookPage.book).toBeVisible();
     });
 

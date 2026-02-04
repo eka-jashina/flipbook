@@ -185,7 +185,7 @@ global.matchMedia = vi.fn((query) => {
     media: query,
     onchange: null,
     addListener: vi.fn((listener) => {
-      // Deprecated, но нужен для совместимости
+      // Устаревший метод, но нужен для совместимости
       if (!mediaQueryListeners.has(query)) {
         mediaQueryListeners.set(query, []);
       }
@@ -234,7 +234,7 @@ global.Audio = vi.fn().mockImplementation((src) => {
     loop: false,
     muted: false,
 
-    // Event listeners
+    // Обработчики событий
     _listeners: {},
 
     play: vi.fn().mockImplementation(() => {
