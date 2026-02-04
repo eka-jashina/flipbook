@@ -305,13 +305,31 @@ describe('Event System Integration', () => {
       expect(onSettings).toHaveBeenCalledWith('font', 'inter');
     });
 
-    it('should update font size display on increase', () => {
+    it('должен обновить отображение размера шрифта при увеличении', () => {
+      // Симулируем: onSettings изменяет настройки, getFontSize возвращает новое значение
+      let currentFontSize = 18;
+      eventController.getFontSize = () => currentFontSize;
+      onSettings.mockImplementation((key, value) => {
+        if (key === 'fontSize' && value === 'increase') {
+          currentFontSize = Math.min(currentFontSize + 1, 22);
+        }
+      });
+
       increaseBtn.click();
 
       expect(fontSizeValue.textContent).toBe('19');
     });
 
-    it('should update font size display on decrease', () => {
+    it('должен обновить отображение размера шрифта при уменьшении', () => {
+      // Симулируем: onSettings изменяет настройки, getFontSize возвращает новое значение
+      let currentFontSize = 18;
+      eventController.getFontSize = () => currentFontSize;
+      onSettings.mockImplementation((key, value) => {
+        if (key === 'fontSize' && value === 'decrease') {
+          currentFontSize = Math.max(currentFontSize - 1, 14);
+        }
+      });
+
       decreaseBtn.click();
 
       expect(fontSizeValue.textContent).toBe('17');
