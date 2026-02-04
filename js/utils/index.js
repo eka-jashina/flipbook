@@ -15,3 +15,4 @@ export { ErrorHandler } from './ErrorHandler.js';
 export { StorageManager } from './StorageManager.js';
 export { SoundManager } from './SoundManager.js';
 export { AmbientManager } from './AmbientManager.js';
+export { OfflineIndicator, offlineIndicator } from './OfflineIndicator.js';

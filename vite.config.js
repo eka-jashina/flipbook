@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 import viteCompression from 'vite-plugin-compression';
 import viteImagemin from 'vite-plugin-imagemin';
 import autoprefixer from 'autoprefixer';
@@ -126,6 +127,76 @@ export default defineConfig(({ command, mode }) => {
     plugins: [
       // Генерация мобильных фоновых изображений (960px)
       mobileBackgrounds(),
+
+      // PWA поддержка (Service Worker + Manifest)
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: [
+          'favicon.ico',
+          'icons/*.png',
+          'sounds/**/*.mp3',
+        ],
+        workbox: {
+          // Предварительное кэширование статики
+          globPatterns: [
+            '**/*.{js,css,html,woff2}',
+            'content/*.html',
+          ],
+          // Кэширование в рантайме для больших файлов
+          runtimeCaching: [
+            {
+              urlPattern: /\.(?:png|jpg|jpeg|webp)$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'images-cache',
+                expiration: {
+                  maxEntries: 60,
+                  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 дней
+                },
+              },
+            },
+            {
+              urlPattern: /\.(?:mp3|wav|ogg)$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'audio-cache',
+                expiration: {
+                  maxEntries: 15,
+                  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 дней
+                },
+              },
+            },
+          ],
+        },
+        manifest: {
+          name: 'Flipbook — Интерактивная читалка',
+          short_name: 'Flipbook',
+          description: 'Электронная книга с реалистичной 3D анимацией перелистывания страниц',
+          theme_color: '#1a1a2e',
+          background_color: '#1a1a2e',
+          display: 'standalone',
+          orientation: 'any',
+          start_url: '.',
+          icons: [
+            {
+              src: 'icons/icon-192.png',
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: 'icons/icon-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+            },
+            {
+              src: 'icons/icon-512-maskable.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+      }),
 
       // Gzip сжатие
       viteCompression({
