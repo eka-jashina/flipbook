@@ -195,14 +195,14 @@ export class EventController {
     if (increaseBtn) {
       this.eventManager.add(increaseBtn, "click", () => {
         this.onSettings("fontSize", "increase");
-        this._updateFontSizeDisplay(fontSizeValue, 1);
+        this._updateFontSizeDisplay(fontSizeValue);
       });
     }
 
     if (decreaseBtn) {
       this.eventManager.add(decreaseBtn, "click", () => {
         this.onSettings("fontSize", "decrease");
-        this._updateFontSizeDisplay(fontSizeValue, -1);
+        this._updateFontSizeDisplay(fontSizeValue);
       });
     }
 
@@ -399,18 +399,13 @@ export class EventController {
    *
    * @private
    * @param {HTMLElement} element - Элемент отображения значения
-   * @param {number} delta - Изменение (+1 или -1)
    */
-  _updateFontSizeDisplay(element, delta) {
+  _updateFontSizeDisplay(element) {
     if (!element) return;
 
-    const minSize = cssVars.getNumber("--font-min", 14);
-    const maxSize = cssVars.getNumber("--font-max", 22);
     // Source of truth — настройки, не DOM
-    const current = this.getFontSize();
-    const newSize = Math.max(minSize, Math.min(maxSize, current + delta));
-
-    element.textContent = newSize;
+    // Значение уже обновлено в SettingsDelegate._handleFontSize()
+    element.textContent = this.getFontSize();
   }
 
   /**

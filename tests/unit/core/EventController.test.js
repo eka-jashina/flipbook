@@ -645,7 +645,16 @@ describe('EventController', () => {
       expect(mockCallbacks.onSettings).toHaveBeenCalledWith('fontSize', 'increase');
     });
 
-    it('should update font size display when increaseBtn clicked', () => {
+    it('должен обновить отображение размера шрифта при клике на increase', () => {
+      // Симулируем: onSettings изменяет настройки, getFontSize возвращает новое значение
+      let currentFontSize = 18;
+      mockCallbacks.getFontSize.mockImplementation(() => currentFontSize);
+      mockCallbacks.onSettings.mockImplementation((key, value) => {
+        if (key === 'fontSize' && value === 'increase') {
+          currentFontSize = Math.min(currentFontSize + 1, 22);
+        }
+      });
+
       controller._bindSettingsControls(elements);
 
       const handler = registeredListeners.find(
@@ -656,8 +665,16 @@ describe('EventController', () => {
       expect(elements.fontSizeValue.textContent).toBe('19');
     });
 
-    it('should not exceed max font size', () => {
-      mockCallbacks.getFontSize.mockReturnValue(22); // max is 22
+    it('не должен превышать максимальный размер шрифта', () => {
+      // Симулируем: fontSize уже на максимуме, onSettings не изменяет значение
+      let currentFontSize = 22;
+      mockCallbacks.getFontSize.mockImplementation(() => currentFontSize);
+      mockCallbacks.onSettings.mockImplementation((key, value) => {
+        if (key === 'fontSize' && value === 'increase') {
+          currentFontSize = Math.min(currentFontSize + 1, 22);
+        }
+      });
+
       controller._bindSettingsControls(elements);
 
       const handler = registeredListeners.find(
@@ -679,8 +696,16 @@ describe('EventController', () => {
       expect(mockCallbacks.onSettings).toHaveBeenCalledWith('fontSize', 'decrease');
     });
 
-    it('should not go below min font size', () => {
-      mockCallbacks.getFontSize.mockReturnValue(14); // min is 14
+    it('не должен опускаться ниже минимального размера шрифта', () => {
+      // Симулируем: fontSize уже на минимуме, onSettings не изменяет значение
+      let currentFontSize = 14;
+      mockCallbacks.getFontSize.mockImplementation(() => currentFontSize);
+      mockCallbacks.onSettings.mockImplementation((key, value) => {
+        if (key === 'fontSize' && value === 'decrease') {
+          currentFontSize = Math.max(currentFontSize - 1, 14);
+        }
+      });
+
       controller._bindSettingsControls(elements);
 
       const handler = registeredListeners.find(
@@ -1342,46 +1367,28 @@ describe('EventController', () => {
   });
 
   describe('_updateFontSizeDisplay', () => {
-    it('should update element text content with clamped value', () => {
+    it('должен обновлять текст элемента текущим значением из настроек', () => {
       const element = document.createElement('span');
-      mockCallbacks.getFontSize.mockReturnValue(18);
+      mockCallbacks.getFontSize.mockReturnValue(19);
 
-      controller._updateFontSizeDisplay(element, 1);
+      controller._updateFontSizeDisplay(element);
 
       expect(element.textContent).toBe('19');
     });
 
-    it('should not exceed max value', () => {
-      const element = document.createElement('span');
-      mockCallbacks.getFontSize.mockReturnValue(22); // max
-
-      controller._updateFontSizeDisplay(element, 1);
-
-      expect(element.textContent).toBe('22');
+    it('должен корректно обрабатывать null элемент', () => {
+      expect(() => controller._updateFontSizeDisplay(null)).not.toThrow();
     });
 
-    it('should not go below min value', () => {
+    it('должен использовать getFontSize как источник правды', () => {
       const element = document.createElement('span');
-      mockCallbacks.getFontSize.mockReturnValue(14); // min
+      element.textContent = '20'; // Это значение должно быть перезаписано
+      mockCallbacks.getFontSize.mockReturnValue(18); // Это реальное значение
 
-      controller._updateFontSizeDisplay(element, -1);
+      controller._updateFontSizeDisplay(element);
 
-      expect(element.textContent).toBe('14');
-    });
-
-    it('should handle null element', () => {
-      expect(() => controller._updateFontSizeDisplay(null, 1)).not.toThrow();
-    });
-
-    it('should use getFontSize as source of truth', () => {
-      const element = document.createElement('span');
-      element.textContent = '20'; // This should be ignored
-      mockCallbacks.getFontSize.mockReturnValue(18); // This is the actual value
-
-      controller._updateFontSizeDisplay(element, 1);
-
-      // Should use getFontSize() value (18) not DOM value (20)
-      expect(element.textContent).toBe('19');
+      // Должен использовать значение getFontSize() (18), не DOM значение (20)
+      expect(element.textContent).toBe('18');
     });
   });
 
