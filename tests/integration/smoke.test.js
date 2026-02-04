@@ -251,7 +251,7 @@ describe('Integration Test Infrastructure', () => {
     let dom;
 
     beforeEach(() => {
-      // Use real timers for user action tests (flushPromises uses setTimeout)
+      // Используем реальные таймеры для тестов действий (flushPromises использует setTimeout)
       vi.useRealTimers();
       dom = createFullBookDOM();
     });

@@ -1,6 +1,6 @@
 /**
- * BOOK FIXTURES
- * Test fixtures and helpers for book E2E tests
+ * ФИКСТУРЫ КНИГИ
+ * Тестовые фикстуры и хелперы для E2E тестов книги
  */
 
 import { test as base, expect } from '@playwright/test';
@@ -84,7 +84,7 @@ export async function getStoredSettings(page) {
  * @param {number} timeout
  */
 export async function waitForAnimations(page, timeout = 1500) {
-  // Total animation time: lift(240) + rotate(900) + drop(160) = 1300ms
+  // Общее время анимации: lift(240) + rotate(900) + drop(160) = 1300ms
   await page.waitForTimeout(timeout);
 }
 
@@ -131,23 +131,23 @@ export async function touchSwipe(page, { startX, startY, endX, endY, steps = 10 
  * @returns {Promise<object>}
  */
 export async function checkA11y(page) {
-  // Basic accessibility checks without axe-core
+  // Базовые проверки доступности без axe-core
   const results = await page.evaluate(() => {
     const issues = [];
 
-    // Check for images without alt
+    // Проверка изображений без alt
     document.querySelectorAll('img:not([alt])').forEach(img => {
       issues.push({ type: 'missing-alt', element: img.outerHTML.slice(0, 100) });
     });
 
-    // Check for buttons without accessible name
+    // Проверка кнопок без доступного имени
     document.querySelectorAll('button').forEach(btn => {
       if (!btn.textContent?.trim() && !btn.getAttribute('aria-label')) {
         issues.push({ type: 'button-no-name', element: btn.outerHTML.slice(0, 100) });
       }
     });
 
-    // Check for form inputs without labels
+    // Проверка полей ввода без меток
     document.querySelectorAll('input, select, textarea').forEach(input => {
       const id = input.id;
       const hasLabel = id && document.querySelector(`label[for="${id}"]`);

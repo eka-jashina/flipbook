@@ -1,6 +1,6 @@
 /**
- * E2E TESTS: PERFORMANCE
- * Load times, animation performance, memory leaks
+ * E2E ТЕСТЫ: ПРОИЗВОДИТЕЛЬНОСТЬ
+ * Время загрузки, производительность анимаций, утечки памяти
  */
 
 import { test, expect, clearStorage, viewports, getPerformanceMetrics } from '../fixtures/book.fixture.js';
@@ -65,7 +65,7 @@ test.describe('Initial Load Performance', () => {
     const metrics = await getPerformanceMetrics(page);
 
     if (metrics.usedJSHeapSize) {
-      // Should be less than 50MB on initial load
+      // Должно быть меньше 50МБ при начальной загрузке
       expect(metrics.usedJSHeapSize).toBeLessThan(50 * 1024 * 1024);
     }
   });
@@ -88,7 +88,7 @@ test.describe('Book Open Performance', () => {
     await bookPage.waitForState('opened', 5000);
     const openTime = Date.now() - startTime;
 
-    // Opening includes animation (~1.2s) plus content load
+    // Открытие включает анимацию (~1.2с) плюс загрузку контента
     expect(openTime).toBeLessThan(2500);
   });
 
@@ -98,7 +98,7 @@ test.describe('Book Open Performance', () => {
     const startTime = Date.now();
     await bookPage.openByCover();
 
-    // Wait for total pages to be calculated
+    // Ждём вычисления общего количества страниц
     await bookPage.page.waitForFunction(() => {
       const total = document.querySelector('.total-pages');
       return total && parseInt(total.textContent) > 0;
@@ -115,7 +115,7 @@ test.describe('Book Open Performance', () => {
     const startTime = Date.now();
     await bookPage.cover.click();
 
-    // Wait for loading to complete
+    // Ждём завершения загрузки
     await bookPage.loadingIndicator.waitFor({ state: 'hidden', timeout: 5000 });
     const loadTime = Date.now() - startTime;
 
@@ -141,7 +141,7 @@ test.describe('Page Flip Animation Performance', () => {
     await bookPage.waitForState('opened', 3000);
     const flipTime = Date.now() - startTime;
 
-    // Total animation: lift(240ms) + rotate(900ms) + drop(160ms) = 1300ms + buffer
+    // Общая анимация: lift(240мс) + rotate(900мс) + drop(160мс) = 1300мс + запас
     expect(flipTime).toBeLessThan(1800);
   });
 
@@ -157,11 +157,11 @@ test.describe('Page Flip Animation Performance', () => {
       flipTimes.push(Date.now() - startTime);
     }
 
-    // All flips should be consistent
+    // Все перелистывания должны быть стабильными
     const avgTime = flipTimes.reduce((a, b) => a + b, 0) / flipTimes.length;
     expect(avgTime).toBeLessThan(1800);
 
-    // No flip should be drastically slower
+    // Ни одно перелистывание не должно быть значительно медленнее
     const maxTime = Math.max(...flipTimes);
     expect(maxTime).toBeLessThan(2500);
   });
@@ -225,7 +225,7 @@ test.describe('Repagination Performance', () => {
     const startTime = Date.now();
     await page.setViewportSize(viewports.mobile);
 
-    // Wait for repagination
+    // Ждём репагинации
     await page.waitForTimeout(500);
     await bookPage.waitForState('opened', 5000);
 
@@ -248,32 +248,32 @@ test.describe('Memory Performance', () => {
     await bookPage.goto();
     await bookPage.openByCover();
 
-    // Get initial memory
+    // Получаем начальную память
     const initialMetrics = await getPerformanceMetrics(page);
     const initialMemory = initialMetrics.usedJSHeapSize || 0;
 
-    // Flip forward 10 times
+    // Листаем вперёд 10 раз
     for (let i = 0; i < 10; i++) {
       await bookPage.flipNext();
     }
 
-    // Flip backward 10 times
+    // Листаем назад 10 раз
     for (let i = 0; i < 10; i++) {
       await bookPage.flipPrev();
     }
 
-    // Force garbage collection if possible
+    // Принудительная сборка мусора, если возможно
     await page.evaluate(() => {
       if (global.gc) global.gc();
     });
     await page.waitForTimeout(500);
 
-    // Get final memory
+    // Получаем итоговую память
     const finalMetrics = await getPerformanceMetrics(page);
     const finalMemory = finalMetrics.usedJSHeapSize || 0;
 
     if (initialMemory > 0 && finalMemory > 0) {
-      // Memory shouldn't grow more than 50%
+      // Память не должна вырасти более чем на 50%
       const growthRatio = finalMemory / initialMemory;
       expect(growthRatio).toBeLessThan(1.5);
     }
@@ -285,7 +285,7 @@ test.describe('Memory Performance', () => {
     const initialMetrics = await getPerformanceMetrics(page);
     const initialMemory = initialMetrics.usedJSHeapSize || 0;
 
-    // Open and close book 5 times
+    // Открываем и закрываем книгу 5 раз
     for (let i = 0; i < 5; i++) {
       await bookPage.openByCover();
       await bookPage.flipNext();
@@ -309,15 +309,15 @@ test.describe('Memory Performance', () => {
     await bookPage.goto();
     await bookPage.openByCover();
 
-    // Enable debug to check cache
+    // Включаем отладку для проверки кэша
     await settings.toggleDebug();
 
-    // Navigate through many pages
+    // Проходим через много страниц
     for (let i = 0; i < 20; i++) {
       await bookPage.flipNext();
     }
 
-    // Cache should be limited (check debug panel if visible)
+    // Кэш должен быть ограничен (проверяем панель отладки, если видна)
     const debugInfo = await bookPage.page.locator('.debug-info').textContent();
 
     if (debugInfo && debugInfo.includes('cache')) {
@@ -350,7 +350,7 @@ test.describe('Mobile Performance', () => {
 
     const loadTime = Date.now() - startTime;
 
-    // Mobile might be slightly slower, allow 4s
+    // На мобильном может быть немного медленнее, допускаем 4с
     expect(loadTime).toBeLessThan(4000);
   });
 
@@ -368,7 +368,7 @@ test.describe('Mobile Performance', () => {
 
     const avgTime = flipTimes.reduce((a, b) => a + b, 0) / flipTimes.length;
 
-    // Mobile flips single page, should be faster
+    // На мобильном перелистывается одна страница, должно быть быстрее
     expect(avgTime).toBeLessThan(1500);
   });
 
@@ -379,7 +379,7 @@ test.describe('Mobile Performance', () => {
     const box = await bookPage.book.boundingBox();
     const startTime = Date.now();
 
-    // Perform swipe
+    // Выполняем свайп
     await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2, { steps: 10 });
@@ -414,7 +414,7 @@ test.describe('Resource Loading', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Filter out expected failures (e.g., analytics, external resources)
+    // Фильтруем ожидаемые ошибки (например, аналитика, внешние ресурсы)
     const criticalFailures = failedRequests.filter(r =>
       !r.url.includes('analytics') &&
       !r.url.includes('fonts.googleapis')
@@ -427,29 +427,29 @@ test.describe('Resource Loading', () => {
     await bookPage.goto();
     await bookPage.openByCover();
 
-    // Check that images in content have loading strategy
+    // Проверяем, что изображения в контенте имеют стратегию загрузки
     const images = await page.locator('.page-content img').all();
 
     for (const img of images) {
       const loading = await img.getAttribute('loading');
       const dataLoading = await img.getAttribute('data-loading');
 
-      // Either native lazy loading or custom loading state
+      // Либо нативная ленивая загрузка, либо кастомное состояние загрузки
       const hasLoadingStrategy = loading === 'lazy' || dataLoading !== null;
 
-      // This is a soft check - not all images need lazy loading
+      // Это мягкая проверка - не все изображения нуждаются в ленивой загрузке
     }
   });
 
   test('background images should preload', async ({ bookPage, page }) => {
     await bookPage.goto();
 
-    // Check that background manager preloaded images
+    // Проверяем, что менеджер фонов предзагрузил изображения
     const bgStyle = await bookPage.book.evaluate(el =>
       getComputedStyle(el).backgroundImage
     );
 
-    // Background should be set (either image or gradient fallback)
+    // Фон должен быть установлен (либо изображение, либо градиентный fallback)
     expect(bgStyle).not.toBe('none');
   });
 });
@@ -467,7 +467,7 @@ test.describe('Long Session Stability', () => {
     await bookPage.goto();
     await bookPage.openByCover();
 
-    // Navigate extensively
+    // Активно навигируем
     for (let i = 0; i < 10; i++) {
       await bookPage.flipNext();
     }
@@ -481,7 +481,7 @@ test.describe('Long Session Stability', () => {
     await bookPage.flipByKey('end');
     await bookPage.flipByKey('home');
 
-    // Book should still be functional
+    // Книга должна оставаться функциональной
     expect(await bookPage.isOpened()).toBe(true);
 
     const pageBefore = await bookPage.getCurrentPageIndex();
@@ -495,7 +495,7 @@ test.describe('Long Session Stability', () => {
     await bookPage.goto();
     await bookPage.openByCover();
 
-    // Change settings multiple times
+    // Меняем настройки несколько раз
     await settings.setTheme('dark');
     await settings.setTheme('light');
     await settings.setTheme('bw');
@@ -505,7 +505,7 @@ test.describe('Long Session Stability', () => {
     await settings.setFontSize(16);
     await settings.setFontSize(18);
 
-    // Flip should still be responsive
+    // Перелистывание должно оставаться отзывчивым
     const startTime = Date.now();
     await bookPage.flipNext();
     const flipTime = Date.now() - startTime;
