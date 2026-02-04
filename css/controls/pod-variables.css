@@ -10,32 +10,32 @@
    ═══════════════════════════════════════════ */
 
 :root {
-  /* Pod container */
+  /* Контейнер Pod */
   --pod-bg: rgba(0, 0, 0, 0.08);
   --pod-border: none;
 
-  /* Dividers */
+  /* Разделители */
   --pod-divider: rgba(139, 69, 19, 0.2);
 
-  /* Buttons */
+  /* Кнопки */
   --pod-btn-bg: rgba(139, 69, 19, 0.15);
   --pod-btn-bg-hover: rgba(139, 69, 19, 0.25);
   --pod-btn-bg-active: rgba(139, 69, 19, 0.35);
   --pod-btn-border-active: rgba(139, 69, 19, 0.6);
 
-  /* Accent (progress, toggles) */
+  /* Акцент (прогресс, переключатели) */
   --pod-accent: rgba(139, 69, 19, 0.8);
   --pod-accent-gradient: linear-gradient(90deg, rgba(139, 69, 19, 0.6), rgba(139, 69, 19, 0.9));
 
-  /* Inputs */
+  /* Поля ввода */
   --pod-input-bg: rgba(139, 69, 19, 0.1);
   --pod-input-bg-hover: rgba(139, 69, 19, 0.15);
   --pod-input-focus-border: rgba(139, 69, 19, 0.4);
 
-  /* Slider thumb */
+  /* Ползунок слайдера */
   --pod-slider-thumb: linear-gradient(135deg, #8b4513, #5d3a1a);
 
-  /* Select arrow (encoded SVG) */
+  /* Стрелка выпадающего списка (закодированный SVG) */
   --pod-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%238b4513' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
 }
 

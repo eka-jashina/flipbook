@@ -288,7 +288,7 @@ export class EventController {
       });
     }
 
-    // Fullscreen toggle
+    // Переключение полноэкранного режима
     if (fullscreenBtn) {
       this.eventManager.add(fullscreenBtn, "click", () => {
         this.onSettings("fullscreen", "toggle");

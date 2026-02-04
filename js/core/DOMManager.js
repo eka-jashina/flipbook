@@ -23,36 +23,36 @@ export class DOMManager {
     const $ = id => document.getElementById(id);
     
     return {
-      // Root elements
+      // Корневые элементы
       html: document.documentElement,
       body: document.body,
-      
-      // Book structure
+
+      // Структура книги
       book: $("book"),
       bookWrap: $("book-wrap"),
       cover: $("cover"),
-      
-      // Pages (active buffer)
+
+      // Страницы (активный буфер)
       leftA: $("leftA"),
       rightA: $("rightA"),
-      
-      // Pages (secondary buffer)
+
+      // Страницы (вторичный буфер)
       leftB: $("leftB"),
       rightB: $("rightB"),
-      
-      // Animated sheet
+
+      // Анимированный лист
       sheet: $("sheet"),
       sheetFront: $("sheetFront"),
       sheetBack: $("sheetBack"),
-      
-      // Effects
+
+      // Эффекты
       flipShadow: $("flipShadow"),
-      
-      // Loading
+
+      // Загрузка
       loadingOverlay: $("loadingOverlay"),
       loadingProgress: $("loadingProgress"),
-      
-      // Navigation controls (new Navigation Pod)
+
+      // Элементы навигации (Navigation Pod)
       nextBtn: $("next"),
       prevBtn: $("prev"),
       tocBtn: $("tocBtn"),
@@ -60,8 +60,8 @@ export class DOMManager {
       currentPage: $("current-page"),
       totalPages: $("total-pages"),
       readingProgress: $("reading-progress"),
-      
-      // Settings controls (new Settings Pod)
+
+      // Элементы настроек (Settings Pod)
       increaseBtn: $("increase"),
       decreaseBtn: $("decrease"),
       fontSizeValue: $("font-size-value"),
@@ -69,23 +69,23 @@ export class DOMManager {
       themeSegmented: document.querySelector(".theme-segmented"),
       debugToggle: $("debugToggle"),
 
-      // Sound controls (new Audio Pod)
+      // Элементы звука (Audio Pod)
       soundToggle: $("sound-toggle"),
       volumeSlider: $("volume-slider"),
       pageVolumeControl: $("page-volume-control"),
 
-      // Ambient controls (pill buttons)
+      // Элементы ambient (кнопки-таблетки)
       ambientPills: document.querySelector(".ambient-pills"),
       ambientVolume: $("ambient-volume"),
       ambientVolumeWrapper: $("ambient-volume-wrapper"),
 
-      // Settings toggle checkbox (Safari fallback for :has())
+      // Чекбокс настроек (fallback для Safari без :has())
       settingsCheckbox: $("settings-checkbox"),
 
-      // Fullscreen control
+      // Полноэкранный режим
       fullscreenBtn: $("fullscreen-btn"),
-      
-      // Debug panel
+
+      // Панель отладки
       debugInfo: $("debugInfo"),
       debugState: $("debugState"),
       debugTotal: $("debugTotal"),

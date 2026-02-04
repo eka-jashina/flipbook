@@ -16,7 +16,7 @@
   width: 100%;
 
   perspective: var(--perspective);
-  -webkit-perspective: var(--perspective); /* Safari */
+  -webkit-perspective: var(--perspective); /* для Safari */
 
   transition: width var(--timing-wrap) ease-in-out;
 }
