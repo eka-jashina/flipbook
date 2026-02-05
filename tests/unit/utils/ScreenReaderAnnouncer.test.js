@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ScreenReaderAnnouncer, getAnnouncer, announce } from '../../../js/utils/ScreenReaderAnnouncer.js';
+import { ScreenReaderAnnouncer, getAnnouncer, announce, resetAnnouncer } from '../../../js/utils/ScreenReaderAnnouncer.js';
 
 describe('ScreenReaderAnnouncer', () => {
   let announcer;
 
   beforeEach(() => {
+    // Сбрасываем singleton перед каждым тестом
+    resetAnnouncer();
     // Очищаем DOM
     document.body.innerHTML = '';
     announcer = new ScreenReaderAnnouncer({ containerId: 'test-announcer' });

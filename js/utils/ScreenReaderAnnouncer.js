@@ -20,6 +20,7 @@ export class ScreenReaderAnnouncer {
     this.containerId = options.containerId || 'sr-announcer';
     this.clearDelay = options.clearDelay || 3000;
     this._clearTimer = null;
+    this._announceTimer = null;
     this._container = null;
 
     this._init();
@@ -65,11 +66,19 @@ export class ScreenReaderAnnouncer {
       this._clearTimer = null;
     }
 
+    // Очищаем предыдущий таймер объявления
+    if (this._announceTimer) {
+      clearTimeout(this._announceTimer);
+      this._announceTimer = null;
+    }
+
     // Устанавливаем новое сообщение
     // Используем setTimeout(0) для гарантии, что screen reader заметит изменение
     this._container.textContent = '';
-    setTimeout(() => {
-      this._container.textContent = message;
+    this._announceTimer = setTimeout(() => {
+      if (this._container) {
+        this._container.textContent = message;
+      }
     }, 50);
 
     // Очищаем после задержки
@@ -142,6 +151,10 @@ export class ScreenReaderAnnouncer {
    * Очистить текущее объявление
    */
   clear() {
+    if (this._announceTimer) {
+      clearTimeout(this._announceTimer);
+      this._announceTimer = null;
+    }
     if (this._clearTimer) {
       clearTimeout(this._clearTimer);
       this._clearTimer = null;
@@ -175,6 +188,16 @@ export function getAnnouncer() {
     instance = new ScreenReaderAnnouncer();
   }
   return instance;
+}
+
+/**
+ * Сбросить singleton (для тестов)
+ */
+export function resetAnnouncer() {
+  if (instance) {
+    instance.destroy();
+    instance = null;
+  }
 }
 
 /**

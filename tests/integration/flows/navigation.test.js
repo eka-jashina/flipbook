@@ -13,6 +13,7 @@ import { BookStateMachine } from '../../../js/managers/BookStateMachine.js';
 import { NavigationDelegate } from '../../../js/core/delegates/NavigationDelegate.js';
 import { BookState, Direction } from '../../../js/config.js';
 import { EventEmitter } from '../../../js/utils/EventEmitter.js';
+import { rateLimiters } from '../../../js/utils/RateLimiter.js';
 
 describe('Page Navigation Integration', () => {
   let dom;
@@ -40,6 +41,10 @@ describe('Page Navigation Integration', () => {
 
   beforeEach(() => {
     dom = createFullBookDOM();
+
+    // Сброс rate limiter для изоляции тестов
+    rateLimiters.navigation.reset();
+    rateLimiters.chapter.reset();
 
     // Real state machine
     stateMachine = new BookStateMachine();
@@ -595,6 +600,8 @@ describe('Page Navigation Integration', () => {
   describe('Error Handling', () => {
     it('should recover to OPENED on animation error', async () => {
       const errorPromise = createControllablePromise();
+      // Предотвращаем unhandled rejection
+      errorPromise.promise.catch(() => {});
       mockAnimator.runFlip.mockReturnValue(errorPromise.promise);
 
       const flipPromise = navigationDelegate.flip(Direction.NEXT);
@@ -608,6 +615,8 @@ describe('Page Navigation Integration', () => {
 
     it('should not emit indexChange on error', async () => {
       const errorPromise = createControllablePromise();
+      // Предотвращаем unhandled rejection
+      errorPromise.promise.catch(() => {});
       mockAnimator.runFlip.mockReturnValue(errorPromise.promise);
 
       const handler = vi.fn();
