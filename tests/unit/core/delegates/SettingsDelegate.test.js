@@ -6,15 +6,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Hoist mocks
-const { mockCssVars } = vi.hoisted(() => ({
+const { mockCssVars, mockAnnounce } = vi.hoisted(() => ({
   mockCssVars: {
     invalidateCache: vi.fn(),
     getNumber: vi.fn((name, defaultVal) => defaultVal),
   },
+  mockAnnounce: vi.fn(),
 }));
 
-vi.mock('../../../../js/utils/CSSVariables.js', () => ({
+vi.mock('../../../../js/utils/index.js', () => ({
   cssVars: mockCssVars,
+  announce: mockAnnounce,
 }));
 
 vi.mock('../../../../js/config.js', () => ({
@@ -105,6 +107,7 @@ describe('SettingsDelegate', () => {
     // Reset mocks
     mockCssVars.invalidateCache.mockClear();
     mockCssVars.getNumber.mockImplementation((name, defaultVal) => defaultVal);
+    mockAnnounce.mockClear();
   });
 
   afterEach(() => {
@@ -271,6 +274,26 @@ describe('SettingsDelegate', () => {
 
         expect(eventHandlers.onRepaginate).toHaveBeenCalledWith(true);
       });
+
+      it('should announce font size change', () => {
+        mockDeps.settings.get.mockImplementation((key) => key === 'fontSize' ? 18 : null);
+
+        delegate.handleChange('fontSize', 'increase');
+
+        expect(mockAnnounce).toHaveBeenCalledWith('Размер шрифта: 19');
+      });
+
+      it('should not announce when size unchanged', () => {
+        mockDeps.settings.get.mockImplementation((key) => key === 'fontSize' ? 22 : null);
+        mockCssVars.getNumber.mockImplementation((name, defaultVal) => {
+          if (name === '--font-max') return 22;
+          return defaultVal;
+        });
+
+        delegate.handleChange('fontSize', 'increase');
+
+        expect(mockAnnounce).not.toHaveBeenCalled();
+      });
     });
 
     describe('font handling', () => {
@@ -287,6 +310,18 @@ describe('SettingsDelegate', () => {
         delegate.handleChange('font', 'merriweather');
 
         expect(eventHandlers.onRepaginate).toHaveBeenCalledWith(true);
+      });
+
+      it('should announce font change', () => {
+        delegate.handleChange('font', 'merriweather');
+
+        expect(mockAnnounce).toHaveBeenCalledWith('Шрифт: Merriweather');
+      });
+
+      it('should announce georgia font', () => {
+        delegate.handleChange('font', 'georgia');
+
+        expect(mockAnnounce).toHaveBeenCalledWith('Шрифт: Georgia');
       });
     });
 
@@ -307,6 +342,24 @@ describe('SettingsDelegate', () => {
         delegate.handleChange('theme', 'bw');
 
         expect(mockHtml.dataset.theme).toBe('bw');
+      });
+
+      it('should announce light theme', () => {
+        delegate.handleChange('theme', 'light');
+
+        expect(mockAnnounce).toHaveBeenCalledWith('Светлая тема');
+      });
+
+      it('should announce dark theme', () => {
+        delegate.handleChange('theme', 'dark');
+
+        expect(mockAnnounce).toHaveBeenCalledWith('Тёмная тема');
+      });
+
+      it('should announce bw theme', () => {
+        delegate.handleChange('theme', 'bw');
+
+        expect(mockAnnounce).toHaveBeenCalledWith('Чёрно-белая тема');
       });
     });
 
