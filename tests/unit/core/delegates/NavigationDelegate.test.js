@@ -6,14 +6,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Hoist mocks
-const { mockCssVars } = vi.hoisted(() => ({
+const { mockCssVars, mockRateLimiters } = vi.hoisted(() => ({
   mockCssVars: {
     getNumber: vi.fn((name, defaultVal) => defaultVal),
+  },
+  mockRateLimiters: {
+    navigation: {
+      tryAction: vi.fn(() => true),
+      reset: vi.fn(),
+    },
+    chapter: {
+      tryAction: vi.fn(() => true),
+      reset: vi.fn(),
+    },
   },
 }));
 
 vi.mock('../../../../js/utils/CSSVariables.js', () => ({
   cssVars: mockCssVars,
+}));
+
+vi.mock('../../../../js/utils/index.js', () => ({
+  rateLimiters: mockRateLimiters,
 }));
 
 // Mock config
@@ -101,6 +115,8 @@ describe('NavigationDelegate', () => {
   afterEach(() => {
     delegate.destroy();
     vi.restoreAllMocks();
+    mockRateLimiters.navigation.tryAction.mockReturnValue(true);
+    mockRateLimiters.chapter.tryAction.mockReturnValue(true);
   });
 
   describe('constructor', () => {
@@ -194,6 +210,34 @@ describe('NavigationDelegate', () => {
         await delegate.flip('next');
 
         expect(mockDeps.animator.runFlip).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('rate limiting', () => {
+      it('should check rate limiter before flipping', async () => {
+        mockDeps.state.index = 10;
+
+        await delegate.flip('next');
+
+        expect(mockRateLimiters.navigation.tryAction).toHaveBeenCalled();
+      });
+
+      it('should block flip when rate limited', async () => {
+        mockRateLimiters.navigation.tryAction.mockReturnValue(false);
+        mockDeps.state.index = 10;
+
+        await delegate.flip('next');
+
+        expect(mockDeps.animator.runFlip).not.toHaveBeenCalled();
+      });
+
+      it('should allow flip when rate limiter allows', async () => {
+        mockRateLimiters.navigation.tryAction.mockReturnValue(true);
+        mockDeps.state.index = 10;
+
+        await delegate.flip('next');
+
+        expect(mockDeps.animator.runFlip).toHaveBeenCalled();
       });
     });
 
@@ -340,6 +384,20 @@ describe('NavigationDelegate', () => {
 
       it('should do nothing for invalid chapter', async () => {
         await delegate.handleTOCNavigation(99);
+
+        expect(mockDeps.animator.runFlip).not.toHaveBeenCalled();
+      });
+
+      it('should check chapter rate limiter', async () => {
+        await delegate.handleTOCNavigation(1);
+
+        expect(mockRateLimiters.chapter.tryAction).toHaveBeenCalled();
+      });
+
+      it('should block when chapter rate limited', async () => {
+        mockRateLimiters.chapter.tryAction.mockReturnValue(false);
+
+        await delegate.handleTOCNavigation(1);
 
         expect(mockDeps.animator.runFlip).not.toHaveBeenCalled();
       });

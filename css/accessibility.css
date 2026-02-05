@@ -67,3 +67,59 @@
   outline: 3px solid var(--pod-accent, #4a90d9);
   outline-offset: 4px;
 }
+
+/* ═══════════════════════════════════════════
+   SCREEN READER ONLY (visually hidden)
+   ═══════════════════════════════════════════ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ═══════════════════════════════════════════
+   PREFERS REDUCED MOTION
+   Отключение анимаций для пользователей
+   с вестибулярными нарушениями
+   ═══════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Сохраняем минимальные переходы для понимания состояния */
+  .sheet {
+    transition: none !important;
+  }
+
+  .cover {
+    transition: none !important;
+  }
+
+  .page {
+    transition: none !important;
+  }
+
+  /* Отключаем фоновые анимации */
+  .chapter-bg .bg {
+    transition-duration: 0.1s !important;
+  }
+
+  /* Loading spinner - минимальная анимация */
+  .loading-spinner span {
+    animation: none !important;
+  }
+}

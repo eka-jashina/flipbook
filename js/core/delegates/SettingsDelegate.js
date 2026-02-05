@@ -4,7 +4,7 @@
  */
 
 import { CONFIG } from "../../config.js";
-import { cssVars } from "../../utils/CSSVariables.js";
+import { cssVars, announce } from "../../utils/index.js";
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 
 export class SettingsDelegate extends BaseDelegate {
@@ -149,14 +149,15 @@ export class SettingsDelegate extends BaseDelegate {
 
     if (newSize !== current) {
       this.settings.set("fontSize", newSize);
-      
+
       const html = this.dom.get("html");
       if (html) {
         html.style.setProperty("--reader-font-size", `${newSize}px`);
       }
 
       cssVars.invalidateCache();
-      
+      announce(`Размер шрифта: ${newSize}`);
+
       // Требуется репагинация
       if (this.isOpened) {
         this.emit(DelegateEvents.REPAGINATE, true);
@@ -180,6 +181,17 @@ export class SettingsDelegate extends BaseDelegate {
 
     cssVars.invalidateCache();
 
+    // Названия шрифтов для объявления
+    const fontNames = {
+      georgia: 'Georgia',
+      merriweather: 'Merriweather',
+      'libre-baskerville': 'Libre Baskerville',
+      inter: 'Inter',
+      roboto: 'Roboto',
+      'open-sans': 'Open Sans',
+    };
+    announce(`Шрифт: ${fontNames[fontKey] || fontKey}`);
+
     // Требуется репагинация
     if (this.isOpened) {
       this.emit(DelegateEvents.REPAGINATE, true);
@@ -196,6 +208,14 @@ export class SettingsDelegate extends BaseDelegate {
     if (html) {
       html.dataset.theme = theme === "light" ? "" : theme;
     }
+
+    // Названия тем для объявления
+    const themeNames = {
+      light: 'Светлая тема',
+      dark: 'Тёмная тема',
+      bw: 'Чёрно-белая тема',
+    };
+    announce(themeNames[theme] || theme);
   }
 
   /**

@@ -38,5 +38,8 @@ lerna-debug.log*
 # Test coverage
 coverage/
 
+# Generated documentation
+docs/
+
 # OS
 Thumbs.db

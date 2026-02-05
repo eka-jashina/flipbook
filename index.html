@@ -5,6 +5,20 @@
     <title>О хоббитах — Интерактивная книга</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self';
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      img-src 'self' data: blob:;
+      media-src 'self';
+      connect-src 'self';
+      frame-ancestors 'none';
+      base-uri 'self';
+      form-action 'none';
+    ">
+
     <!-- Google Fonts -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter&family=Roboto&family=Open+Sans&family=Merriweather&family=Libre+Baskerville&display=swap"
@@ -44,6 +58,9 @@
     <div class="error-message" id="errorMessage" hidden role="alert">
       <span id="errorText"></span>
     </div>
+
+    <!-- Screen reader announcements (visually hidden) -->
+    <div id="sr-announcer" class="sr-only" aria-live="polite" aria-atomic="true" role="status"></div>
 
     <main class="scene">
       <div class="book-wrap" data-state="closed" id="book-wrap">

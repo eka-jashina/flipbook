@@ -26,7 +26,7 @@ export class HTMLSanitizer {
       "h5", "h6", "strong", "em", "b", "i", "u", "s", "mark",
       "small", "sub", "sup", "ol", "ul", "li", "dl", "dt", "dd",
       "blockquote", "pre", "code", "br", "hr", "figure",
-      "figcaption", "img", "table", "thead", "tbody", "tfoot",
+      "figcaption", "img", "a", "table", "thead", "tbody", "tfoot",
       "tr", "th", "td", "caption",
     ]);
 
@@ -163,9 +163,34 @@ export class HTMLSanitizer {
       el.removeAttribute("src");
     }
 
-    if (el.hasAttribute("href") && this.DANGEROUS_URL_SCHEMES.test(el.getAttribute("href"))) {
-      el.removeAttribute("href");
+    if (el.hasAttribute("href")) {
+      const href = el.getAttribute("href");
+
+      // Удаляем опасные URL-схемы
+      if (this.DANGEROUS_URL_SCHEMES.test(href)) {
+        el.removeAttribute("href");
+      } else if (this._isExternalUrl(href)) {
+        // Для внешних ссылок добавляем защитные атрибуты
+        el.setAttribute("rel", "noopener noreferrer");
+        el.setAttribute("target", "_blank");
+      }
     }
+  }
+
+  /**
+   * Проверить, является ли URL внешним
+   * @private
+   * @param {string} url - URL для проверки
+   * @returns {boolean} true если URL внешний
+   */
+  _isExternalUrl(url) {
+    if (!url) return false;
+    // Относительные пути и якоря — не внешние
+    if (url.startsWith("/") || url.startsWith("#") || url.startsWith("./") || url.startsWith("../")) {
+      return false;
+    }
+    // Абсолютные URL с протоколом — внешние
+    return /^https?:\/\//i.test(url);
   }
 }
 

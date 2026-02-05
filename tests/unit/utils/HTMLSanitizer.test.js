@@ -176,11 +176,17 @@ describe('HTMLSanitizer', () => {
     });
 
     it('should preserve safe URLs in img src', () => {
-      // Note: <a> тег не в списке разрешённых по умолчанию
       const safe = '<img src="/images/photo.jpg" alt="Photo">';
       const clean = sanitizer.sanitize(safe);
 
       expect(clean).toContain('src="/images/photo.jpg"');
+    });
+
+    it('should preserve safe URLs in anchor href', () => {
+      const safe = '<a href="/pages/about.html">About</a>';
+      const clean = sanitizer.sanitize(safe);
+
+      expect(clean).toContain('href="/pages/about.html"');
     });
   });
 
@@ -335,20 +341,13 @@ describe('HTMLSanitizer', () => {
       expect(result).toContain('loading="lazy"');
     });
 
-    it('should preserve link attributes with custom sanitizer', () => {
-      // Note: <a> тег не в списке разрешённых по умолчанию
-      // Создаём custom sanitizer с добавленным <a> тегом
-      const customSanitizer = new HTMLSanitizer({
-        allowedTags: [
-          'article', 'section', 'div', 'span', 'p', 'a', 'img',
-        ],
-      });
-
-      const safe = '<a href="https://example.com" rel="noopener" target="_blank">Link</a>';
-      const result = customSanitizer.sanitize(safe);
+    it('should preserve link attributes', () => {
+      // External links automatically get rel="noopener noreferrer" and target="_blank"
+      const safe = '<a href="https://example.com">Link</a>';
+      const result = sanitizer.sanitize(safe);
 
       expect(result).toContain('href="https://example.com"');
-      expect(result).toContain('rel="noopener"');
+      expect(result).toContain('rel="noopener noreferrer"');
       expect(result).toContain('target="_blank"');
     });
 
@@ -461,6 +460,77 @@ describe('HTMLSanitizer', () => {
   // ═══════════════════════════════════════════════════════════════════════════
   // CUSTOM OPTIONS
   // ═══════════════════════════════════════════════════════════════════════════
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LINK SECURITY
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('link security', () => {
+    it('should allow anchor tags by default', () => {
+      const html = '<a href="/page">Internal Link</a>';
+      const result = sanitizer.sanitize(html);
+
+      expect(result).toContain('<a');
+      expect(result).toContain('href="/page"');
+      expect(result).toContain('Internal Link');
+    });
+
+    it('should add noopener noreferrer to external links', () => {
+      const html = '<a href="https://example.com">External</a>';
+      const result = sanitizer.sanitize(html);
+
+      expect(result).toContain('rel="noopener noreferrer"');
+      expect(result).toContain('target="_blank"');
+    });
+
+    it('should not add noopener to internal links', () => {
+      const html = '<a href="/internal/page">Internal</a>';
+      const result = sanitizer.sanitize(html);
+
+      expect(result).not.toContain('noopener');
+      expect(result).not.toContain('target="_blank"');
+    });
+
+    it('should not add noopener to anchor links', () => {
+      const html = '<a href="#section">Anchor</a>';
+      const result = sanitizer.sanitize(html);
+
+      expect(result).not.toContain('noopener');
+      expect(result).not.toContain('target="_blank"');
+    });
+
+    it('should not add noopener to relative paths', () => {
+      const html = '<a href="./page.html">Relative</a><a href="../other.html">Parent</a>';
+      const result = sanitizer.sanitize(html);
+
+      expect(result).not.toContain('noopener');
+      expect(result).not.toContain('target="_blank"');
+    });
+
+    it('should handle http:// as external', () => {
+      const html = '<a href="http://example.com">HTTP</a>';
+      const result = sanitizer.sanitize(html);
+
+      expect(result).toContain('rel="noopener noreferrer"');
+      expect(result).toContain('target="_blank"');
+    });
+
+    it('should remove javascript: URLs completely', () => {
+      const html = '<a href="javascript:alert(1)">XSS</a>';
+      const result = sanitizer.sanitize(html);
+
+      expect(result).not.toContain('javascript:');
+      expect(result).not.toContain('href');
+    });
+
+    it('should remove data: URLs completely', () => {
+      const html = '<a href="data:text/html,<script>alert(1)</script>">XSS</a>';
+      const result = sanitizer.sanitize(html);
+
+      expect(result).not.toContain('data:');
+      expect(result).not.toContain('href');
+    });
+  });
 
   describe('custom options', () => {
     it('should allow custom allowed tags', () => {

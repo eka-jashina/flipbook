@@ -21,7 +21,7 @@
  * 4. Managers   → Subscriptions, ResizeHandler
  */
 
-import { mediaQueries, ErrorHandler } from '../utils/index.js';
+import { mediaQueries, ErrorHandler, getAnnouncer } from '../utils/index.js';
 import { CONFIG } from '../config.js';
 import { ComponentFactory } from './ComponentFactory.js';
 import { AppInitializer } from './AppInitializer.js';
@@ -45,6 +45,9 @@ export class BookController {
       index: 0,
       chapterStarts: []
     };
+
+    // Screen reader announcer (singleton)
+    this.announcer = getAnnouncer();
 
     // ВАЖНО: Порядок инициализации критичен!
     this._createServices();       // 1. Сервисные группы
@@ -261,11 +264,26 @@ export class BookController {
    * @param {number} newIndex
    */
   _handleIndexChange(newIndex) {
+    const oldChapter = this.chapterDelegate.getCurrentChapter(this.state.index);
+
     this.state.index = newIndex;
     this.settings.set("page", newIndex);
     this._updateChapterBackground();
     this._updateDebug();
     this._updateNavigationUI();
+
+    // Объявление для screen reader
+    const totalPages = this.render.renderer.pageContents.length;
+    const newChapter = this.chapterDelegate.getCurrentChapter(newIndex);
+
+    if (oldChapter !== newChapter && CONFIG.CHAPTERS[newChapter]) {
+      // Смена главы
+      const chapterInfo = CONFIG.CHAPTERS[newChapter];
+      this.announcer.announceChapter(chapterInfo.title || `Глава ${newChapter + 1}`, newChapter + 1);
+    } else {
+      // Просто смена страницы
+      this.announcer.announcePage(newIndex + 1, totalPages);
+    }
   }
 
   /**
@@ -286,8 +304,10 @@ export class BookController {
    * @param {boolean} continueReading
    */
   async _handleBookOpen(continueReading = false) {
+    this.announcer.announceLoading('книги');
     const startIndex = continueReading ? this.settings.get("page") : 0;
     await this.lifecycleDelegate.open(startIndex);
+    this.announcer.announceBookState(true);
   }
 
   /**
@@ -296,6 +316,7 @@ export class BookController {
    */
   async _handleBookClose() {
     await this.lifecycleDelegate.close();
+    this.announcer.announceBookState(false);
   }
 
   /**
