@@ -27,6 +27,8 @@ npm run build        # Production build to dist/
 npm run preview      # Preview production build locally
 npm run build:prod   # Clean + build (recommended for production)
 npm run size         # Check dist folder size
+npm run docs         # Generate API documentation to docs/
+npm run docs:serve   # Generate and serve docs on port 3001
 ```
 
 ### Requirements
