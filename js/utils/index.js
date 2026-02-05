@@ -16,3 +16,4 @@ export { StorageManager } from './StorageManager.js';
 export { SoundManager } from './SoundManager.js';
 export { AmbientManager } from './AmbientManager.js';
 export { OfflineIndicator, offlineIndicator } from './OfflineIndicator.js';
+export { RateLimiter, rateLimiters } from './RateLimiter.js';

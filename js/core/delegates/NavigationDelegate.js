@@ -5,6 +5,7 @@
 
 import { BookState, Direction, CONFIG } from '../../config.js';
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
+import { rateLimiters } from '../../utils/index.js';
 
 /** @constant {number} Минимальный интервал между перелистываниями (мс) */
 const FLIP_THROTTLE_MS = CONFIG.TIMING?.FLIP_THROTTLE ?? 100;
@@ -45,12 +46,18 @@ export class NavigationDelegate extends BaseDelegate {
   /**
    * Переворот страницы вперёд/назад
    *
-   * Включает rate limiting для защиты от быстрых повторных кликов.
+   * Включает rate limiting для защиты от быстрых повторных кликов
+   * и автоматизированных действий.
    *
    * @param {'next'|'prev'} direction
    */
   async flip(direction) {
-    // Rate limiting: игнорируем слишком частые вызовы
+    // Rate limiting: защита от автоматизации (token bucket)
+    if (!rateLimiters.navigation.tryAction()) {
+      return;
+    }
+
+    // Дополнительный throttle для UI
     const now = Date.now();
     if (now - this._lastFlipTime < FLIP_THROTTLE_MS) {
       return;
@@ -95,6 +102,11 @@ export class NavigationDelegate extends BaseDelegate {
    * @param {number|undefined} chapter
    */
   async handleTOCNavigation(chapter) {
+    // Rate limiting для смены глав (более строгий)
+    if (!rateLimiters.chapter.tryAction()) {
+      return;
+    }
+
     // Если книга закрыта - просто открываем
     if (!this.isOpened) {
       await this.flip(Direction.NEXT);
