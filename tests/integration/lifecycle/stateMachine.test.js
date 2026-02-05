@@ -17,6 +17,7 @@ import { NavigationDelegate } from '../../../js/core/delegates/NavigationDelegat
 import { BookState, Direction } from '../../../js/config.js';
 import { EventEmitter } from '../../../js/utils/EventEmitter.js';
 import { ContentLoader } from '../../../js/managers/ContentLoader.js';
+import { rateLimiters } from '../../../js/utils/RateLimiter.js';
 
 describe('State Machine Integration', () => {
   let dom;
@@ -496,6 +497,9 @@ describe('State Machine Integration', () => {
     };
 
     beforeEach(() => {
+      // Сброс rate limiter для изоляции тестов
+      rateLimiters.navigation.reset();
+
       // Set state to OPENED
       stateMachine.transitionTo(BookState.OPENING);
       stateMachine.transitionTo(BookState.OPENED);
@@ -560,6 +564,8 @@ describe('State Machine Integration', () => {
 
     it('should recover to OPENED if flip fails', async () => {
       const errorPromise = createControllablePromise();
+      // Предотвращаем unhandled rejection
+      errorPromise.promise.catch(() => {});
       mockAnimator.runFlip.mockReturnValue(errorPromise.promise);
 
       const flipPromise = navigationDelegate.flip(Direction.NEXT);

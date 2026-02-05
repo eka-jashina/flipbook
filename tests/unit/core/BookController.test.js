@@ -69,6 +69,21 @@ const resetMockInstances = () => {
 // Mock utils
 vi.mock('../../../js/utils/index.js', () => ({
   mediaQueries: mockMediaQueries,
+  getAnnouncer: () => ({
+    announce: () => {},
+    announcePage: () => {},
+    announceChapter: () => {},
+    announceLoading: () => {},
+    announceLoadingComplete: () => {},
+    announceError: () => {},
+    announceSetting: () => {},
+    announceBookState: () => {},
+    clear: () => {},
+    destroy: () => {},
+  }),
+  ErrorHandler: class {
+    static handle() {}
+  },
 }));
 
 // Mock config
@@ -327,6 +342,7 @@ vi.mock('../../../js/core/delegates/index.js', () => ({
       const methods = createDelegateMockMethods();
       Object.assign(this, methods);
       this.updateBackground = vi.fn();
+      this.getCurrentChapter = vi.fn().mockReturnValue(0);
       mockInstances.chapterDelegate = this;
     }
   },
