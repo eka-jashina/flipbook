@@ -3,6 +3,9 @@
  * Управление звуковыми эффектами книги.
  */
 
+/** @constant {number} Таймаут загрузки звука (мс) */
+const LOAD_TIMEOUT_MS = 10000;
+
 export class SoundManager {
   constructor(options = {}) {
     this.enabled = options.enabled ?? true;
@@ -61,11 +64,22 @@ export class SoundManager {
         audio.volume = sound.volume;
         audio.preload = 'auto';
         
-        // Ждем загрузки первого элемента
+        // Ждем загрузки первого элемента с таймаутом
         if (i === 0) {
           await new Promise((resolve, reject) => {
-            audio.addEventListener('canplaythrough', resolve, { once: true });
-            audio.addEventListener('error', reject, { once: true });
+            const timeout = setTimeout(() => {
+              reject(new Error(`Sound load timeout (${LOAD_TIMEOUT_MS}ms)`));
+            }, LOAD_TIMEOUT_MS);
+
+            audio.addEventListener('canplaythrough', () => {
+              clearTimeout(timeout);
+              resolve();
+            }, { once: true });
+
+            audio.addEventListener('error', (e) => {
+              clearTimeout(timeout);
+              reject(e);
+            }, { once: true });
           });
         }
         

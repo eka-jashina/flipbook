@@ -147,11 +147,18 @@ export class BookStateMachine {
    *
    * Используется для восстановления после ошибок, когда нормальный
    * переход невозможен (например, OPENED → OPENED).
+   * Допускает только стабильные состояния (OPENED, CLOSED) как целевые,
+   * чтобы предотвратить зависание в промежуточном состоянии.
    * Уведомляет подписчиков, если состояние изменилось.
    *
-   * @param {string} newState - Целевое состояние
+   * @param {string} newState - Целевое состояние (только OPENED или CLOSED)
    */
   forceTransitionTo(newState) {
+    if (!BookStateMachine.RECOVERY_STATES.has(newState)) {
+      console.warn(`forceTransitionTo: состояние "${newState}" не допускается для принудительного перехода. Допустимы: ${[...BookStateMachine.RECOVERY_STATES].join(', ')}`);
+      return;
+    }
+
     const oldState = this._state;
     if (oldState === newState) return;
 
@@ -199,3 +206,13 @@ export class BookStateMachine {
     this._listeners.clear();
   }
 }
+
+/**
+ * Допустимые состояния для принудительного перехода (восстановление после ошибок).
+ * Только стабильные состояния — промежуточные (OPENING, CLOSING, FLIPPING) запрещены.
+ * @type {Set<string>}
+ */
+BookStateMachine.RECOVERY_STATES = Object.freeze(new Set([
+  BookState.OPENED,
+  BookState.CLOSED,
+]));

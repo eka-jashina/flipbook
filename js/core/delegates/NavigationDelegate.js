@@ -3,12 +3,9 @@
  * Управление навигацией по книге.
  */
 
-import { BookState, Direction, CONFIG } from '../../config.js';
+import { BookState, Direction } from '../../config.js';
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 import { rateLimiters } from '../../utils/index.js';
-
-/** @constant {number} Минимальный интервал между перелистываниями (мс) */
-const FLIP_THROTTLE_MS = CONFIG.TIMING?.FLIP_THROTTLE ?? 100;
 
 export class NavigationDelegate extends BaseDelegate {
   /**
@@ -23,8 +20,6 @@ export class NavigationDelegate extends BaseDelegate {
    */
   constructor(deps) {
     super(deps);
-    /** @type {number} Timestamp последнего перелистывания */
-    this._lastFlipTime = 0;
   }
 
   /**
@@ -52,27 +47,19 @@ export class NavigationDelegate extends BaseDelegate {
    * @param {'next'|'prev'} direction
    */
   async flip(direction) {
-    // Rate limiting: защита от автоматизации (token bucket)
+    // Rate limiting: защита от автоматизации и быстрых повторных кликов (token bucket)
     if (!rateLimiters.navigation.tryAction()) {
-      return;
-    }
-
-    // Дополнительный throttle для UI
-    const now = Date.now();
-    if (now - this._lastFlipTime < FLIP_THROTTLE_MS) {
       return;
     }
 
     // Открываем книгу если закрыта и направление "next"
     if (!this.isOpened && direction === Direction.NEXT) {
-      this._lastFlipTime = now;
       this.emit(DelegateEvents.BOOK_OPEN);
       return;
     }
 
     // Закрываем если на первой странице и направление "prev"
     if (this.isOpened && direction === Direction.PREV && this.currentIndex === 0) {
-      this._lastFlipTime = now;
       this.emit(DelegateEvents.BOOK_CLOSE);
       return;
     }
@@ -93,7 +80,6 @@ export class NavigationDelegate extends BaseDelegate {
       return;
     }
 
-    this._lastFlipTime = now;
     await this._executeFlip(direction, nextIndex);
   }
 

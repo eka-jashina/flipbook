@@ -243,9 +243,30 @@ describe('BookStateMachine', () => {
   });
 
   describe('forceTransitionTo', () => {
-    it('should change state without validation', () => {
+    it('should allow force transition to OPENED (recovery state)', () => {
+      fsm.forceTransitionTo(BookState.OPENED);
+      expect(fsm.state).toBe(BookState.OPENED);
+    });
+
+    it('should allow force transition to CLOSED (recovery state)', () => {
+      fsm.transitionTo(BookState.OPENING);
+      fsm.forceTransitionTo(BookState.CLOSED);
+      expect(fsm.state).toBe(BookState.CLOSED);
+    });
+
+    it('should reject non-recovery states (e.g. FLIPPING)', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       fsm.forceTransitionTo(BookState.FLIPPING);
-      expect(fsm.state).toBe(BookState.FLIPPING);
+      expect(fsm.state).toBe(BookState.CLOSED); // Unchanged
+      expect(warnSpy).toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('should reject OPENING as non-recovery state', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      fsm.forceTransitionTo(BookState.OPENING);
+      expect(fsm.state).toBe(BookState.CLOSED); // Unchanged
+      warnSpy.mockRestore();
     });
 
     it('should notify listeners', () => {

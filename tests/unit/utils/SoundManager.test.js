@@ -262,6 +262,34 @@ describe('SoundManager', () => {
 
       consoleWarnSpy.mockRestore();
     });
+
+    it('should timeout if canplaythrough never fires', async () => {
+      vi.useFakeTimers();
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      // Audio, который никогда не вызовет canplaythrough
+      global.Audio = function MockAudioHanging(url) {
+        const audio = createMockAudio();
+        audio.addEventListener = vi.fn(); // Не вызывает никаких событий
+        mockAudioInstances.push(audio);
+        return audio;
+      };
+
+      manager.register('hanging', '/hanging.mp3');
+
+      const loadPromise = manager._loadSound('hanging');
+
+      // Продвигаем таймер на 10 секунд (таймаут загрузки)
+      vi.advanceTimersByTime(10000);
+
+      await loadPromise;
+
+      expect(consoleWarnSpy).toHaveBeenCalled();
+      expect(manager.sounds.get('hanging').loaded).toBe(false);
+
+      consoleWarnSpy.mockRestore();
+      vi.useRealTimers();
+    });
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
