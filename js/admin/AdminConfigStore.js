@@ -35,6 +35,12 @@ const DEFAULT_CONFIG = {
       bgMobile: 'images/backgrounds/part_3-mobile.webp',
     },
   ],
+  ambients: [
+    { id: 'none', label: 'Без звука', shortLabel: 'Нет', icon: '✕', file: null, visible: true, builtin: true },
+    { id: 'rain', label: 'Дождь', shortLabel: 'Дождь', icon: '🌧️', file: 'sounds/ambient/rain.mp3', visible: true, builtin: true },
+    { id: 'fireplace', label: 'Камин', shortLabel: 'Камин', icon: '🔥', file: 'sounds/ambient/fireplace.mp3', visible: true, builtin: true },
+    { id: 'cafe', label: 'Кафе', shortLabel: 'Кафе', icon: '☕', file: 'sounds/ambient/cafe.mp3', visible: true, builtin: true },
+  ],
   defaultSettings: {
     font: 'georgia',
     fontSize: 18,
@@ -85,6 +91,7 @@ export class AdminConfigStore {
         ...(saved.cover || {}),
       },
       chapters: Array.isArray(saved.chapters) ? saved.chapters : structuredClone(DEFAULT_CONFIG.chapters),
+      ambients: Array.isArray(saved.ambients) ? saved.ambients : structuredClone(DEFAULT_CONFIG.ambients),
       defaultSettings: {
         ...structuredClone(DEFAULT_CONFIG.defaultSettings),
         ...(saved.defaultSettings || {}),
@@ -153,6 +160,31 @@ export class AdminConfigStore {
     const [moved] = chapters.splice(fromIndex, 1);
     chapters.splice(toIndex, 0, moved);
     this._save();
+  }
+
+  // --- Амбиенты ---
+
+  getAmbients() {
+    return structuredClone(this._config.ambients);
+  }
+
+  addAmbient(ambient) {
+    this._config.ambients.push({ ...ambient });
+    this._save();
+  }
+
+  updateAmbient(index, data) {
+    if (index >= 0 && index < this._config.ambients.length) {
+      this._config.ambients[index] = { ...this._config.ambients[index], ...data };
+      this._save();
+    }
+  }
+
+  removeAmbient(index) {
+    if (index >= 0 && index < this._config.ambients.length) {
+      this._config.ambients.splice(index, 1);
+      this._save();
+    }
   }
 
   // --- Настройки ---

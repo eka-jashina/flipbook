@@ -178,14 +178,11 @@
               </div>
             </div>
 
-            <!-- Амбиент -->
+            <!-- Амбиент — выбор по умолчанию -->
             <div class="setting-card">
               <label class="setting-label">Атмосфера по умолчанию</label>
               <div class="setting-ambient-group" id="defaultAmbient">
-                <button class="setting-ambient-btn active" type="button" data-ambient="none">Нет</button>
-                <button class="setting-ambient-btn" type="button" data-ambient="rain">Дождь</button>
-                <button class="setting-ambient-btn" type="button" data-ambient="fireplace">Камин</button>
-                <button class="setting-ambient-btn" type="button" data-ambient="cafe">Кафе</button>
+                <!-- Генерируется динамически -->
               </div>
             </div>
           </div>
@@ -194,6 +191,22 @@
             <button class="btn btn-primary" id="saveSettings" type="button">Сохранить настройки</button>
             <button class="btn btn-secondary" id="resetSettings" type="button">Сбросить к дефолтным</button>
           </div>
+
+          <!-- Управление амбиентами -->
+          <fieldset class="setting-fieldset" style="margin-top: 24px;">
+            <legend class="setting-fieldset-legend">Управление атмосферами</legend>
+
+            <div class="ambient-cards" id="ambientCards">
+              <!-- Карточки генерируются динамически -->
+            </div>
+
+            <button class="btn btn-primary" id="addAmbient" type="button" style="margin-top: 16px;">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg>
+              Добавить атмосферу
+            </button>
+          </fieldset>
         </section>
 
         <!-- Таб: Оформление -->
@@ -425,6 +438,47 @@
         <div class="modal-actions">
           <button class="btn btn-secondary" type="button" id="cancelModal">Отмена</button>
           <button class="btn btn-primary" type="submit" id="saveChapter">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Модальное окно редактирования амбиента -->
+    <dialog class="admin-modal" id="ambientModal">
+      <form class="modal-form" id="ambientForm" method="dialog">
+        <h3 class="modal-title" id="ambientModalTitle">Добавить атмосферу</h3>
+
+        <div class="form-group">
+          <label class="form-label" for="ambientLabel">Название</label>
+          <input class="form-input" type="text" id="ambientLabel" placeholder="Океан" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ambientIcon">Иконка (эмодзи)</label>
+          <input class="form-input" type="text" id="ambientIcon" placeholder="🌊" required maxlength="4">
+          <span class="form-hint">Одно эмодзи для отображения на кнопке</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ambientFile">Путь к файлу</label>
+          <input class="form-input" type="text" id="ambientFile" placeholder="sounds/ambient/ocean.mp3">
+          <span class="form-hint">Путь к аудиофайлу или загрузите ниже</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Или загрузить файл</label>
+          <label class="btn btn-secondary upload-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+            </svg>
+            <span id="ambientUploadLabel">Выбрать файл</span>
+            <input type="file" id="ambientFileUpload" accept="audio/*" hidden>
+          </label>
+          <span class="form-hint">Макс. 5 МБ. Будет сохранён в конфигурации</span>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-secondary" type="button" id="cancelAmbientModal">Отмена</button>
+          <button class="btn btn-primary" type="submit" id="saveAmbient">Сохранить</button>
         </div>
       </form>
     </dialog>

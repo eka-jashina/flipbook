@@ -65,6 +65,35 @@ function resolveCoverBg(value, fallback) {
   return value.startsWith('http') ? value : `${BASE_URL}${value}`;
 }
 
+// Амбиенты: из админки (с фильтрацией по visible) или дефолтные
+function buildAmbientConfig(adminAmbients) {
+  const defaultAmbients = {
+    none: { label: "Без звука", shortLabel: "Нет", icon: "✕", file: null },
+    rain: { label: "Дождь", shortLabel: "Дождь", icon: "🌧️", file: `${BASE_URL}sounds/ambient/rain.mp3` },
+    fireplace: { label: "Камин", shortLabel: "Камин", icon: "🔥", file: `${BASE_URL}sounds/ambient/fireplace.mp3` },
+    cafe: { label: "Кафе", shortLabel: "Кафе", icon: "☕", file: `${BASE_URL}sounds/ambient/cafe.mp3` },
+  };
+
+  if (!Array.isArray(adminAmbients) || adminAmbients.length === 0) {
+    return defaultAmbients;
+  }
+
+  const result = {};
+  for (const a of adminAmbients) {
+    if (!a.visible) continue;
+    const file = a.file
+      ? (a.file.startsWith('data:') || a.file.startsWith('http') ? a.file : `${BASE_URL}${a.file}`)
+      : null;
+    result[a.id] = {
+      label: a.label,
+      shortLabel: a.shortLabel || a.label,
+      icon: a.icon,
+      file,
+    };
+  }
+  return result;
+}
+
 export const CONFIG = Object.freeze({
   STORAGE_KEY: "reader-settings",
   COVER_BG: resolveCoverBg(adminCover.bg, 'images/backgrounds/bg-cover.webp'),
@@ -88,13 +117,8 @@ export const CONFIG = Object.freeze({
   },
 
   // Конфигурация ambient звуков
-  // Для добавления нового типа достаточно добавить запись сюда
-  AMBIENT: {
-    none: { label: "Без звука", shortLabel: "Нет", icon: "✕", file: null },
-    rain: { label: "Дождь", shortLabel: "Дождь", icon: "🌧️", file: `${BASE_URL}sounds/ambient/rain.mp3` },
-    fireplace: { label: "Камин", shortLabel: "Камин", icon: "🔥", file: `${BASE_URL}sounds/ambient/fireplace.mp3` },
-    cafe: { label: "Кафе", shortLabel: "Кафе", icon: "☕", file: `${BASE_URL}sounds/ambient/cafe.mp3` },
-  },
+  // Из админки (с фильтрацией по visible) или дефолтные
+  AMBIENT: buildAmbientConfig(adminConfig?.ambients),
 
  DEFAULT_SETTINGS: {
     font: adminDefaults.font || "georgia",
