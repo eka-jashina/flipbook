@@ -40,6 +40,7 @@
     "docs:serve": "npm run docs && npx serve docs -p 3001"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
     "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.58.1",
     "@vitest/coverage-v8": "^4.0.18",
