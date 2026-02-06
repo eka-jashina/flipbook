@@ -11,7 +11,7 @@
 
 import { cssVars } from "../utils/CSSVariables.js";
 import { mediaQueries } from "../utils/MediaQueryManager.js";
-import { Direction, BoolStr } from "../config.js";
+import { Direction } from "../config.js";
 
 export class EventController {
   /**

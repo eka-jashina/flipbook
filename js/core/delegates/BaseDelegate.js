@@ -40,7 +40,7 @@ export class BaseDelegate extends EventEmitter {
    * @protected
    * @param {Object} deps
    */
-  _validateRequiredDependencies(deps) {
+  _validateRequiredDependencies(_deps) {
     // Базовая валидация - переопределяется в наследниках
   }
 

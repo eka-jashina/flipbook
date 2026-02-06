@@ -12,20 +12,15 @@
   position: absolute;
   top: -100%;
   left: 50%;
-
   z-index: 10000;
-
   padding: 12px 24px;
-
   font-size: 1em;
   font-weight: 600;
   color: #000;
   text-decoration: none;
-
   background: #fff;
   border: 2px solid #000;
   border-radius: 8px;
-
   transform: translateX(-50%);
 }
 
