@@ -3,6 +3,7 @@
  */
 
 export { BookController } from './BookController.js';
+export { DelegateMediator } from './DelegateMediator.js';
 export { BookRenderer } from './BookRenderer.js';
 export { BookAnimator } from './BookAnimator.js';
 export { EventController } from './EventController.js';
