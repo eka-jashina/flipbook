@@ -56,10 +56,19 @@ const adminDefaults = adminConfig?.defaultSettings || {};
 // Оформление книги: из админки или дефолтные
 const adminAppearance = adminConfig?.appearance || {};
 
+// Обложка: из админки или дефолтные
+const adminCover = adminConfig?.cover || {};
+
+// Фон обложки: из админки (с добавлением BASE_URL) или дефолтные
+function resolveCoverBg(value, fallback) {
+  if (!value) return `${BASE_URL}${fallback}`;
+  return value.startsWith('http') ? value : `${BASE_URL}${value}`;
+}
+
 export const CONFIG = Object.freeze({
   STORAGE_KEY: "reader-settings",
-  COVER_BG: `${BASE_URL}images/backgrounds/bg-cover.webp`,
-  COVER_BG_MOBILE: `${BASE_URL}images/backgrounds/bg-cover-mobile.webp`,
+  COVER_BG: resolveCoverBg(adminCover.bg, 'images/backgrounds/bg-cover.webp'),
+  COVER_BG_MOBILE: resolveCoverBg(adminCover.bgMobile, 'images/backgrounds/bg-cover-mobile.webp'),
 
   CHAPTERS,
 
@@ -100,8 +109,8 @@ export const CONFIG = Object.freeze({
 
   // Настройки оформления из админки
   APPEARANCE: {
-    coverTitle: adminAppearance.coverTitle || 'О хоббитах',
-    coverAuthor: adminAppearance.coverAuthor || 'Дж.Р.Р.Толкин',
+    coverTitle: adminCover.title || 'О хоббитах',
+    coverAuthor: adminCover.author || 'Дж.Р.Р.Толкин',
     coverBgStart: adminAppearance.coverBgStart || '#3a2d1f',
     coverBgEnd: adminAppearance.coverBgEnd || '#2a2016',
     coverText: adminAppearance.coverText || '#f2e9d8',

@@ -26,6 +26,13 @@ class AdminApp {
     this.chaptersEmpty = document.getElementById('chaptersEmpty');
     this.addChapterBtn = document.getElementById('addChapter');
 
+    // Обложка (в табе Главы)
+    this.coverTitle = document.getElementById('coverTitle');
+    this.coverAuthor = document.getElementById('coverAuthor');
+    this.coverBgInput = document.getElementById('coverBg');
+    this.coverBgMobileInput = document.getElementById('coverBgMobile');
+    this.saveCoverBtn = document.getElementById('saveCover');
+
     // Модальное окно
     this.modal = document.getElementById('chapterModal');
     this.modalTitle = document.getElementById('modalTitle');
@@ -50,8 +57,6 @@ class AdminApp {
     this.resetSettingsBtn = document.getElementById('resetSettings');
 
     // Оформление — обложка
-    this.coverTitle = document.getElementById('coverTitle');
-    this.coverAuthor = document.getElementById('coverAuthor');
     this.coverBgStart = document.getElementById('coverBgStart');
     this.coverBgEnd = document.getElementById('coverBgEnd');
     this.coverText = document.getElementById('coverText');
@@ -133,8 +138,10 @@ class AdminApp {
     this.saveSettingsBtn.addEventListener('click', () => this._saveSettings());
     this.resetSettingsBtn.addEventListener('click', () => this._resetSettings());
 
+    // Обложка (таб Главы)
+    this.saveCoverBtn.addEventListener('click', () => this._saveCover());
+
     // Оформление — живой предпросмотр
-    this.coverTitle.addEventListener('input', () => this._updateAppearancePreview());
     this.coverBgStart.addEventListener('input', () => this._updateAppearancePreview());
     this.coverBgEnd.addEventListener('input', () => this._updateAppearancePreview());
     this.coverText.addEventListener('input', () => this._updateAppearancePreview());
@@ -173,10 +180,19 @@ class AdminApp {
   // --- Рендер ---
 
   _render() {
+    this._renderCover();
     this._renderChapters();
     this._renderSettings();
     this._renderAppearance();
     this._renderJsonPreview();
+  }
+
+  _renderCover() {
+    const cover = this.store.getCover();
+    this.coverTitle.value = cover.title;
+    this.coverAuthor.value = cover.author;
+    this.coverBgInput.value = cover.bg || '';
+    this.coverBgMobileInput.value = cover.bgMobile || '';
   }
 
   _renderChapters() {
@@ -343,6 +359,20 @@ class AdminApp {
     this._renderJsonPreview();
   }
 
+  // --- Обложка ---
+
+  _saveCover() {
+    this.store.updateCover({
+      title: this.coverTitle.value.trim(),
+      author: this.coverAuthor.value.trim(),
+      bg: this.coverBgInput.value.trim(),
+      bgMobile: this.coverBgMobileInput.value.trim(),
+    });
+
+    this._renderJsonPreview();
+    this._showToast('Обложка сохранена');
+  }
+
   // --- Настройки ---
 
   _saveSettings() {
@@ -383,8 +413,6 @@ class AdminApp {
   _renderAppearance() {
     const a = this.store.getAppearance();
 
-    this.coverTitle.value = a.coverTitle;
-    this.coverAuthor.value = a.coverAuthor;
     this.coverBgStart.value = a.coverBgStart;
     this.coverBgEnd.value = a.coverBgEnd;
     this.coverText.value = a.coverText;
@@ -410,7 +438,8 @@ class AdminApp {
     const bg = `linear-gradient(135deg, ${this.coverBgStart.value}, ${this.coverBgEnd.value})`;
     this.coverTextPreview.style.background = bg;
     this.coverTextPreview.style.color = this.coverText.value;
-    this.coverTextPreview.textContent = this.coverTitle.value || 'Заголовок';
+    const cover = this.store.getCover();
+    this.coverTextPreview.textContent = cover.title || 'Заголовок';
   }
 
   // --- Фон обложки ---
@@ -551,8 +580,6 @@ class AdminApp {
 
   _saveAppearance() {
     const update = {
-      coverTitle: this.coverTitle.value.trim(),
-      coverAuthor: this.coverAuthor.value.trim(),
       coverBgStart: this.coverBgStart.value,
       coverBgEnd: this.coverBgEnd.value,
       coverText: this.coverText.value,
@@ -576,8 +603,6 @@ class AdminApp {
 
   _resetAppearance() {
     this.store.updateAppearance({
-      coverTitle: 'О хоббитах',
-      coverAuthor: 'Дж.Р.Р.Толкин',
       coverBgStart: '#3a2d1f',
       coverBgEnd: '#2a2016',
       coverText: '#f2e9d8',

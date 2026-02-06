@@ -64,7 +64,38 @@
         <!-- Таб: Главы -->
         <section class="admin-panel active" data-panel="chapters" role="tabpanel">
           <div class="panel-header">
-            <h2>Управление главами</h2>
+            <h2>Управление книгой</h2>
+          </div>
+
+          <!-- Обложка -->
+          <fieldset class="setting-fieldset">
+            <legend class="setting-fieldset-legend">Обложка</legend>
+            <div class="settings-grid settings-grid--inner">
+              <div class="setting-card">
+                <label class="setting-label" for="coverTitle">Заголовок книги</label>
+                <input class="form-input" type="text" id="coverTitle" value="О хоббитах" placeholder="Название книги">
+              </div>
+              <div class="setting-card">
+                <label class="setting-label" for="coverAuthor">Автор</label>
+                <input class="form-input" type="text" id="coverAuthor" value="Дж.Р.Р.Толкин" placeholder="Имя автора">
+              </div>
+              <div class="setting-card">
+                <label class="setting-label" for="coverBg">Фон обложки (десктоп)</label>
+                <input class="form-input" type="text" id="coverBg" placeholder="images/backgrounds/bg-cover.webp">
+              </div>
+              <div class="setting-card">
+                <label class="setting-label" for="coverBgMobile">Фон обложки (мобильный)</label>
+                <input class="form-input" type="text" id="coverBgMobile" placeholder="images/backgrounds/bg-cover-mobile.webp">
+              </div>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-primary" id="saveCover" type="button">Сохранить обложку</button>
+            </div>
+          </fieldset>
+
+          <!-- Главы -->
+          <div class="panel-header" style="margin-top: 24px;">
+            <h2>Главы</h2>
             <button class="btn btn-primary" id="addChapter" type="button">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                 <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
@@ -178,18 +209,6 @@
               <legend class="setting-fieldset-legend">Обложка</legend>
 
               <div class="settings-grid settings-grid--inner">
-                <!-- Заголовок книги -->
-                <div class="setting-card">
-                  <label class="setting-label" for="coverTitle">Заголовок книги</label>
-                  <input class="form-input" type="text" id="coverTitle" value="О хоббитах" placeholder="Название книги">
-                </div>
-
-                <!-- Автор -->
-                <div class="setting-card">
-                  <label class="setting-label" for="coverAuthor">Автор</label>
-                  <input class="form-input" type="text" id="coverAuthor" value="Дж.Р.Р.Толкин" placeholder="Имя автора">
-                </div>
-
                 <!-- Фон обложки: градиент -->
                 <div class="setting-card">
                   <label class="setting-label" for="coverBgStart">Цвет фона (градиент)</label>

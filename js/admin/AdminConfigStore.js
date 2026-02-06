@@ -9,6 +9,12 @@ const STORAGE_KEY = 'flipbook-admin-config';
 
 // Дефолтная конфигурация (совпадает с CONFIG из config.js)
 const DEFAULT_CONFIG = {
+  cover: {
+    title: 'О хоббитах',
+    author: 'Дж.Р.Р.Толкин',
+    bg: 'images/backgrounds/bg-cover.webp',
+    bgMobile: 'images/backgrounds/bg-cover-mobile.webp',
+  },
   chapters: [
     {
       id: 'part_1',
@@ -39,8 +45,6 @@ const DEFAULT_CONFIG = {
     ambientVolume: 0.5,
   },
   appearance: {
-    coverTitle: 'О хоббитах',
-    coverAuthor: 'Дж.Р.Р.Толкин',
     coverBgStart: '#3a2d1f',
     coverBgEnd: '#2a2016',
     coverText: '#f2e9d8',
@@ -76,6 +80,10 @@ export class AdminConfigStore {
   /** Гарантируем наличие всех полей после загрузки */
   _mergeWithDefaults(saved) {
     return {
+      cover: {
+        ...structuredClone(DEFAULT_CONFIG.cover),
+        ...(saved.cover || {}),
+      },
       chapters: Array.isArray(saved.chapters) ? saved.chapters : structuredClone(DEFAULT_CONFIG.chapters),
       defaultSettings: {
         ...structuredClone(DEFAULT_CONFIG.defaultSettings),
@@ -96,6 +104,20 @@ export class AdminConfigStore {
   /** Получить весь конфиг */
   getConfig() {
     return structuredClone(this._config);
+  }
+
+  // --- Обложка ---
+
+  getCover() {
+    return structuredClone(this._config.cover);
+  }
+
+  updateCover(cover) {
+    this._config.cover = {
+      ...this._config.cover,
+      ...cover,
+    };
+    this._save();
   }
 
   // --- Главы ---
