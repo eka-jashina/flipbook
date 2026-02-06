@@ -199,12 +199,38 @@
             </div>
 
             <!-- Текстура страницы -->
-            <div class="setting-card">
-              <label class="setting-label" for="pageTexture">Текстура страницы</label>
-              <select class="setting-select" id="pageTexture">
-                <option value="default">По умолчанию (бумага)</option>
-                <option value="none">Без текстуры</option>
-              </select>
+            <div class="setting-card setting-card--texture">
+              <label class="setting-label">Текстура страницы</label>
+              <div class="texture-selector">
+                <div class="texture-options">
+                  <button class="texture-option active" type="button" data-texture="default" title="По умолчанию">
+                    <img src="images/backgrounds/bg-page.webp" alt="Текстура по умолчанию" class="texture-thumb">
+                    <span class="texture-option-label">Бумага</span>
+                  </button>
+                  <button class="texture-option" type="button" data-texture="none" title="Без текстуры">
+                    <span class="texture-thumb texture-thumb--none"></span>
+                    <span class="texture-option-label">Нет</span>
+                  </button>
+                  <label class="texture-option texture-option--upload" title="Загрузить свою текстуру">
+                    <span class="texture-thumb texture-thumb--upload" id="customTextureThumb">
+                      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                        <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                      </svg>
+                    </span>
+                    <span class="texture-option-label">Своя</span>
+                    <input type="file" id="textureFileInput" accept="image/*" hidden>
+                  </label>
+                </div>
+                <div class="texture-custom-info" id="textureCustomInfo" hidden>
+                  <span class="texture-custom-name" id="textureCustomName"></span>
+                  <button class="texture-custom-remove" type="button" id="textureCustomRemove" title="Удалить свою текстуру">
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                      <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <input type="hidden" id="pageTexture" value="default">
             </div>
 
             <!-- Фон страницы -->

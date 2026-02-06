@@ -340,7 +340,9 @@ export class SettingsDelegate extends BaseDelegate {
     html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${a.coverBgStart}, ${a.coverBgEnd})`);
     html.style.setProperty("--cover-front-text", a.coverText);
 
-    if (a.pageTexture === "none") {
+    if (a.pageTexture === "custom" && a.customTextureData) {
+      html.style.setProperty("--bg-page-image", `url(${a.customTextureData})`);
+    } else if (a.pageTexture === "none") {
       html.style.setProperty("--bg-page-image", "none");
     }
 

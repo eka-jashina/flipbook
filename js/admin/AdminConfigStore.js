@@ -43,6 +43,7 @@ const DEFAULT_CONFIG = {
     coverBgEnd: '#2a2016',
     coverText: '#f2e9d8',
     pageTexture: 'default',
+    customTextureData: null,
     bgPage: '#fdfcf8',
     bgApp: '#e6e3dc',
     fontMin: 14,

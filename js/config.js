@@ -104,6 +104,7 @@ export const CONFIG = Object.freeze({
     coverBgEnd: adminAppearance.coverBgEnd || '#2a2016',
     coverText: adminAppearance.coverText || '#f2e9d8',
     pageTexture: adminAppearance.pageTexture || 'default',
+    customTextureData: adminAppearance.customTextureData || null,
     bgPage: adminAppearance.bgPage || '#fdfcf8',
     bgApp: adminAppearance.bgApp || '#e6e3dc',
     fontMin: adminAppearance.fontMin ?? 14,

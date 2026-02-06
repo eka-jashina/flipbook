@@ -55,6 +55,12 @@ class AdminApp {
     this.coverText = document.getElementById('coverText');
     this.coverTextPreview = document.getElementById('coverTextPreview');
     this.pageTexture = document.getElementById('pageTexture');
+    this.textureOptions = document.querySelectorAll('.texture-option[data-texture]');
+    this.textureFileInput = document.getElementById('textureFileInput');
+    this.customTextureThumb = document.getElementById('customTextureThumb');
+    this.textureCustomInfo = document.getElementById('textureCustomInfo');
+    this.textureCustomName = document.getElementById('textureCustomName');
+    this.textureCustomRemove = document.getElementById('textureCustomRemove');
     this.bgPage = document.getElementById('bgPage');
     this.bgPageSwatch = document.getElementById('bgPageSwatch');
     this.bgApp = document.getElementById('bgApp');
@@ -125,6 +131,13 @@ class AdminApp {
     this.coverBgStart.addEventListener('input', () => this._updateAppearancePreview());
     this.coverBgEnd.addEventListener('input', () => this._updateAppearancePreview());
     this.coverText.addEventListener('input', () => this._updateAppearancePreview());
+    // Текстура — выбор варианта
+    this.textureOptions.forEach(btn => {
+      btn.addEventListener('click', () => this._selectTexture(btn.dataset.texture));
+    });
+    this.textureFileInput.addEventListener('change', (e) => this._handleTextureUpload(e));
+    this.textureCustomRemove.addEventListener('click', () => this._removeCustomTexture());
+
     this.bgPage.addEventListener('input', () => {
       this.bgPageSwatch.style.background = this.bgPage.value;
     });
@@ -365,6 +378,10 @@ class AdminApp {
     this.coverBgEnd.value = a.coverBgEnd;
     this.coverText.value = a.coverText;
     this.pageTexture.value = a.pageTexture;
+
+    // Текстура — подсветить активный вариант
+    this._renderTextureSelector(a.pageTexture, a.customTextureData);
+
     this.bgPage.value = a.bgPage;
     this.bgPageSwatch.style.background = a.bgPage;
     this.bgApp.value = a.bgApp;
@@ -383,8 +400,93 @@ class AdminApp {
     this.coverTextPreview.style.color = this.coverText.value;
   }
 
-  _saveAppearance() {
+  // --- Текстура ---
+
+  _renderTextureSelector(textureValue, customData) {
+    const uploadOption = document.querySelector('.texture-option--upload');
+
+    // Подсветка активного варианта
+    this.textureOptions.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.texture === textureValue);
+    });
+
+    // Если выбрана кастомная текстура
+    if (textureValue === 'custom') {
+      uploadOption.classList.add('active');
+    } else {
+      uploadOption.classList.remove('active');
+    }
+
+    // Показать превью кастомной текстуры
+    if (customData) {
+      this.customTextureThumb.style.backgroundImage = `url(${customData})`;
+      this.customTextureThumb.classList.add('has-image');
+      this.textureCustomInfo.hidden = false;
+      this.textureCustomName.textContent = 'Своя текстура';
+    } else {
+      this.customTextureThumb.style.backgroundImage = '';
+      this.customTextureThumb.classList.remove('has-image');
+      this.textureCustomInfo.hidden = true;
+    }
+  }
+
+  _selectTexture(value) {
+    this.pageTexture.value = value;
+    this._renderTextureSelector(value, this.store.getAppearance().customTextureData);
+  }
+
+  _handleTextureUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Ограничение размера — 2 МБ
+    if (file.size > 2 * 1024 * 1024) {
+      this._showToast('Файл слишком большой (макс. 2 МБ)');
+      e.target.value = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this._showToast('Допустимы только изображения');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+
+      // Сохраняем data URL в store
+      this.store.updateAppearance({
+        pageTexture: 'custom',
+        customTextureData: dataUrl,
+      });
+
+      this.pageTexture.value = 'custom';
+      this._renderTextureSelector('custom', dataUrl);
+      this._renderJsonPreview();
+      this._showToast('Текстура загружена');
+    };
+    reader.readAsDataURL(file);
+
+    // Сброс input
+    e.target.value = '';
+  }
+
+  _removeCustomTexture() {
     this.store.updateAppearance({
+      pageTexture: 'default',
+      customTextureData: null,
+    });
+
+    this.pageTexture.value = 'default';
+    this._renderTextureSelector('default', null);
+    this._renderJsonPreview();
+    this._showToast('Своя текстура удалена');
+  }
+
+  _saveAppearance() {
+    const update = {
       coverBgStart: this.coverBgStart.value,
       coverBgEnd: this.coverBgEnd.value,
       coverText: this.coverText.value,
@@ -393,7 +495,14 @@ class AdminApp {
       bgApp: this.bgApp.value,
       fontMin: parseInt(this.fontMin.value, 10),
       fontMax: parseInt(this.fontMax.value, 10),
-    });
+    };
+
+    // Если текстура не custom — очистить загруженные данные
+    if (update.pageTexture !== 'custom') {
+      update.customTextureData = null;
+    }
+
+    this.store.updateAppearance(update);
 
     this._renderJsonPreview();
     this._showToast('Оформление сохранено');
@@ -405,6 +514,7 @@ class AdminApp {
       coverBgEnd: '#2a2016',
       coverText: '#f2e9d8',
       pageTexture: 'default',
+      customTextureData: null,
       bgPage: '#fdfcf8',
       bgApp: '#e6e3dc',
       fontMin: 14,
