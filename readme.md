@@ -34,6 +34,7 @@
 | **Dependency Injection** | `BookController` | Тестируемость и модульность |
 | **Factory** | `ComponentFactory` | Централизованное создание компонентов |
 | **Delegate** | `delegates/` | Разделение ответственности по доменам |
+| **Mediator** | `DelegateMediator` | Коммуникация между делегатами |
 | **Double Buffering** | `BookRenderer` | Плавные переходы между страницами |
 | **LRU Cache** | `LRUCache` | Оптимизация производительности пагинации |
 | **Service Groups** | `services/` | Группировка связанных зависимостей для DI |
@@ -131,6 +132,7 @@ flipbook/
 │       ├── AppInitializer.js       # Инициализация приложения
 │       ├── SubscriptionManager.js  # Управление подписками на события
 │       ├── ResizeHandler.js        # Обработка изменения размера окна
+│       ├── DelegateMediator.js     # Коммуникация между делегатами
 │       │
 │       ├── services/               # Сервисные группы (DI)
 │       │   ├── CoreServices.js         # DOM, события, таймеры, storage
@@ -143,6 +145,7 @@ flipbook/
 │           ├── NavigationDelegate.js   # Логика перелистывания
 │           ├── DragDelegate.js         # Touch-перетаскивание страниц
 │           ├── DragAnimator.js         # Анимация угла поворота при drag
+│           ├── DragDOMPreparer.js      # Подготовка DOM для drag
 │           ├── DragShadowRenderer.js   # Рендеринг теней при drag
 │           ├── SettingsDelegate.js     # UI настроек
 │           ├── ChapterDelegate.js      # Переключение глав
@@ -277,8 +280,10 @@ npm run dev
 | **AsyncPaginator** | `managers/AsyncPaginator.js` | Разбивка контента на страницы |
 | **EventController** | `core/EventController.js` | Клики, свайпы, клавиатура |
 | **NavigationDelegate** | `core/delegates/NavigationDelegate.js` | Логика навигации по страницам |
+| **DelegateMediator** | `core/DelegateMediator.js` | Коммуникация между делегатами |
 | **DragDelegate** | `core/delegates/DragDelegate.js` | Touch-перетаскивание страниц |
 | **DragAnimator** | `core/delegates/DragAnimator.js` | Анимация угла поворота при drag |
+| **DragDOMPreparer** | `core/delegates/DragDOMPreparer.js` | Подготовка DOM для drag |
 | **DragShadowRenderer** | `core/delegates/DragShadowRenderer.js` | Рендеринг теней при drag |
 | **CoreServices** | `core/services/CoreServices.js` | Группа: DOM, события, таймеры, storage |
 | **AudioServices** | `core/services/AudioServices.js` | Группа: звуки и ambient |
