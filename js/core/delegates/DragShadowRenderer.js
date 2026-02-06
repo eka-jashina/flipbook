@@ -46,8 +46,8 @@ export class DragShadowRenderer {
    * Очистить все тени и сбросить состояние
    */
   reset() {
-    const book = this.dom.get("book");
-    const flipShadow = this.dom.get("flipShadow");
+    const book = this.dom?.get("book");
+    const flipShadow = this.dom?.get("flipShadow");
 
     if (book) {
       book.style.removeProperty("--spine-shadow-alpha");
