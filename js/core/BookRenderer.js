@@ -13,7 +13,7 @@ import { LRUCache } from '../utils/LRUCache.js';
 import { BoolStr } from '../config.js';
 
 /** @constant {number} Максимальное количество URL изображений в кэше */
-const IMAGE_URL_CACHE_LIMIT = 50;
+const IMAGE_URL_CACHE_LIMIT = 100;
 
 export class BookRenderer {
   /**
@@ -26,8 +26,6 @@ export class BookRenderer {
    * @param {HTMLElement} options.sheetFront - Лицевая сторона перелистываемого листа
    * @param {HTMLElement} options.sheetBack - Оборотная сторона перелистываемого листа
    */
-  /** @type {number} Максимальный размер кэша загруженных URL изображений */
-  static MAX_LOADED_IMAGES = 100;
 
   constructor(options) {
     this.cache = new LRUCache(options.cacheLimit || 12);
@@ -35,8 +33,6 @@ export class BookRenderer {
     this.pageContents = [];
     /** @type {Set<string>} Уже загруженные URL изображений (ограниченный размер) */
     this.loadedImageUrls = new Set();
-    /** @type {number} Лимит кэша URL изображений */
-    this._imageUrlCacheLimit = IMAGE_URL_CACHE_LIMIT;
 
     this.elements = {
       leftActive: options.leftActive,
@@ -109,27 +105,6 @@ export class BookRenderer {
   }
 
   /**
-   * Добавить URL изображения в кэш с ограничением размера.
-   * При превышении лимита удаляет самый старый URL (FIFO).
-   * @param {string} url - URL изображения
-   * @private
-   */
-  _addLoadedImageUrl(url) {
-    // Если URL уже есть - ничего не делаем (Set не добавит дубликат)
-    if (this.loadedImageUrls.has(url)) {
-      return;
-    }
-
-    // Удаляем старые записи при превышении лимита
-    if (this.loadedImageUrls.size >= this._imageUrlCacheLimit) {
-      const firstUrl = this.loadedImageUrls.values().next().value;
-      this.loadedImageUrls.delete(firstUrl);
-    }
-
-    this.loadedImageUrls.add(url);
-  }
-
-  /**
    * Настроить placeholder для изображений в контейнере
    * @param {HTMLElement} container - Контейнер с контентом
    * @private
@@ -175,10 +150,16 @@ export class BookRenderer {
    * @private
    */
   _trackLoadedImage(src) {
-    // Если кэш переполнен, очищаем его для предотвращения утечки памяти
-    if (this.loadedImageUrls.size >= BookRenderer.MAX_LOADED_IMAGES) {
-      this.loadedImageUrls.clear();
+    if (this.loadedImageUrls.has(src)) {
+      return;
     }
+
+    // FIFO-вытеснение: удаляем самый старый URL при превышении лимита
+    if (this.loadedImageUrls.size >= IMAGE_URL_CACHE_LIMIT) {
+      const oldestUrl = this.loadedImageUrls.values().next().value;
+      this.loadedImageUrls.delete(oldestUrl);
+    }
+
     this.loadedImageUrls.add(src);
   }
 
