@@ -19,6 +19,7 @@
 - **Ambient-звуки** — фоновая атмосфера (дождь, камин, кафе)
 - **Адаптивный дизайн** — корректная работа на десктопе и мобильных устройствах
 - **Сохранение прогресса** — автоматическое запоминание позиции чтения
+- **PWA** — установка как приложение, офлайн-доступ через Service Worker
 
 ---
 
@@ -105,7 +106,11 @@ flipbook/
 │   │   ├── ErrorHandler.js         # Централизованная обработка ошибок
 │   │   ├── StorageManager.js       # Абстракция над localStorage
 │   │   ├── SoundManager.js         # Управление звуковыми эффектами
-│   │   └── AmbientManager.js       # Фоновые ambient-звуки
+│   │   ├── AmbientManager.js       # Фоновые ambient-звуки
+│   │   ├── RateLimiter.js          # Ограничение частоты вызовов
+│   │   ├── InstallPrompt.js        # PWA-промпт установки
+│   │   ├── OfflineIndicator.js     # Индикатор офлайн-режима
+│   │   └── ScreenReaderAnnouncer.js # Анонсы для скринридеров
 │   │
 │   ├── managers/                   # Бизнес-логика и данные
 │   │   ├── BookStateMachine.js     # Конечный автомат состояний
@@ -160,6 +165,8 @@ flipbook/
 │   ├── animations.css              # Keyframe-анимации
 │   ├── drag.css                    # Стили drag-взаимодействия
 │   ├── accessibility.css           # Стили доступности (skip-link, focus)
+│   ├── install-prompt.css          # PWA-промпт установки
+│   ├── offline.css                 # Индикатор офлайн-режима
 │   ├── responsive.css              # Адаптивность
 │   └── controls/                   # Стили UI-контролов
 │       ├── index.css               # Входная точка + общие стили
@@ -172,6 +179,7 @@ flipbook/
 │   ├── content/                    # HTML-контент глав
 │   ├── images/                     # Фоны и иллюстрации (.webp)
 │   ├── fonts/                      # Кастомные шрифты (.woff2)
+│   ├── icons/                      # PWA-иконки (SVG, PNG)
 │   └── sounds/                     # Аудио (перелистывание, ambient)
 │
 └── tests/                          # Тесты
@@ -200,6 +208,7 @@ flipbook/
         ├── fixtures/               # Фикстуры для тестов
         │   └── book.fixture.js     # Фикстура книги
         ├── pages/                  # Page Object модели
+        │   ├── index.js            # Экспорт моделей
         │   ├── BookPage.js         # Страница книги
         │   └── SettingsPanel.js    # Панель настроек
         ├── flows/                  # Тестовые сценарии
@@ -252,6 +261,8 @@ npm run dev
 | `npm run test:e2e:debug` | E2E-тесты в режиме отладки |
 | `npm run test:e2e:headed` | E2E-тесты с видимым браузером |
 | `npm run test:e2e:report` | Показать отчёт E2E-тестов |
+| `npm run docs` | Генерация API-документации в `docs/` |
+| `npm run docs:serve` | Генерация и сервер документации (порт 3001) |
 
 ---
 
@@ -273,6 +284,10 @@ npm run dev
 | **AudioServices** | `core/services/AudioServices.js` | Группа: звуки и ambient |
 | **RenderServices** | `core/services/RenderServices.js` | Группа: рендеринг и анимации |
 | **ContentServices** | `core/services/ContentServices.js` | Группа: загрузка и пагинация |
+| **InstallPrompt** | `utils/InstallPrompt.js` | PWA-промпт установки приложения |
+| **OfflineIndicator** | `utils/OfflineIndicator.js` | Индикатор офлайн-режима |
+| **ScreenReaderAnnouncer** | `utils/ScreenReaderAnnouncer.js` | Анонсы для скринридеров (a11y) |
+| **RateLimiter** | `utils/RateLimiter.js` | Ограничение частоты вызовов |
 
 ---
 
@@ -323,6 +338,13 @@ E2E-тесты используют Page Object модели для абстра
 - **Double buffering** для плавных переходов
 - **GPU-ускоренные** CSS 3D-трансформации
 - **Debounce** обработки resize
+
+### PWA (Progressive Web App)
+- **Service Worker** с автообновлением (Workbox)
+- **Офлайн-доступ** — предкэширование JS, CSS, HTML, шрифтов
+- **Runtime-кэширование** изображений (30 дней, до 60 записей) и аудио (30 дней, до 15 записей)
+- **Установка** как нативное приложение на десктопе и мобильных устройствах
+- **Иконки** — SVG, PNG 192px, PNG 512px, maskable 512px
 
 ### Качество кода
 - Чистая архитектура с разделением ответственности
