@@ -44,6 +44,7 @@ export default defineConfig({
       include: [
         'js/utils/**/*.js',
         'js/managers/**/*.js',
+        'js/core/**/*.js',
       ],
 
       // Исключения
@@ -53,13 +54,12 @@ export default defineConfig({
       ],
 
       // Пороговые значения покрытия
-      // Раскомментируйте после достижения целевого покрытия
-      // thresholds: {
-      //   statements: 70,
-      //   branches: 60,
-      //   functions: 70,
-      //   lines: 70,
-      // },
+      thresholds: {
+        statements: 80,
+        branches: 70,
+        functions: 80,
+        lines: 80,
+      },
     },
 
     // ═══════════════════════════════════════════════════════════
