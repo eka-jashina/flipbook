@@ -6,6 +6,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock helpers
+vi.mock('../../../../js/core/delegates/DragDOMPreparer.js', () => ({
+  DragDOMPreparer: vi.fn(function() {
+    this.prepare = vi.fn();
+    this.cleanupSheet = vi.fn();
+    this.cleanupPages = vi.fn();
+    this.destroy = vi.fn();
+    this._pageRefs = null;
+  }),
+}));
+
 vi.mock('../../../../js/core/delegates/DragShadowRenderer.js', () => ({
   DragShadowRenderer: vi.fn(function() {
     this.activate = vi.fn();
@@ -168,7 +178,8 @@ describe('DragDelegate', () => {
       expect(delegate.currentAngle).toBe(0);
     });
 
-    it('should create shadow renderer and drag animator', () => {
+    it('should create helper instances', () => {
+      expect(delegate.domPreparer).toBeDefined();
       expect(delegate.shadowRenderer).toBeDefined();
       expect(delegate.dragAnimator).toBeDefined();
     });
@@ -309,42 +320,16 @@ describe('DragDelegate', () => {
       expect(delegate.bookWidth).toBe(1000);
     });
 
+    it('should call domPreparer.prepare', () => {
+      delegate._startDrag({ clientX: 500 }, 'next');
+
+      expect(delegate.domPreparer.prepare).toHaveBeenCalledWith('next', 50, 2, false);
+    });
+
     it('should activate shadow renderer', () => {
       delegate._startDrag({ clientX: 500 }, 'next');
 
       expect(delegate.shadowRenderer.activate).toHaveBeenCalledWith('next');
-    });
-  });
-
-  describe('_prepareFlip', () => {
-    beforeEach(() => {
-      delegate.direction = 'next';
-    });
-
-    it('should prepare buffer with next index', () => {
-      delegate._prepareFlip();
-
-      // 50 + 2 (desktop pagesPerFlip) = 52
-      expect(mockDeps.renderer.prepareBuffer).toHaveBeenCalledWith(52, false);
-    });
-
-    it('should prepare sheet', () => {
-      delegate._prepareFlip();
-
-      expect(mockDeps.renderer.prepareSheet).toHaveBeenCalled();
-    });
-
-    it('should set sheet dataset', () => {
-      delegate._prepareFlip();
-
-      expect(mockSheet.dataset.direction).toBe('next');
-      expect(mockSheet.dataset.phase).toBe('drag');
-    });
-
-    it('should add no-transition class to sheet', () => {
-      delegate._prepareFlip();
-
-      expect(mockSheet.classList.contains('no-transition')).toBe(true);
     });
   });
 
@@ -480,26 +465,12 @@ describe('DragDelegate', () => {
     beforeEach(() => {
       delegate.direction = 'next';
       delegate.currentAngle = 180;
-      delegate._pageRefs = {
-        leftActive: mockDeps.renderer.elements.leftActive,
-        rightActive: mockDeps.renderer.elements.rightActive,
-        leftBuffer: mockDeps.renderer.elements.leftBuffer,
-        rightBuffer: mockDeps.renderer.elements.rightBuffer,
-      };
-
-      // Set up sheet with drag phase
-      mockSheet.dataset.phase = 'drag';
-      mockSheet.dataset.direction = 'next';
-      mockSheet.classList.add('no-transition');
-      mockSheet.style.setProperty('--sheet-angle', '-180deg');
     });
 
-    it('should clean up sheet', () => {
+    it('should call domPreparer.cleanupSheet', () => {
       delegate._finish(true);
 
-      expect(mockSheet.classList.contains('no-transition')).toBe(false);
-      expect(mockSheet.dataset.phase).toBeUndefined();
-      expect(mockSheet.dataset.direction).toBeUndefined();
+      expect(delegate.domPreparer.cleanupSheet).toHaveBeenCalled();
     });
 
     it('should reset shadow renderer', () => {
@@ -535,20 +506,10 @@ describe('DragDelegate', () => {
 
       expect(delegate.direction).toBeNull();
       expect(delegate.currentAngle).toBe(0);
-      expect(delegate._pageRefs).toBeNull();
     });
   });
 
   describe('_completeFlip', () => {
-    beforeEach(() => {
-      delegate._pageRefs = {
-        leftActive: mockDeps.renderer.elements.leftActive,
-        rightActive: mockDeps.renderer.elements.rightActive,
-        leftBuffer: mockDeps.renderer.elements.leftBuffer,
-        rightBuffer: mockDeps.renderer.elements.rightBuffer,
-      };
-    });
-
     it('should play flip sound', () => {
       delegate._completeFlip('next');
 
@@ -583,33 +544,19 @@ describe('DragDelegate', () => {
 
       expect(eventHandlers.onChapterUpdate).toHaveBeenCalled();
     });
+
+    it('should call domPreparer.cleanupPages with completed=true', () => {
+      delegate._completeFlip('next');
+
+      expect(delegate.domPreparer.cleanupPages).toHaveBeenCalledWith(true);
+    });
   });
 
   describe('_cancelFlip', () => {
-    beforeEach(() => {
-      delegate._pageRefs = {
-        leftActive: mockDeps.renderer.elements.leftActive,
-        rightActive: mockDeps.renderer.elements.rightActive,
-        leftBuffer: mockDeps.renderer.elements.leftBuffer,
-        rightBuffer: mockDeps.renderer.elements.rightBuffer,
-      };
-    });
-
-    it('should restore buffer attributes', () => {
-      // Mark buffers as not-buffer (they were shown during drag)
-      mockDeps.renderer.elements.leftBuffer.dataset.buffer = 'false';
-      mockDeps.renderer.elements.rightBuffer.dataset.buffer = 'false';
-
+    it('should call domPreparer.cleanupPages with completed=false', () => {
       delegate._cancelFlip();
 
-      expect(mockDeps.renderer.elements.leftBuffer.dataset.buffer).toBe('true');
-      expect(mockDeps.renderer.elements.rightBuffer.dataset.buffer).toBe('true');
-    });
-
-    it('should set book state to opened', () => {
-      delegate._cancelFlip();
-
-      expect(mockBook.dataset.state).toBe('opened');
+      expect(delegate.domPreparer.cleanupPages).toHaveBeenCalledWith(false);
     });
   });
 
@@ -634,11 +581,13 @@ describe('DragDelegate', () => {
 
     it('should destroy helpers', () => {
       // Capture references before destroy sets them to null
+      const domPreparer = delegate.domPreparer;
       const shadowRenderer = delegate.shadowRenderer;
       const dragAnimator = delegate.dragAnimator;
 
       delegate.destroy();
 
+      expect(domPreparer.destroy).toHaveBeenCalled();
       expect(shadowRenderer.destroy).toHaveBeenCalled();
       expect(dragAnimator.destroy).toHaveBeenCalled();
     });

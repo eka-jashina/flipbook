@@ -3,24 +3,25 @@
  * Управление drag-перелистыванием страниц.
  *
  * Использует вспомогательные классы:
+ * - DragDOMPreparer — подготовка и очистка DOM
  * - DragShadowRenderer — рендеринг теней
  * - DragAnimator — анимация угла поворота
  *
  * Жизненный цикл drag-операции:
- * 1. _startDrag()     → Инициализация: проверка возможности, захват координат
- * 2. _prepareFlip()   → Подготовка DOM: буфер, sheet, отключение transitions
- * 3. _showUnderPage() → Показ страницы "под" текущей (целевая страница)
- * 4. _updateAngle()   → Цикл: обновление угла по позиции курсора/пальца
- * 5. _render()        → Цикл: применение угла к CSS-переменным
- * 6. _endDrag()       → Решение: завершить (>90°) или отменить (<90°)
- * 7. animator.animate → Анимация до целевого угла (0° или 180°)
- * 8. _finish()        → Очистка CSS-переменных и состояния sheet
- * 9. _completeFlip()  → При успехе: swap буферов, обновление индекса
- *    _cancelFlip()    → При отмене: возврат видимости страниц
+ * 1. _startDrag()            → Инициализация: проверка возможности, захват координат
+ * 2. domPreparer.prepare()   → Подготовка DOM: буфер, sheet, отключение transitions
+ * 3. _updateAngle()          → Цикл: обновление угла по позиции курсора/пальца
+ * 4. _render()               → Цикл: применение угла к CSS-переменным
+ * 5. _endDrag()              → Решение: завершить (>90°) или отменить (<90°)
+ * 6. animator.animate        → Анимация до целевого угла (0° или 180°)
+ * 7. domPreparer.cleanup*()  → Очистка CSS-переменных и состояния
+ * 8. _completeFlip()         → При успехе: swap буферов, обновление индекса
+ *    _cancelFlip()           → При отмене: возврат видимости страниц
  */
 
-import { BookState, FlipPhase, Direction, BoolStr } from "../../config.js";
+import { BookState, Direction } from "../../config.js";
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
+import { DragDOMPreparer } from './DragDOMPreparer.js';
 import { DragShadowRenderer } from './DragShadowRenderer.js';
 import { DragAnimator } from './DragAnimator.js';
 
@@ -41,6 +42,7 @@ export class DragDelegate extends BaseDelegate {
     this.eventManager = deps.eventManager;
 
     // Вспомогательные классы
+    this.domPreparer = new DragDOMPreparer(this.dom, this.renderer);
     this.shadowRenderer = new DragShadowRenderer(this.dom);
     this.dragAnimator = new DragAnimator();
 
@@ -53,7 +55,6 @@ export class DragDelegate extends BaseDelegate {
     // Кэшированные значения
     this.bookWidth = 0;
     this.bookRect = null;
-    this._pageRefs = null;
 
     // RAF throttling для move-событий
     this._rafId = null;
@@ -181,78 +182,9 @@ export class DragDelegate extends BaseDelegate {
     this.bookRect = book.getBoundingClientRect();
     this.bookWidth = this.bookRect.width;
 
-    this._prepareFlip();
+    this.domPreparer.prepare(dir, this.currentIndex, this.pagesPerFlip, this.isMobile);
     this.shadowRenderer.activate(this.direction);
     this._updateAngleFromEvent(e);
-  }
-
-  /**
-   * Подготовить DOM к перелистыванию:
-   * - Отключить transitions для мгновенного обновления
-   * - Подготовить буфер с целевой страницей
-   * - Настроить sheet для drag-режима
-   * @private
-   */
-  _prepareFlip() {
-    const nextIndex =
-      this.direction === Direction.NEXT
-        ? this.currentIndex + this.pagesPerFlip
-        : this.currentIndex - this.pagesPerFlip;
-
-    const book = this.dom.get("book");
-
-    // Отключаем transitions ДО изменения видимости страниц,
-    // чтобы избежать мигания белого фона на мобильных
-    if (book) {
-      book.dataset.noTransition = BoolStr.TRUE;
-    }
-
-    this.renderer.prepareBuffer(nextIndex, this.isMobile);
-    this.renderer.prepareSheet(this.currentIndex, nextIndex, this.direction, this.isMobile);
-    this._showUnderPage();
-
-    const sheet = this.dom.get("sheet");
-
-    if (sheet) {
-      sheet.dataset.direction = this.direction;
-      sheet.dataset.phase = FlipPhase.DRAG;
-      sheet.classList.add("no-transition");
-    }
-
-    if (book) {
-      book.dataset.state = BookState.FLIPPING;
-      book.dataset.dragging = "";
-    }
-  }
-
-  /**
-   * Показать страницу "под" текущей (целевую страницу).
-   * Буферная страница становится видимой, активная скрывается.
-   * @private
-   */
-  _showUnderPage() {
-    const { leftActive, rightActive, leftBuffer, rightBuffer } = this.renderer.elements;
-    this._pageRefs = { leftActive, rightActive, leftBuffer, rightBuffer };
-
-    if (this.isMobile) {
-      if (rightBuffer) {
-        rightBuffer.dataset.buffer = BoolStr.FALSE;
-        rightBuffer.dataset.dragVisible = BoolStr.TRUE;
-      }
-      if (rightActive) rightActive.dataset.dragHidden = BoolStr.TRUE;
-    } else if (this.direction === Direction.NEXT) {
-      if (rightBuffer) {
-        rightBuffer.dataset.buffer = BoolStr.FALSE;
-        rightBuffer.dataset.dragVisible = BoolStr.TRUE;
-      }
-      if (rightActive) rightActive.dataset.dragHidden = BoolStr.TRUE;
-    } else {
-      if (leftBuffer) {
-        leftBuffer.dataset.buffer = BoolStr.FALSE;
-        leftBuffer.dataset.dragVisible = BoolStr.TRUE;
-      }
-      if (leftActive) leftActive.dataset.dragHidden = BoolStr.TRUE;
-    }
   }
 
   // ═══════════════════════════════════════════
@@ -370,27 +302,14 @@ export class DragDelegate extends BaseDelegate {
 
   /**
    * Финализация после завершения анимации.
-   * Очищает CSS-переменные и вызывает _completeFlip или _cancelFlip.
+   * Очищает sheet/dragging-атрибуты и вызывает _completeFlip или _cancelFlip.
    * @private
    * @param {boolean} completed - true если перелистывание успешно
    */
   _finish(completed) {
     const direction = this.direction;
 
-    // Очистка sheet
-    const sheet = this.dom.get("sheet");
-    if (sheet) {
-      sheet.classList.remove("no-transition");
-      sheet.style.removeProperty("--sheet-angle");
-      delete sheet.dataset.phase;
-      delete sheet.dataset.direction;
-    }
-
-    // Очистка data-dragging на book
-    const book = this.dom.get("book");
-    if (book) delete book.dataset.dragging;
-
-    // Очистка теней через shadowRenderer
+    this.domPreparer.cleanupSheet();
     this.shadowRenderer.reset();
 
     // Возвращаемся в OPENED через state machine
@@ -404,7 +323,6 @@ export class DragDelegate extends BaseDelegate {
 
     this.direction = null;
     this.currentAngle = 0;
-    this._pageRefs = null;
   }
 
   /**
@@ -413,23 +331,19 @@ export class DragDelegate extends BaseDelegate {
    * @param {string} direction - Направление перелистывания
    */
   _completeFlip(direction) {
-    const book = this.dom.get("book");
-    if (book) book.dataset.noTransition = BoolStr.TRUE;
-
     const newIndex =
       direction === Direction.NEXT
         ? this.currentIndex + this.pagesPerFlip
         : this.currentIndex - this.pagesPerFlip;
 
     this._playFlipSound();
-
     this.renderer.swapBuffers();
 
     // Уведомляем контроллер об изменении индекса и главы
     this.emit(DelegateEvents.INDEX_CHANGE, newIndex);
     this.emit(DelegateEvents.CHAPTER_UPDATE);
 
-    this._cleanupAfterFlip(book, true);
+    this.domPreparer.cleanupPages(true);
   }
 
   /**
@@ -437,46 +351,7 @@ export class DragDelegate extends BaseDelegate {
    * @private
    */
   _cancelFlip() {
-    const book = this.dom.get("book");
-    this._cleanupAfterFlip(book, false);
-  }
-
-  /**
-   * Очистить DOM-атрибуты после перелистывания.
-   * При отмене восстанавливает buffer-атрибуты, при успехе — нет
-   * (swapBuffers уже корректно настроил их).
-   * @private
-   * @param {HTMLElement} book - Контейнер книги
-   * @param {boolean} completed - Было ли перелистывание успешным
-   */
-  _cleanupAfterFlip(book, completed = false) {
-    if (book) book.dataset.state = BookState.OPENED;
-
-    if (this._pageRefs) {
-      const { leftActive, rightActive, leftBuffer, rightBuffer } = this._pageRefs;
-
-      // Убираем скрытие для страниц
-      if (leftActive) delete leftActive.dataset.dragHidden;
-      if (rightActive) delete rightActive.dataset.dragHidden;
-
-      // Удаляем dragVisible
-      if (leftBuffer) delete leftBuffer.dataset.dragVisible;
-      if (rightBuffer) delete rightBuffer.dataset.dragVisible;
-
-      // Атрибуты buffer устанавливаем только при отмене флипа.
-      // При успешном флипе swapBuffers() уже корректно настроил атрибуты,
-      // и изменение их по старым ссылкам скроет активную страницу.
-      if (!completed) {
-        if (leftBuffer) leftBuffer.dataset.buffer = BoolStr.TRUE;
-        if (rightBuffer) rightBuffer.dataset.buffer = BoolStr.TRUE;
-      }
-    }
-
-    if (book) {
-      requestAnimationFrame(() => {
-        if (book) delete book.dataset.noTransition;
-      });
-    }
+    this.domPreparer.cleanupPages(false);
   }
 
   /**
@@ -494,6 +369,7 @@ export class DragDelegate extends BaseDelegate {
     this.dragAnimator.cancel();
 
     // Очищаем вспомогательные классы
+    this.domPreparer.destroy();
     this.shadowRenderer.destroy();
     this.dragAnimator.destroy();
 
@@ -502,9 +378,9 @@ export class DragDelegate extends BaseDelegate {
     this.currentAngle = 0;
     this.bookWidth = 0;
     this.bookRect = null;
-    this._pageRefs = null;
     this._boundHandlers = null;
     this.eventManager = null;
+    this.domPreparer = null;
     this.shadowRenderer = null;
     this.dragAnimator = null;
     super.destroy();
