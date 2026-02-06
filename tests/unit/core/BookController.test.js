@@ -63,6 +63,7 @@ const resetMockInstances = () => {
     appInitializer: null,
     subscriptionManager: null,
     resizeHandler: null,
+    mediator: null,
   };
 };
 
@@ -249,6 +250,24 @@ vi.mock('../../../js/core/ComponentFactory.js', () => ({
   },
 }));
 
+// Mock DelegateMediator using class
+vi.mock('../../../js/core/DelegateMediator.js', () => ({
+  DelegateMediator: class MockDelegateMediator {
+    constructor(deps) {
+      this.handleIndexChange = vi.fn();
+      this.handlePaginationComplete = vi.fn();
+      this.handleBookOpen = vi.fn().mockResolvedValue(undefined);
+      this.handleBookClose = vi.fn().mockResolvedValue(undefined);
+      this.repaginate = vi.fn().mockResolvedValue(undefined);
+      this.updateChapterBackground = vi.fn();
+      this.updateDebug = vi.fn();
+      this.updateNavigationUI = vi.fn();
+      this._deps = deps;
+      mockInstances.mediator = this;
+    }
+  },
+}));
+
 // Mock SubscriptionManager using class
 vi.mock('../../../js/core/SubscriptionManager.js', () => ({
   SubscriptionManager: class MockSubscriptionManager {
@@ -415,6 +434,10 @@ describe('BookController', () => {
       expect(controller.dragDelegate).toBeDefined();
     });
 
+    it('should create mediator', () => {
+      expect(controller.mediator).toBeDefined();
+    });
+
     it('should create event controller', () => {
       expect(controller.eventController).toBeDefined();
     });
@@ -475,75 +498,38 @@ describe('BookController', () => {
     });
   });
 
-  describe('delegate event subscriptions', () => {
-    it('should subscribe to NavigationDelegate INDEX_CHANGE', () => {
-      expect(mockInstances.navigationDelegate.on).toHaveBeenCalledWith(
-        mockDelegateEvents.INDEX_CHANGE,
-        expect.any(Function)
-      );
+  describe('mediator creation', () => {
+    it('should pass state to mediator', () => {
+      expect(mockInstances.mediator._deps.state).toBe(controller.state);
     });
 
-    it('should subscribe to NavigationDelegate BOOK_OPEN', () => {
-      expect(mockInstances.navigationDelegate.on).toHaveBeenCalledWith(
-        mockDelegateEvents.BOOK_OPEN,
-        expect.any(Function)
-      );
+    it('should pass all delegates to mediator', () => {
+      const delegates = mockInstances.mediator._deps.delegates;
+      expect(delegates.navigation).toBe(controller.navigationDelegate);
+      expect(delegates.lifecycle).toBe(controller.lifecycleDelegate);
+      expect(delegates.settings).toBe(controller.settingsDelegate);
+      expect(delegates.chapter).toBe(controller.chapterDelegate);
+      expect(delegates.drag).toBe(controller.dragDelegate);
     });
 
-    it('should subscribe to NavigationDelegate BOOK_CLOSE', () => {
-      expect(mockInstances.navigationDelegate.on).toHaveBeenCalledWith(
-        mockDelegateEvents.BOOK_CLOSE,
-        expect.any(Function)
-      );
+    it('should pass services to mediator', () => {
+      const services = mockInstances.mediator._deps.services;
+      expect(services.settings).toBe(controller.settings);
+      expect(services.renderer).toBe(controller.render.renderer);
+      expect(services.dom).toBe(controller.core.dom);
+      expect(services.eventManager).toBe(controller.core.eventManager);
+      expect(services.stateMachine).toBe(controller.stateMachine);
+      expect(services.debugPanel).toBe(controller.debugPanel);
     });
 
-    it('should subscribe to LifecycleDelegate PAGINATION_COMPLETE', () => {
-      expect(mockInstances.lifecycleDelegate.on).toHaveBeenCalledWith(
-        mockDelegateEvents.PAGINATION_COMPLETE,
-        expect.any(Function)
-      );
-    });
+    it('should pass isMobileFn to mediator', () => {
+      const isMobileFn = mockInstances.mediator._deps.isMobileFn;
+      expect(typeof isMobileFn).toBe('function');
 
-    it('should subscribe to LifecycleDelegate INDEX_CHANGE', () => {
-      expect(mockInstances.lifecycleDelegate.on).toHaveBeenCalledWith(
-        mockDelegateEvents.INDEX_CHANGE,
-        expect.any(Function)
-      );
-    });
-
-    it('should subscribe to LifecycleDelegate CHAPTER_UPDATE', () => {
-      expect(mockInstances.lifecycleDelegate.on).toHaveBeenCalledWith(
-        mockDelegateEvents.CHAPTER_UPDATE,
-        expect.any(Function)
-      );
-    });
-
-    it('should subscribe to SettingsDelegate SETTINGS_UPDATE', () => {
-      expect(mockInstances.settingsDelegate.on).toHaveBeenCalledWith(
-        mockDelegateEvents.SETTINGS_UPDATE,
-        expect.any(Function)
-      );
-    });
-
-    it('should subscribe to SettingsDelegate REPAGINATE', () => {
-      expect(mockInstances.settingsDelegate.on).toHaveBeenCalledWith(
-        mockDelegateEvents.REPAGINATE,
-        expect.any(Function)
-      );
-    });
-
-    it('should subscribe to DragDelegate INDEX_CHANGE', () => {
-      expect(mockInstances.dragDelegate.on).toHaveBeenCalledWith(
-        mockDelegateEvents.INDEX_CHANGE,
-        expect.any(Function)
-      );
-    });
-
-    it('should subscribe to DragDelegate CHAPTER_UPDATE', () => {
-      expect(mockInstances.dragDelegate.on).toHaveBeenCalledWith(
-        mockDelegateEvents.CHAPTER_UPDATE,
-        expect.any(Function)
-      );
+      mockMediaQueries.isMobile = true;
+      expect(isMobileFn()).toBe(true);
+      mockMediaQueries.isMobile = false;
+      expect(isMobileFn()).toBe(false);
     });
   });
 
@@ -579,9 +565,9 @@ describe('BookController', () => {
       expect(mockInstances.appInitializer.initialize).not.toHaveBeenCalled();
     });
 
-    it('should update debug panel after init', async () => {
+    it('should update debug panel via mediator after init', async () => {
       await controller.init();
-      expect(mockInstances.debugPanel.update).toHaveBeenCalled();
+      expect(mockInstances.mediator.updateDebug).toHaveBeenCalled();
     });
   });
 
@@ -629,6 +615,11 @@ describe('BookController', () => {
       expect(controller.state).toBeNull();
     });
 
+    it('should nullify mediator', () => {
+      controller.destroy();
+      expect(controller.mediator).toBeNull();
+    });
+
     it('should nullify service references', () => {
       controller.destroy();
       expect(controller.core).toBeNull();
@@ -646,173 +637,6 @@ describe('BookController', () => {
       controller.destroy();
       // Should not call destroy methods again
       expect(mockInstances.subscriptionManager.unsubscribeAll).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('_handleIndexChange', () => {
-    it('should update state index', () => {
-      controller._handleIndexChange(5);
-      expect(controller.state.index).toBe(5);
-    });
-
-    it('should save page to settings', () => {
-      controller._handleIndexChange(10);
-      expect(mockInstances.settings.set).toHaveBeenCalledWith('page', 10);
-    });
-
-    it('should update chapter background', () => {
-      controller._handleIndexChange(5);
-      expect(mockInstances.chapterDelegate.updateBackground).toHaveBeenCalled();
-    });
-
-    it('should update debug panel', () => {
-      controller._handleIndexChange(5);
-      expect(mockInstances.debugPanel.update).toHaveBeenCalled();
-    });
-  });
-
-  describe('_handlePaginationComplete', () => {
-    it('should set page contents on renderer', () => {
-      const pages = ['<p>Page 1</p>', '<p>Page 2</p>'];
-      const chapterStarts = [0];
-
-      controller._handlePaginationComplete(pages, chapterStarts);
-
-      expect(mockInstances.renderServices.renderer.setPageContents).toHaveBeenCalledWith(pages);
-    });
-
-    it('should update chapterStarts in state', () => {
-      const pages = ['<p>Page 1</p>'];
-      const chapterStarts = [0, 10, 20];
-
-      controller._handlePaginationComplete(pages, chapterStarts);
-
-      expect(controller.state.chapterStarts).toEqual([0, 10, 20]);
-    });
-  });
-
-  describe('_handleBookOpen', () => {
-    it('should call lifecycleDelegate.open with startIndex 0 when not continuing', async () => {
-      await controller._handleBookOpen(false);
-      expect(mockInstances.lifecycleDelegate.open).toHaveBeenCalledWith(0);
-    });
-
-    it('should call lifecycleDelegate.open with saved page when continuing', async () => {
-      mockInstances.settings.get = vi.fn((key) => {
-        if (key === 'page') return 42;
-        return null;
-      });
-
-      await controller._handleBookOpen(true);
-      expect(mockInstances.lifecycleDelegate.open).toHaveBeenCalledWith(42);
-    });
-  });
-
-  describe('_handleBookClose', () => {
-    it('should call lifecycleDelegate.close', async () => {
-      await controller._handleBookClose();
-      expect(mockInstances.lifecycleDelegate.close).toHaveBeenCalled();
-    });
-  });
-
-  describe('_repaginate', () => {
-    it('should call lifecycleDelegate.repaginate with keepIndex true', async () => {
-      await controller._repaginate(true);
-      expect(mockInstances.lifecycleDelegate.repaginate).toHaveBeenCalledWith(true);
-    });
-
-    it('should call lifecycleDelegate.repaginate with keepIndex false', async () => {
-      await controller._repaginate(false);
-      expect(mockInstances.lifecycleDelegate.repaginate).toHaveBeenCalledWith(false);
-    });
-  });
-
-  describe('_updateChapterBackground', () => {
-    it('should call chapterDelegate.updateBackground with current index and mobile state', () => {
-      controller.state.index = 15;
-      mockMediaQueries.isMobile = true;
-
-      controller._updateChapterBackground();
-
-      expect(mockInstances.chapterDelegate.updateBackground).toHaveBeenCalledWith(15, true);
-
-      mockMediaQueries.isMobile = false; // Reset
-    });
-  });
-
-  describe('_updateDebug', () => {
-    it('should call debugPanel.update with correct data', () => {
-      controller.state.index = 5;
-      controller.render.renderer.pageContents = new Array(100);
-      controller.render.renderer.cacheSize = 8;
-
-      controller._updateDebug();
-
-      expect(mockInstances.debugPanel.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          currentPage: 5,
-          cacheLimit: 12,
-        })
-      );
-    });
-  });
-
-  describe('_updateNavigationUI', () => {
-    let currentPageEl;
-    let totalPagesEl;
-    let progressBar;
-
-    beforeEach(() => {
-      currentPageEl = document.createElement('span');
-      totalPagesEl = document.createElement('span');
-      progressBar = document.createElement('div');
-
-      // Wrap in page-counter for aria-label test
-      const pageCounter = document.createElement('div');
-      pageCounter.className = 'page-counter';
-      pageCounter.appendChild(currentPageEl);
-
-      mockInstances.coreServices.dom.get = vi.fn((key) => {
-        if (key === 'currentPage') return currentPageEl;
-        if (key === 'totalPages') return totalPagesEl;
-        if (key === 'readingProgress') return progressBar;
-        return null;
-      });
-
-      controller.render.renderer.pageContents = new Array(100);
-      controller.state.index = 49;
-    });
-
-    it('should update current page display (1-based)', () => {
-      controller._updateNavigationUI();
-      expect(currentPageEl.textContent).toBe('50');
-    });
-
-    it('should update total pages display', () => {
-      controller._updateNavigationUI();
-      expect(totalPagesEl.textContent).toBe('100');
-    });
-
-    it('should update progress bar CSS variable', () => {
-      controller._updateNavigationUI();
-      expect(progressBar.style.getPropertyValue('--progress-width')).toBe('50%');
-    });
-
-    it('should update progress bar aria-valuenow', () => {
-      controller._updateNavigationUI();
-      expect(progressBar.getAttribute('aria-valuenow')).toBe('50');
-    });
-
-    it('should handle missing elements gracefully', () => {
-      mockInstances.coreServices.dom.get = vi.fn(() => null);
-      expect(() => controller._updateNavigationUI()).not.toThrow();
-    });
-
-    it('should handle zero total pages', () => {
-      controller.render.renderer.pageContents = [];
-      controller.state.index = 0;
-
-      expect(() => controller._updateNavigationUI()).not.toThrow();
     });
   });
 });
@@ -918,5 +742,12 @@ describe('BookController event controller callbacks', () => {
     handlers.onSettings('theme', 'dark');
 
     expect(mockInstances.settingsDelegate.handleChange).toHaveBeenCalledWith('theme', 'dark');
+  });
+
+  it('onOpen callback should call mediator.handleBookOpen', () => {
+    const handlers = mockInstances.eventController.handlers;
+    handlers.onOpen(true);
+
+    expect(mockInstances.mediator.handleBookOpen).toHaveBeenCalledWith(true);
   });
 });
