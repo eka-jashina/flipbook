@@ -122,6 +122,18 @@
   text-decoration: none;
 }
 
+.admin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.admin-link:hover {
+  opacity: 1;
+}
+
 /* ═══════════════════════════════════════════
    СООБЩЕНИЕ ОБ ОШИБКЕ
    ═══════════════════════════════════════════ */

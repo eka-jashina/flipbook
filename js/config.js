@@ -1,37 +1,64 @@
 /**
  * CONFIGURATION
- * 
+ *
  * Централизованное хранилище настроек.
+ * Если в localStorage есть конфиг от админки — используем его для глав и настроек.
  */
 
 // Vite подставляет base URL для production
 const BASE_URL = import.meta.env.BASE_URL || '/';
+
+/**
+ * Загрузка конфига админки из localStorage (если есть)
+ */
+function loadAdminConfig() {
+  try {
+    const raw = localStorage.getItem('flipbook-admin-config');
+    if (raw) return JSON.parse(raw);
+  } catch { /* повреждённые данные — игнорируем */ }
+  return null;
+}
+
+const adminConfig = loadAdminConfig();
+
+// Главы: из админки (с добавлением BASE_URL) или дефолтные
+const CHAPTERS = adminConfig?.chapters?.length
+  ? adminConfig.chapters.map(ch => ({
+      id: ch.id,
+      file: ch.file.startsWith('http') ? ch.file : `${BASE_URL}${ch.file}`,
+      bg: ch.bg ? (ch.bg.startsWith('http') ? ch.bg : `${BASE_URL}${ch.bg}`) : '',
+      bgMobile: ch.bgMobile ? (ch.bgMobile.startsWith('http') ? ch.bgMobile : `${BASE_URL}${ch.bgMobile}`) : '',
+    }))
+  : [
+      {
+        id: "part_1",
+        file: `${BASE_URL}content/part_1.html`,
+        bg: `${BASE_URL}images/backgrounds/part_1.webp`,
+        bgMobile: `${BASE_URL}images/backgrounds/part_1-mobile.webp`,
+      },
+      {
+        id: "part_2",
+        file: `${BASE_URL}content/part_2.html`,
+        bg: `${BASE_URL}images/backgrounds/part_2.webp`,
+        bgMobile: `${BASE_URL}images/backgrounds/part_2-mobile.webp`,
+      },
+      {
+        id: "part_3",
+        file: `${BASE_URL}content/part_3.html`,
+        bg: `${BASE_URL}images/backgrounds/part_3.webp`,
+        bgMobile: `${BASE_URL}images/backgrounds/part_3-mobile.webp`,
+      },
+    ];
+
+// Настройки по умолчанию: из админки или захардкоженные
+const adminDefaults = adminConfig?.defaultSettings || {};
 
 export const CONFIG = Object.freeze({
   STORAGE_KEY: "reader-settings",
   COVER_BG: `${BASE_URL}images/backgrounds/bg-cover.webp`,
   COVER_BG_MOBILE: `${BASE_URL}images/backgrounds/bg-cover-mobile.webp`,
 
-  CHAPTERS: [
-    {
-      id: "part_1",
-      file: `${BASE_URL}content/part_1.html`,
-      bg: `${BASE_URL}images/backgrounds/part_1.webp`,
-      bgMobile: `${BASE_URL}images/backgrounds/part_1-mobile.webp`,
-    },
-    {
-      id: "part_2",
-      file: `${BASE_URL}content/part_2.html`,
-      bg: `${BASE_URL}images/backgrounds/part_2.webp`,
-      bgMobile: `${BASE_URL}images/backgrounds/part_2-mobile.webp`,
-    },
-    {
-      id: "part_3",
-      file: `${BASE_URL}content/part_3.html`,
-      bg: `${BASE_URL}images/backgrounds/part_3.webp`,
-      bgMobile: `${BASE_URL}images/backgrounds/part_3-mobile.webp`,
-    },
-  ],
+  CHAPTERS,
 
   FONTS: {
     georgia: "Georgia, serif",
@@ -58,14 +85,14 @@ export const CONFIG = Object.freeze({
   },
 
  DEFAULT_SETTINGS: {
-    font: "georgia",
-    fontSize: 18,
-    theme: "light",
+    font: adminDefaults.font || "georgia",
+    fontSize: adminDefaults.fontSize || 18,
+    theme: adminDefaults.theme || "light",
     page: 0,
-    soundEnabled: true,
-    soundVolume: 0.3,
-    ambientType: 'none',
-    ambientVolume: 0.5
+    soundEnabled: adminDefaults.soundEnabled ?? true,
+    soundVolume: adminDefaults.soundVolume ?? 0.3,
+    ambientType: adminDefaults.ambientType || 'none',
+    ambientVolume: adminDefaults.ambientVolume ?? 0.5
   },
 
   VIRTUALIZATION: {
