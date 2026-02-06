@@ -231,7 +231,7 @@ export class DragDelegate extends BaseDelegate {
    * @param {MouseEvent|Touch} e - Событие с координатами
    */
   _updateAngleFromEvent(e) {
-    if (!this.bookRect) return;
+    if (!this.bookRect || this.bookWidth <= 0) return;
 
     const x = e.clientX - this.bookRect.left;
 

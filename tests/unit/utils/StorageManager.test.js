@@ -144,19 +144,36 @@ describe('StorageManager', () => {
       expect(stored).toEqual({ existing: 'value' });
     });
 
-    it('should handle localStorage errors gracefully', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    it('should handle QuotaExceededError with warning', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      // Симулируем ошибку квоты
+      const quotaError = new DOMException('QuotaExceededError', 'QuotaExceededError');
       const setItemSpy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
-        throw new DOMException('QuotaExceededError');
+        throw quotaError;
       });
 
       expect(() => storage.save({ data: 'test' })).not.toThrow();
-      expect(consoleSpy).toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Storage quota exceeded'),
+        TEST_KEY,
+      );
 
       setItemSpy.mockRestore();
-      consoleSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+
+    it('should handle other localStorage errors with error log', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const setItemSpy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+
+      expect(() => storage.save({ data: 'test' })).not.toThrow();
+      expect(errorSpy).toHaveBeenCalled();
+
+      setItemSpy.mockRestore();
+      errorSpy.mockRestore();
     });
 
     it('should handle various value types', () => {

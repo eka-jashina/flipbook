@@ -40,7 +40,11 @@ export class StorageManager {
       const data = this.load();
       localStorage.setItem(this.key, JSON.stringify({ ...data, ...patch }));
     } catch (error) {
-      console.error("Storage save error:", error);
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.warn("Storage quota exceeded. Unable to save data for key:", this.key);
+      } else {
+        console.error("Storage save error:", error);
+      }
     }
   }
 
