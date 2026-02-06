@@ -173,30 +173,74 @@
           </div>
 
           <div class="settings-grid">
-            <!-- Фон обложки: начальный цвет градиента -->
-            <div class="setting-card">
-              <label class="setting-label" for="coverBgStart">Фон обложки (градиент)</label>
-              <div class="appearance-color-row">
-                <div class="appearance-color-group">
-                  <input type="color" class="appearance-color" id="coverBgStart" value="#3a2d1f">
-                  <span class="appearance-color-label">Начало</span>
-                </div>
-                <span class="appearance-arrow" aria-hidden="true">→</span>
-                <div class="appearance-color-group">
-                  <input type="color" class="appearance-color" id="coverBgEnd" value="#2a2016">
-                  <span class="appearance-color-label">Конец</span>
-                </div>
-              </div>
-            </div>
+            <!-- Обложка — секция -->
+            <fieldset class="setting-fieldset">
+              <legend class="setting-fieldset-legend">Обложка</legend>
 
-            <!-- Цвет текста обложки -->
-            <div class="setting-card">
-              <label class="setting-label" for="coverText">Цвет текста обложки</label>
-              <div class="appearance-color-row">
-                <input type="color" class="appearance-color" id="coverText" value="#f2e9d8">
-                <span class="appearance-color-preview" id="coverTextPreview" style="color: #f2e9d8; background: linear-gradient(135deg, #3a2d1f, #2a2016); padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">Заголовок</span>
+              <div class="settings-grid settings-grid--inner">
+                <!-- Заголовок книги -->
+                <div class="setting-card">
+                  <label class="setting-label" for="coverTitle">Заголовок книги</label>
+                  <input class="form-input" type="text" id="coverTitle" value="О хоббитах" placeholder="Название книги">
+                </div>
+
+                <!-- Автор -->
+                <div class="setting-card">
+                  <label class="setting-label" for="coverAuthor">Автор</label>
+                  <input class="form-input" type="text" id="coverAuthor" value="Дж.Р.Р.Толкин" placeholder="Имя автора">
+                </div>
+
+                <!-- Фон обложки: градиент -->
+                <div class="setting-card">
+                  <label class="setting-label" for="coverBgStart">Цвет фона (градиент)</label>
+                  <div class="appearance-color-row">
+                    <div class="appearance-color-group">
+                      <input type="color" class="appearance-color" id="coverBgStart" value="#3a2d1f">
+                      <span class="appearance-color-label">Начало</span>
+                    </div>
+                    <span class="appearance-arrow" aria-hidden="true">→</span>
+                    <div class="appearance-color-group">
+                      <input type="color" class="appearance-color" id="coverBgEnd" value="#2a2016">
+                      <span class="appearance-color-label">Конец</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Цвет текста обложки -->
+                <div class="setting-card">
+                  <label class="setting-label" for="coverText">Цвет текста</label>
+                  <div class="appearance-color-row">
+                    <input type="color" class="appearance-color" id="coverText" value="#f2e9d8">
+                    <span class="appearance-color-preview" id="coverTextPreview" style="color: #f2e9d8; background: linear-gradient(135deg, #3a2d1f, #2a2016); padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">Заголовок</span>
+                  </div>
+                </div>
+
+                <!-- Фоновое изображение обложки -->
+                <div class="setting-card setting-card--texture">
+                  <label class="setting-label">Фоновое изображение</label>
+                  <div class="cover-bg-upload">
+                    <div class="cover-bg-preview" id="coverBgPreview">
+                      <span class="cover-bg-preview-empty" id="coverBgPreviewEmpty">
+                        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                          <path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                        </svg>
+                        Нет изображения
+                      </span>
+                    </div>
+                    <div class="cover-bg-actions">
+                      <label class="btn btn-secondary btn-small upload-btn">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                        </svg>
+                        Загрузить
+                        <input type="file" id="coverBgFileInput" accept="image/*" hidden>
+                      </label>
+                      <button class="btn btn-small" type="button" id="coverBgRemove" hidden>Удалить</button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            </fieldset>
 
             <!-- Текстура страницы -->
             <div class="setting-card setting-card--texture">

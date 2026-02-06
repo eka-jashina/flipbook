@@ -49,11 +49,17 @@ class AdminApp {
     this.saveSettingsBtn = document.getElementById('saveSettings');
     this.resetSettingsBtn = document.getElementById('resetSettings');
 
-    // Оформление
+    // Оформление — обложка
+    this.coverTitle = document.getElementById('coverTitle');
+    this.coverAuthor = document.getElementById('coverAuthor');
     this.coverBgStart = document.getElementById('coverBgStart');
     this.coverBgEnd = document.getElementById('coverBgEnd');
     this.coverText = document.getElementById('coverText');
     this.coverTextPreview = document.getElementById('coverTextPreview');
+    this.coverBgFileInput = document.getElementById('coverBgFileInput');
+    this.coverBgPreview = document.getElementById('coverBgPreview');
+    this.coverBgPreviewEmpty = document.getElementById('coverBgPreviewEmpty');
+    this.coverBgRemove = document.getElementById('coverBgRemove');
     this.pageTexture = document.getElementById('pageTexture');
     this.textureOptions = document.querySelectorAll('.texture-option[data-texture]');
     this.textureFileInput = document.getElementById('textureFileInput');
@@ -128,9 +134,12 @@ class AdminApp {
     this.resetSettingsBtn.addEventListener('click', () => this._resetSettings());
 
     // Оформление — живой предпросмотр
+    this.coverTitle.addEventListener('input', () => this._updateAppearancePreview());
     this.coverBgStart.addEventListener('input', () => this._updateAppearancePreview());
     this.coverBgEnd.addEventListener('input', () => this._updateAppearancePreview());
     this.coverText.addEventListener('input', () => this._updateAppearancePreview());
+    this.coverBgFileInput.addEventListener('change', (e) => this._handleCoverBgUpload(e));
+    this.coverBgRemove.addEventListener('click', () => this._removeCoverBg());
     // Текстура — выбор варианта
     this.textureOptions.forEach(btn => {
       btn.addEventListener('click', () => this._selectTexture(btn.dataset.texture));
@@ -374,9 +383,12 @@ class AdminApp {
   _renderAppearance() {
     const a = this.store.getAppearance();
 
+    this.coverTitle.value = a.coverTitle;
+    this.coverAuthor.value = a.coverAuthor;
     this.coverBgStart.value = a.coverBgStart;
     this.coverBgEnd.value = a.coverBgEnd;
     this.coverText.value = a.coverText;
+    this._renderCoverBgPreview(a.coverBgImage);
     this.pageTexture.value = a.pageTexture;
 
     // Текстура — подсветить активный вариант
@@ -398,6 +410,58 @@ class AdminApp {
     const bg = `linear-gradient(135deg, ${this.coverBgStart.value}, ${this.coverBgEnd.value})`;
     this.coverTextPreview.style.background = bg;
     this.coverTextPreview.style.color = this.coverText.value;
+    this.coverTextPreview.textContent = this.coverTitle.value || 'Заголовок';
+  }
+
+  // --- Фон обложки ---
+
+  _renderCoverBgPreview(imageData) {
+    if (imageData) {
+      this.coverBgPreview.style.backgroundImage = `url(${imageData})`;
+      this.coverBgPreview.classList.add('has-image');
+      this.coverBgPreviewEmpty.hidden = true;
+      this.coverBgRemove.hidden = false;
+    } else {
+      this.coverBgPreview.style.backgroundImage = '';
+      this.coverBgPreview.classList.remove('has-image');
+      this.coverBgPreviewEmpty.hidden = false;
+      this.coverBgRemove.hidden = true;
+    }
+  }
+
+  _handleCoverBgUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      this._showToast('Файл слишком большой (макс. 2 МБ)');
+      e.target.value = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this._showToast('Допустимы только изображения');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      this.store.updateAppearance({ coverBgImage: dataUrl });
+      this._renderCoverBgPreview(dataUrl);
+      this._renderJsonPreview();
+      this._showToast('Фон обложки загружен');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  _removeCoverBg() {
+    this.store.updateAppearance({ coverBgImage: null });
+    this._renderCoverBgPreview(null);
+    this._renderJsonPreview();
+    this._showToast('Фон обложки удалён');
   }
 
   // --- Текстура ---
@@ -487,6 +551,8 @@ class AdminApp {
 
   _saveAppearance() {
     const update = {
+      coverTitle: this.coverTitle.value.trim(),
+      coverAuthor: this.coverAuthor.value.trim(),
       coverBgStart: this.coverBgStart.value,
       coverBgEnd: this.coverBgEnd.value,
       coverText: this.coverText.value,
@@ -510,9 +576,12 @@ class AdminApp {
 
   _resetAppearance() {
     this.store.updateAppearance({
+      coverTitle: 'О хоббитах',
+      coverAuthor: 'Дж.Р.Р.Толкин',
       coverBgStart: '#3a2d1f',
       coverBgEnd: '#2a2016',
       coverText: '#f2e9d8',
+      coverBgImage: null,
       pageTexture: 'default',
       customTextureData: null,
       bgPage: '#fdfcf8',

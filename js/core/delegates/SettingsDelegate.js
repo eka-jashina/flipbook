@@ -337,7 +337,22 @@ export class SettingsDelegate extends BaseDelegate {
     const a = CONFIG.APPEARANCE;
     if (!a) return;
 
-    html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${a.coverBgStart}, ${a.coverBgEnd})`);
+    // Заголовок и автор на обложке
+    const cover = this.dom.get("cover");
+    if (cover) {
+      const spans = cover.querySelectorAll(".cover-front h1 span");
+      if (spans.length >= 2) {
+        spans[0].textContent = a.coverTitle;
+        spans[1].textContent = a.coverAuthor;
+      }
+    }
+
+    // Фон обложки: градиент или изображение
+    if (a.coverBgImage) {
+      html.style.setProperty("--cover-front-bg", `url(${a.coverBgImage})`);
+    } else {
+      html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${a.coverBgStart}, ${a.coverBgEnd})`);
+    }
     html.style.setProperty("--cover-front-text", a.coverText);
 
     if (a.pageTexture === "custom" && a.customTextureData) {

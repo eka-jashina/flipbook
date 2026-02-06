@@ -39,9 +39,12 @@ const DEFAULT_CONFIG = {
     ambientVolume: 0.5,
   },
   appearance: {
+    coverTitle: 'О хоббитах',
+    coverAuthor: 'Дж.Р.Р.Толкин',
     coverBgStart: '#3a2d1f',
     coverBgEnd: '#2a2016',
     coverText: '#f2e9d8',
+    coverBgImage: null,
     pageTexture: 'default',
     customTextureData: null,
     bgPage: '#fdfcf8',

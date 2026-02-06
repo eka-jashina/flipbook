@@ -100,9 +100,12 @@ export const CONFIG = Object.freeze({
 
   // Настройки оформления из админки
   APPEARANCE: {
+    coverTitle: adminAppearance.coverTitle || 'О хоббитах',
+    coverAuthor: adminAppearance.coverAuthor || 'Дж.Р.Р.Толкин',
     coverBgStart: adminAppearance.coverBgStart || '#3a2d1f',
     coverBgEnd: adminAppearance.coverBgEnd || '#2a2016',
     coverText: adminAppearance.coverText || '#f2e9d8',
+    coverBgImage: adminAppearance.coverBgImage || null,
     pageTexture: adminAppearance.pageTexture || 'default',
     customTextureData: adminAppearance.customTextureData || null,
     bgPage: adminAppearance.bgPage || '#fdfcf8',

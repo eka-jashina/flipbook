@@ -532,6 +532,72 @@ body {
   flex-shrink: 0;
 }
 
+/* === Группировка полей === */
+.setting-fieldset {
+  grid-column: 1 / -1;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  padding: 20px;
+  margin: 0;
+  background: var(--admin-bg);
+}
+
+.setting-fieldset-legend {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--admin-text-secondary);
+  padding: 0 8px;
+}
+
+.settings-grid--inner {
+  margin-bottom: 0;
+}
+
+/* === Загрузка фона обложки === */
+.cover-bg-upload {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cover-bg-preview {
+  width: 120px;
+  height: 80px;
+  border-radius: var(--admin-radius-sm);
+  border: 1px solid var(--admin-border);
+  background: var(--admin-bg);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cover-bg-preview.has-image .cover-bg-preview-empty {
+  display: none;
+}
+
+.cover-bg-preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--admin-text-secondary);
+  font-size: 11px;
+  text-align: center;
+  padding: 8px;
+}
+
+.cover-bg-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* === Селектор текстуры === */
 .setting-card--texture {
   grid-column: 1 / -1;
