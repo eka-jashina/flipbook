@@ -38,6 +38,16 @@ const DEFAULT_CONFIG = {
     ambientType: 'none',
     ambientVolume: 0.5,
   },
+  appearance: {
+    coverBgStart: '#3a2d1f',
+    coverBgEnd: '#2a2016',
+    coverText: '#f2e9d8',
+    pageTexture: 'default',
+    bgPage: '#fdfcf8',
+    bgApp: '#e6e3dc',
+    fontMin: 14,
+    fontMax: 22,
+  },
 };
 
 export class AdminConfigStore {
@@ -66,6 +76,10 @@ export class AdminConfigStore {
       defaultSettings: {
         ...structuredClone(DEFAULT_CONFIG.defaultSettings),
         ...(saved.defaultSettings || {}),
+      },
+      appearance: {
+        ...structuredClone(DEFAULT_CONFIG.appearance),
+        ...(saved.appearance || {}),
       },
     };
   }
@@ -125,6 +139,20 @@ export class AdminConfigStore {
     this._config.defaultSettings = {
       ...this._config.defaultSettings,
       ...settings,
+    };
+    this._save();
+  }
+
+  // --- Оформление ---
+
+  getAppearance() {
+    return structuredClone(this._config.appearance);
+  }
+
+  updateAppearance(appearance) {
+    this._config.appearance = {
+      ...this._config.appearance,
+      ...appearance,
     };
     this._save();
   }

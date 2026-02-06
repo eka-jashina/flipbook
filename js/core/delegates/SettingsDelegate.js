@@ -75,6 +75,9 @@ export class SettingsDelegate extends BaseDelegate {
       this.ambientManager.setVolume(this.settings.get("ambientVolume"));
     }
 
+    // Применить настройки оформления из админки
+    this._applyAppearance();
+
     cssVars.invalidateCache();
   }
 
@@ -316,6 +319,35 @@ export class SettingsDelegate extends BaseDelegate {
         });
       }
     }
+  }
+
+  // ═══════════════════════════════════════════
+  // ОФОРМЛЕНИЕ ИЗ АДМИНКИ
+  // ═══════════════════════════════════════════
+
+  /**
+   * Применить настройки оформления из CONFIG.APPEARANCE к CSS-переменным.
+   * Значения задаются в админке (admin.html) и читаются через config.js.
+   * @private
+   */
+  _applyAppearance() {
+    const html = this.dom.get("html");
+    if (!html) return;
+
+    const a = CONFIG.APPEARANCE;
+    if (!a) return;
+
+    html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${a.coverBgStart}, ${a.coverBgEnd})`);
+    html.style.setProperty("--cover-front-text", a.coverText);
+
+    if (a.pageTexture === "none") {
+      html.style.setProperty("--bg-page-image", "none");
+    }
+
+    html.style.setProperty("--bg-page", a.bgPage);
+    html.style.setProperty("--bg-app", a.bgApp);
+    html.style.setProperty("--font-min", `${a.fontMin}px`);
+    html.style.setProperty("--font-max", `${a.fontMax}px`);
   }
 
   /**

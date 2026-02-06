@@ -474,6 +474,64 @@ body {
   gap: 12px;
 }
 
+/* === Оформление — цветовые контролы === */
+.appearance-color-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.appearance-color-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.appearance-color {
+  width: 48px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-surface);
+  cursor: pointer;
+  appearance: none;
+}
+
+.appearance-color::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.appearance-color::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+.appearance-color::-moz-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+.appearance-color-label {
+  font-size: 11px;
+  color: var(--admin-text-secondary);
+}
+
+.appearance-arrow {
+  font-size: 16px;
+  color: var(--admin-text-secondary);
+  margin-bottom: 18px;
+}
+
+.appearance-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--admin-radius-sm);
+  border: 1px solid var(--admin-border);
+  flex-shrink: 0;
+}
+
 /* === Экспорт/Импорт === */
 .export-grid {
   display: grid;

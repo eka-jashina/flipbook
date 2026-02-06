@@ -44,6 +44,12 @@
           </svg>
           Настройки
         </button>
+        <button class="admin-tab" role="tab" aria-selected="false" data-tab="appearance">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-1 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+          </svg>
+          Оформление
+        </button>
         <button class="admin-tab" role="tab" aria-selected="false" data-tab="export">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
@@ -156,6 +162,91 @@
           <div class="panel-actions">
             <button class="btn btn-primary" id="saveSettings" type="button">Сохранить настройки</button>
             <button class="btn btn-secondary" id="resetSettings" type="button">Сбросить к дефолтным</button>
+          </div>
+        </section>
+
+        <!-- Таб: Оформление -->
+        <section class="admin-panel" data-panel="appearance" role="tabpanel" hidden>
+          <div class="panel-header">
+            <h2>Оформление книги</h2>
+            <p class="panel-description">Настройте цвета, текстуры и ограничения шрифтов</p>
+          </div>
+
+          <div class="settings-grid">
+            <!-- Фон обложки: начальный цвет градиента -->
+            <div class="setting-card">
+              <label class="setting-label" for="coverBgStart">Фон обложки (градиент)</label>
+              <div class="appearance-color-row">
+                <div class="appearance-color-group">
+                  <input type="color" class="appearance-color" id="coverBgStart" value="#3a2d1f">
+                  <span class="appearance-color-label">Начало</span>
+                </div>
+                <span class="appearance-arrow" aria-hidden="true">→</span>
+                <div class="appearance-color-group">
+                  <input type="color" class="appearance-color" id="coverBgEnd" value="#2a2016">
+                  <span class="appearance-color-label">Конец</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Цвет текста обложки -->
+            <div class="setting-card">
+              <label class="setting-label" for="coverText">Цвет текста обложки</label>
+              <div class="appearance-color-row">
+                <input type="color" class="appearance-color" id="coverText" value="#f2e9d8">
+                <span class="appearance-color-preview" id="coverTextPreview" style="color: #f2e9d8; background: linear-gradient(135deg, #3a2d1f, #2a2016); padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">Заголовок</span>
+              </div>
+            </div>
+
+            <!-- Текстура страницы -->
+            <div class="setting-card">
+              <label class="setting-label" for="pageTexture">Текстура страницы</label>
+              <select class="setting-select" id="pageTexture">
+                <option value="default">По умолчанию (бумага)</option>
+                <option value="none">Без текстуры</option>
+              </select>
+            </div>
+
+            <!-- Фон страницы -->
+            <div class="setting-card">
+              <label class="setting-label" for="bgPage">Цвет фона страницы</label>
+              <div class="appearance-color-row">
+                <input type="color" class="appearance-color" id="bgPage" value="#fdfcf8">
+                <span class="appearance-swatch" id="bgPageSwatch" style="background: #fdfcf8;"></span>
+              </div>
+            </div>
+
+            <!-- Фон приложения -->
+            <div class="setting-card">
+              <label class="setting-label" for="bgApp">Цвет фона приложения</label>
+              <div class="appearance-color-row">
+                <input type="color" class="appearance-color" id="bgApp" value="#e6e3dc">
+                <span class="appearance-swatch" id="bgAppSwatch" style="background: #e6e3dc;"></span>
+              </div>
+            </div>
+
+            <!-- Мин. размер шрифта -->
+            <div class="setting-card">
+              <label class="setting-label" for="fontMin">Мин. размер шрифта</label>
+              <div class="setting-range-row">
+                <input class="setting-range" type="range" id="fontMin" min="8" max="30" value="14">
+                <span class="setting-range-value" id="fontMinValue">14px</span>
+              </div>
+            </div>
+
+            <!-- Макс. размер шрифта -->
+            <div class="setting-card">
+              <label class="setting-label" for="fontMax">Макс. размер шрифта</label>
+              <div class="setting-range-row">
+                <input class="setting-range" type="range" id="fontMax" min="8" max="60" value="22">
+                <span class="setting-range-value" id="fontMaxValue">22px</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-actions">
+            <button class="btn btn-primary" id="saveAppearance" type="button">Сохранить оформление</button>
+            <button class="btn btn-secondary" id="resetAppearance" type="button">Сбросить к дефолтным</button>
           </div>
         </section>
 

@@ -49,6 +49,23 @@ class AdminApp {
     this.saveSettingsBtn = document.getElementById('saveSettings');
     this.resetSettingsBtn = document.getElementById('resetSettings');
 
+    // Оформление
+    this.coverBgStart = document.getElementById('coverBgStart');
+    this.coverBgEnd = document.getElementById('coverBgEnd');
+    this.coverText = document.getElementById('coverText');
+    this.coverTextPreview = document.getElementById('coverTextPreview');
+    this.pageTexture = document.getElementById('pageTexture');
+    this.bgPage = document.getElementById('bgPage');
+    this.bgPageSwatch = document.getElementById('bgPageSwatch');
+    this.bgApp = document.getElementById('bgApp');
+    this.bgAppSwatch = document.getElementById('bgAppSwatch');
+    this.fontMin = document.getElementById('fontMin');
+    this.fontMinValue = document.getElementById('fontMinValue');
+    this.fontMax = document.getElementById('fontMax');
+    this.fontMaxValue = document.getElementById('fontMaxValue');
+    this.saveAppearanceBtn = document.getElementById('saveAppearance');
+    this.resetAppearanceBtn = document.getElementById('resetAppearance');
+
     // Экспорт
     this.exportBtn = document.getElementById('exportConfig');
     this.importInput = document.getElementById('importConfig');
@@ -104,6 +121,26 @@ class AdminApp {
     this.saveSettingsBtn.addEventListener('click', () => this._saveSettings());
     this.resetSettingsBtn.addEventListener('click', () => this._resetSettings());
 
+    // Оформление — живой предпросмотр
+    this.coverBgStart.addEventListener('input', () => this._updateAppearancePreview());
+    this.coverBgEnd.addEventListener('input', () => this._updateAppearancePreview());
+    this.coverText.addEventListener('input', () => this._updateAppearancePreview());
+    this.bgPage.addEventListener('input', () => {
+      this.bgPageSwatch.style.background = this.bgPage.value;
+    });
+    this.bgApp.addEventListener('input', () => {
+      this.bgAppSwatch.style.background = this.bgApp.value;
+    });
+    this.fontMin.addEventListener('input', () => {
+      this.fontMinValue.textContent = `${this.fontMin.value}px`;
+    });
+    this.fontMax.addEventListener('input', () => {
+      this.fontMaxValue.textContent = `${this.fontMax.value}px`;
+    });
+
+    this.saveAppearanceBtn.addEventListener('click', () => this._saveAppearance());
+    this.resetAppearanceBtn.addEventListener('click', () => this._resetAppearance());
+
     // Экспорт
     this.exportBtn.addEventListener('click', () => this._exportConfig());
     this.importInput.addEventListener('change', (e) => this._importConfig(e));
@@ -116,6 +153,7 @@ class AdminApp {
   _render() {
     this._renderChapters();
     this._renderSettings();
+    this._renderAppearance();
     this._renderJsonPreview();
   }
 
@@ -316,6 +354,66 @@ class AdminApp {
     this._renderSettings();
     this._renderJsonPreview();
     this._showToast('Настройки сброшены');
+  }
+
+  // --- Оформление ---
+
+  _renderAppearance() {
+    const a = this.store.getAppearance();
+
+    this.coverBgStart.value = a.coverBgStart;
+    this.coverBgEnd.value = a.coverBgEnd;
+    this.coverText.value = a.coverText;
+    this.pageTexture.value = a.pageTexture;
+    this.bgPage.value = a.bgPage;
+    this.bgPageSwatch.style.background = a.bgPage;
+    this.bgApp.value = a.bgApp;
+    this.bgAppSwatch.style.background = a.bgApp;
+    this.fontMin.value = a.fontMin;
+    this.fontMinValue.textContent = `${a.fontMin}px`;
+    this.fontMax.value = a.fontMax;
+    this.fontMaxValue.textContent = `${a.fontMax}px`;
+
+    this._updateAppearancePreview();
+  }
+
+  _updateAppearancePreview() {
+    const bg = `linear-gradient(135deg, ${this.coverBgStart.value}, ${this.coverBgEnd.value})`;
+    this.coverTextPreview.style.background = bg;
+    this.coverTextPreview.style.color = this.coverText.value;
+  }
+
+  _saveAppearance() {
+    this.store.updateAppearance({
+      coverBgStart: this.coverBgStart.value,
+      coverBgEnd: this.coverBgEnd.value,
+      coverText: this.coverText.value,
+      pageTexture: this.pageTexture.value,
+      bgPage: this.bgPage.value,
+      bgApp: this.bgApp.value,
+      fontMin: parseInt(this.fontMin.value, 10),
+      fontMax: parseInt(this.fontMax.value, 10),
+    });
+
+    this._renderJsonPreview();
+    this._showToast('Оформление сохранено');
+  }
+
+  _resetAppearance() {
+    this.store.updateAppearance({
+      coverBgStart: '#3a2d1f',
+      coverBgEnd: '#2a2016',
+      coverText: '#f2e9d8',
+      pageTexture: 'default',
+      bgPage: '#fdfcf8',
+      bgApp: '#e6e3dc',
+      fontMin: 14,
+      fontMax: 22,
+    });
+
+    this._renderAppearance();
+    this._renderJsonPreview();
+    this._showToast('Оформление сброшено');
   }
 
   // --- Экспорт/Импорт ---

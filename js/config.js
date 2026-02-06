@@ -53,6 +53,9 @@ const CHAPTERS = adminConfig?.chapters?.length
 // Настройки по умолчанию: из админки или захардкоженные
 const adminDefaults = adminConfig?.defaultSettings || {};
 
+// Оформление книги: из админки или дефолтные
+const adminAppearance = adminConfig?.appearance || {};
+
 export const CONFIG = Object.freeze({
   STORAGE_KEY: "reader-settings",
   COVER_BG: `${BASE_URL}images/backgrounds/bg-cover.webp`,
@@ -93,6 +96,18 @@ export const CONFIG = Object.freeze({
     soundVolume: adminDefaults.soundVolume ?? 0.3,
     ambientType: adminDefaults.ambientType || 'none',
     ambientVolume: adminDefaults.ambientVolume ?? 0.5
+  },
+
+  // Настройки оформления из админки
+  APPEARANCE: {
+    coverBgStart: adminAppearance.coverBgStart || '#3a2d1f',
+    coverBgEnd: adminAppearance.coverBgEnd || '#2a2016',
+    coverText: adminAppearance.coverText || '#f2e9d8',
+    pageTexture: adminAppearance.pageTexture || 'default',
+    bgPage: adminAppearance.bgPage || '#fdfcf8',
+    bgApp: adminAppearance.bgApp || '#e6e3dc',
+    fontMin: adminAppearance.fontMin ?? 14,
+    fontMax: adminAppearance.fontMax ?? 22,
   },
 
   VIRTUALIZATION: {
