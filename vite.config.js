@@ -89,6 +89,7 @@ export default defineConfig(({ command, mode }) => {
               './js/core/delegates/LifecycleDelegate.js',
               './js/core/delegates/ChapterDelegate.js',
               './js/core/delegates/DragDelegate.js',
+              './js/core/delegates/DragDOMPreparer.js',
             ],
           },
           
