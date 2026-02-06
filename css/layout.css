@@ -12,37 +12,31 @@
   position: fixed;
   inset: 0;
   z-index: -1;
-
   overflow: hidden;
 }
 
 .chapter-bg .bg {
   position: absolute;
   inset: 0;
-
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-
   transition:
     opacity var(--timing-transition) ease-in-out,
     filter var(--timing-blur) ease-out,
     transform var(--timing-blur) ease-out;
   will-change: opacity, filter, transform;
-
   contain: strict;
 }
 
 /* Blur placeholder при загрузке изображения */
 .bg[data-loading="true"] {
   filter: blur(20px);
-
   transform: scale(1.05); /* Компенсация blur-краёв */
 }
 
 .bg[data-loading="false"] {
   filter: blur(0);
-
   transform: scale(1);
 }
 
@@ -58,9 +52,7 @@
 .chapter-bg::after {
   position: absolute;
   inset: 0;
-
-  background: rgba(0, 0, 0, 0.15);
-
+  background: rgb(0, 0, 0, 0.15);
   pointer-events: none;
   content: "";
 }

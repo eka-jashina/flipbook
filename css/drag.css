@@ -11,11 +11,9 @@
 .corner-zone {
   position: absolute;
   z-index: 100;
-
   width: 80px;
   height: 80px;
   overflow: visible;
-
   cursor: grab;
 }
 
@@ -52,11 +50,8 @@
 .corner-zone::before {
   position: absolute;
   inset: 0;
-
   opacity: 0;
-
   transition: opacity 0.3s ease;
-
   pointer-events: none;
   content: "";
 }
@@ -66,8 +61,8 @@
 .corner-zone.bottom-right::before {
   background: radial-gradient(
     circle at bottom left,
-    rgba(255, 255, 255, 0.2),
-    rgba(255, 255, 255, 0.05) 50%,
+    rgb(255, 255, 255, 0.2),
+    rgb(255, 255, 255, 0.05) 50%,
     transparent 70%
   );
 }
@@ -77,8 +72,8 @@
 .corner-zone.bottom-left::before {
   background: radial-gradient(
     circle at bottom right,
-    rgba(255, 255, 255, 0.2),
-    rgba(255, 255, 255, 0.05) 50%,
+    rgb(255, 255, 255, 0.2),
+    rgb(255, 255, 255, 0.05) 50%,
     transparent 70%
   );
 }
@@ -86,15 +81,11 @@
 /* Тень загиба */
 .corner-zone::after {
   position: absolute;
-
   width: 0;
   height: 0;
-
   border-style: solid;
   opacity: 0;
-
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
   pointer-events: none;
   content: "";
 }
@@ -103,7 +94,7 @@
 .corner-zone.top-right::after {
   top: 0;
   right: 0;
-  border-width: 0 0 0 0;
+  border-width: 0;
   border-color: transparent;
 }
 
@@ -114,7 +105,7 @@
 .corner-zone.top-right:hover::after {
   opacity: 1;
   border-width: 0 45px 45px 0;
-  border-color: transparent rgba(0, 0, 0, 0.15) transparent transparent;
+  border-color: transparent rgb(0, 0, 0, 0.15) transparent transparent;
   filter: blur(3px);
 }
 
@@ -122,7 +113,7 @@
 .corner-zone.bottom-right::after {
   bottom: 0;
   right: 0;
-  border-width: 0 0 0 0;
+  border-width: 0;
   border-color: transparent;
 }
 
@@ -133,7 +124,7 @@
 .corner-zone.bottom-right:hover::after {
   opacity: 1;
   border-width: 45px 45px 0 0;
-  border-color: transparent rgba(0, 0, 0, 0.15) transparent transparent;
+  border-color: transparent rgb(0, 0, 0, 0.15) transparent transparent;
   filter: blur(3px);
 }
 
@@ -141,7 +132,7 @@
 .corner-zone.top-left::after {
   top: 0;
   left: 0;
-  border-width: 0 0 0 0;
+  border-width: 0;
   border-color: transparent;
 }
 
@@ -152,7 +143,7 @@
 .corner-zone.top-left:hover::after {
   opacity: 1;
   border-width: 45px 0 0 45px;
-  border-color: transparent transparent transparent rgba(0, 0, 0, 0.15);
+  border-color: transparent transparent transparent rgb(0, 0, 0, 0.15);
   filter: blur(3px);
   transform: rotate(90deg);
 }
@@ -161,7 +152,7 @@
 .corner-zone.bottom-left::after {
   bottom: 0;
   left: 0;
-  border-width: 0 0 0 0;
+  border-width: 0;
   border-color: transparent;
 }
 
@@ -172,7 +163,7 @@
 .corner-zone.bottom-left:hover::after {
   opacity: 1;
   border-width: 0 0 45px 45px;
-  border-color: transparent transparent rgba(0, 0, 0, 0.15) transparent;
+  border-color: transparent transparent rgb(0, 0, 0, 0.15);
   filter: blur(3px);
   transform: rotate(90deg);
 }
@@ -201,11 +192,9 @@
   top: 0;
   left: var(--flip-shadow-left, 50%);
   z-index: 15;
-
   display: none;
   width: var(--flip-shadow-width, 0);
   height: 100%;
-
   pointer-events: none;
 }
 
@@ -215,12 +204,12 @@
 
 /* Направление "вперёд" - градиент справа налево */
 .flip-shadow.active[data-direction="next"] {
-  background: linear-gradient(to right, rgba(0,0,0,var(--flip-shadow-opacity, 0)), transparent);
+  background: linear-gradient(to right, rgb(0,0,0,var(--flip-shadow-opacity, 0)), transparent);
 }
 
 /* Направление "назад" - градиент слева направо */
 .flip-shadow.active[data-direction="prev"] {
-  background: linear-gradient(to left, rgba(0,0,0,var(--flip-shadow-opacity, 0)), transparent);
+  background: linear-gradient(to left, rgb(0,0,0,var(--flip-shadow-opacity, 0)), transparent);
 }
 
 /* ═══════════════════════════════════════════
@@ -229,7 +218,6 @@
 
 .page[data-drag-visible="true"] {
   z-index: 2;
-
   opacity: 1 !important;
   visibility: visible !important;
 }
@@ -253,7 +241,6 @@
 
 .sheet[data-phase="drag"] {
   z-index: 20;
-
   opacity: 1;
   visibility: visible;
 

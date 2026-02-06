@@ -373,7 +373,7 @@ export class AsyncPaginator extends EventEmitter {
   async _slicePagesAsync(cols, pageContent, pageWidth, pageHeight, signal) {
     const probe = document.createElement("div");
     probe.style.width = "1px";
-    probe.style.height = pageHeight + "px";
+    probe.style.height = `${pageHeight}px`;
     probe.style.breakBefore = "column";
     pageContent.appendChild(probe);
 

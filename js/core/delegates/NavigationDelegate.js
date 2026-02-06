@@ -128,7 +128,7 @@ export class NavigationDelegate extends BaseDelegate {
 
     // Переход к конкретной главе
     const pageIndex = this.chapterStarts[chapter];
-    if (pageIndex == null) return;
+    if (pageIndex === undefined || pageIndex === null) return;
 
     // Выравниваем по развороту для десктопа
     const targetIndex = this.isMobile ? pageIndex : pageIndex - (pageIndex % 2);

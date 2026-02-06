@@ -8,25 +8,19 @@
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%) translateY(100%);
-
   display: flex;
   align-items: center;
   gap: 16px;
-
   max-width: 420px;
   width: calc(100% - 32px);
   padding: 16px 20px;
-
   background: var(--pod-btn-bg);
   color: var(--text-primary, #f5f5f5);
-
   border-radius: 16px;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-
+    0 8px 32px rgb(0, 0, 0, 0.4),
+    0 0 0 1px rgb(255, 255, 255, 0.1);
   z-index: 10001;
-
   opacity: 0;
   visibility: hidden;
   transition:
@@ -47,13 +41,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-
   width: 48px;
   height: 48px;
-
   background: var(--pod-btn-bg);
   border-radius: 12px;
-
   color: #fff;
 }
 
@@ -86,14 +77,11 @@
 
 .install-prompt__btn {
   padding: 8px 16px;
-
   font-size: 13px;
   font-weight: 500;
-
   border: none;
   border-radius: 8px;
   cursor: pointer;
-
   transition: all 0.15s ease;
 }
 
@@ -103,7 +91,7 @@
 }
 
 .install-prompt__btn--dismiss:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255, 255, 255, 0.1);
   color: var(--text-primary, #f5f5f5);
 }
 
@@ -126,27 +114,23 @@
   position: absolute;
   top: 8px;
   right: 8px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   width: 28px;
   height: 28px;
   padding: 0;
-
   background: transparent;
   border: none;
   border-radius: 50%;
   color: var(--text-secondary, #a0a0a0);
-
   cursor: pointer;
   opacity: 0.6;
   transition: all 0.15s ease;
 }
 
 .install-prompt__close:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255, 255, 255, 0.1);
   opacity: 1;
 }
 
@@ -155,16 +139,16 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-theme="light"] .install-prompt {
-  background: rgba(30, 30, 46, 0.95);
-  color: #ffffff;
+  background: rgb(30, 30, 46, 0.95);
+  color: #fff;
 }
 
 [data-theme="bw"] .install-prompt {
   background: #333;
   color: #fff;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.2);
+    0 8px 32px rgb(0, 0, 0, 0.5),
+    0 0 0 1px rgb(255, 255, 255, 0.2);
 }
 
 [data-theme="bw"] .install-prompt__icon {
@@ -185,7 +169,6 @@
     padding: 14px 16px;
     padding-right: 40px; /* Место для кнопки закрытия */
     gap: 12px;
-
     flex-wrap: wrap;
   }
 
@@ -231,19 +214,14 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-
   width: 100%;
   padding: 12px 16px;
-
   font-size: 14px;
   font-weight: 500;
-
   background: var(--pod-btn-bg);
   color: #fff;
-
   border: none;
   border-radius: 10px;
-
   cursor: pointer;
   transition: all 0.15s ease;
 }

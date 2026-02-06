@@ -16,18 +16,14 @@
 
 .controls {
   display: flex;
-  flex-direction: column;
-  flex-wrap: wrap;
+  flex-flow: column wrap;
   gap: 10px;
   margin-top: 16px;
   padding: 0.7em;
-
-  font-family: "TolkienCyr", sans-serif;
+  font-family: TolkienCyr, sans-serif;
   font-size: 18px;
   color: var(--cover-front-text);
-
   background: var(--cover-front-bg);
-
   transition:
     background var(--timing-transition),
     color var(--timing-transition);
@@ -41,21 +37,17 @@
 .controls select,
 .controls label {
   padding: 0.3em;
-
-  font-family: "TolkienCyr", sans-serif;
+  font-family: TolkienCyr, sans-serif;
   font-size: 100%;
   font-weight: 700;
   line-height: 1;
   color: #a52a2a;
-
   background-color: var(--cover-front-text);
   border: none;
   border-radius: 10px;
-
   transition:
     transform var(--timing-transition) ease-in-out,
     outline var(--timing-transition) ease-in-out;
-
   cursor: pointer;
 }
 
@@ -64,7 +56,6 @@
 .controls label:hover,
 .controls label:focus-within {
   outline: 1px solid #a52a2a;
-
   transform: scale(1.2);
   transform-origin: center;
 }
@@ -80,13 +71,10 @@
   justify-content: center;
   align-items: center;
   max-height: 0;
-
   opacity: 0;
-
   transition:
     opacity var(--timing-transition) ease-in-out,
     max-height var(--timing-transition) ease-in-out;
-
   visibility: hidden;
 }
 
@@ -130,7 +118,7 @@
 }
 
 .copyright a {
-  color: currentColor;
+  color: currentcolor;
   text-decoration: none;
 }
 
@@ -143,15 +131,11 @@
   top: 20px;
   left: 50%;
   z-index: 9999;
-
   padding: 1em 2em;
-
-  color: #ffffff;
-
-  background: #ff4444;
+  color: #fff;
+  background: #f44;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-
+  box-shadow: 0 4px 12px rgb(0, 0, 0, 0.3);
   transform: translateX(-50%);
   animation: slideDown 0.3s ease-out;
 }
@@ -162,8 +146,7 @@
 
 @media (min-width: 801px) {
   .controls {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-flow: row wrap;
     align-items: flex-start;
     justify-content: center;
     gap: 16px;

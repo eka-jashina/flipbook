@@ -24,7 +24,7 @@ const updateSW = registerSW({
   onOfflineReady() {
     console.log('Flipbook готов к работе offline');
   },
-  onRegisteredSW(swUrl, registration) {
+  onRegisteredSW(swUrl, _registration) {
     console.log('Service Worker зарегистрирован:', swUrl);
   },
   onRegisterError(error) {

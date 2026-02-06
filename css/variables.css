@@ -71,28 +71,28 @@
   --bg-page: #fdfcf8;
   --bg-page-alt: #f3f2ed;
   --text-main: #1f1f1f;
-  --text-muted: #555555;
-  --border-page: rgba(0, 0, 0, 0.08);
+  --text-muted: #555;
+  --border-page: rgb(0, 0, 0, 0.08);
 
   /* Край страниц */
   --page-edge-base: #f3f1ea;
   --page-edge-alt: #e6e3dc;
-  --page-edge-contrast: rgba(0, 0, 0, 0.18);
+  --page-edge-contrast: rgb(0, 0, 0, 0.18);
   --pages-color: #f3f2ed;
-  --pages-shadow: rgba(0, 0, 0, 0.18);
+  --pages-shadow: rgb(0, 0, 0, 0.18);
 
   /* Тени */
   --shadow-book:
-    0 2px 4px rgba(0, 0, 0, 0.08),
-    0 8px 16px rgba(0, 0, 0, 0.12),
-    0 30px 60px rgba(0, 0, 0, 0.28);
-  --shadow-page: rgba(0, 0, 0, 0.18);
+    0 2px 4px rgb(0, 0, 0, 0.08),
+    0 8px 16px rgb(0, 0, 0, 0.12),
+    0 30px 60px rgb(0, 0, 0, 0.28);
+  --shadow-page: rgb(0, 0, 0, 0.18);
 
   /* Корешок */
-  --spine-dark: rgba(0, 0, 0, 0.45);
-  --spine-mid: rgba(0, 0, 0, 0.22);
-  --spine-soft: rgba(0, 0, 0, 0.08);
-  --paper-highlight: rgba(255, 255, 255, 0.35);
+  --spine-dark: rgb(0, 0, 0, 0.45);
+  --spine-mid: rgb(0, 0, 0, 0.22);
+  --spine-soft: rgb(0, 0, 0, 0.08);
+  --paper-highlight: rgb(255, 255, 255, 0.35);
 
   /* Обложка */
   --cover-front-bg: linear-gradient(135deg, #3a2d1f, #2a2016);
@@ -103,7 +103,7 @@
      НАСТРОЙКИ ЧИТАЛКИ
      ═══════════════════════════════════════════ */
   --reader-font-size: var(--font-default);
-  --reader-font-family: Georgia, serif;
+  --reader-font-family: georgia, serif;
 
   /* ═══════════════════════════════════════════
      ПАГИНАЦИЯ

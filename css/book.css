@@ -14,10 +14,8 @@
   display: flex;
   justify-content: flex-end;
   width: 100%;
-
   perspective: var(--perspective);
-  -webkit-perspective: var(--perspective); /* для Safari */
-
+  perspective: var(--perspective); /* для Safari */
   transition: width var(--timing-wrap) ease-in-out;
 }
 
@@ -37,19 +35,17 @@
 
 .book {
   position: relative;
-
   width: 100%;
   height: 80vh;
   height: 80dvh;
   margin: 0 auto;
-
   background-color: var(--bg-book);
   border-radius: 12px;
   box-shadow: var(--shadow-book);
 
   /* 3D контекст для анимаций переворота */
   transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
   transform-origin: left;
   /* Плавные переходы включая animatable CSS properties */
   transition:
@@ -146,11 +142,8 @@
   top: 8px;
   bottom: 8px;
   z-index: 0;
-
   width: var(--pages-depth);
-
   filter: blur(0.35px);
-
   content: "";
 }
 
@@ -161,8 +154,8 @@
     /* Горизонтальные линии - текстура страниц */
     repeating-linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.1) 0,
-      rgba(0, 0, 0, 0.1) 1px,
+      rgb(0, 0, 0, 0.1) 0,
+      rgb(0, 0, 0, 0.1) 1px,
       transparent 2px,
       transparent 4px
     ),
@@ -192,7 +185,7 @@
       var(--page-edge-contrast) 100%
     ),
     /* Тень от корешка */
-    linear-gradient(to right, rgba(0, 0, 0, 0.25), transparent);
+    linear-gradient(to right, rgb(0, 0, 0, 0.25), transparent);
   border-radius: 6px 0 0 6px;
 }
 
@@ -203,8 +196,8 @@
     /* Горизонтальные линии - текстура страниц */
     repeating-linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.08) 0,
-      rgba(0, 0, 0, 0.08) 1px,
+      rgb(0, 0, 0, 0.08) 0,
+      rgb(0, 0, 0, 0.08) 1px,
       transparent 2px,
       transparent 4px
     ),
@@ -234,6 +227,6 @@
       var(--page-edge-contrast) 100%
     ),
     /* Тень от края */
-    linear-gradient(to left, rgba(0, 0, 0, 0.22), transparent);
+    linear-gradient(to left, rgb(0, 0, 0, 0.22), transparent);
   border-radius: 0 6px 6px 0;
 }
