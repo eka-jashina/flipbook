@@ -212,6 +212,9 @@ export class SettingsDelegate extends BaseDelegate {
       html.dataset.theme = theme === "light" ? "" : theme;
     }
 
+    // Переприменить оформление для новой темы
+    this._applyAppearance();
+
     // Названия тем для объявления
     const themeNames = {
       light: 'Светлая тема',
@@ -337,7 +340,7 @@ export class SettingsDelegate extends BaseDelegate {
     const a = CONFIG.APPEARANCE;
     if (!a) return;
 
-    // Заголовок и автор на обложке
+    // Заголовок и автор на обложке (глобальные)
     const cover = this.dom.get("cover");
     if (cover) {
       const spans = cover.querySelectorAll(".cover-front h1 span");
@@ -347,22 +350,33 @@ export class SettingsDelegate extends BaseDelegate {
       }
     }
 
+    // Определить текущую тему для per-theme значений
+    const currentTheme = this.settings.get("theme");
+    // bw наследует от light
+    const themeKey = currentTheme === "dark" ? "dark" : "light";
+    const t = a[themeKey] || a.light;
+
     // Фон обложки: градиент или изображение
-    if (a.coverBgImage) {
-      html.style.setProperty("--cover-front-bg", `url(${a.coverBgImage})`);
+    if (t.coverBgImage) {
+      html.style.setProperty("--cover-front-bg", `url(${t.coverBgImage})`);
     } else {
-      html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${a.coverBgStart}, ${a.coverBgEnd})`);
+      html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${t.coverBgStart}, ${t.coverBgEnd})`);
     }
-    html.style.setProperty("--cover-front-text", a.coverText);
+    html.style.setProperty("--cover-front-text", t.coverText);
 
-    if (a.pageTexture === "custom" && a.customTextureData) {
-      html.style.setProperty("--bg-page-image", `url(${a.customTextureData})`);
-    } else if (a.pageTexture === "none") {
+    // Текстура страницы
+    if (t.pageTexture === "custom" && t.customTextureData) {
+      html.style.setProperty("--bg-page-image", `url(${t.customTextureData})`);
+    } else if (t.pageTexture === "none") {
       html.style.setProperty("--bg-page-image", "none");
+    } else {
+      html.style.removeProperty("--bg-page-image");
     }
 
-    html.style.setProperty("--bg-page", a.bgPage);
-    html.style.setProperty("--bg-app", a.bgApp);
+    html.style.setProperty("--bg-page", t.bgPage);
+    html.style.setProperty("--bg-app", t.bgApp);
+
+    // Ограничения шрифтов (глобальные)
     html.style.setProperty("--font-min", `${a.fontMin}px`);
     html.style.setProperty("--font-max", `${a.fontMax}px`);
   }

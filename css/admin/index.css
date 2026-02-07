@@ -532,6 +532,47 @@ body {
   flex-shrink: 0;
 }
 
+/* === Переключатель темы оформления === */
+.appearance-theme-switch {
+  display: flex;
+  gap: 4px;
+  background: var(--admin-surface);
+  border-radius: var(--admin-radius);
+  padding: 4px;
+  box-shadow: var(--admin-shadow);
+  margin-bottom: 20px;
+}
+
+.appearance-theme-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  border-radius: var(--admin-radius-sm);
+  font-family: var(--admin-font);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: all var(--admin-transition);
+}
+
+.appearance-theme-btn:hover {
+  color: var(--admin-text);
+  background: var(--admin-bg);
+}
+
+.appearance-theme-btn.active {
+  color: var(--admin-primary);
+  background: var(--admin-bg);
+  box-shadow: var(--admin-shadow);
+  font-weight: 600;
+}
+
 /* === Группировка полей === */
 .setting-fieldset {
   grid-column: 1 / -1;

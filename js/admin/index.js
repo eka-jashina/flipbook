@@ -9,6 +9,7 @@ class AdminApp {
     this._editingIndex = null; // индекс редактируемой главы (null = добавление)
     this._editingAmbientIndex = null; // индекс редактируемого амбиента
     this._pendingAmbientDataUrl = null; // data URL загруженного аудиофайла
+    this._editTheme = 'light'; // текущая редактируемая тема оформления
     this._toastTimer = null;
 
     this._cacheDOM();
@@ -84,7 +85,10 @@ class AdminApp {
     this.ambientFileUpload = document.getElementById('ambientFileUpload');
     this.ambientUploadLabel = document.getElementById('ambientUploadLabel');
 
-    // Оформление — обложка
+    // Оформление — переключатель темы
+    this.appearanceThemeBtns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn');
+
+    // Оформление — per-theme поля
     this.coverBgStart = document.getElementById('coverBgStart');
     this.coverBgEnd = document.getElementById('coverBgEnd');
     this.coverText = document.getElementById('coverText');
@@ -181,6 +185,11 @@ class AdminApp {
 
     // Обложка (таб Главы)
     this.saveCoverBtn.addEventListener('click', () => this._saveCover());
+
+    // Оформление — переключатель темы
+    this.appearanceThemeBtns.forEach(btn => {
+      btn.addEventListener('click', () => this._switchEditTheme(btn.dataset.editTheme));
+    });
 
     // Оформление — живой предпросмотр
     this.coverBgStart.addEventListener('input', () => this._updateAppearancePreview());
@@ -687,28 +696,62 @@ class AdminApp {
 
   // --- Оформление ---
 
+  /** Переключить редактируемую тему */
+  _switchEditTheme(theme) {
+    this._saveCurrentThemeFromForm();
+    this._editTheme = theme;
+    this.appearanceThemeBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.editTheme === theme);
+    });
+    this._renderAppearanceThemeFields();
+    this._updateAppearancePreview();
+  }
+
+  /** Сохранить per-theme поля из формы в store */
+  _saveCurrentThemeFromForm() {
+    const data = {
+      coverBgStart: this.coverBgStart.value,
+      coverBgEnd: this.coverBgEnd.value,
+      coverText: this.coverText.value,
+      pageTexture: this.pageTexture.value,
+      bgPage: this.bgPage.value,
+      bgApp: this.bgApp.value,
+    };
+    if (data.pageTexture !== 'custom') {
+      data.customTextureData = null;
+    }
+    this.store.updateAppearanceTheme(this._editTheme, data);
+  }
+
   _renderAppearance() {
     const a = this.store.getAppearance();
 
-    this.coverBgStart.value = a.coverBgStart;
-    this.coverBgEnd.value = a.coverBgEnd;
-    this.coverText.value = a.coverText;
-    this._renderCoverBgPreview(a.coverBgImage);
-    this.pageTexture.value = a.pageTexture;
-
-    // Текстура — подсветить активный вариант
-    this._renderTextureSelector(a.pageTexture, a.customTextureData);
-
-    this.bgPage.value = a.bgPage;
-    this.bgPageSwatch.style.background = a.bgPage;
-    this.bgApp.value = a.bgApp;
-    this.bgAppSwatch.style.background = a.bgApp;
+    // Глобальные поля
     this.fontMin.value = a.fontMin;
     this.fontMinValue.textContent = `${a.fontMin}px`;
     this.fontMax.value = a.fontMax;
     this.fontMaxValue.textContent = `${a.fontMax}px`;
 
+    // Per-theme поля
+    this._renderAppearanceThemeFields();
     this._updateAppearancePreview();
+  }
+
+  /** Заполнить per-theme поля из store для текущей _editTheme */
+  _renderAppearanceThemeFields() {
+    const a = this.store.getAppearance();
+    const t = a[this._editTheme] || a.light;
+
+    this.coverBgStart.value = t.coverBgStart;
+    this.coverBgEnd.value = t.coverBgEnd;
+    this.coverText.value = t.coverText;
+    this._renderCoverBgPreview(t.coverBgImage);
+    this.pageTexture.value = t.pageTexture;
+    this._renderTextureSelector(t.pageTexture, t.customTextureData);
+    this.bgPage.value = t.bgPage;
+    this.bgPageSwatch.style.background = t.bgPage;
+    this.bgApp.value = t.bgApp;
+    this.bgAppSwatch.style.background = t.bgApp;
   }
 
   _updateAppearancePreview() {
@@ -754,7 +797,7 @@ class AdminApp {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result;
-      this.store.updateAppearance({ coverBgImage: dataUrl });
+      this.store.updateAppearanceTheme(this._editTheme, { coverBgImage: dataUrl });
       this._renderCoverBgPreview(dataUrl);
       this._renderJsonPreview();
       this._showToast('Фон обложки загружен');
@@ -764,7 +807,7 @@ class AdminApp {
   }
 
   _removeCoverBg() {
-    this.store.updateAppearance({ coverBgImage: null });
+    this.store.updateAppearanceTheme(this._editTheme, { coverBgImage: null });
     this._renderCoverBgPreview(null);
     this._renderJsonPreview();
     this._showToast('Фон обложки удалён');
@@ -802,7 +845,8 @@ class AdminApp {
 
   _selectTexture(value) {
     this.pageTexture.value = value;
-    this._renderTextureSelector(value, this.store.getAppearance().customTextureData);
+    const t = this.store.getAppearance()[this._editTheme];
+    this._renderTextureSelector(value, t?.customTextureData);
   }
 
   _handleTextureUpload(e) {
@@ -826,8 +870,7 @@ class AdminApp {
     reader.onload = () => {
       const dataUrl = reader.result;
 
-      // Сохраняем data URL в store
-      this.store.updateAppearance({
+      this.store.updateAppearanceTheme(this._editTheme, {
         pageTexture: 'custom',
         customTextureData: dataUrl,
       });
@@ -844,7 +887,7 @@ class AdminApp {
   }
 
   _removeCustomTexture() {
-    this.store.updateAppearance({
+    this.store.updateAppearanceTheme(this._editTheme, {
       pageTexture: 'default',
       customTextureData: null,
     });
@@ -856,30 +899,23 @@ class AdminApp {
   }
 
   _saveAppearance() {
-    const update = {
-      coverBgStart: this.coverBgStart.value,
-      coverBgEnd: this.coverBgEnd.value,
-      coverText: this.coverText.value,
-      pageTexture: this.pageTexture.value,
-      bgPage: this.bgPage.value,
-      bgApp: this.bgApp.value,
+    // Глобальные поля
+    this.store.updateAppearanceGlobal({
       fontMin: parseInt(this.fontMin.value, 10),
       fontMax: parseInt(this.fontMax.value, 10),
-    };
+    });
 
-    // Если текстура не custom — очистить загруженные данные
-    if (update.pageTexture !== 'custom') {
-      update.customTextureData = null;
-    }
-
-    this.store.updateAppearance(update);
+    // Per-theme поля из формы
+    this._saveCurrentThemeFromForm();
 
     this._renderJsonPreview();
     this._showToast('Оформление сохранено');
   }
 
   _resetAppearance() {
-    this.store.updateAppearance({
+    this.store.updateAppearanceGlobal({ fontMin: 14, fontMax: 22 });
+
+    this.store.updateAppearanceTheme('light', {
       coverBgStart: '#3a2d1f',
       coverBgEnd: '#2a2016',
       coverText: '#f2e9d8',
@@ -888,8 +924,17 @@ class AdminApp {
       customTextureData: null,
       bgPage: '#fdfcf8',
       bgApp: '#e6e3dc',
-      fontMin: 14,
-      fontMax: 22,
+    });
+
+    this.store.updateAppearanceTheme('dark', {
+      coverBgStart: '#111111',
+      coverBgEnd: '#000000',
+      coverText: '#eaeaea',
+      coverBgImage: null,
+      pageTexture: 'none',
+      customTextureData: null,
+      bgPage: '#1e1e1e',
+      bgApp: '#121212',
     });
 
     this._renderAppearance();

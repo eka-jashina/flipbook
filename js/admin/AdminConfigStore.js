@@ -7,6 +7,29 @@
 
 const STORAGE_KEY = 'flipbook-admin-config';
 
+// Per-theme дефолты
+const LIGHT_DEFAULTS = {
+  coverBgStart: '#3a2d1f',
+  coverBgEnd: '#2a2016',
+  coverText: '#f2e9d8',
+  coverBgImage: null,
+  pageTexture: 'default',
+  customTextureData: null,
+  bgPage: '#fdfcf8',
+  bgApp: '#e6e3dc',
+};
+
+const DARK_DEFAULTS = {
+  coverBgStart: '#111111',
+  coverBgEnd: '#000000',
+  coverText: '#eaeaea',
+  coverBgImage: null,
+  pageTexture: 'none',
+  customTextureData: null,
+  bgPage: '#1e1e1e',
+  bgApp: '#121212',
+};
+
 // Дефолтная конфигурация (совпадает с CONFIG из config.js)
 const DEFAULT_CONFIG = {
   cover: {
@@ -56,16 +79,10 @@ const DEFAULT_CONFIG = {
     ambientVolume: 0.5,
   },
   appearance: {
-    coverBgStart: '#3a2d1f',
-    coverBgEnd: '#2a2016',
-    coverText: '#f2e9d8',
-    coverBgImage: null,
-    pageTexture: 'default',
-    customTextureData: null,
-    bgPage: '#fdfcf8',
-    bgApp: '#e6e3dc',
     fontMin: 14,
     fontMax: 22,
+    light: { ...LIGHT_DEFAULTS },
+    dark: { ...DARK_DEFAULTS },
   },
 };
 
@@ -90,6 +107,24 @@ export class AdminConfigStore {
 
   /** Гарантируем наличие всех полей после загрузки */
   _mergeWithDefaults(saved) {
+    const appearance = saved.appearance || {};
+
+    // Миграция: если нет light/dark — переносим плоскую структуру в light
+    const hasPerTheme = appearance.light || appearance.dark;
+    let light, dark;
+
+    if (hasPerTheme) {
+      light = { ...structuredClone(LIGHT_DEFAULTS), ...(appearance.light || {}) };
+      dark = { ...structuredClone(DARK_DEFAULTS), ...(appearance.dark || {}) };
+    } else {
+      // Старый формат — мигрируем в light
+      const rest = { ...appearance };
+      delete rest.fontMin;
+      delete rest.fontMax;
+      light = { ...structuredClone(LIGHT_DEFAULTS), ...rest };
+      dark = structuredClone(DARK_DEFAULTS);
+    }
+
     return {
       cover: {
         ...structuredClone(DEFAULT_CONFIG.cover),
@@ -106,8 +141,10 @@ export class AdminConfigStore {
         ...(saved.defaultSettings || {}),
       },
       appearance: {
-        ...structuredClone(DEFAULT_CONFIG.appearance),
-        ...(saved.appearance || {}),
+        fontMin: appearance.fontMin ?? DEFAULT_CONFIG.appearance.fontMin,
+        fontMax: appearance.fontMax ?? DEFAULT_CONFIG.appearance.fontMax,
+        light,
+        dark,
       },
     };
   }
@@ -230,10 +267,19 @@ export class AdminConfigStore {
     return structuredClone(this._config.appearance);
   }
 
-  updateAppearance(appearance) {
-    this._config.appearance = {
-      ...this._config.appearance,
-      ...appearance,
+  /** Обновить глобальные поля оформления (fontMin, fontMax) */
+  updateAppearanceGlobal(data) {
+    if (data.fontMin !== undefined) this._config.appearance.fontMin = data.fontMin;
+    if (data.fontMax !== undefined) this._config.appearance.fontMax = data.fontMax;
+    this._save();
+  }
+
+  /** Обновить per-theme поля оформления */
+  updateAppearanceTheme(theme, data) {
+    if (theme !== 'light' && theme !== 'dark') return;
+    this._config.appearance[theme] = {
+      ...this._config.appearance[theme],
+      ...data,
     };
     this._save();
   }
