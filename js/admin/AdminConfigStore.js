@@ -30,6 +30,16 @@ const DARK_DEFAULTS = {
   bgApp: '#121212',
 };
 
+// Дефолтные шрифты для чтения
+const DEFAULT_READING_FONTS = [
+  { id: 'georgia', label: 'Georgia', family: 'Georgia, serif', builtin: true, enabled: true },
+  { id: 'merriweather', label: 'Merriweather', family: '"Merriweather", serif', builtin: true, enabled: true },
+  { id: 'libre-baskerville', label: 'Libre Baskerville', family: '"Libre Baskerville", serif', builtin: true, enabled: true },
+  { id: 'inter', label: 'Inter', family: 'Inter, sans-serif', builtin: true, enabled: true },
+  { id: 'roboto', label: 'Roboto', family: 'Roboto, sans-serif', builtin: true, enabled: true },
+  { id: 'open-sans', label: 'Open Sans', family: '"Open Sans", sans-serif', builtin: true, enabled: true },
+];
+
 // Дефолтная конфигурация (совпадает с CONFIG из config.js)
 const DEFAULT_CONFIG = {
   cover: {
@@ -84,6 +94,8 @@ const DEFAULT_CONFIG = {
     light: { ...LIGHT_DEFAULTS },
     dark: { ...DARK_DEFAULTS },
   },
+  decorativeFont: null, // { name, dataUrl } или null — дефолтный TolkienCyr
+  readingFonts: structuredClone(DEFAULT_READING_FONTS),
 };
 
 export class AdminConfigStore {
@@ -146,6 +158,10 @@ export class AdminConfigStore {
         light,
         dark,
       },
+      decorativeFont: saved.decorativeFont || null,
+      readingFonts: Array.isArray(saved.readingFonts)
+        ? saved.readingFonts
+        : structuredClone(DEFAULT_READING_FONTS),
     };
   }
 
@@ -259,6 +275,47 @@ export class AdminConfigStore {
       ...settings,
     };
     this._save();
+  }
+
+  // --- Декоративный шрифт ---
+
+  getDecorativeFont() {
+    return this._config.decorativeFont
+      ? { ...this._config.decorativeFont }
+      : null;
+  }
+
+  setDecorativeFont(fontData) {
+    this._config.decorativeFont = fontData ? { ...fontData } : null;
+    this._save();
+  }
+
+  // --- Шрифты для чтения ---
+
+  getReadingFonts() {
+    return structuredClone(this._config.readingFonts);
+  }
+
+  addReadingFont(font) {
+    this._config.readingFonts.push({ ...font });
+    this._save();
+  }
+
+  updateReadingFont(index, data) {
+    if (index >= 0 && index < this._config.readingFonts.length) {
+      this._config.readingFonts[index] = {
+        ...this._config.readingFonts[index],
+        ...data,
+      };
+      this._save();
+    }
+  }
+
+  removeReadingFont(index) {
+    if (index >= 0 && index < this._config.readingFonts.length) {
+      this._config.readingFonts.splice(index, 1);
+      this._save();
+    }
   }
 
   // --- Оформление ---

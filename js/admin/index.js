@@ -9,6 +9,7 @@ class AdminApp {
     this._editingIndex = null; // индекс редактируемой главы (null = добавление)
     this._editingAmbientIndex = null; // индекс редактируемого амбиента
     this._pendingAmbientDataUrl = null; // data URL загруженного аудиофайла
+    this._pendingReadingFontDataUrl = null; // data URL загруженного шрифта для чтения
     this._editTheme = 'light'; // текущая редактируемая тема оформления
     this._toastTimer = null;
 
@@ -115,6 +116,25 @@ class AdminApp {
     this.saveAppearanceBtn = document.getElementById('saveAppearance');
     this.resetAppearanceBtn = document.getElementById('resetAppearance');
 
+    // Декоративный шрифт
+    this.decorativeFontUpload = document.getElementById('decorativeFontUpload');
+    this.decorativeFontSample = document.getElementById('decorativeFontSample');
+    this.decorativeFontInfo = document.getElementById('decorativeFontInfo');
+    this.decorativeFontName = document.getElementById('decorativeFontName');
+    this.decorativeFontRemove = document.getElementById('decorativeFontRemove');
+
+    // Шрифты для чтения
+    this.readingFontsList = document.getElementById('readingFontsList');
+    this.addReadingFontBtn = document.getElementById('addReadingFont');
+    this.readingFontModal = document.getElementById('readingFontModal');
+    this.readingFontModalTitle = document.getElementById('readingFontModalTitle');
+    this.readingFontForm = document.getElementById('readingFontForm');
+    this.cancelReadingFontModal = document.getElementById('cancelReadingFontModal');
+    this.readingFontNameInput = document.getElementById('readingFontName');
+    this.readingFontFileUpload = document.getElementById('readingFontFileUpload');
+    this.readingFontUploadLabel = document.getElementById('readingFontUploadLabel');
+    this.readingFontCategory = document.getElementById('readingFontCategory');
+
     // Экспорт
     this.exportBtn = document.getElementById('exportConfig');
     this.importInput = document.getElementById('importConfig');
@@ -220,6 +240,16 @@ class AdminApp {
     this.saveAppearanceBtn.addEventListener('click', () => this._saveAppearance());
     this.resetAppearanceBtn.addEventListener('click', () => this._resetAppearance());
 
+    // Декоративный шрифт
+    this.decorativeFontUpload.addEventListener('change', (e) => this._handleDecorativeFontUpload(e));
+    this.decorativeFontRemove.addEventListener('click', () => this._removeDecorativeFont());
+
+    // Шрифты для чтения
+    this.addReadingFontBtn.addEventListener('click', () => this._openReadingFontModal());
+    this.cancelReadingFontModal.addEventListener('click', () => this.readingFontModal.close());
+    this.readingFontForm.addEventListener('submit', (e) => this._handleReadingFontSubmit(e));
+    this.readingFontFileUpload.addEventListener('change', (e) => this._handleReadingFontFileUpload(e));
+
     // Экспорт
     this.exportBtn.addEventListener('click', () => this._exportConfig());
     this.importInput.addEventListener('change', (e) => this._importConfig(e));
@@ -236,6 +266,8 @@ class AdminApp {
     this._renderSounds();
     this._renderSettings();
     this._renderAppearance();
+    this._renderDecorativeFont();
+    this._renderReadingFonts();
     this._renderJsonPreview();
   }
 
@@ -940,6 +972,239 @@ class AdminApp {
     this._renderAppearance();
     this._renderJsonPreview();
     this._showToast('Оформление сброшено');
+  }
+
+  // --- Декоративный шрифт ---
+
+  _renderDecorativeFont() {
+    const font = this.store.getDecorativeFont();
+
+    if (font) {
+      this.decorativeFontInfo.hidden = false;
+      this.decorativeFontName.textContent = font.name;
+
+      // Загрузить шрифт для предпросмотра
+      this._loadCustomFontPreview('CustomDecorativePreview', font.dataUrl);
+      this.decorativeFontSample.style.fontFamily = 'CustomDecorativePreview, sans-serif';
+    } else {
+      this.decorativeFontInfo.hidden = true;
+      this.decorativeFontSample.style.fontFamily = '';
+    }
+  }
+
+  _handleDecorativeFontUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      this._showToast('Файл слишком большой (макс. 2 МБ)');
+      e.target.value = '';
+      return;
+    }
+
+    const validExts = ['.woff2', '.woff', '.ttf', '.otf'];
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!validExts.includes(ext)) {
+      this._showToast('Допустимые форматы: .woff2, .woff, .ttf, .otf');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const name = file.name.replace(/\.[^.]+$/, '');
+      this.store.setDecorativeFont({ name, dataUrl });
+      this._renderDecorativeFont();
+      this._renderJsonPreview();
+      this._showToast('Декоративный шрифт загружен');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  _removeDecorativeFont() {
+    this.store.setDecorativeFont(null);
+    this._renderDecorativeFont();
+    this._renderJsonPreview();
+    this._showToast('Декоративный шрифт сброшен');
+  }
+
+  /**
+   * Загрузить кастомный шрифт через FontFace API для предпросмотра в админке
+   */
+  _loadCustomFontPreview(familyName, dataUrl) {
+    // Удалить предыдущий, если был
+    for (const face of document.fonts) {
+      if (face.family === familyName) {
+        document.fonts.delete(face);
+      }
+    }
+
+    const fontFace = new FontFace(familyName, `url(${dataUrl})`);
+    fontFace.load().then((loaded) => {
+      document.fonts.add(loaded);
+    }).catch(() => {
+      this._showToast('Ошибка загрузки шрифта');
+    });
+  }
+
+  // --- Шрифты для чтения ---
+
+  _renderReadingFonts() {
+    const fonts = this.store.getReadingFonts();
+
+    // Загрузить кастомные шрифты для предпросмотра
+    fonts.forEach((f, i) => {
+      if (!f.builtin && f.dataUrl) {
+        this._loadCustomFontPreview(`CustomReading_${i}`, f.dataUrl);
+      }
+    });
+
+    this.readingFontsList.innerHTML = fonts.map((f, i) => {
+      const previewFamily = f.builtin ? f.family : `CustomReading_${i}, ${f.family.split(',').pop().trim()}`;
+      const meta = f.builtin ? 'Встроенный' : 'Пользовательский';
+
+      return `
+        <div class="reading-font-card${f.enabled ? '' : ' disabled-font'}" data-index="${i}">
+          <div class="reading-font-preview" style="font-family: ${this._escapeHtml(previewFamily)}">Абвг Abcd</div>
+          <div class="reading-font-info">
+            <div class="reading-font-label">${this._escapeHtml(f.label)}</div>
+            <div class="reading-font-meta">${meta}</div>
+          </div>
+          <div class="reading-font-actions">
+            <label class="admin-toggle" title="${f.enabled ? 'Отключить' : 'Включить'}">
+              <input type="checkbox" data-font-toggle="${i}" ${f.enabled ? 'checked' : ''}>
+              <span class="admin-toggle-slider"></span>
+            </label>
+            ${!f.builtin ? `
+              <button class="chapter-action-btn delete" data-font-delete="${i}" title="Удалить">
+                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Делегирование событий
+    this.readingFontsList.onclick = (e) => {
+      const toggle = e.target.closest('[data-font-toggle]');
+      if (toggle) {
+        const idx = parseInt(toggle.dataset.fontToggle, 10);
+        const fonts = this.store.getReadingFonts();
+        // Не дать отключить последний активный шрифт
+        const enabledCount = fonts.filter(f => f.enabled).length;
+        if (enabledCount <= 1 && !toggle.checked) {
+          toggle.checked = true;
+          this._showToast('Нельзя отключить последний шрифт');
+          return;
+        }
+        this.store.updateReadingFont(idx, { enabled: toggle.checked });
+        this._renderReadingFonts();
+        this._renderSettings();
+        this._renderJsonPreview();
+        this._showToast(toggle.checked ? 'Шрифт включён' : 'Шрифт отключён');
+        return;
+      }
+
+      const deleteBtn = e.target.closest('[data-font-delete]');
+      if (deleteBtn) {
+        if (confirm('Удалить этот шрифт?')) {
+          this.store.removeReadingFont(parseInt(deleteBtn.dataset.fontDelete, 10));
+          this._renderReadingFonts();
+          this._renderSettings();
+          this._renderJsonPreview();
+          this._showToast('Шрифт удалён');
+        }
+      }
+    };
+
+    // Обновить <select> шрифта в настройках
+    this._updateFontSelect();
+  }
+
+  /** Обновить select шрифтов в настройках по умолчанию */
+  _updateFontSelect() {
+    const fonts = this.store.getReadingFonts().filter(f => f.enabled);
+    const current = this.defaultFont.value;
+    this.defaultFont.innerHTML = fonts.map(f =>
+      `<option value="${this._escapeHtml(f.id)}">${this._escapeHtml(f.label)}</option>`
+    ).join('');
+
+    // Восстановить выбранное значение, если оно ещё есть
+    const hasCurrentFont = fonts.some(f => f.id === current);
+    if (hasCurrentFont) {
+      this.defaultFont.value = current;
+    } else if (fonts.length > 0) {
+      this.defaultFont.value = fonts[0].id;
+    }
+  }
+
+  _openReadingFontModal() {
+    this._pendingReadingFontDataUrl = null;
+    this.readingFontUploadLabel.textContent = 'Выбрать файл';
+    this.readingFontModalTitle.textContent = 'Добавить шрифт';
+    this.readingFontForm.reset();
+    this.readingFontModal.showModal();
+  }
+
+  _handleReadingFontFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      this._showToast('Файл слишком большой (макс. 2 МБ)');
+      e.target.value = '';
+      return;
+    }
+
+    const validExts = ['.woff2', '.woff', '.ttf', '.otf'];
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!validExts.includes(ext)) {
+      this._showToast('Допустимые форматы: .woff2, .woff, .ttf, .otf');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      this._pendingReadingFontDataUrl = reader.result;
+      this.readingFontUploadLabel.textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  _handleReadingFontSubmit(e) {
+    e.preventDefault();
+
+    const label = this.readingFontNameInput.value.trim();
+    if (!label) return;
+
+    if (!this._pendingReadingFontDataUrl) {
+      this._showToast('Загрузите файл шрифта');
+      return;
+    }
+
+    const category = this.readingFontCategory.value;
+    const id = `custom_${Date.now()}`;
+    const family = `"${label}", ${category}`;
+
+    this.store.addReadingFont({
+      id,
+      label,
+      family,
+      builtin: false,
+      enabled: true,
+      dataUrl: this._pendingReadingFontDataUrl,
+    });
+
+    this.readingFontModal.close();
+    this._renderReadingFonts();
+    this._renderSettings();
+    this._renderJsonPreview();
+    this._showToast('Шрифт добавлен');
   }
 
   // --- Экспорт/Импорт ---

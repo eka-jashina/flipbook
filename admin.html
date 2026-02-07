@@ -398,6 +398,54 @@
               </div>
             </div>
 
+            <!-- Декоративный шрифт -->
+            <fieldset class="setting-fieldset">
+              <legend class="setting-fieldset-legend">Декоративный шрифт</legend>
+              <p class="fieldset-description">Шрифт для заголовков, буквиц и обложки. По умолчанию — TolkienCyr</p>
+
+              <div class="decorative-font-preview">
+                <span class="decorative-font-sample" id="decorativeFontSample">Абвг Abcd 1234</span>
+              </div>
+
+              <div class="decorative-font-actions">
+                <label class="btn btn-secondary upload-btn">
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                  </svg>
+                  Загрузить шрифт
+                  <input type="file" id="decorativeFontUpload" accept=".woff2,.woff,.ttf,.otf" hidden>
+                </label>
+                <div class="decorative-font-info" id="decorativeFontInfo" hidden>
+                  <span class="decorative-font-name" id="decorativeFontName"></span>
+                  <button class="texture-custom-remove" type="button" id="decorativeFontRemove" title="Удалить свой шрифт">
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                      <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <span class="form-hint">Форматы: .woff2, .woff, .ttf, .otf. Макс. 2 МБ</span>
+            </fieldset>
+
+            <!-- Шрифты для чтения -->
+            <fieldset class="setting-fieldset">
+              <legend class="setting-fieldset-legend">Шрифты для чтения</legend>
+              <p class="fieldset-description">Управляйте списком шрифтов, доступных читателю</p>
+
+              <div class="reading-fonts-list" id="readingFontsList">
+                <!-- Генерируется динамически -->
+              </div>
+
+              <div class="reading-fonts-add" style="margin-top: 12px;">
+                <button class="btn btn-primary" type="button" id="addReadingFont">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                  </svg>
+                  Добавить свой шрифт
+                </button>
+              </div>
+            </fieldset>
+
             <!-- Мин. размер шрифта -->
             <div class="setting-card">
               <label class="setting-label" for="fontMin">Мин. размер шрифта</label>
@@ -550,6 +598,45 @@
         <div class="modal-actions">
           <button class="btn btn-secondary" type="button" id="cancelAmbientModal">Отмена</button>
           <button class="btn btn-primary" type="submit" id="saveAmbient">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Модальное окно добавления шрифта для чтения -->
+    <dialog class="admin-modal" id="readingFontModal">
+      <form class="modal-form" id="readingFontForm" method="dialog">
+        <h3 class="modal-title" id="readingFontModalTitle">Добавить шрифт</h3>
+
+        <div class="form-group">
+          <label class="form-label" for="readingFontName">Название шрифта</label>
+          <input class="form-input" type="text" id="readingFontName" placeholder="My Custom Font" required>
+          <span class="form-hint">Отображаемое название в списке выбора</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Файл шрифта</label>
+          <label class="btn btn-secondary upload-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+            </svg>
+            <span id="readingFontUploadLabel">Выбрать файл</span>
+            <input type="file" id="readingFontFileUpload" accept=".woff2,.woff,.ttf,.otf" hidden>
+          </label>
+          <span class="form-hint">Форматы: .woff2, .woff, .ttf, .otf. Макс. 2 МБ</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="readingFontCategory">Категория</label>
+          <select class="setting-select" id="readingFontCategory">
+            <option value="serif">Serif (с засечками)</option>
+            <option value="sans-serif">Sans-serif (без засечек)</option>
+            <option value="monospace">Monospace (моноширинный)</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-secondary" type="button" id="cancelReadingFontModal">Отмена</button>
+          <button class="btn btn-primary" type="submit" id="saveReadingFont">Сохранить</button>
         </div>
       </form>
     </dialog>

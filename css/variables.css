@@ -107,6 +107,7 @@
      ═══════════════════════════════════════════ */
   --reader-font-size: var(--font-default);
   --reader-font-family: georgia, serif;
+  --decorative-font: tolkiencyr, sans-serif;
 
   /* ═══════════════════════════════════════════
      ПАГИНАЦИЯ

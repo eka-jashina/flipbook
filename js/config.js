@@ -104,6 +104,35 @@ function buildAmbientConfig(adminAmbients) {
   return result;
 }
 
+// Шрифты для чтения: из админки (только enabled) или дефолтные
+function buildFontsConfig(adminReadingFonts) {
+  const defaultFonts = {
+    georgia: "Georgia, serif",
+    merriweather: '"Merriweather", serif',
+    "libre-baskerville": '"Libre Baskerville", serif',
+    inter: "Inter, sans-serif",
+    roboto: "Roboto, sans-serif",
+    "open-sans": '"Open Sans", sans-serif',
+  };
+
+  if (!Array.isArray(adminReadingFonts) || adminReadingFonts.length === 0) {
+    return { fonts: defaultFonts, fontsList: null };
+  }
+
+  const fonts = {};
+  const customFonts = [];
+  for (const f of adminReadingFonts) {
+    if (!f.enabled) continue;
+    fonts[f.id] = f.family;
+    if (!f.builtin && f.dataUrl) {
+      customFonts.push({ id: f.id, label: f.label, family: f.family, dataUrl: f.dataUrl });
+    }
+  }
+  return { fonts, fontsList: adminReadingFonts.filter(f => f.enabled), customFonts };
+}
+
+const fontsResult = buildFontsConfig(adminConfig?.readingFonts);
+
 export const CONFIG = Object.freeze({
   STORAGE_KEY: "reader-settings",
   COVER_BG: resolveCoverBg(adminCover.bg, 'images/backgrounds/bg-cover.webp'),
@@ -111,14 +140,16 @@ export const CONFIG = Object.freeze({
 
   CHAPTERS,
 
-  FONTS: {
-    georgia: "Georgia, serif",
-    merriweather: '"Merriweather", serif',
-    "libre-baskerville": '"Libre Baskerville", serif',
-    inter: "Inter, sans-serif",
-    roboto: "Roboto, sans-serif",
-    "open-sans": '"Open Sans", sans-serif',
-  },
+  FONTS: fontsResult.fonts,
+
+  // Список шрифтов с метаданными (для генерации <select>)
+  FONTS_LIST: fontsResult.fontsList,
+
+  // Кастомные шрифты (нужна загрузка через FontFace)
+  CUSTOM_FONTS: fontsResult.customFonts || [],
+
+  // Декоративный шрифт (для заголовков)
+  DECORATIVE_FONT: adminConfig?.decorativeFont || null,
 
   SOUNDS: {
     pageFlip: resolveSound(adminSounds.pageFlip, 'sounds/page-flip.mp3'),

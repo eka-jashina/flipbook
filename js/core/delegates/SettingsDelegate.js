@@ -75,6 +75,9 @@ export class SettingsDelegate extends BaseDelegate {
       this.ambientManager.setVolume(this.settings.get("ambientVolume"));
     }
 
+    // Загрузить кастомные шрифты
+    this._loadCustomFonts();
+
     // Применить настройки оформления из админки
     this._applyAppearance();
 
@@ -321,6 +324,82 @@ export class SettingsDelegate extends BaseDelegate {
           console.warn("Не удалось выйти из полноэкранного режима:", err.message);
         });
       }
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // ЗАГРУЗКА КАСТОМНЫХ ШРИФТОВ
+  // ═══════════════════════════════════════════
+
+  /**
+   * Загрузить кастомные шрифты (декоративный + шрифты для чтения) через FontFace API.
+   * Вызывается один раз при apply().
+   * @private
+   */
+  _loadCustomFonts() {
+    // Декоративный шрифт
+    const decorative = CONFIG.DECORATIVE_FONT;
+    if (decorative?.dataUrl) {
+      this._registerFont('CustomDecorativeFont', decorative.dataUrl).then(() => {
+        const html = this.dom.get("html");
+        if (html) {
+          html.style.setProperty("--decorative-font", "CustomDecorativeFont, sans-serif");
+        }
+      });
+    }
+
+    // Кастомные шрифты для чтения
+    const customFonts = CONFIG.CUSTOM_FONTS;
+    if (customFonts?.length) {
+      for (const f of customFonts) {
+        const fontName = `CustomReading_${f.id}`;
+        this._registerFont(fontName, f.dataUrl).then(() => {
+          // Обновить CONFIG.FONTS чтобы использовать загруженное имя
+          // Семейство уже содержит fallback, просто добавляем загруженное имя
+          CONFIG.FONTS[f.id] = `${fontName}, ${f.family.split(',').pop().trim()}`;
+        });
+      }
+    }
+
+    // Динамически заполнить <select> шрифтов из конфига
+    this._populateFontSelect();
+  }
+
+  /**
+   * Зарегистрировать шрифт через FontFace API
+   * @private
+   */
+  _registerFont(familyName, dataUrl) {
+    const fontFace = new FontFace(familyName, `url(${dataUrl})`);
+    return fontFace.load().then((loaded) => {
+      document.fonts.add(loaded);
+    }).catch((err) => {
+      console.warn(`Не удалось загрузить шрифт ${familyName}:`, err.message);
+    });
+  }
+
+  /**
+   * Заполнить <select> шрифтов из CONFIG.FONTS_LIST
+   * @private
+   */
+  _populateFontSelect() {
+    const fontsList = CONFIG.FONTS_LIST;
+    if (!fontsList) return; // Нет данных из админки — используем статический HTML
+
+    const select = this.dom.get("fontSelect");
+    if (!select) return;
+
+    select.innerHTML = fontsList.map(f =>
+      `<option value="${f.id}">${f.label}</option>`
+    ).join('');
+
+    // Восстановить текущее значение
+    const currentFont = this.settings.get("font");
+    if (fontsList.some(f => f.id === currentFont)) {
+      select.value = currentFont;
+    } else if (fontsList.length > 0) {
+      select.value = fontsList[0].id;
+      this.settings.set("font", fontsList[0].id);
     }
   }
 
