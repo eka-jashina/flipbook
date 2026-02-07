@@ -2,12 +2,16 @@
  * AdminConfigStore
  *
  * Хранилище конфигурации книги для админки.
- * Читает/записывает в localStorage, предоставляет CRUD для книг, глав и настроек.
+ * Читает/записывает в IndexedDB (с миграцией из localStorage),
+ * предоставляет CRUD для книг, глав и настроек.
  *
  * Поддерживает несколько книг. Одна книга — активная (отображается в ридере).
  */
 
 const STORAGE_KEY = 'flipbook-admin-config';
+const IDB_NAME = 'flipbook-admin';
+const IDB_STORE = 'config';
+const IDB_VERSION = 1;
 
 // Per-theme дефолты
 const LIGHT_DEFAULTS = {
@@ -117,20 +121,58 @@ const DEFAULT_CONFIG = {
 
 export class AdminConfigStore {
   constructor() {
-    this._config = this._load();
+    this._config = structuredClone(DEFAULT_CONFIG);
+    this._savePromise = null;
   }
 
-  /** Загрузить конфиг из localStorage или вернуть дефолтный */
-  _load() {
+  /**
+   * Асинхронная фабрика — загружает конфиг из IndexedDB (с миграцией из localStorage)
+   * @returns {Promise<AdminConfigStore>}
+   */
+  static async create() {
+    const store = new AdminConfigStore();
+    await store._init();
+    return store;
+  }
+
+  /** Инициализация: загрузка из IndexedDB с миграцией из localStorage */
+  async _init() {
+    this._config = await this._load();
+  }
+
+  /** Загрузить конфиг из IndexedDB, затем localStorage (миграция), или дефолт */
+  async _load() {
+    // 1. Попробовать IndexedDB
+    try {
+      const data = await this._idbGet(STORAGE_KEY);
+      if (data) {
+        return this._mergeWithDefaults(data);
+      }
+    } catch {
+      // IndexedDB недоступен — пробуем localStorage
+    }
+
+    // 2. Миграция из localStorage
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        return this._mergeWithDefaults(parsed);
+        const config = this._mergeWithDefaults(parsed);
+
+        // Мигрировать в IndexedDB и очистить localStorage
+        try {
+          await this._idbPut(STORAGE_KEY, config);
+          localStorage.removeItem(STORAGE_KEY);
+        } catch {
+          // Не удалось мигрировать — не критично, данные уже в памяти
+        }
+
+        return config;
       }
     } catch {
       // Повреждённые данные — используем дефолт
     }
+
     return structuredClone(DEFAULT_CONFIG);
   }
 
@@ -202,9 +244,81 @@ export class AdminConfigStore {
     };
   }
 
-  /** Сохранить конфиг в localStorage */
+  /** Сохранить конфиг в IndexedDB (fire-and-forget) */
   _save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this._config));
+    this._savePromise = this._idbPut(STORAGE_KEY, structuredClone(this._config))
+      .catch(err => {
+        console.error('AdminConfigStore: ошибка сохранения в IndexedDB', err);
+        throw err;
+      });
+  }
+
+  /** Дождаться завершения последнего сохранения (для операций, где важен результат) */
+  async waitForSave() {
+    if (this._savePromise) {
+      await this._savePromise;
+    }
+  }
+
+  // --- IndexedDB ---
+
+  /** Открыть соединение с IndexedDB */
+  _idbOpen() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(IDB_NAME, IDB_VERSION);
+
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+      };
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /** Прочитать значение из IndexedDB */
+  async _idbGet(key) {
+    const db = await this._idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const request = store.get(key);
+
+      request.onsuccess = () => resolve(request.result ?? null);
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = () => db.close();
+    });
+  }
+
+  /** Записать значение в IndexedDB */
+  async _idbPut(key, value) {
+    const db = await this._idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const request = store.put(value, key);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = () => db.close();
+    });
+  }
+
+  /** Удалить значение из IndexedDB */
+  async _idbDelete(key) {
+    const db = await this._idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const request = store.delete(key);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = () => db.close();
+    });
   }
 
   /** Получить весь конфиг */
@@ -482,8 +596,9 @@ export class AdminConfigStore {
     this._save();
   }
 
-  /** Удалить конфиг из localStorage */
+  /** Удалить конфиг из IndexedDB и localStorage */
   clear() {
+    this._idbDelete(STORAGE_KEY).catch(() => {});
     localStorage.removeItem(STORAGE_KEY);
     this._config = structuredClone(DEFAULT_CONFIG);
   }

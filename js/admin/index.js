@@ -5,8 +5,8 @@ import { AdminConfigStore } from './AdminConfigStore.js';
 import { BookParser } from './BookParser.js';
 
 class AdminApp {
-  constructor() {
-    this.store = new AdminConfigStore();
+  constructor(store) {
+    this.store = store;
     this._editingIndex = null; // индекс редактируемой главы (null = добавление)
     this._editingAmbientIndex = null; // индекс редактируемого амбиента
     this._pendingAmbientDataUrl = null; // data URL загруженного аудиофайла
@@ -809,7 +809,7 @@ class AdminApp {
     }
   }
 
-  _applyParsedBook() {
+  async _applyParsedBook() {
     if (!this._pendingParsedBook) return;
 
     const { title, author, chapters } = this._pendingParsedBook;
@@ -836,6 +836,16 @@ class AdminApp {
       },
       chapters: newChapters,
     });
+
+    // Дождаться сохранения — проверить, что данные записались в IndexedDB
+    try {
+      await this.store.waitForSave();
+    } catch {
+      // Откатить добавление книги из памяти
+      this.store.removeBook(bookId);
+      this._showToast('Ошибка сохранения: недостаточно места в хранилище');
+      return;
+    }
 
     // Переключиться на неё
     this.store.setActiveBook(bookId);
@@ -1533,5 +1543,5 @@ class AdminApp {
   }
 }
 
-// Запуск
-new AdminApp();
+// Запуск (асинхронная инициализация из-за IndexedDB)
+AdminConfigStore.create().then(store => new AdminApp(store));
