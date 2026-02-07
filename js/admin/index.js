@@ -32,6 +32,14 @@ class AdminApp {
     this.chaptersEmpty = document.getElementById('chaptersEmpty');
     this.addChapterBtn = document.getElementById('addChapter');
 
+    // Переключатель книг
+    this.bookSelector = document.getElementById('bookSelector');
+
+    // Под-табы
+    this.bookSubtabs = document.getElementById('bookSubtabs');
+    this.subtabBtns = document.querySelectorAll('.book-subtab');
+    this.subtabContents = document.querySelectorAll('.book-subtab-content');
+
     // Загрузка книги
     this.bookUploadArea = document.getElementById('bookUploadArea');
     this.bookDropzone = document.getElementById('bookDropzone');
@@ -43,7 +51,6 @@ class AdminApp {
     this.bookUploadAuthor = document.getElementById('bookUploadAuthor');
     this.bookUploadChaptersCount = document.getElementById('bookUploadChaptersCount');
     this.bookUploadConfirm = document.getElementById('bookUploadConfirm');
-    this.bookUploadAppend = document.getElementById('bookUploadAppend');
     this.bookUploadCancel = document.getElementById('bookUploadCancel');
 
     // Обложка (в табе Главы)
@@ -179,6 +186,26 @@ class AdminApp {
     this.cancelModal.addEventListener('click', () => this.modal.close());
     this.chapterForm.addEventListener('submit', (e) => this._handleChapterSubmit(e));
 
+    // Под-табы (Создать / Загрузить)
+    this.subtabBtns.forEach(btn => {
+      btn.addEventListener('click', () => this._switchSubtab(btn.dataset.subtab));
+    });
+
+    // Переключатель книг (делегирование)
+    this.bookSelector.addEventListener('click', (e) => {
+      const card = e.target.closest('[data-book-id]');
+      if (!card) return;
+
+      const deleteBtn = e.target.closest('[data-book-delete]');
+      if (deleteBtn) {
+        e.stopPropagation();
+        this._handleDeleteBook(deleteBtn.dataset.bookDelete);
+        return;
+      }
+
+      this._handleSelectBook(card.dataset.bookId);
+    });
+
     // Загрузка книги
     this.bookDropzone.addEventListener('click', () => this.bookFileInput.click());
     this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
@@ -195,8 +222,7 @@ class AdminApp {
       const file = e.dataTransfer.files[0];
       if (file) this._processBookFile(file);
     });
-    this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook('replace'));
-    this.bookUploadAppend.addEventListener('click', () => this._applyParsedBook('append'));
+    this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook());
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
 
     // Настройки
@@ -308,6 +334,7 @@ class AdminApp {
   // --- Рендер ---
 
   _render() {
+    this._renderBookSelector();
     this._renderCover();
     this._renderChapters();
     this._renderAmbients();
@@ -438,6 +465,68 @@ class AdminApp {
 
   _renderJsonPreview() {
     this.jsonPreview.textContent = this.store.exportJSON();
+  }
+
+  // --- Переключатель книг ---
+
+  _renderBookSelector() {
+    const books = this.store.getBooks();
+    const activeId = this.store.getActiveBookId();
+
+    this.bookSelector.innerHTML = books.map(b => `
+      <div class="book-card${b.id === activeId ? ' active' : ''}" data-book-id="${this._escapeHtml(b.id)}">
+        <div class="book-card-info">
+          <div class="book-card-title">${this._escapeHtml(b.title || 'Без названия')}</div>
+          <div class="book-card-meta">${this._escapeHtml(b.author || '')}${b.author ? ' · ' : ''}${b.chaptersCount} гл.</div>
+        </div>
+        <div class="book-card-actions">
+          ${b.id === activeId ? '<span class="book-card-active-badge">Активна</span>' : ''}
+          ${books.length > 1 ? `<button class="chapter-action-btn delete" data-book-delete="${this._escapeHtml(b.id)}" title="Удалить книгу">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  _handleSelectBook(bookId) {
+    if (bookId === this.store.getActiveBookId()) return;
+    this.store.setActiveBook(bookId);
+    this._renderBookSelector();
+    this._renderCover();
+    this._renderChapters();
+    this._renderJsonPreview();
+    this._showToast('Книга переключена');
+  }
+
+  _handleDeleteBook(bookId) {
+    const books = this.store.getBooks();
+    if (books.length <= 1) {
+      this._showToast('Нельзя удалить единственную книгу');
+      return;
+    }
+    const book = books.find(b => b.id === bookId);
+    if (!confirm(`Удалить книгу «${book?.title || bookId}»?`)) return;
+
+    this.store.removeBook(bookId);
+    this._renderBookSelector();
+    this._renderCover();
+    this._renderChapters();
+    this._renderJsonPreview();
+    this._showToast('Книга удалена');
+  }
+
+  // --- Под-табы ---
+
+  _switchSubtab(subtabName) {
+    this.subtabBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.subtab === subtabName);
+    });
+    this.subtabContents.forEach(content => {
+      const isActive = content.dataset.subtabContent === subtabName;
+      content.classList.toggle('active', isActive);
+      content.hidden = !isActive;
+    });
   }
 
   // --- Табы ---
@@ -720,51 +809,43 @@ class AdminApp {
     }
   }
 
-  _applyParsedBook(mode) {
+  _applyParsedBook() {
     if (!this._pendingParsedBook) return;
 
     const { title, author, chapters } = this._pendingParsedBook;
 
-    // Обновить обложку
-    if (title || author) {
-      const cover = this.store.getCover();
-      this.store.updateCover({
-        title: title || cover.title,
-        author: author || cover.author,
-      });
-    }
-
     // Подготовить главы для store
     const newChapters = chapters.map(ch => ({
       id: ch.id,
-      file: '', // файла нет, контент в htmlContent
+      file: '',
       htmlContent: ch.html,
       bg: '',
       bgMobile: '',
     }));
 
-    if (mode === 'replace') {
-      // Очистить существующие и добавить новые
-      const currentChapters = this.store.getChapters();
-      for (let i = currentChapters.length - 1; i >= 0; i--) {
-        this.store.removeChapter(i);
-      }
-      for (const ch of newChapters) {
-        this.store.addChapter(ch);
-      }
-      this._showToast(`Добавлено ${chapters.length} глав (старые заменены)`);
-    } else {
-      // Добавить к существующим
-      for (const ch of newChapters) {
-        this.store.addChapter(ch);
-      }
-      this._showToast(`Добавлено ${chapters.length} глав`);
-    }
+    const bookId = `book_${Date.now()}`;
 
+    // Создать новую книгу
+    this.store.addBook({
+      id: bookId,
+      cover: {
+        title: title || 'Без названия',
+        author: author || '',
+        bg: '',
+        bgMobile: '',
+      },
+      chapters: newChapters,
+    });
+
+    // Переключиться на неё
+    this.store.setActiveBook(bookId);
+
+    this._renderBookSelector();
     this._renderCover();
     this._renderChapters();
     this._renderJsonPreview();
     this._resetBookUpload();
+    this._showToast(`Книга «${title || 'Без названия'}» добавлена (${chapters.length} гл.)`);
   }
 
   _resetBookUpload() {

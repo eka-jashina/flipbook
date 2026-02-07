@@ -2,7 +2,9 @@
  * AdminConfigStore
  *
  * Хранилище конфигурации книги для админки.
- * Читает/записывает в localStorage, предоставляет CRUD для глав и настроек.
+ * Читает/записывает в localStorage, предоставляет CRUD для книг, глав и настроек.
+ *
+ * Поддерживает несколько книг. Одна книга — активная (отображается в ридере).
  */
 
 const STORAGE_KEY = 'flipbook-admin-config';
@@ -40,8 +42,9 @@ const DEFAULT_READING_FONTS = [
   { id: 'open-sans', label: 'Open Sans', family: '"Open Sans", sans-serif', builtin: true, enabled: true },
 ];
 
-// Дефолтная конфигурация (совпадает с CONFIG из config.js)
-const DEFAULT_CONFIG = {
+// Дефолтная книга
+const DEFAULT_BOOK = {
+  id: 'default',
   cover: {
     title: 'О хоббитах',
     author: 'Дж.Р.Р.Толкин',
@@ -68,6 +71,12 @@ const DEFAULT_CONFIG = {
       bgMobile: 'images/backgrounds/part_3-mobile.webp',
     },
   ],
+};
+
+// Дефолтная конфигурация
+const DEFAULT_CONFIG = {
+  books: [structuredClone(DEFAULT_BOOK)],
+  activeBookId: 'default',
   sounds: {
     pageFlip: 'sounds/page-flip.mp3',
     bookOpen: 'sounds/cover-flip.mp3',
@@ -94,7 +103,7 @@ const DEFAULT_CONFIG = {
     light: { ...LIGHT_DEFAULTS },
     dark: { ...DARK_DEFAULTS },
   },
-  decorativeFont: null, // { name, dataUrl } или null — дефолтный TolkienCyr
+  decorativeFont: null,
   readingFonts: structuredClone(DEFAULT_READING_FONTS),
   settingsVisibility: {
     fontSize: true,
@@ -137,7 +146,6 @@ export class AdminConfigStore {
       light = { ...structuredClone(LIGHT_DEFAULTS), ...(appearance.light || {}) };
       dark = { ...structuredClone(DARK_DEFAULTS), ...(appearance.dark || {}) };
     } else {
-      // Старый формат — мигрируем в light
       const rest = { ...appearance };
       delete rest.fontMin;
       delete rest.fontMax;
@@ -145,12 +153,29 @@ export class AdminConfigStore {
       dark = structuredClone(DARK_DEFAULTS);
     }
 
+    // Миграция: старый формат (cover + chapters) → books[]
+    let books;
+    if (Array.isArray(saved.books) && saved.books.length > 0) {
+      books = saved.books;
+    } else if (saved.cover || saved.chapters) {
+      // Старый формат — мигрируем в одну книгу
+      books = [{
+        id: 'default',
+        cover: {
+          ...structuredClone(DEFAULT_BOOK.cover),
+          ...(saved.cover || {}),
+        },
+        chapters: Array.isArray(saved.chapters) ? saved.chapters : structuredClone(DEFAULT_BOOK.chapters),
+      }];
+    } else {
+      books = structuredClone(DEFAULT_CONFIG.books);
+    }
+
+    const activeBookId = saved.activeBookId || (books.length > 0 ? books[0].id : 'default');
+
     return {
-      cover: {
-        ...structuredClone(DEFAULT_CONFIG.cover),
-        ...(saved.cover || {}),
-      },
-      chapters: Array.isArray(saved.chapters) ? saved.chapters : structuredClone(DEFAULT_CONFIG.chapters),
+      books,
+      activeBookId,
       sounds: {
         ...structuredClone(DEFAULT_CONFIG.sounds),
         ...(saved.sounds || {}),
@@ -187,47 +212,119 @@ export class AdminConfigStore {
     return structuredClone(this._config);
   }
 
-  // --- Обложка ---
+  // --- Книги ---
 
-  getCover() {
-    return structuredClone(this._config.cover);
+  /** Получить список всех книг (краткая инфо: id, title, author, chaptersCount) */
+  getBooks() {
+    return this._config.books.map(b => ({
+      id: b.id,
+      title: b.cover?.title || 'Без названия',
+      author: b.cover?.author || '',
+      chaptersCount: b.chapters?.length || 0,
+    }));
   }
 
-  updateCover(cover) {
-    this._config.cover = {
-      ...this._config.cover,
-      ...cover,
-    };
+  /** ID активной книги */
+  getActiveBookId() {
+    return this._config.activeBookId;
+  }
+
+  /** Переключить активную книгу */
+  setActiveBook(bookId) {
+    const exists = this._config.books.some(b => b.id === bookId);
+    if (!exists) return;
+    this._config.activeBookId = bookId;
     this._save();
   }
 
-  // --- Главы ---
+  /** Получить активную книгу */
+  _getActiveBook() {
+    return this._config.books.find(b => b.id === this._config.activeBookId)
+      || this._config.books[0];
+  }
+
+  /** Добавить новую книгу */
+  addBook(book) {
+    this._config.books.push({
+      id: book.id || `book_${Date.now()}`,
+      cover: book.cover || { title: '', author: '', bg: '', bgMobile: '' },
+      chapters: book.chapters || [],
+    });
+    this._save();
+  }
+
+  /** Удалить книгу по id */
+  removeBook(bookId) {
+    const idx = this._config.books.findIndex(b => b.id === bookId);
+    if (idx === -1) return;
+    this._config.books.splice(idx, 1);
+
+    // Если удалили активную — переключаемся на первую
+    if (this._config.activeBookId === bookId) {
+      this._config.activeBookId = this._config.books.length > 0 ? this._config.books[0].id : '';
+    }
+    this._save();
+  }
+
+  /** Переименовать книгу */
+  updateBookMeta(bookId, meta) {
+    const book = this._config.books.find(b => b.id === bookId);
+    if (!book) return;
+    if (meta.title !== undefined) book.cover.title = meta.title;
+    if (meta.author !== undefined) book.cover.author = meta.author;
+    this._save();
+  }
+
+  // --- Обложка (активной книги) ---
+
+  getCover() {
+    const book = this._getActiveBook();
+    return book ? structuredClone(book.cover) : structuredClone(DEFAULT_BOOK.cover);
+  }
+
+  updateCover(cover) {
+    const book = this._getActiveBook();
+    if (!book) return;
+    book.cover = { ...book.cover, ...cover };
+    this._save();
+  }
+
+  // --- Главы (активной книги) ---
 
   getChapters() {
-    return structuredClone(this._config.chapters);
+    const book = this._getActiveBook();
+    return book ? structuredClone(book.chapters) : [];
   }
 
   addChapter(chapter) {
-    this._config.chapters.push({ ...chapter });
+    const book = this._getActiveBook();
+    if (!book) return;
+    book.chapters.push({ ...chapter });
     this._save();
   }
 
   updateChapter(index, chapter) {
-    if (index >= 0 && index < this._config.chapters.length) {
-      this._config.chapters[index] = { ...chapter };
+    const book = this._getActiveBook();
+    if (!book) return;
+    if (index >= 0 && index < book.chapters.length) {
+      book.chapters[index] = { ...chapter };
       this._save();
     }
   }
 
   removeChapter(index) {
-    if (index >= 0 && index < this._config.chapters.length) {
-      this._config.chapters.splice(index, 1);
+    const book = this._getActiveBook();
+    if (!book) return;
+    if (index >= 0 && index < book.chapters.length) {
+      book.chapters.splice(index, 1);
       this._save();
     }
   }
 
   moveChapter(fromIndex, toIndex) {
-    const chapters = this._config.chapters;
+    const book = this._getActiveBook();
+    if (!book) return;
+    const chapters = book.chapters;
     if (fromIndex < 0 || fromIndex >= chapters.length) return;
     if (toIndex < 0 || toIndex >= chapters.length) return;
 

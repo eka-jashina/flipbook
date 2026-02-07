@@ -61,42 +61,88 @@
       <!-- Содержимое табов -->
       <div class="admin-content">
 
-        <!-- Таб: Главы -->
+        <!-- Таб: Книги -->
         <section class="admin-panel active" data-panel="chapters" role="tabpanel">
           <div class="panel-header">
-            <h2>Управление книгой</h2>
+            <h2>Управление книгами</h2>
           </div>
 
-          <!-- Обложка -->
-          <fieldset class="setting-fieldset">
-            <legend class="setting-fieldset-legend">Обложка</legend>
-            <div class="settings-grid settings-grid--inner">
-              <div class="setting-card">
-                <label class="setting-label" for="coverTitle">Заголовок книги</label>
-                <input class="form-input" type="text" id="coverTitle" value="О хоббитах" placeholder="Название книги">
-              </div>
-              <div class="setting-card">
-                <label class="setting-label" for="coverAuthor">Автор</label>
-                <input class="form-input" type="text" id="coverAuthor" value="Дж.Р.Р.Толкин" placeholder="Имя автора">
-              </div>
-              <div class="setting-card">
-                <label class="setting-label" for="coverBg">Фон обложки (десктоп)</label>
-                <input class="form-input" type="text" id="coverBg" placeholder="images/backgrounds/bg-cover.webp">
-              </div>
-              <div class="setting-card">
-                <label class="setting-label" for="coverBgMobile">Фон обложки (мобильный)</label>
-                <input class="form-input" type="text" id="coverBgMobile" placeholder="images/backgrounds/bg-cover-mobile.webp">
-              </div>
-            </div>
-            <div class="panel-actions">
-              <button class="btn btn-primary" id="saveCover" type="button">Сохранить обложку</button>
-            </div>
-          </fieldset>
+          <!-- Переключатель книг -->
+          <div class="book-selector" id="bookSelector">
+            <!-- Генерируется динамически -->
+          </div>
 
-          <!-- Загрузка книги -->
-          <fieldset class="setting-fieldset" style="margin-top: 24px;">
-            <legend class="setting-fieldset-legend">Загрузить книгу</legend>
-            <p class="fieldset-description">Загрузите файл EPUB или FB2 — главы будут автоматически извлечены и добавлены</p>
+          <!-- Под-табы: Создать / Загрузить -->
+          <div class="book-subtabs" id="bookSubtabs">
+            <button class="book-subtab active" type="button" data-subtab="create">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+              </svg>
+              Создать вручную
+            </button>
+            <button class="book-subtab" type="button" data-subtab="upload">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+              </svg>
+              Загрузить файл
+            </button>
+          </div>
+
+          <!-- Под-таб: Создать вручную -->
+          <div class="book-subtab-content active" data-subtab-content="create">
+            <!-- Обложка -->
+            <fieldset class="setting-fieldset">
+              <legend class="setting-fieldset-legend">Обложка</legend>
+              <div class="settings-grid settings-grid--inner">
+                <div class="setting-card">
+                  <label class="setting-label" for="coverTitle">Заголовок книги</label>
+                  <input class="form-input" type="text" id="coverTitle" value="О хоббитах" placeholder="Название книги">
+                </div>
+                <div class="setting-card">
+                  <label class="setting-label" for="coverAuthor">Автор</label>
+                  <input class="form-input" type="text" id="coverAuthor" value="Дж.Р.Р.Толкин" placeholder="Имя автора">
+                </div>
+                <div class="setting-card">
+                  <label class="setting-label" for="coverBg">Фон обложки (десктоп)</label>
+                  <input class="form-input" type="text" id="coverBg" placeholder="images/backgrounds/bg-cover.webp">
+                </div>
+                <div class="setting-card">
+                  <label class="setting-label" for="coverBgMobile">Фон обложки (мобильный)</label>
+                  <input class="form-input" type="text" id="coverBgMobile" placeholder="images/backgrounds/bg-cover-mobile.webp">
+                </div>
+              </div>
+              <div class="panel-actions">
+                <button class="btn btn-primary" id="saveCover" type="button">Сохранить обложку</button>
+              </div>
+            </fieldset>
+
+            <!-- Главы -->
+            <div class="panel-header" style="margin-top: 24px;">
+              <h2>Главы</h2>
+              <button class="btn btn-primary" id="addChapter" type="button">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+                Добавить главу
+              </button>
+            </div>
+
+            <div class="chapters-list" id="chaptersList">
+              <!-- Главы генерируются динамически -->
+            </div>
+
+            <div class="empty-state" id="chaptersEmpty" hidden>
+              <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+                <path fill="currentColor" d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H6V4h12v16z"/>
+              </svg>
+              <p>Нет добавленных глав</p>
+              <p class="empty-hint">Нажмите «Добавить главу», чтобы начать</p>
+            </div>
+          </div>
+
+          <!-- Под-таб: Загрузить файл -->
+          <div class="book-subtab-content" data-subtab-content="upload" hidden>
+            <p class="panel-description">Загрузите файл EPUB или FB2 — книга будет добавлена в список</p>
 
             <div class="book-upload-area" id="bookUploadArea">
               <div class="book-upload-dropzone" id="bookDropzone">
@@ -120,35 +166,11 @@
                   <p id="bookUploadChaptersCount"></p>
                 </div>
                 <div class="book-upload-result-actions">
-                  <button class="btn btn-primary" id="bookUploadConfirm" type="button">Заменить главы</button>
-                  <button class="btn btn-secondary" id="bookUploadAppend" type="button">Добавить к существующим</button>
+                  <button class="btn btn-primary" id="bookUploadConfirm" type="button">Добавить книгу</button>
                   <button class="btn btn-secondary" id="bookUploadCancel" type="button">Отмена</button>
                 </div>
               </div>
             </div>
-          </fieldset>
-
-          <!-- Главы -->
-          <div class="panel-header" style="margin-top: 24px;">
-            <h2>Главы</h2>
-            <button class="btn btn-primary" id="addChapter" type="button">
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-              </svg>
-              Добавить главу
-            </button>
-          </div>
-
-          <div class="chapters-list" id="chaptersList">
-            <!-- Главы генерируются динамически -->
-          </div>
-
-          <div class="empty-state" id="chaptersEmpty" hidden>
-            <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
-              <path fill="currentColor" d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H6V4h12v16z"/>
-            </svg>
-            <p>Нет добавленных глав</p>
-            <p class="empty-hint">Нажмите «Добавить главу», чтобы начать</p>
           </div>
         </section>
 

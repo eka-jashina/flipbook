@@ -28,9 +28,29 @@ function resolveAssetPath(value) {
   return `${BASE_URL}${value}`;
 }
 
-// Главы: из админки (с добавлением BASE_URL) или дефолтные
-const CHAPTERS = adminConfig?.chapters?.length
-  ? adminConfig.chapters.map(ch => ({
+// Получить активную книгу из конфига админки
+function getActiveBook(config) {
+  if (!config) return null;
+
+  // Новый формат: books[] + activeBookId
+  if (Array.isArray(config.books) && config.books.length > 0) {
+    const active = config.books.find(b => b.id === config.activeBookId);
+    return active || config.books[0];
+  }
+
+  // Старый формат: cover + chapters на верхнем уровне
+  if (config.chapters?.length) {
+    return { cover: config.cover || {}, chapters: config.chapters };
+  }
+
+  return null;
+}
+
+const activeBook = getActiveBook(adminConfig);
+
+// Главы: из активной книги (с добавлением BASE_URL) или дефолтные
+const CHAPTERS = activeBook?.chapters?.length
+  ? activeBook.chapters.map(ch => ({
       id: ch.id,
       file: resolveAssetPath(ch.file),
       htmlContent: ch.htmlContent || null,
@@ -64,8 +84,8 @@ const adminDefaults = adminConfig?.defaultSettings || {};
 // Оформление книги: из админки или дефолтные
 const adminAppearance = adminConfig?.appearance || {};
 
-// Обложка: из админки или дефолтные
-const adminCover = adminConfig?.cover || {};
+// Обложка: из активной книги или дефолтные
+const adminCover = activeBook?.cover || {};
 
 // Звуки: из админки или дефолтные
 const adminSounds = adminConfig?.sounds || {};
