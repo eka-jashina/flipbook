@@ -81,6 +81,9 @@ export class SettingsDelegate extends BaseDelegate {
     // Применить настройки оформления из админки
     this._applyAppearance();
 
+    // Скрыть/показать секции настроек по конфигу админки
+    this._applySettingsVisibility();
+
     cssVars.invalidateCache();
   }
 
@@ -458,6 +461,42 @@ export class SettingsDelegate extends BaseDelegate {
     // Ограничения шрифтов (глобальные)
     html.style.setProperty("--font-min", `${a.fontMin}px`);
     html.style.setProperty("--font-max", `${a.fontMax}px`);
+  }
+
+  // ═══════════════════════════════════════════
+  // ВИДИМОСТЬ НАСТРОЕК
+  // ═══════════════════════════════════════════
+
+  /**
+   * Скрыть/показать секции пользовательских настроек по конфигу из админки.
+   * Если все секции внутри pod-а скрыты — скрываем сам pod.
+   * @private
+   */
+  _applySettingsVisibility() {
+    const v = CONFIG.SETTINGS_VISIBILITY;
+    if (!v) return;
+
+    // Найти все секции с data-setting
+    const sections = document.querySelectorAll('[data-setting]');
+    sections.forEach(section => {
+      const key = section.dataset.setting;
+      if (key in v) {
+        section.hidden = !v[key];
+      }
+    });
+
+    // Скрыть pod-ы, если все их видимые секции скрыты
+    const settingsPod = document.querySelector('.settings-pod');
+    if (settingsPod) {
+      const visibleSections = settingsPod.querySelectorAll('.settings-section:not([hidden])');
+      settingsPod.hidden = visibleSections.length === 0;
+    }
+
+    const audioPod = document.querySelector('.audio-pod');
+    if (audioPod) {
+      const visibleSections = audioPod.querySelectorAll('.audio-section:not([hidden])');
+      audioPod.hidden = visibleSections.length === 0;
+    }
   }
 
   /**

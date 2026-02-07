@@ -778,6 +778,34 @@ img.texture-thumb {
   margin-bottom: 16px;
 }
 
+/* ═══════════════════════════════════════════
+   VISIBILITY TOGGLES
+   ═══════════════════════════════════════════ */
+
+.visibility-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.visibility-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.visibility-toggle-row:last-child {
+  border-bottom: none;
+}
+
+.visibility-toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--admin-text);
+}
+
 .decorative-font-preview {
   margin-bottom: 12px;
   padding: 16px;

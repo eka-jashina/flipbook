@@ -192,6 +192,57 @@
             <button class="btn btn-secondary" id="resetSettings" type="button">Сбросить к дефолтным</button>
           </div>
 
+          <!-- Видимость настроек для читателя -->
+          <fieldset class="setting-fieldset" style="margin-top: 24px;">
+            <legend class="setting-fieldset-legend">Видимость настроек</legend>
+            <p class="fieldset-description">Выберите, какие настройки будут доступны читателю</p>
+
+            <div class="visibility-toggles" id="visibilityToggles">
+              <div class="visibility-toggle-row">
+                <span class="visibility-toggle-label">Размер шрифта</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" data-visibility="fontSize" checked>
+                  <span class="admin-toggle-slider"></span>
+                </label>
+              </div>
+              <div class="visibility-toggle-row">
+                <span class="visibility-toggle-label">Тема</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" data-visibility="theme" checked>
+                  <span class="admin-toggle-slider"></span>
+                </label>
+              </div>
+              <div class="visibility-toggle-row">
+                <span class="visibility-toggle-label">Шрифт</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" data-visibility="font" checked>
+                  <span class="admin-toggle-slider"></span>
+                </label>
+              </div>
+              <div class="visibility-toggle-row">
+                <span class="visibility-toggle-label">Полноэкранный режим</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" data-visibility="fullscreen" checked>
+                  <span class="admin-toggle-slider"></span>
+                </label>
+              </div>
+              <div class="visibility-toggle-row">
+                <span class="visibility-toggle-label">Звук перелистывания</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" data-visibility="sound" checked>
+                  <span class="admin-toggle-slider"></span>
+                </label>
+              </div>
+              <div class="visibility-toggle-row">
+                <span class="visibility-toggle-label">Атмосфера</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" data-visibility="ambient" checked>
+                  <span class="admin-toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </fieldset>
+
           <!-- Управление амбиентами -->
           <fieldset class="setting-fieldset" style="margin-top: 24px;">
             <legend class="setting-fieldset-legend">Управление атмосферами</legend>

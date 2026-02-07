@@ -60,6 +60,9 @@ class AdminApp {
     this.saveSettingsBtn = document.getElementById('saveSettings');
     this.resetSettingsBtn = document.getElementById('resetSettings');
 
+    // Видимость настроек
+    this.visibilityToggles = document.getElementById('visibilityToggles');
+
     // Звуки
     this.soundPageFlip = document.getElementById('soundPageFlip');
     this.soundBookOpen = document.getElementById('soundBookOpen');
@@ -190,6 +193,15 @@ class AdminApp {
     this.saveSettingsBtn.addEventListener('click', () => this._saveSettings());
     this.resetSettingsBtn.addEventListener('click', () => this._resetSettings());
 
+    // Видимость настроек
+    this.visibilityToggles.addEventListener('change', (e) => {
+      const input = e.target.closest('[data-visibility]');
+      if (!input) return;
+      this.store.updateSettingsVisibility({ [input.dataset.visibility]: input.checked });
+      this._renderJsonPreview();
+      this._showToast(input.checked ? 'Настройка показана' : 'Настройка скрыта');
+    });
+
     // Амбиенты
     this.addAmbientBtn.addEventListener('click', () => this._openAmbientModal());
     this.cancelAmbientModal.addEventListener('click', () => this.ambientModal.close());
@@ -265,6 +277,7 @@ class AdminApp {
     this._renderAmbients();
     this._renderSounds();
     this._renderSettings();
+    this._renderSettingsVisibility();
     this._renderAppearance();
     this._renderDecorativeFont();
     this._renderReadingFonts();
@@ -374,6 +387,17 @@ class AdminApp {
     this.defaultAmbientGroup.innerHTML = ambients.map(a =>
       `<button class="setting-ambient-btn${a.id === s.ambientType ? ' active' : ''}" type="button" data-ambient="${this._escapeHtml(a.id)}">${this._escapeHtml(a.icon)} ${this._escapeHtml(a.shortLabel || a.label)}</button>`
     ).join('');
+  }
+
+  _renderSettingsVisibility() {
+    const v = this.store.getSettingsVisibility();
+    const inputs = this.visibilityToggles.querySelectorAll('[data-visibility]');
+    inputs.forEach(input => {
+      const key = input.dataset.visibility;
+      if (key in v) {
+        input.checked = v[key];
+      }
+    });
   }
 
   _renderJsonPreview() {
@@ -721,7 +745,17 @@ class AdminApp {
       ambientVolume: 0.5,
     });
 
+    this.store.updateSettingsVisibility({
+      fontSize: true,
+      theme: true,
+      font: true,
+      fullscreen: true,
+      sound: true,
+      ambient: true,
+    });
+
     this._renderSettings();
+    this._renderSettingsVisibility();
     this._renderJsonPreview();
     this._showToast('Настройки сброшены');
   }

@@ -200,6 +200,16 @@ export const CONFIG = Object.freeze({
     },
   },
 
+  // Видимость настроек для читателя (из админки)
+  SETTINGS_VISIBILITY: {
+    fontSize: adminConfig?.settingsVisibility?.fontSize ?? true,
+    theme: adminConfig?.settingsVisibility?.theme ?? true,
+    font: adminConfig?.settingsVisibility?.font ?? true,
+    fullscreen: adminConfig?.settingsVisibility?.fullscreen ?? true,
+    sound: adminConfig?.settingsVisibility?.sound ?? true,
+    ambient: adminConfig?.settingsVisibility?.ambient ?? true,
+  },
+
   VIRTUALIZATION: {
     cacheLimit: 12,
   },

@@ -96,6 +96,14 @@ const DEFAULT_CONFIG = {
   },
   decorativeFont: null, // { name, dataUrl } или null — дефолтный TolkienCyr
   readingFonts: structuredClone(DEFAULT_READING_FONTS),
+  settingsVisibility: {
+    fontSize: true,
+    theme: true,
+    font: true,
+    fullscreen: true,
+    sound: true,
+    ambient: true,
+  },
 };
 
 export class AdminConfigStore {
@@ -162,6 +170,10 @@ export class AdminConfigStore {
       readingFonts: Array.isArray(saved.readingFonts)
         ? saved.readingFonts
         : structuredClone(DEFAULT_READING_FONTS),
+      settingsVisibility: {
+        ...structuredClone(DEFAULT_CONFIG.settingsVisibility),
+        ...(saved.settingsVisibility || {}),
+      },
     };
   }
 
@@ -336,6 +348,20 @@ export class AdminConfigStore {
     if (theme !== 'light' && theme !== 'dark') return;
     this._config.appearance[theme] = {
       ...this._config.appearance[theme],
+      ...data,
+    };
+    this._save();
+  }
+
+  // --- Видимость настроек ---
+
+  getSettingsVisibility() {
+    return { ...this._config.settingsVisibility };
+  }
+
+  updateSettingsVisibility(data) {
+    this._config.settingsVisibility = {
+      ...this._config.settingsVisibility,
       ...data,
     };
     this._save();

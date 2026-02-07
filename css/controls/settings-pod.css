@@ -23,15 +23,29 @@
   border-radius: 12px;
 }
 
+.settings-pod[hidden] {
+  display: none;
+}
+
 .settings-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
+.settings-section[hidden] {
+  display: none;
+}
+
 .settings-section:not(:last-child) {
   padding-bottom: 12px;
   border-bottom: 1px solid var(--pod-divider);
+}
+
+/* Убираем border у последней видимой секции, если за ней только скрытые */
+.settings-section:not([hidden], :has(~ .settings-section:not([hidden]))) {
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .settings-section-header {
