@@ -771,6 +771,20 @@ img.texture-thumb {
   background: rgb(255, 59, 48, 0.1);
 }
 
+/* === Подзаголовки и разделители внутри fieldset === */
+.section-subtitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--admin-text);
+  margin-bottom: 4px;
+}
+
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--admin-border);
+  margin: 24px 0;
+}
+
 /* === Декоративный шрифт === */
 .fieldset-description {
   font-size: 13px;

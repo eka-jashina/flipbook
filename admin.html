@@ -178,81 +178,85 @@
         <section class="admin-panel" data-panel="settings" role="tabpanel" hidden>
           <div class="panel-header">
             <h2>Настройки по умолчанию</h2>
-            <p class="panel-description">Эти настройки увидит читатель при первом открытии книги</p>
+            <p class="panel-description">Значения, которые читатель увидит при первом открытии книги. Ниже можно выбрать, какие из них он сможет менять</p>
           </div>
 
-          <div class="settings-grid">
-            <!-- Шрифт -->
-            <div class="setting-card">
-              <label class="setting-label" for="defaultFont">Шрифт по умолчанию</label>
-              <select class="setting-select" id="defaultFont">
-                <option value="georgia">Georgia</option>
-                <option value="merriweather">Merriweather</option>
-                <option value="libre-baskerville">Libre Baskerville</option>
-                <option value="inter">Inter</option>
-                <option value="roboto">Roboto</option>
-                <option value="open-sans">Open Sans</option>
-              </select>
-            </div>
+          <!-- Чтение -->
+          <fieldset class="setting-fieldset">
+            <legend class="setting-fieldset-legend">Чтение</legend>
+            <div class="settings-grid settings-grid--inner">
+              <div class="setting-card">
+                <label class="setting-label" for="defaultFont">Шрифт</label>
+                <select class="setting-select" id="defaultFont">
+                  <option value="georgia">Georgia</option>
+                  <option value="merriweather">Merriweather</option>
+                  <option value="libre-baskerville">Libre Baskerville</option>
+                  <option value="inter">Inter</option>
+                  <option value="roboto">Roboto</option>
+                  <option value="open-sans">Open Sans</option>
+                </select>
+              </div>
 
-            <!-- Размер шрифта -->
-            <div class="setting-card">
-              <label class="setting-label" for="defaultFontSize">Размер шрифта</label>
-              <div class="setting-range-row">
-                <input class="setting-range" type="range" id="defaultFontSize" min="14" max="22" value="18">
-                <span class="setting-range-value" id="fontSizeValue">18px</span>
+              <div class="setting-card">
+                <label class="setting-label" for="defaultFontSize">Размер шрифта</label>
+                <div class="setting-range-row">
+                  <input class="setting-range" type="range" id="defaultFontSize" min="14" max="22" value="18">
+                  <span class="setting-range-value" id="fontSizeValue">18px</span>
+                </div>
+              </div>
+
+              <div class="setting-card">
+                <label class="setting-label">Тема</label>
+                <div class="setting-theme-group" id="defaultTheme">
+                  <button class="setting-theme-btn active" type="button" data-theme="light">Светлая</button>
+                  <button class="setting-theme-btn" type="button" data-theme="dark">Тёмная</button>
+                  <button class="setting-theme-btn" type="button" data-theme="bw">Ч/Б</button>
+                </div>
               </div>
             </div>
+          </fieldset>
 
-            <!-- Тема -->
-            <div class="setting-card">
-              <label class="setting-label">Тема по умолчанию</label>
-              <div class="setting-theme-group" id="defaultTheme">
-                <button class="setting-theme-btn active" type="button" data-theme="light">Светлая</button>
-                <button class="setting-theme-btn" type="button" data-theme="dark">Тёмная</button>
-                <button class="setting-theme-btn" type="button" data-theme="bw">Ч/Б</button>
+          <!-- Звук -->
+          <fieldset class="setting-fieldset" style="margin-top: 20px;">
+            <legend class="setting-fieldset-legend">Звук</legend>
+            <div class="settings-grid settings-grid--inner">
+              <div class="setting-card">
+                <label class="setting-label">Звук перелистывания</label>
+                <div class="setting-toggle-row">
+                  <label class="admin-toggle">
+                    <input type="checkbox" id="defaultSound" checked>
+                    <span class="admin-toggle-slider"></span>
+                  </label>
+                  <span class="setting-toggle-label" id="soundLabel">Включён</span>
+                </div>
+              </div>
+
+              <div class="setting-card">
+                <label class="setting-label" for="defaultVolume">Громкость</label>
+                <div class="setting-range-row">
+                  <input class="setting-range" type="range" id="defaultVolume" min="0" max="100" value="30">
+                  <span class="setting-range-value" id="volumeValue">30%</span>
+                </div>
+              </div>
+
+              <div class="setting-card">
+                <label class="setting-label">Атмосфера</label>
+                <div class="setting-ambient-group" id="defaultAmbient">
+                  <!-- Генерируется динамически -->
+                </div>
               </div>
             </div>
+          </fieldset>
 
-            <!-- Звук -->
-            <div class="setting-card">
-              <label class="setting-label">Звук перелистывания</label>
-              <div class="setting-toggle-row">
-                <label class="admin-toggle">
-                  <input type="checkbox" id="defaultSound" checked>
-                  <span class="admin-toggle-slider"></span>
-                </label>
-                <span class="setting-toggle-label" id="soundLabel">Включён</span>
-              </div>
-            </div>
-
-            <!-- Громкость -->
-            <div class="setting-card">
-              <label class="setting-label" for="defaultVolume">Громкость звуков</label>
-              <div class="setting-range-row">
-                <input class="setting-range" type="range" id="defaultVolume" min="0" max="100" value="30">
-                <span class="setting-range-value" id="volumeValue">30%</span>
-              </div>
-            </div>
-
-            <!-- Амбиент — выбор по умолчанию -->
-            <div class="setting-card">
-              <label class="setting-label">Атмосфера по умолчанию</label>
-              <div class="setting-ambient-group" id="defaultAmbient">
-                <!-- Генерируется динамически -->
-              </div>
-            </div>
-          </div>
-
-          <div class="panel-actions">
-            <button class="btn btn-primary" id="saveSettings" type="button">Сохранить настройки</button>
-            <button class="btn btn-secondary" id="resetSettings" type="button">Сбросить к дефолтным</button>
+          <div class="panel-actions" style="margin-top: 20px;">
+            <button class="btn btn-primary" id="saveSettings" type="button">Сохранить</button>
+            <button class="btn btn-secondary" id="resetSettings" type="button">Сбросить</button>
           </div>
 
           <!-- Видимость настроек для читателя -->
-          <fieldset class="setting-fieldset" style="margin-top: 24px;">
-            <legend class="setting-fieldset-legend">Видимость настроек</legend>
-            <p class="fieldset-description">Выберите, какие настройки будут доступны читателю</p>
+          <fieldset class="setting-fieldset" style="margin-top: 32px;">
+            <legend class="setting-fieldset-legend">Видимость для читателя</legend>
+            <p class="fieldset-description">Какие настройки будут доступны в панели читателя</p>
 
             <div class="visibility-toggles" id="visibilityToggles">
               <div class="visibility-toggle-row">
@@ -300,27 +304,11 @@
             </div>
           </fieldset>
 
-          <!-- Управление амбиентами -->
-          <fieldset class="setting-fieldset" style="margin-top: 24px;">
-            <legend class="setting-fieldset-legend">Управление атмосферами</legend>
-
-            <div class="ambient-cards" id="ambientCards">
-              <!-- Карточки генерируются динамически -->
-            </div>
-
-            <button class="btn btn-primary" id="addAmbient" type="button" style="margin-top: 16px;">
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-              </svg>
-              Добавить атмосферу
-            </button>
-          </fieldset>
-
-          <!-- Управление звуками -->
-          <fieldset class="setting-fieldset" style="margin-top: 24px;">
-            <legend class="setting-fieldset-legend">Звуки</legend>
+          <!-- Звуковые эффекты -->
+          <fieldset class="setting-fieldset" style="margin-top: 32px;">
+            <legend class="setting-fieldset-legend">Звуковые эффекты</legend>
+            <p class="fieldset-description">Файлы звуков для перелистывания и открытия/закрытия книги</p>
             <div class="settings-grid settings-grid--inner">
-              <!-- Перелистывание -->
               <div class="setting-card">
                 <label class="setting-label" for="soundPageFlip">Перелистывание</label>
                 <div class="sound-input-row">
@@ -335,7 +323,6 @@
                 <span class="form-hint" id="soundPageFlipHint">Дефолт: sounds/page-flip.mp3</span>
               </div>
 
-              <!-- Открытие книги -->
               <div class="setting-card">
                 <label class="setting-label" for="soundBookOpen">Открытие книги</label>
                 <div class="sound-input-row">
@@ -350,7 +337,6 @@
                 <span class="form-hint" id="soundBookOpenHint">Дефолт: sounds/cover-flip.mp3</span>
               </div>
 
-              <!-- Закрытие книги -->
               <div class="setting-card">
                 <label class="setting-label" for="soundBookClose">Закрытие книги</label>
                 <div class="sound-input-row">
@@ -367,16 +353,33 @@
             </div>
             <div class="panel-actions" style="margin-top: 16px;">
               <button class="btn btn-primary" id="saveSounds" type="button">Сохранить звуки</button>
-              <button class="btn btn-secondary" id="resetSounds" type="button">Сбросить к дефолтным</button>
+              <button class="btn btn-secondary" id="resetSounds" type="button">Сбросить</button>
             </div>
+          </fieldset>
+
+          <!-- Атмосферы -->
+          <fieldset class="setting-fieldset" style="margin-top: 20px;">
+            <legend class="setting-fieldset-legend">Атмосферы</legend>
+            <p class="fieldset-description">Фоновые звуки, доступные читателю во время чтения</p>
+
+            <div class="ambient-cards" id="ambientCards">
+              <!-- Карточки генерируются динамически -->
+            </div>
+
+            <button class="btn btn-primary" id="addAmbient" type="button" style="margin-top: 16px;">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg>
+              Добавить атмосферу
+            </button>
           </fieldset>
         </section>
 
         <!-- Таб: Оформление -->
         <section class="admin-panel" data-panel="appearance" role="tabpanel" hidden>
           <div class="panel-header">
-            <h2>Оформление книги</h2>
-            <p class="panel-description">Настройте цвета, текстуры и ограничения шрифтов</p>
+            <h2>Оформление</h2>
+            <p class="panel-description">Визуальная настройка обложки, страниц и шрифтов. Цвета настраиваются отдельно для каждой темы</p>
           </div>
 
           <!-- Переключатель темы -->
@@ -395,187 +398,192 @@
             </button>
           </div>
 
-          <div class="settings-grid">
-            <!-- Обложка — секция -->
-            <fieldset class="setting-fieldset">
-              <legend class="setting-fieldset-legend">Обложка</legend>
-
-              <div class="settings-grid settings-grid--inner">
-                <!-- Фон обложки: градиент -->
-                <div class="setting-card">
-                  <label class="setting-label" for="coverBgStart">Цвет фона (градиент)</label>
-                  <div class="appearance-color-row">
-                    <div class="appearance-color-group">
-                      <input type="color" class="appearance-color" id="coverBgStart" value="#3a2d1f">
-                      <span class="appearance-color-label">Начало</span>
-                    </div>
-                    <span class="appearance-arrow" aria-hidden="true">→</span>
-                    <div class="appearance-color-group">
-                      <input type="color" class="appearance-color" id="coverBgEnd" value="#2a2016">
-                      <span class="appearance-color-label">Конец</span>
-                    </div>
+          <!-- Обложка -->
+          <fieldset class="setting-fieldset">
+            <legend class="setting-fieldset-legend">Обложка</legend>
+            <div class="settings-grid settings-grid--inner">
+              <div class="setting-card">
+                <label class="setting-label" for="coverBgStart">Цвет фона (градиент)</label>
+                <div class="appearance-color-row">
+                  <div class="appearance-color-group">
+                    <input type="color" class="appearance-color" id="coverBgStart" value="#3a2d1f">
+                    <span class="appearance-color-label">Начало</span>
                   </div>
-                </div>
-
-                <!-- Цвет текста обложки -->
-                <div class="setting-card">
-                  <label class="setting-label" for="coverText">Цвет текста</label>
-                  <div class="appearance-color-row">
-                    <input type="color" class="appearance-color" id="coverText" value="#f2e9d8">
-                    <span class="appearance-color-preview" id="coverTextPreview" style="color: #f2e9d8; background: linear-gradient(135deg, #3a2d1f, #2a2016); padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">Заголовок</span>
-                  </div>
-                </div>
-
-                <!-- Фоновое изображение обложки -->
-                <div class="setting-card setting-card--texture">
-                  <label class="setting-label">Фоновое изображение</label>
-                  <div class="cover-bg-upload">
-                    <div class="cover-bg-preview" id="coverBgPreview">
-                      <span class="cover-bg-preview-empty" id="coverBgPreviewEmpty">
-                        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-                          <path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                        </svg>
-                        Нет изображения
-                      </span>
-                    </div>
-                    <div class="cover-bg-actions">
-                      <label class="btn btn-secondary btn-small upload-btn">
-                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                          <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
-                        </svg>
-                        Загрузить
-                        <input type="file" id="coverBgFileInput" accept="image/*" hidden>
-                      </label>
-                      <button class="btn btn-small" type="button" id="coverBgRemove" hidden>Удалить</button>
-                    </div>
+                  <span class="appearance-arrow" aria-hidden="true">→</span>
+                  <div class="appearance-color-group">
+                    <input type="color" class="appearance-color" id="coverBgEnd" value="#2a2016">
+                    <span class="appearance-color-label">Конец</span>
                   </div>
                 </div>
               </div>
-            </fieldset>
 
-            <!-- Текстура страницы -->
-            <div class="setting-card setting-card--texture">
-              <label class="setting-label">Текстура страницы</label>
-              <div class="texture-selector">
-                <div class="texture-options">
-                  <button class="texture-option active" type="button" data-texture="default" title="По умолчанию">
-                    <img src="images/backgrounds/bg-page.webp" alt="Текстура по умолчанию" class="texture-thumb">
-                    <span class="texture-option-label">Бумага</span>
-                  </button>
-                  <button class="texture-option" type="button" data-texture="none" title="Без текстуры">
-                    <span class="texture-thumb texture-thumb--none"></span>
-                    <span class="texture-option-label">Нет</span>
-                  </button>
-                  <label class="texture-option texture-option--upload" title="Загрузить свою текстуру">
-                    <span class="texture-thumb texture-thumb--upload" id="customTextureThumb">
+              <div class="setting-card">
+                <label class="setting-label" for="coverText">Цвет текста</label>
+                <div class="appearance-color-row">
+                  <input type="color" class="appearance-color" id="coverText" value="#f2e9d8">
+                  <span class="appearance-color-preview" id="coverTextPreview" style="color: #f2e9d8; background: linear-gradient(135deg, #3a2d1f, #2a2016); padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">Заголовок</span>
+                </div>
+              </div>
+
+              <div class="setting-card setting-card--texture">
+                <label class="setting-label">Фоновое изображение</label>
+                <div class="cover-bg-upload">
+                  <div class="cover-bg-preview" id="coverBgPreview">
+                    <span class="cover-bg-preview-empty" id="coverBgPreviewEmpty">
                       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                        <path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                      </svg>
+                      Нет изображения
+                    </span>
+                  </div>
+                  <div class="cover-bg-actions">
+                    <label class="btn btn-secondary btn-small upload-btn">
+                      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                         <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
                       </svg>
-                    </span>
-                    <span class="texture-option-label">Своя</span>
-                    <input type="file" id="textureFileInput" accept="image/*" hidden>
-                  </label>
-                </div>
-                <div class="texture-custom-info" id="textureCustomInfo" hidden>
-                  <span class="texture-custom-name" id="textureCustomName"></span>
-                  <button class="texture-custom-remove" type="button" id="textureCustomRemove" title="Удалить свою текстуру">
-                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                      <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                  </button>
+                      Загрузить
+                      <input type="file" id="coverBgFileInput" accept="image/*" hidden>
+                    </label>
+                    <button class="btn btn-small" type="button" id="coverBgRemove" hidden>Удалить</button>
+                  </div>
                 </div>
               </div>
-              <input type="hidden" id="pageTexture" value="default">
             </div>
+          </fieldset>
 
-            <!-- Фон страницы -->
-            <div class="setting-card">
-              <label class="setting-label" for="bgPage">Цвет фона страницы</label>
-              <div class="appearance-color-row">
-                <input type="color" class="appearance-color" id="bgPage" value="#fdfcf8">
-                <span class="appearance-swatch" id="bgPageSwatch" style="background: #fdfcf8;"></span>
+          <!-- Страницы -->
+          <fieldset class="setting-fieldset" style="margin-top: 20px;">
+            <legend class="setting-fieldset-legend">Страницы</legend>
+            <div class="settings-grid settings-grid--inner">
+              <div class="setting-card setting-card--texture">
+                <label class="setting-label">Текстура</label>
+                <div class="texture-selector">
+                  <div class="texture-options">
+                    <button class="texture-option active" type="button" data-texture="default" title="По умолчанию">
+                      <img src="images/backgrounds/bg-page.webp" alt="Текстура по умолчанию" class="texture-thumb">
+                      <span class="texture-option-label">Бумага</span>
+                    </button>
+                    <button class="texture-option" type="button" data-texture="none" title="Без текстуры">
+                      <span class="texture-thumb texture-thumb--none"></span>
+                      <span class="texture-option-label">Нет</span>
+                    </button>
+                    <label class="texture-option texture-option--upload" title="Загрузить свою текстуру">
+                      <span class="texture-thumb texture-thumb--upload" id="customTextureThumb">
+                        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                          <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                        </svg>
+                      </span>
+                      <span class="texture-option-label">Своя</span>
+                      <input type="file" id="textureFileInput" accept="image/*" hidden>
+                    </label>
+                  </div>
+                  <div class="texture-custom-info" id="textureCustomInfo" hidden>
+                    <span class="texture-custom-name" id="textureCustomName"></span>
+                    <button class="texture-custom-remove" type="button" id="textureCustomRemove" title="Удалить свою текстуру">
+                      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                        <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <input type="hidden" id="pageTexture" value="default">
+              </div>
+
+              <div class="setting-card">
+                <label class="setting-label" for="bgPage">Фон страницы</label>
+                <div class="appearance-color-row">
+                  <input type="color" class="appearance-color" id="bgPage" value="#fdfcf8">
+                  <span class="appearance-swatch" id="bgPageSwatch" style="background: #fdfcf8;"></span>
+                </div>
+              </div>
+
+              <div class="setting-card">
+                <label class="setting-label" for="bgApp">Фон приложения</label>
+                <div class="appearance-color-row">
+                  <input type="color" class="appearance-color" id="bgApp" value="#e6e3dc">
+                  <span class="appearance-swatch" id="bgAppSwatch" style="background: #e6e3dc;"></span>
+                </div>
               </div>
             </div>
+          </fieldset>
 
-            <!-- Фон приложения -->
-            <div class="setting-card">
-              <label class="setting-label" for="bgApp">Цвет фона приложения</label>
-              <div class="appearance-color-row">
-                <input type="color" class="appearance-color" id="bgApp" value="#e6e3dc">
-                <span class="appearance-swatch" id="bgAppSwatch" style="background: #e6e3dc;"></span>
-              </div>
-            </div>
+          <!-- Шрифты -->
+          <fieldset class="setting-fieldset" style="margin-top: 20px;">
+            <legend class="setting-fieldset-legend">Шрифты</legend>
 
             <!-- Декоративный шрифт -->
-            <fieldset class="setting-fieldset">
-              <legend class="setting-fieldset-legend">Декоративный шрифт</legend>
-              <p class="fieldset-description">Шрифт для заголовков, буквиц и обложки. По умолчанию — TolkienCyr</p>
+            <div class="section-subtitle">Декоративный шрифт</div>
+            <p class="fieldset-description">Для заголовков, буквиц и обложки. По умолчанию — TolkienCyr</p>
 
-              <div class="decorative-font-preview">
-                <span class="decorative-font-sample" id="decorativeFontSample">Абвг Abcd 1234</span>
-              </div>
+            <div class="decorative-font-preview">
+              <span class="decorative-font-sample" id="decorativeFontSample">Абвг Abcd 1234</span>
+            </div>
 
-              <div class="decorative-font-actions">
-                <label class="btn btn-secondary upload-btn">
+            <div class="decorative-font-actions">
+              <label class="btn btn-secondary upload-btn">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                </svg>
+                Загрузить шрифт
+                <input type="file" id="decorativeFontUpload" accept=".woff2,.woff,.ttf,.otf" hidden>
+              </label>
+              <div class="decorative-font-info" id="decorativeFontInfo" hidden>
+                <span class="decorative-font-name" id="decorativeFontName"></span>
+                <button class="texture-custom-remove" type="button" id="decorativeFontRemove" title="Удалить свой шрифт">
                   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                    <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                    <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                   </svg>
-                  Загрузить шрифт
-                  <input type="file" id="decorativeFontUpload" accept=".woff2,.woff,.ttf,.otf" hidden>
-                </label>
-                <div class="decorative-font-info" id="decorativeFontInfo" hidden>
-                  <span class="decorative-font-name" id="decorativeFontName"></span>
-                  <button class="texture-custom-remove" type="button" id="decorativeFontRemove" title="Удалить свой шрифт">
-                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                      <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <span class="form-hint">Форматы: .woff2, .woff, .ttf, .otf. Макс. 2 МБ</span>
-            </fieldset>
-
-            <!-- Шрифты для чтения -->
-            <fieldset class="setting-fieldset">
-              <legend class="setting-fieldset-legend">Шрифты для чтения</legend>
-              <p class="fieldset-description">Управляйте списком шрифтов, доступных читателю</p>
-
-              <div class="reading-fonts-list" id="readingFontsList">
-                <!-- Генерируется динамически -->
-              </div>
-
-              <div class="reading-fonts-add" style="margin-top: 12px;">
-                <button class="btn btn-primary" type="button" id="addReadingFont">
-                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                    <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                  </svg>
-                  Добавить свой шрифт
                 </button>
               </div>
-            </fieldset>
+            </div>
+            <span class="form-hint">Форматы: .woff2, .woff, .ttf, .otf. Макс. 2 МБ</span>
 
-            <!-- Мин. размер шрифта -->
-            <div class="setting-card">
-              <label class="setting-label" for="fontMin">Мин. размер шрифта</label>
-              <div class="setting-range-row">
-                <input class="setting-range" type="range" id="fontMin" min="8" max="30" value="14">
-                <span class="setting-range-value" id="fontMinValue">14px</span>
-              </div>
+            <hr class="section-divider">
+
+            <!-- Шрифты для чтения -->
+            <div class="section-subtitle">Шрифты для чтения</div>
+            <p class="fieldset-description">Список шрифтов, доступных читателю</p>
+
+            <div class="reading-fonts-list" id="readingFontsList">
+              <!-- Генерируется динамически -->
             </div>
 
-            <!-- Макс. размер шрифта -->
-            <div class="setting-card">
-              <label class="setting-label" for="fontMax">Макс. размер шрифта</label>
-              <div class="setting-range-row">
-                <input class="setting-range" type="range" id="fontMax" min="8" max="60" value="22">
-                <span class="setting-range-value" id="fontMaxValue">22px</span>
+            <div class="reading-fonts-add" style="margin-top: 12px;">
+              <button class="btn btn-primary" type="button" id="addReadingFont">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+                Добавить свой шрифт
+              </button>
+            </div>
+
+            <hr class="section-divider">
+
+            <!-- Ограничения размера -->
+            <div class="section-subtitle">Ограничения размера</div>
+            <p class="fieldset-description">Допустимый диапазон размера шрифта для читателя</p>
+            <div class="settings-grid settings-grid--inner">
+              <div class="setting-card">
+                <label class="setting-label" for="fontMin">Минимальный</label>
+                <div class="setting-range-row">
+                  <input class="setting-range" type="range" id="fontMin" min="8" max="30" value="14">
+                  <span class="setting-range-value" id="fontMinValue">14px</span>
+                </div>
+              </div>
+
+              <div class="setting-card">
+                <label class="setting-label" for="fontMax">Максимальный</label>
+                <div class="setting-range-row">
+                  <input class="setting-range" type="range" id="fontMax" min="8" max="60" value="22">
+                  <span class="setting-range-value" id="fontMaxValue">22px</span>
+                </div>
               </div>
             </div>
-          </div>
+          </fieldset>
 
-          <div class="panel-actions">
-            <button class="btn btn-primary" id="saveAppearance" type="button">Сохранить оформление</button>
-            <button class="btn btn-secondary" id="resetAppearance" type="button">Сбросить к дефолтным</button>
+          <div class="panel-actions" style="margin-top: 20px;">
+            <button class="btn btn-primary" id="saveAppearance" type="button">Сохранить</button>
+            <button class="btn btn-secondary" id="resetAppearance" type="button">Сбросить</button>
           </div>
         </section>
 
