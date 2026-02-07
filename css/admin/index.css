@@ -730,6 +730,17 @@ img.texture-thumb {
   background: rgb(255, 59, 48, 0.1);
 }
 
+/* === Звуки — ряд ввода === */
+.sound-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sound-input-row .form-input {
+  flex: 1;
+}
+
 /* === Карточки амбиентов === */
 .ambient-cards {
   display: flex;

@@ -59,10 +59,20 @@ const adminAppearance = adminConfig?.appearance || {};
 // Обложка: из админки или дефолтные
 const adminCover = adminConfig?.cover || {};
 
+// Звуки: из админки или дефолтные
+const adminSounds = adminConfig?.sounds || {};
+
 // Фон обложки: из админки (с добавлением BASE_URL) или дефолтные
 function resolveCoverBg(value, fallback) {
   if (!value) return `${BASE_URL}${fallback}`;
   return value.startsWith('http') ? value : `${BASE_URL}${value}`;
+}
+
+// Звук: из админки (data URL / http / путь) или дефолтный
+function resolveSound(value, fallback) {
+  if (!value) return `${BASE_URL}${fallback}`;
+  if (value.startsWith('data:') || value.startsWith('http')) return value;
+  return `${BASE_URL}${value}`;
 }
 
 // Амбиенты: из админки (с фильтрацией по visible) или дефолтные
@@ -111,9 +121,9 @@ export const CONFIG = Object.freeze({
   },
 
   SOUNDS: {
-    pageFlip: `${BASE_URL}sounds/page-flip.mp3`,
-    bookOpen: `${BASE_URL}sounds/cover-flip.mp3`,
-    bookClose:`${BASE_URL}sounds/cover-flip.mp3`,
+    pageFlip: resolveSound(adminSounds.pageFlip, 'sounds/page-flip.mp3'),
+    bookOpen: resolveSound(adminSounds.bookOpen, 'sounds/cover-flip.mp3'),
+    bookClose: resolveSound(adminSounds.bookClose, 'sounds/cover-flip.mp3'),
   },
 
   // Конфигурация ambient звуков

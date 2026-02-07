@@ -207,6 +207,61 @@
               Добавить атмосферу
             </button>
           </fieldset>
+
+          <!-- Управление звуками -->
+          <fieldset class="setting-fieldset" style="margin-top: 24px;">
+            <legend class="setting-fieldset-legend">Звуки</legend>
+            <div class="settings-grid settings-grid--inner">
+              <!-- Перелистывание -->
+              <div class="setting-card">
+                <label class="setting-label" for="soundPageFlip">Перелистывание</label>
+                <div class="sound-input-row">
+                  <input class="form-input" type="text" id="soundPageFlip" placeholder="sounds/page-flip.mp3">
+                  <label class="btn btn-small upload-btn" title="Загрузить файл">
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                      <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                    </svg>
+                    <input type="file" id="soundPageFlipUpload" accept="audio/*" hidden>
+                  </label>
+                </div>
+                <span class="form-hint" id="soundPageFlipHint">Дефолт: sounds/page-flip.mp3</span>
+              </div>
+
+              <!-- Открытие книги -->
+              <div class="setting-card">
+                <label class="setting-label" for="soundBookOpen">Открытие книги</label>
+                <div class="sound-input-row">
+                  <input class="form-input" type="text" id="soundBookOpen" placeholder="sounds/cover-flip.mp3">
+                  <label class="btn btn-small upload-btn" title="Загрузить файл">
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                      <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                    </svg>
+                    <input type="file" id="soundBookOpenUpload" accept="audio/*" hidden>
+                  </label>
+                </div>
+                <span class="form-hint" id="soundBookOpenHint">Дефолт: sounds/cover-flip.mp3</span>
+              </div>
+
+              <!-- Закрытие книги -->
+              <div class="setting-card">
+                <label class="setting-label" for="soundBookClose">Закрытие книги</label>
+                <div class="sound-input-row">
+                  <input class="form-input" type="text" id="soundBookClose" placeholder="sounds/cover-flip.mp3">
+                  <label class="btn btn-small upload-btn" title="Загрузить файл">
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                      <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                    </svg>
+                    <input type="file" id="soundBookCloseUpload" accept="audio/*" hidden>
+                  </label>
+                </div>
+                <span class="form-hint" id="soundBookCloseHint">Дефолт: sounds/cover-flip.mp3</span>
+              </div>
+            </div>
+            <div class="panel-actions" style="margin-top: 16px;">
+              <button class="btn btn-primary" id="saveSounds" type="button">Сохранить звуки</button>
+              <button class="btn btn-secondary" id="resetSounds" type="button">Сбросить к дефолтным</button>
+            </div>
+          </fieldset>
         </section>
 
         <!-- Таб: Оформление -->

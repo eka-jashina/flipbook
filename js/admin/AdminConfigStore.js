@@ -35,6 +35,11 @@ const DEFAULT_CONFIG = {
       bgMobile: 'images/backgrounds/part_3-mobile.webp',
     },
   ],
+  sounds: {
+    pageFlip: 'sounds/page-flip.mp3',
+    bookOpen: 'sounds/cover-flip.mp3',
+    bookClose: 'sounds/cover-flip.mp3',
+  },
   ambients: [
     { id: 'none', label: 'Без звука', shortLabel: 'Нет', icon: '✕', file: null, visible: true, builtin: true },
     { id: 'rain', label: 'Дождь', shortLabel: 'Дождь', icon: '🌧️', file: 'sounds/ambient/rain.mp3', visible: true, builtin: true },
@@ -91,6 +96,10 @@ export class AdminConfigStore {
         ...(saved.cover || {}),
       },
       chapters: Array.isArray(saved.chapters) ? saved.chapters : structuredClone(DEFAULT_CONFIG.chapters),
+      sounds: {
+        ...structuredClone(DEFAULT_CONFIG.sounds),
+        ...(saved.sounds || {}),
+      },
       ambients: Array.isArray(saved.ambients) ? saved.ambients : structuredClone(DEFAULT_CONFIG.ambients),
       defaultSettings: {
         ...structuredClone(DEFAULT_CONFIG.defaultSettings),
@@ -185,6 +194,20 @@ export class AdminConfigStore {
       this._config.ambients.splice(index, 1);
       this._save();
     }
+  }
+
+  // --- Звуки ---
+
+  getSounds() {
+    return structuredClone(this._config.sounds);
+  }
+
+  updateSounds(sounds) {
+    this._config.sounds = {
+      ...this._config.sounds,
+      ...sounds,
+    };
+    this._save();
   }
 
   // --- Настройки ---
