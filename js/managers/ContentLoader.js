@@ -82,32 +82,48 @@ export class ContentLoader {
   }
 
   /**
-   * Загрузить контент по списку URL
-   * @param {string[]} urls - Массив URL для загрузки
-   * @returns {Promise<string>} Объединённый HTML всех URL
+   * Загрузить контент глав
+   * @param {Array<{file: string, htmlContent?: string}>} chapters - Главы (URL или inline-контент)
+   * @returns {Promise<string>} Объединённый HTML всех глав
    * @throws {Error} При ошибке загрузки
    */
-  async load(urls) {
+  async load(chapters) {
+    // Обратная совместимость: если передан массив строк (URL) — обернуть
+    const items = chapters.map(ch =>
+      typeof ch === 'string' ? { file: ch } : ch
+    );
+
     // Отменяем предыдущую загрузку если была
     this.abort();
     this.controller = new AbortController();
     const { signal } = this.controller;
 
-    // Загружаем только те URL, которых нет в кэше
-    const missing = urls.filter(u => !this.cache.has(u));
+    // Кэшируем inline-контент и определяем что нужно загружать
+    for (const item of items) {
+      if (item.htmlContent) {
+        // Inline-контент — сразу в кэш по ключу
+        const key = item.file || `__inline_${item.id || ''}`;
+        item._cacheKey = key;
+        this.cache.set(key, item.htmlContent);
+      } else {
+        item._cacheKey = item.file;
+      }
+    }
+
+    // Загружаем только URL, которых нет в кэше
+    const missing = items.filter(item => !item.htmlContent && !this.cache.has(item.file));
 
     if (missing.length) {
-      // Параллельная загрузка всех недостающих URL с retry
       await Promise.all(
-        missing.map(async (url) => {
-          const text = await this._fetchWithRetry(url, signal);
-          this.cache.set(url, text);
+        missing.map(async (item) => {
+          const text = await this._fetchWithRetry(item.file, signal);
+          this.cache.set(item.file, text);
         })
       );
     }
 
-    // Возвращаем объединённый контент в порядке переданных URL
-    return urls.map(u => this.cache.get(u)).join("\n");
+    // Возвращаем объединённый контент в порядке глав
+    return items.map(item => this.cache.get(item._cacheKey)).join("\n");
   }
 
   /**
