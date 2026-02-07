@@ -93,6 +93,41 @@
             </div>
           </fieldset>
 
+          <!-- Загрузка книги -->
+          <fieldset class="setting-fieldset" style="margin-top: 24px;">
+            <legend class="setting-fieldset-legend">Загрузить книгу</legend>
+            <p class="fieldset-description">Загрузите файл EPUB или FB2 — главы будут автоматически извлечены и добавлены</p>
+
+            <div class="book-upload-area" id="bookUploadArea">
+              <div class="book-upload-dropzone" id="bookDropzone">
+                <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+                  <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                </svg>
+                <p class="book-upload-text">Перетащите файл сюда или нажмите для выбора</p>
+                <p class="book-upload-hint">Форматы: .epub, .fb2</p>
+                <input type="file" id="bookFileInput" accept=".epub,.fb2" hidden>
+              </div>
+
+              <div class="book-upload-progress" id="bookUploadProgress" hidden>
+                <div class="book-upload-spinner"></div>
+                <p class="book-upload-status" id="bookUploadStatus">Обработка файла...</p>
+              </div>
+
+              <div class="book-upload-result" id="bookUploadResult" hidden>
+                <div class="book-upload-result-info">
+                  <h4 id="bookUploadTitle"></h4>
+                  <p id="bookUploadAuthor"></p>
+                  <p id="bookUploadChaptersCount"></p>
+                </div>
+                <div class="book-upload-result-actions">
+                  <button class="btn btn-primary" id="bookUploadConfirm" type="button">Заменить главы</button>
+                  <button class="btn btn-secondary" id="bookUploadAppend" type="button">Добавить к существующим</button>
+                  <button class="btn btn-secondary" id="bookUploadCancel" type="button">Отмена</button>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
           <!-- Главы -->
           <div class="panel-header" style="margin-top: 24px;">
             <h2>Главы</h2>

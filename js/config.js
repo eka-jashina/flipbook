@@ -21,14 +21,35 @@ function loadAdminConfig() {
 
 const adminConfig = loadAdminConfig();
 
+// Резолвить путь к файлу главы (data: / blob: / http / относительный)
+function resolveChapterFile(value) {
+  if (!value) return '';
+  if (value.startsWith('data:') || value.startsWith('blob:') || value.startsWith('http')) return value;
+  return `${BASE_URL}${value}`;
+}
+
+// Если контент главы хранится inline (htmlContent) — создать blob URL
+function resolveChapterWithContent(ch) {
+  const result = {
+    id: ch.id,
+    bg: ch.bg ? (ch.bg.startsWith('data:') || ch.bg.startsWith('http') ? ch.bg : `${BASE_URL}${ch.bg}`) : '',
+    bgMobile: ch.bgMobile ? (ch.bgMobile.startsWith('data:') || ch.bgMobile.startsWith('http') ? ch.bgMobile : `${BASE_URL}${ch.bgMobile}`) : '',
+  };
+
+  if (ch.htmlContent) {
+    // Inline HTML-контент → blob URL для fetch
+    const blob = new Blob([ch.htmlContent], { type: 'text/html' });
+    result.file = URL.createObjectURL(blob);
+  } else {
+    result.file = resolveChapterFile(ch.file);
+  }
+
+  return result;
+}
+
 // Главы: из админки (с добавлением BASE_URL) или дефолтные
 const CHAPTERS = adminConfig?.chapters?.length
-  ? adminConfig.chapters.map(ch => ({
-      id: ch.id,
-      file: ch.file.startsWith('http') ? ch.file : `${BASE_URL}${ch.file}`,
-      bg: ch.bg ? (ch.bg.startsWith('http') ? ch.bg : `${BASE_URL}${ch.bg}`) : '',
-      bgMobile: ch.bgMobile ? (ch.bgMobile.startsWith('http') ? ch.bgMobile : `${BASE_URL}${ch.bgMobile}`) : '',
-    }))
+  ? adminConfig.chapters.map(ch => resolveChapterWithContent(ch))
   : [
       {
         id: "part_1",

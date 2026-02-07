@@ -80,5 +80,8 @@
     "3d-animation",
     "interactive",
     "reading"
-  ]
+  ],
+  "dependencies": {
+    "jszip": "^3.10.1"
+  }
 }

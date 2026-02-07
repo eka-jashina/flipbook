@@ -2,6 +2,7 @@
  * Точка входа админ-панели
  */
 import { AdminConfigStore } from './AdminConfigStore.js';
+import { BookParser } from './BookParser.js';
 
 class AdminApp {
   constructor() {
@@ -12,6 +13,7 @@ class AdminApp {
     this._pendingReadingFontDataUrl = null; // data URL загруженного шрифта для чтения
     this._editTheme = 'light'; // текущая редактируемая тема оформления
     this._toastTimer = null;
+    this._pendingParsedBook = null; // результат парсинга загруженной книги
 
     this._cacheDOM();
     this._bindEvents();
@@ -29,6 +31,20 @@ class AdminApp {
     this.chaptersList = document.getElementById('chaptersList');
     this.chaptersEmpty = document.getElementById('chaptersEmpty');
     this.addChapterBtn = document.getElementById('addChapter');
+
+    // Загрузка книги
+    this.bookUploadArea = document.getElementById('bookUploadArea');
+    this.bookDropzone = document.getElementById('bookDropzone');
+    this.bookFileInput = document.getElementById('bookFileInput');
+    this.bookUploadProgress = document.getElementById('bookUploadProgress');
+    this.bookUploadStatus = document.getElementById('bookUploadStatus');
+    this.bookUploadResult = document.getElementById('bookUploadResult');
+    this.bookUploadTitle = document.getElementById('bookUploadTitle');
+    this.bookUploadAuthor = document.getElementById('bookUploadAuthor');
+    this.bookUploadChaptersCount = document.getElementById('bookUploadChaptersCount');
+    this.bookUploadConfirm = document.getElementById('bookUploadConfirm');
+    this.bookUploadAppend = document.getElementById('bookUploadAppend');
+    this.bookUploadCancel = document.getElementById('bookUploadCancel');
 
     // Обложка (в табе Главы)
     this.coverTitle = document.getElementById('coverTitle');
@@ -162,6 +178,26 @@ class AdminApp {
     this.addChapterBtn.addEventListener('click', () => this._openModal());
     this.cancelModal.addEventListener('click', () => this.modal.close());
     this.chapterForm.addEventListener('submit', (e) => this._handleChapterSubmit(e));
+
+    // Загрузка книги
+    this.bookDropzone.addEventListener('click', () => this.bookFileInput.click());
+    this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
+    this.bookDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      this.bookDropzone.classList.add('dragover');
+    });
+    this.bookDropzone.addEventListener('dragleave', () => {
+      this.bookDropzone.classList.remove('dragover');
+    });
+    this.bookDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      this.bookDropzone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) this._processBookFile(file);
+    });
+    this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook('replace'));
+    this.bookUploadAppend.addEventListener('click', () => this._applyParsedBook('append'));
+    this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
 
     // Настройки
     this.defaultFontSize.addEventListener('input', () => {
@@ -311,7 +347,7 @@ class AdminApp {
         </div>
         <div class="chapter-info">
           <div class="chapter-title">${this._escapeHtml(ch.id)}</div>
-          <div class="chapter-meta">${this._escapeHtml(ch.file)}</div>
+          <div class="chapter-meta">${ch.htmlContent ? 'Встроенный контент' : this._escapeHtml(ch.file)}</div>
         </div>
         <div class="chapter-actions">
           ${i > 0 ? `<button class="chapter-action-btn" data-action="up" data-index="${i}" title="Вверх">
@@ -454,7 +490,15 @@ class AdminApp {
       bgMobile: this.inputBgMobile.value.trim(),
     };
 
-    if (!chapter.id || !chapter.file) return;
+    // При редактировании сохранить inline-контент, если file не указан
+    if (this._editingIndex !== null) {
+      const existing = this.store.getChapters()[this._editingIndex];
+      if (existing.htmlContent && !chapter.file) {
+        chapter.htmlContent = existing.htmlContent;
+      }
+    }
+
+    if (!chapter.id || (!chapter.file && !chapter.htmlContent)) return;
 
     if (this._editingIndex !== null) {
       this.store.updateChapter(this._editingIndex, chapter);
@@ -636,6 +680,98 @@ class AdminApp {
     this._renderAmbients();
     this._renderSettings();
     this._renderJsonPreview();
+  }
+
+  // --- Загрузка книги ---
+
+  _handleBookUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    this._processBookFile(file);
+    e.target.value = '';
+  }
+
+  async _processBookFile(file) {
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (ext !== '.epub' && ext !== '.fb2') {
+      this._showToast('Допустимые форматы: .epub, .fb2');
+      return;
+    }
+
+    // Показать прогресс
+    this.bookDropzone.hidden = true;
+    this.bookUploadProgress.hidden = false;
+    this.bookUploadResult.hidden = true;
+    this.bookUploadStatus.textContent = 'Обработка файла...';
+
+    try {
+      const parsed = await BookParser.parse(file);
+      this._pendingParsedBook = parsed;
+
+      // Показать результат
+      this.bookUploadProgress.hidden = true;
+      this.bookUploadResult.hidden = false;
+      this.bookUploadTitle.textContent = parsed.title || 'Без названия';
+      this.bookUploadAuthor.textContent = parsed.author ? `Автор: ${parsed.author}` : '';
+      this.bookUploadChaptersCount.textContent = `Найдено глав: ${parsed.chapters.length}`;
+    } catch (err) {
+      this._showToast(`Ошибка: ${err.message}`);
+      this._resetBookUpload();
+    }
+  }
+
+  _applyParsedBook(mode) {
+    if (!this._pendingParsedBook) return;
+
+    const { title, author, chapters } = this._pendingParsedBook;
+
+    // Обновить обложку
+    if (title || author) {
+      const cover = this.store.getCover();
+      this.store.updateCover({
+        title: title || cover.title,
+        author: author || cover.author,
+      });
+    }
+
+    // Подготовить главы для store
+    const newChapters = chapters.map(ch => ({
+      id: ch.id,
+      file: '', // файла нет, контент в htmlContent
+      htmlContent: ch.html,
+      bg: '',
+      bgMobile: '',
+    }));
+
+    if (mode === 'replace') {
+      // Очистить существующие и добавить новые
+      const currentChapters = this.store.getChapters();
+      for (let i = currentChapters.length - 1; i >= 0; i--) {
+        this.store.removeChapter(i);
+      }
+      for (const ch of newChapters) {
+        this.store.addChapter(ch);
+      }
+      this._showToast(`Добавлено ${chapters.length} глав (старые заменены)`);
+    } else {
+      // Добавить к существующим
+      for (const ch of newChapters) {
+        this.store.addChapter(ch);
+      }
+      this._showToast(`Добавлено ${chapters.length} глав`);
+    }
+
+    this._renderCover();
+    this._renderChapters();
+    this._renderJsonPreview();
+    this._resetBookUpload();
+  }
+
+  _resetBookUpload() {
+    this._pendingParsedBook = null;
+    this.bookDropzone.hidden = false;
+    this.bookUploadProgress.hidden = true;
+    this.bookUploadResult.hidden = true;
   }
 
   // --- Звуки ---
