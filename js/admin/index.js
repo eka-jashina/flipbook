@@ -34,6 +34,7 @@ class AdminApp {
 
     // Переключатель книг
     this.bookSelector = document.getElementById('bookSelector');
+    this.deleteBookBtn = document.getElementById('deleteBook');
 
     // Под-табы
     this.bookSubtabs = document.getElementById('bookSubtabs');
@@ -204,6 +205,11 @@ class AdminApp {
       }
 
       this._handleSelectBook(card.dataset.bookId);
+    });
+
+    // Удаление активной книги
+    this.deleteBookBtn.addEventListener('click', () => {
+      this._handleDeleteBook(this.store.getActiveBookId());
     });
 
     // Загрузка книги
@@ -487,6 +493,9 @@ class AdminApp {
         </div>
       </div>
     `).join('');
+
+    // Показать/скрыть кнопку «Удалить книгу»
+    this.deleteBookBtn.hidden = books.length <= 1;
   }
 
   _handleSelectBook(bookId) {
