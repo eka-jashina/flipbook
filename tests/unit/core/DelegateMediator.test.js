@@ -15,7 +15,7 @@ const { mockConfig, mockDelegateEvents } = vi.hoisted(() => ({
       { id: 'ch1', file: 'content/part_1.html', bg: 'images/bg1.webp', title: 'Глава 1' },
       { id: 'ch2', file: 'content/part_2.html', bg: 'images/bg2.webp', title: 'Глава 2' },
     ],
-    VIRTUALIZATION: { cacheLimit: 12 },
+    VIRTUALIZATION: { cacheLimit: 50 },
   },
   mockDelegateEvents: {
     INDEX_CHANGE: 'indexChange',
@@ -78,8 +78,8 @@ const createDeps = (overrides = {}) => {
       set: vi.fn(),
     },
     renderer: {
-      pageContents: new Array(100),
-      setPageContents: vi.fn(),
+      totalPages: 100,
+      setPaginationData: vi.fn(),
       cacheSize: 8,
     },
     dom: {
@@ -193,14 +193,14 @@ describe('DelegateMediator', () => {
   });
 
   describe('handlePaginationComplete', () => {
-    it('should set page contents on renderer', () => {
-      const pages = ['<p>Page 1</p>', '<p>Page 2</p>'];
-      mediator.handlePaginationComplete(pages, [0]);
-      expect(deps.services.renderer.setPageContents).toHaveBeenCalledWith(pages);
+    it('should set pagination data on renderer', () => {
+      const pageData = { sourceElement: document.createElement('div'), pageCount: 2, pageWidth: 400, pageHeight: 600 };
+      mediator.handlePaginationComplete(pageData, [0]);
+      expect(deps.services.renderer.setPaginationData).toHaveBeenCalledWith(pageData);
     });
 
     it('should update chapterStarts in state', () => {
-      mediator.handlePaginationComplete([], [0, 10, 20]);
+      mediator.handlePaginationComplete(null, [0, 10, 20]);
       expect(deps.state.chapterStarts).toEqual([0, 10, 20]);
     });
   });
@@ -270,7 +270,7 @@ describe('DelegateMediator', () => {
           totalPages: 100,
           currentPage: 5,
           cacheSize: 8,
-          cacheLimit: 12,
+          cacheLimit: 50,
           listenerCount: 5,
         })
       );
@@ -298,7 +298,7 @@ describe('DelegateMediator', () => {
         return null;
       });
 
-      deps.services.renderer.pageContents = new Array(100);
+      deps.services.renderer.totalPages = 100;
       deps.state.index = 49;
 
       // Recreate mediator with updated deps
@@ -332,7 +332,7 @@ describe('DelegateMediator', () => {
     });
 
     it('should handle zero total pages', () => {
-      deps.services.renderer.pageContents = [];
+      deps.services.renderer.totalPages = 0;
       deps.state.index = 0;
       mediator = new DelegateMediator(deps);
 
@@ -347,9 +347,9 @@ describe('DelegateMediator', () => {
     });
 
     it('should route lifecycle PAGINATION_COMPLETE to handlePaginationComplete', () => {
-      const pages = ['page1'];
-      deps.delegates.lifecycle.emit('paginationComplete', { pages, chapterStarts: [0, 5] });
-      expect(deps.services.renderer.setPageContents).toHaveBeenCalledWith(pages);
+      const pageData = { sourceElement: document.createElement('div'), pageCount: 1, pageWidth: 400, pageHeight: 600 };
+      deps.delegates.lifecycle.emit('paginationComplete', { pageData, chapterStarts: [0, 5] });
+      expect(deps.services.renderer.setPaginationData).toHaveBeenCalledWith(pageData);
       expect(deps.state.chapterStarts).toEqual([0, 5]);
     });
 

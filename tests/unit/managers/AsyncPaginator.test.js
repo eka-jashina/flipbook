@@ -383,7 +383,7 @@ describe('AsyncPaginator', () => {
       await advancePagination();
       const result = await paginatePromise;
 
-      expect(result.pages).toEqual([]);
+      expect(result.pageData).toBeNull();
       expect(result.chapterStarts).toEqual([]);
     });
 

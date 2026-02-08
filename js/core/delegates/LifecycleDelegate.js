@@ -127,11 +127,11 @@ export class LifecycleDelegate extends BaseDelegate {
       }
 
       // ─── Этап 5: Пагинация контента ───
-      const { pages, chapterStarts } = await this.paginator.paginate(html, rightA);
+      const { pageData, chapterStarts } = await this.paginator.paginate(html, rightA);
 
       if (this.isDestroyed) return;
 
-      this.emit(DelegateEvents.PAGINATION_COMPLETE, { pages, chapterStarts });
+      this.emit(DelegateEvents.PAGINATION_COMPLETE, { pageData, chapterStarts });
 
       // ─── Этап 6: Рендеринг начального разворота ───
       const maxIndex = this.renderer.getMaxIndex(this.isMobile);
@@ -266,11 +266,11 @@ export class LifecycleDelegate extends BaseDelegate {
       }
 
       // ─── Этап 3: Пагинация ───
-      const { pages, chapterStarts } = await this.paginator.paginate(html, rightA);
+      const { pageData, chapterStarts } = await this.paginator.paginate(html, rightA);
 
       if (this.isDestroyed) return;
 
-      this.emit(DelegateEvents.PAGINATION_COMPLETE, { pages, chapterStarts });
+      this.emit(DelegateEvents.PAGINATION_COMPLETE, { pageData, chapterStarts });
 
       // ─── Этап 4: Рендеринг с сохранением позиции ───
       const maxIndex = this.renderer.getMaxIndex(this.isMobile);

@@ -403,7 +403,7 @@ describe('State Machine Integration', () => {
 
       mockPaginator = {
         paginate: vi.fn().mockResolvedValue({
-          pages: ['<p>1</p>', '<p>2</p>'],
+          pageData: { sourceElement: document.createElement('div'), pageCount: 2, pageWidth: 400, pageHeight: 600 },
           chapterStarts: [0],
         }),
       };

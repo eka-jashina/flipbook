@@ -29,10 +29,18 @@ export class BookRenderer {
 
   constructor(options) {
     this.cache = new LRUCache(options.cacheLimit || 12);
-    /** @type {HTMLElement[]} DOM-элементы всех страниц */
-    this.pageContents = [];
     /** @type {Set<string>} Уже загруженные URL изображений (ограниченный размер) */
     this.loadedImageUrls = new Set();
+
+    // Данные для ленивой материализации страниц (вместо массива pageContents)
+    /** @type {HTMLElement|null} Исходный multi-column элемент */
+    this._sourceElement = null;
+    /** @type {number} Общее количество страниц */
+    this._totalPages = 0;
+    /** @type {number} Ширина одной страницы (px) */
+    this._pageWidth = 0;
+    /** @type {number} Высота одной страницы (px) */
+    this._pageHeight = 0;
 
     this.elements = {
       leftActive: options.leftActive,
@@ -45,11 +53,30 @@ export class BookRenderer {
   }
 
   /**
-   * Установить содержимое страниц (после пагинации)
-   * @param {HTMLElement[]} contents - Массив DOM-элементов страниц
+   * Общее количество страниц
+   * @returns {number}
    */
-  setPageContents(contents) {
-    this.pageContents = contents;
+  get totalPages() {
+    return this._totalPages;
+  }
+
+  /**
+   * Установить данные пагинации для ленивой материализации страниц
+   *
+   * Вместо хранения N DOM-клонов (один на страницу), хранит один
+   * исходный элемент и создаёт страницы по требованию через LRU-кэш.
+   *
+   * @param {Object|null} pageData - Данные пагинации
+   * @param {HTMLElement} pageData.sourceElement - Исходный multi-column элемент
+   * @param {number} pageData.pageCount - Количество страниц
+   * @param {number} pageData.pageWidth - Ширина страницы
+   * @param {number} pageData.pageHeight - Высота страницы
+   */
+  setPaginationData(pageData) {
+    this._sourceElement = pageData?.sourceElement || null;
+    this._totalPages = pageData?.pageCount || 0;
+    this._pageWidth = pageData?.pageWidth || 0;
+    this._pageHeight = pageData?.pageHeight || 0;
     this.cache.clear();
     // Очищаем loadedImageUrls при смене контента для предотвращения утечки памяти
     // Браузер всё равно кэширует изображения, поэтому placeholder покажется кратко
@@ -57,16 +84,16 @@ export class BookRenderer {
   }
 
   /**
-   * Получить DOM-элемент страницы (с кэшированием)
+   * Получить DOM-элемент страницы (с кэшированием и ленивой материализацией)
    *
-   * Кэшируется оригинальный клон из pageContents.
-   * При каждом запросе возвращается новый клон из кэша.
+   * Страница создаётся из исходного multi-column элемента по требованию,
+   * а не хранится заранее. LRU-кэш предотвращает повторную материализацию.
    *
    * @param {number} index - Индекс страницы
    * @returns {HTMLElement|null} Клон DOM-элемента или null
    */
   getPageDOM(index) {
-    if (index < 0 || index >= this.pageContents.length) {
+    if (index < 0 || index >= this._totalPages) {
       return null;
     }
 
@@ -75,10 +102,42 @@ export class BookRenderer {
       return cached.cloneNode(true);
     }
 
-    // Кэшируем оригинал из pageContents, возвращаем его клон
-    const source = this.pageContents[index];
-    this.cache.set(index, source);
-    return source.cloneNode(true);
+    // Ленивая материализация: создаём страницу из исходного элемента
+    const page = this._materializePage(index);
+    if (page) {
+      this.cache.set(index, page);
+      return page.cloneNode(true);
+    }
+
+    return null;
+  }
+
+  /**
+   * Материализовать DOM-элемент страницы из исходного multi-column элемента
+   *
+   * Создаёт viewport div с overflow:hidden и вставляет клон
+   * исходного контента с translateX для отображения нужной колонки.
+   *
+   * @param {number} index - Индекс страницы
+   * @returns {HTMLElement|null} DOM-элемент страницы или null
+   * @private
+   */
+  _materializePage(index) {
+    if (!this._sourceElement) return null;
+
+    const snap = document.createElement("div");
+    snap.style.cssText = `
+      width: ${this._pageWidth}px;
+      height: ${this._pageHeight}px;
+      overflow: hidden;
+    `;
+
+    const clone = this._sourceElement.cloneNode(true);
+    clone.style.width = `${this._totalPages * this._pageWidth}px`;
+    clone.style.transform = `translateX(${-index * this._pageWidth}px)`;
+    snap.appendChild(clone);
+
+    return snap;
   }
 
   /**
@@ -171,7 +230,7 @@ export class BookRenderer {
   renderSpread(index, isMobile) {
     const { leftActive, rightActive } = this.elements;
 
-    if (!this.pageContents.length) {
+    if (!this._totalPages) {
       leftActive?.replaceChildren();
       rightActive?.replaceChildren();
       return;
@@ -278,7 +337,7 @@ export class BookRenderer {
    * @returns {number}
    */
   getMaxIndex(isMobile) {
-    const total = this.pageContents.length;
+    const total = this._totalPages;
     // На desktop последняя страница = total - 2 (левая страница последнего разворота)
     return isMobile ? total - 1 : Math.max(0, total - 2);
   }
@@ -289,7 +348,10 @@ export class BookRenderer {
   destroy() {
     this.cache.clear();
     this.loadedImageUrls.clear();
-    this.pageContents = [];
+    this._sourceElement = null;
+    this._totalPages = 0;
+    this._pageWidth = 0;
+    this._pageHeight = 0;
     this.elements = null;
   }
 }

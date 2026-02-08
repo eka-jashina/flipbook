@@ -1,10 +1,34 @@
 /**
  * Unit tests for BookRenderer
- * Page rendering with double buffering and LRU cache
+ * Page rendering with double buffering, LRU cache, and lazy materialization
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BookRenderer } from '../../../js/core/BookRenderer.js';
+
+/**
+ * Создать mock pageData для тестирования ленивой материализации.
+ * Имитирует результат AsyncPaginator._buildPageData().
+ */
+function createMockPageData(pageCount, pageWidth = 400, pageHeight = 600) {
+  const cols = document.createElement('div');
+  cols.className = 'cols';
+
+  const flow = document.createElement('div');
+  const pageContent = document.createElement('div');
+  pageContent.className = 'page-content';
+
+  for (let i = 0; i < pageCount; i++) {
+    const p = document.createElement('p');
+    p.textContent = `Page ${i}`;
+    pageContent.appendChild(p);
+  }
+
+  flow.appendChild(pageContent);
+  cols.appendChild(flow);
+
+  return { sourceElement: cols, pageCount, pageWidth, pageHeight };
+}
 
 describe('BookRenderer', () => {
   let renderer;
@@ -55,8 +79,8 @@ describe('BookRenderer', () => {
       expect(renderer.cacheSize).toBe(0);
     });
 
-    it('should initialize empty page contents', () => {
-      expect(renderer.pageContents).toEqual([]);
+    it('should initialize with zero total pages', () => {
+      expect(renderer.totalPages).toBe(0);
     });
 
     it('should initialize empty loadedImageUrls set', () => {
@@ -70,48 +94,38 @@ describe('BookRenderer', () => {
     });
   });
 
-  describe('setPageContents', () => {
-    it('should set page contents array', () => {
-      const pages = [
-        document.createElement('div'),
-        document.createElement('div'),
-      ];
-      renderer.setPageContents(pages);
-      expect(renderer.pageContents).toBe(pages);
+  describe('setPaginationData', () => {
+    it('should update totalPages from pagination data', () => {
+      const pageData = createMockPageData(10);
+      renderer.setPaginationData(pageData);
+      expect(renderer.totalPages).toBe(10);
     });
 
-    it('should clear cache when setting new contents', () => {
-      // First populate cache
-      const pages = [document.createElement('div')];
-      renderer.setPageContents(pages);
-      renderer.getPageDOM(0); // This will populate cache
+    it('should clear cache when setting new data', () => {
+      const pageData = createMockPageData(3);
+      renderer.setPaginationData(pageData);
+      renderer.getPageDOM(0);
       expect(renderer.cacheSize).toBe(1);
 
-      // Set new contents - should clear cache
-      renderer.setPageContents([document.createElement('div')]);
+      renderer.setPaginationData(createMockPageData(5));
       expect(renderer.cacheSize).toBe(0);
     });
 
     it('should clear loadedImageUrls to prevent memory leaks', () => {
       renderer.loadedImageUrls.add('http://example.com/image.jpg');
-      renderer.setPageContents([]);
+      renderer.setPaginationData(null);
       expect(renderer.loadedImageUrls.size).toBe(0);
+    });
+
+    it('should handle null pageData', () => {
+      renderer.setPaginationData(null);
+      expect(renderer.totalPages).toBe(0);
     });
   });
 
   describe('getPageDOM', () => {
-    let pages;
-
     beforeEach(() => {
-      pages = [
-        document.createElement('div'),
-        document.createElement('div'),
-        document.createElement('div'),
-      ];
-      pages[0].innerHTML = '<p>Page 1</p>';
-      pages[1].innerHTML = '<p>Page 2</p>';
-      pages[2].innerHTML = '<p>Page 3</p>';
-      renderer.setPageContents(pages);
+      renderer.setPaginationData(createMockPageData(3));
     });
 
     it('should return null for negative index', () => {
@@ -122,11 +136,16 @@ describe('BookRenderer', () => {
       expect(renderer.getPageDOM(100)).toBeNull();
     });
 
-    it('should return cloned DOM element', () => {
+    it('should return a DOM element via lazy materialization', () => {
       const dom = renderer.getPageDOM(0);
       expect(dom).toBeInstanceOf(HTMLElement);
-      expect(dom.innerHTML).toBe('<p>Page 1</p>');
-      expect(dom).not.toBe(pages[0]); // Should be a clone
+    });
+
+    it('should return element with overflow:hidden viewport', () => {
+      const dom = renderer.getPageDOM(0);
+      expect(dom.style.overflow).toBe('hidden');
+      expect(dom.style.width).toBe('400px');
+      expect(dom.style.height).toBe('600px');
     });
 
     it('should cache DOM elements', () => {
@@ -134,23 +153,24 @@ describe('BookRenderer', () => {
       expect(renderer.cacheSize).toBe(1);
     });
 
-    it('should return cached element on subsequent calls', () => {
+    it('should return different clones on subsequent calls', () => {
       const dom1 = renderer.getPageDOM(0);
       const dom2 = renderer.getPageDOM(0);
-      // Both should have same content but be different clones
       expect(dom1.innerHTML).toBe(dom2.innerHTML);
       expect(dom1).not.toBe(dom2);
+    });
+
+    it('should return null when no pagination data', () => {
+      renderer.setPaginationData(null);
+      expect(renderer.getPageDOM(0)).toBeNull();
     });
   });
 
   describe('fill', () => {
-    let pages;
     let container;
 
     beforeEach(() => {
-      pages = [document.createElement('div')];
-      pages[0].innerHTML = '<p>Content</p>';
-      renderer.setPageContents(pages);
+      renderer.setPaginationData(createMockPageData(3));
 
       container = document.createElement('div');
       const page = document.createElement('div');
@@ -165,7 +185,6 @@ describe('BookRenderer', () => {
     it('should fill container with page content', () => {
       renderer.fill(container, 0);
       expect(container.children.length).toBe(1);
-      expect(container.innerHTML).toContain('<p>Content</p>');
     });
 
     it('should clear container if page does not exist', () => {
@@ -175,8 +194,25 @@ describe('BookRenderer', () => {
     });
 
     it('should add page--toc class when page contains TOC', () => {
-      pages[0].innerHTML = '<div class="toc">Table of Contents</div>';
-      renderer.setPageContents(pages);
+      // Create pageData with TOC content
+      const cols = document.createElement('div');
+      const flow = document.createElement('div');
+      const pageContent = document.createElement('div');
+      pageContent.className = 'page-content';
+      const toc = document.createElement('div');
+      toc.className = 'toc';
+      toc.textContent = 'Table of Contents';
+      pageContent.appendChild(toc);
+      flow.appendChild(pageContent);
+      cols.appendChild(flow);
+
+      renderer.setPaginationData({
+        sourceElement: cols,
+        pageCount: 1,
+        pageWidth: 400,
+        pageHeight: 600,
+      });
+
       renderer.fill(container, 0);
 
       const page = container.closest('.page');
@@ -207,7 +243,6 @@ describe('BookRenderer', () => {
     it('should set data-loading="true" for images being loaded', () => {
       const container = document.createElement('div');
       const img = document.createElement('img');
-      // jsdom doesn't set complete properly, but we can test the logic
       Object.defineProperty(img, 'complete', { value: false });
       img.src = 'http://example.com/loading.jpg';
       container.appendChild(img);
@@ -225,7 +260,6 @@ describe('BookRenderer', () => {
 
       renderer._setupImageBlurPlaceholders(container);
 
-      // Simulate load event
       img.dispatchEvent(new Event('load'));
 
       expect(renderer.loadedImageUrls.has('http://example.com/new.jpg')).toBe(true);
@@ -241,7 +275,6 @@ describe('BookRenderer', () => {
 
       renderer._setupImageBlurPlaceholders(container);
 
-      // Simulate error event
       img.dispatchEvent(new Event('error'));
 
       expect(img.dataset.loading).toBe('false');
@@ -249,23 +282,12 @@ describe('BookRenderer', () => {
   });
 
   describe('renderSpread', () => {
-    let pages;
-
     beforeEach(() => {
-      pages = [
-        document.createElement('div'),
-        document.createElement('div'),
-        document.createElement('div'),
-        document.createElement('div'),
-      ];
-      pages.forEach((p, i) => {
-        p.innerHTML = `<p>Page ${i}</p>`;
-      });
-      renderer.setPageContents(pages);
+      renderer.setPaginationData(createMockPageData(4));
     });
 
     it('should clear pages when no content', () => {
-      renderer.setPageContents([]);
+      renderer.setPaginationData(null);
       renderer.renderSpread(0, false);
       expect(mockElements.leftActive.children.length).toBe(0);
       expect(mockElements.rightActive.children.length).toBe(0);
@@ -274,14 +296,14 @@ describe('BookRenderer', () => {
     describe('desktop mode (isMobile=false)', () => {
       it('should render left and right pages', () => {
         renderer.renderSpread(0, false);
-        expect(mockElements.leftActive.innerHTML).toContain('Page 0');
-        expect(mockElements.rightActive.innerHTML).toContain('Page 1');
+        expect(mockElements.leftActive.children.length).toBe(1);
+        expect(mockElements.rightActive.children.length).toBe(1);
       });
 
       it('should render spread at index 2', () => {
         renderer.renderSpread(2, false);
-        expect(mockElements.leftActive.innerHTML).toContain('Page 2');
-        expect(mockElements.rightActive.innerHTML).toContain('Page 3');
+        expect(mockElements.leftActive.children.length).toBe(1);
+        expect(mockElements.rightActive.children.length).toBe(1);
       });
     });
 
@@ -289,37 +311,26 @@ describe('BookRenderer', () => {
       it('should clear left and show current page on right', () => {
         renderer.renderSpread(0, true);
         expect(mockElements.leftActive.children.length).toBe(0);
-        expect(mockElements.rightActive.innerHTML).toContain('Page 0');
+        expect(mockElements.rightActive.children.length).toBe(1);
       });
 
       it('should show page at current index', () => {
         renderer.renderSpread(2, true);
-        expect(mockElements.rightActive.innerHTML).toContain('Page 2');
+        expect(mockElements.rightActive.children.length).toBe(1);
       });
     });
   });
 
   describe('prepareBuffer', () => {
-    let pages;
-
     beforeEach(() => {
-      pages = [
-        document.createElement('div'),
-        document.createElement('div'),
-        document.createElement('div'),
-        document.createElement('div'),
-      ];
-      pages.forEach((p, i) => {
-        p.innerHTML = `<p>Page ${i}</p>`;
-      });
-      renderer.setPageContents(pages);
+      renderer.setPaginationData(createMockPageData(4));
     });
 
     describe('desktop mode', () => {
       it('should prepare buffer with next spread', () => {
         renderer.prepareBuffer(2, false);
-        expect(mockElements.leftBuffer.innerHTML).toContain('Page 2');
-        expect(mockElements.rightBuffer.innerHTML).toContain('Page 3');
+        expect(mockElements.leftBuffer.children.length).toBe(1);
+        expect(mockElements.rightBuffer.children.length).toBe(1);
       });
     });
 
@@ -327,52 +338,37 @@ describe('BookRenderer', () => {
       it('should clear left buffer and fill right with page', () => {
         renderer.prepareBuffer(1, true);
         expect(mockElements.leftBuffer.children.length).toBe(0);
-        expect(mockElements.rightBuffer.innerHTML).toContain('Page 1');
+        expect(mockElements.rightBuffer.children.length).toBe(1);
       });
     });
   });
 
   describe('prepareSheet', () => {
-    let pages;
-
     beforeEach(() => {
-      pages = [
-        document.createElement('div'),
-        document.createElement('div'),
-        document.createElement('div'),
-        document.createElement('div'),
-      ];
-      pages.forEach((p, i) => {
-        p.innerHTML = `<p>Page ${i}</p>`;
-      });
-      renderer.setPageContents(pages);
+      renderer.setPaginationData(createMockPageData(4));
     });
 
     describe('mobile mode', () => {
       it('should fill sheet with current and next pages', () => {
         renderer.prepareSheet(0, 1, 'next', true);
-        expect(mockElements.sheetFront.innerHTML).toContain('Page 0');
-        expect(mockElements.sheetBack.innerHTML).toContain('Page 1');
+        expect(mockElements.sheetFront.children.length).toBe(1);
+        expect(mockElements.sheetBack.children.length).toBe(1);
       });
     });
 
     describe('desktop mode - next direction', () => {
       it('should fill sheet with right page of current spread and left of next', () => {
         renderer.prepareSheet(0, 2, 'next', false);
-        // Front: currentIndex + 1 = 1
-        // Back: currentIndex + 2 = 2
-        expect(mockElements.sheetFront.innerHTML).toContain('Page 1');
-        expect(mockElements.sheetBack.innerHTML).toContain('Page 2');
+        expect(mockElements.sheetFront.children.length).toBe(1);
+        expect(mockElements.sheetBack.children.length).toBe(1);
       });
     });
 
     describe('desktop mode - prev direction', () => {
       it('should fill sheet for prev direction', () => {
         renderer.prepareSheet(2, 0, 'prev', false);
-        // Front: currentIndex = 2
-        // Back: currentIndex - 1 = 1
-        expect(mockElements.sheetFront.innerHTML).toContain('Page 2');
-        expect(mockElements.sheetBack.innerHTML).toContain('Page 1');
+        expect(mockElements.sheetFront.children.length).toBe(1);
+        expect(mockElements.sheetBack.children.length).toBe(1);
       });
     });
   });
@@ -413,8 +409,7 @@ describe('BookRenderer', () => {
 
   describe('clearCache', () => {
     it('should clear the LRU cache', () => {
-      const pages = [document.createElement('div')];
-      renderer.setPageContents(pages);
+      renderer.setPaginationData(createMockPageData(3));
       renderer.getPageDOM(0);
       expect(renderer.cacheSize).toBe(1);
 
@@ -427,11 +422,7 @@ describe('BookRenderer', () => {
     it('should return current cache size', () => {
       expect(renderer.cacheSize).toBe(0);
 
-      const pages = [
-        document.createElement('div'),
-        document.createElement('div'),
-      ];
-      renderer.setPageContents(pages);
+      renderer.setPaginationData(createMockPageData(3));
       renderer.getPageDOM(0);
       renderer.getPageDOM(1);
 
@@ -441,11 +432,7 @@ describe('BookRenderer', () => {
 
   describe('getMaxIndex', () => {
     beforeEach(() => {
-      const pages = [];
-      for (let i = 0; i < 10; i++) {
-        pages.push(document.createElement('div'));
-      }
-      renderer.setPageContents(pages);
+      renderer.setPaginationData(createMockPageData(10));
     });
 
     it('should return last index for mobile', () => {
@@ -453,47 +440,72 @@ describe('BookRenderer', () => {
     });
 
     it('should return last even index for desktop', () => {
-      // 10 pages, last spread starts at index 8 (pages 8 and 9)
       expect(renderer.getMaxIndex(false)).toBe(8);
     });
 
     it('should return 0 for desktop with 1 page', () => {
-      renderer.setPageContents([document.createElement('div')]);
+      renderer.setPaginationData(createMockPageData(1));
       expect(renderer.getMaxIndex(false)).toBe(0);
     });
 
     it('should return 0 for desktop with 2 pages', () => {
-      renderer.setPageContents([
-        document.createElement('div'),
-        document.createElement('div'),
-      ]);
+      renderer.setPaginationData(createMockPageData(2));
       expect(renderer.getMaxIndex(false)).toBe(0);
     });
 
     it('should return 0 for mobile with 1 page', () => {
-      renderer.setPageContents([document.createElement('div')]);
+      renderer.setPaginationData(createMockPageData(1));
       expect(renderer.getMaxIndex(true)).toBe(0);
     });
   });
 
   describe('cache eviction', () => {
     it('should evict oldest entries when cache limit is reached', () => {
-      // Cache limit is 5
-      const pages = [];
-      for (let i = 0; i < 10; i++) {
-        const p = document.createElement('div');
-        p.innerHTML = `<p>Page ${i}</p>`;
-        pages.push(p);
-      }
-      renderer.setPageContents(pages);
+      renderer.setPaginationData(createMockPageData(10));
 
-      // Access pages 0-5 to fill cache beyond limit
       for (let i = 0; i <= 5; i++) {
         renderer.getPageDOM(i);
       }
 
-      // Cache should be at limit (5)
       expect(renderer.cacheSize).toBe(5);
+    });
+  });
+
+  describe('totalPages', () => {
+    it('should return 0 when no pagination data set', () => {
+      expect(renderer.totalPages).toBe(0);
+    });
+
+    it('should return page count from pagination data', () => {
+      renderer.setPaginationData(createMockPageData(42));
+      expect(renderer.totalPages).toBe(42);
+    });
+
+    it('should return 0 after setting null pagination data', () => {
+      renderer.setPaginationData(createMockPageData(10));
+      renderer.setPaginationData(null);
+      expect(renderer.totalPages).toBe(0);
+    });
+  });
+
+  describe('_materializePage', () => {
+    it('should return null when no source element', () => {
+      expect(renderer._materializePage(0)).toBeNull();
+    });
+
+    it('should create viewport with correct dimensions', () => {
+      renderer.setPaginationData(createMockPageData(5, 300, 500));
+      const page = renderer._materializePage(0);
+      expect(page.style.width).toBe('300px');
+      expect(page.style.height).toBe('500px');
+      expect(page.style.overflow).toBe('hidden');
+    });
+
+    it('should set translateX based on page index', () => {
+      renderer.setPaginationData(createMockPageData(5, 300, 500));
+      const page = renderer._materializePage(2);
+      const inner = page.firstChild;
+      expect(inner.style.transform).toBe('translateX(-600px)');
     });
   });
 });
