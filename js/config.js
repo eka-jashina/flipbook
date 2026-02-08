@@ -78,17 +78,19 @@ const CHAPTERS = activeBook?.chapters?.length
       },
     ];
 
-// Настройки по умолчанию: из админки или захардкоженные
-const adminDefaults = adminConfig?.defaultSettings || {};
+// Настройки по умолчанию: из активной книги или захардкоженные
+const adminDefaults = activeBook?.defaultSettings || {};
 
-// Оформление книги: из админки или дефолтные
-const adminAppearance = adminConfig?.appearance || {};
+// Оформление книги: per-book light/dark + global fontMin/fontMax
+const bookAppearance = activeBook?.appearance || {};
+const adminFontMin = adminConfig?.fontMin ?? adminConfig?.appearance?.fontMin;
+const adminFontMax = adminConfig?.fontMax ?? adminConfig?.appearance?.fontMax;
 
 // Обложка: из активной книги или дефолтные
 const adminCover = activeBook?.cover || {};
 
-// Звуки: из админки или дефолтные
-const adminSounds = adminConfig?.sounds || {};
+// Звуки: из активной книги или дефолтные
+const adminSounds = activeBook?.sounds || {};
 
 // Фон обложки: из админки (с добавлением BASE_URL) или дефолтные
 function resolveCoverBg(value, fallback) {
@@ -176,8 +178,8 @@ export const CONFIG = Object.freeze({
   // Кастомные шрифты (нужна загрузка через FontFace)
   CUSTOM_FONTS: fontsResult.customFonts || [],
 
-  // Декоративный шрифт (для заголовков)
-  DECORATIVE_FONT: adminConfig?.decorativeFont || null,
+  // Декоративный шрифт (для заголовков, per-book)
+  DECORATIVE_FONT: activeBook?.decorativeFont || null,
 
   SOUNDS: {
     pageFlip: resolveSound(adminSounds.pageFlip, 'sounds/page-flip.mp3'),
@@ -185,9 +187,8 @@ export const CONFIG = Object.freeze({
     bookClose: resolveSound(adminSounds.bookClose, 'sounds/cover-flip.mp3'),
   },
 
-  // Конфигурация ambient звуков
-  // Из админки (с фильтрацией по visible) или дефолтные
-  AMBIENT: buildAmbientConfig(adminConfig?.ambients),
+  // Конфигурация ambient звуков (per-book)
+  AMBIENT: buildAmbientConfig(activeBook?.ambients),
 
  DEFAULT_SETTINGS: {
     font: adminDefaults.font || "georgia",
@@ -200,31 +201,31 @@ export const CONFIG = Object.freeze({
     ambientVolume: adminDefaults.ambientVolume ?? 0.5
   },
 
-  // Настройки оформления из админки
+  // Настройки оформления: global fontMin/fontMax + per-book light/dark
   APPEARANCE: {
     coverTitle: adminCover.title || 'О хоббитах',
     coverAuthor: adminCover.author || 'Дж.Р.Р.Толкин',
-    fontMin: adminAppearance.fontMin ?? 14,
-    fontMax: adminAppearance.fontMax ?? 22,
+    fontMin: adminFontMin ?? 14,
+    fontMax: adminFontMax ?? 22,
     light: {
-      coverBgStart: adminAppearance.light?.coverBgStart || '#3a2d1f',
-      coverBgEnd: adminAppearance.light?.coverBgEnd || '#2a2016',
-      coverText: adminAppearance.light?.coverText || '#f2e9d8',
-      coverBgImage: adminAppearance.light?.coverBgImage || null,
-      pageTexture: adminAppearance.light?.pageTexture || 'default',
-      customTextureData: adminAppearance.light?.customTextureData || null,
-      bgPage: adminAppearance.light?.bgPage || '#fdfcf8',
-      bgApp: adminAppearance.light?.bgApp || '#e6e3dc',
+      coverBgStart: bookAppearance.light?.coverBgStart || '#3a2d1f',
+      coverBgEnd: bookAppearance.light?.coverBgEnd || '#2a2016',
+      coverText: bookAppearance.light?.coverText || '#f2e9d8',
+      coverBgImage: bookAppearance.light?.coverBgImage || null,
+      pageTexture: bookAppearance.light?.pageTexture || 'default',
+      customTextureData: bookAppearance.light?.customTextureData || null,
+      bgPage: bookAppearance.light?.bgPage || '#fdfcf8',
+      bgApp: bookAppearance.light?.bgApp || '#e6e3dc',
     },
     dark: {
-      coverBgStart: adminAppearance.dark?.coverBgStart || '#111111',
-      coverBgEnd: adminAppearance.dark?.coverBgEnd || '#000000',
-      coverText: adminAppearance.dark?.coverText || '#eaeaea',
-      coverBgImage: adminAppearance.dark?.coverBgImage || null,
-      pageTexture: adminAppearance.dark?.pageTexture || 'none',
-      customTextureData: adminAppearance.dark?.customTextureData || null,
-      bgPage: adminAppearance.dark?.bgPage || '#1e1e1e',
-      bgApp: adminAppearance.dark?.bgApp || '#121212',
+      coverBgStart: bookAppearance.dark?.coverBgStart || '#111111',
+      coverBgEnd: bookAppearance.dark?.coverBgEnd || '#000000',
+      coverText: bookAppearance.dark?.coverText || '#eaeaea',
+      coverBgImage: bookAppearance.dark?.coverBgImage || null,
+      pageTexture: bookAppearance.dark?.pageTexture || 'none',
+      customTextureData: bookAppearance.dark?.customTextureData || null,
+      bgPage: bookAppearance.dark?.bgPage || '#1e1e1e',
+      bgApp: bookAppearance.dark?.bgApp || '#121212',
     },
   },
 

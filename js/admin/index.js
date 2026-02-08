@@ -501,10 +501,7 @@ class AdminApp {
   _handleSelectBook(bookId) {
     if (bookId === this.store.getActiveBookId()) return;
     this.store.setActiveBook(bookId);
-    this._renderBookSelector();
-    this._renderCover();
-    this._renderChapters();
-    this._renderJsonPreview();
+    this._render();
     this._showToast('Книга переключена');
   }
 
@@ -518,10 +515,7 @@ class AdminApp {
     if (!confirm(`Удалить книгу «${book?.title || bookId}»?`)) return;
 
     this.store.removeBook(bookId);
-    this._renderBookSelector();
-    this._renderCover();
-    this._renderChapters();
-    this._renderJsonPreview();
+    this._render();
     this._showToast('Книга удалена');
   }
 
@@ -859,10 +853,7 @@ class AdminApp {
     // Переключиться на неё
     this.store.setActiveBook(bookId);
 
-    this._renderBookSelector();
-    this._renderCover();
-    this._renderChapters();
-    this._renderJsonPreview();
+    this._render();
     this._resetBookUpload();
     this._showToast(`Книга «${title || 'Без названия'}» добавлена (${chapters.length} гл.)`);
   }

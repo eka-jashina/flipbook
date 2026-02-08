@@ -6,6 +6,9 @@
  * предоставляет CRUD для книг, глав и настроек.
  *
  * Поддерживает несколько книг. Одна книга — активная (отображается в ридере).
+ *
+ * Per-book: defaultSettings, appearance (light/dark), sounds, ambients, decorativeFont
+ * Global:  readingFonts, settingsVisibility, fontMin, fontMax
  */
 
 const STORAGE_KEY = 'flipbook-admin-config';
@@ -46,6 +49,35 @@ const DEFAULT_READING_FONTS = [
   { id: 'open-sans', label: 'Open Sans', family: '"Open Sans", sans-serif', builtin: true, enabled: true },
 ];
 
+// Дефолтные per-book настройки
+const DEFAULT_BOOK_SETTINGS = {
+  defaultSettings: {
+    font: 'georgia',
+    fontSize: 18,
+    theme: 'light',
+    soundEnabled: true,
+    soundVolume: 0.3,
+    ambientType: 'none',
+    ambientVolume: 0.5,
+  },
+  appearance: {
+    light: { ...LIGHT_DEFAULTS },
+    dark: { ...DARK_DEFAULTS },
+  },
+  sounds: {
+    pageFlip: 'sounds/page-flip.mp3',
+    bookOpen: 'sounds/cover-flip.mp3',
+    bookClose: 'sounds/cover-flip.mp3',
+  },
+  ambients: [
+    { id: 'none', label: 'Без звука', shortLabel: 'Нет', icon: '✕', file: null, visible: true, builtin: true },
+    { id: 'rain', label: 'Дождь', shortLabel: 'Дождь', icon: '🌧️', file: 'sounds/ambient/rain.mp3', visible: true, builtin: true },
+    { id: 'fireplace', label: 'Камин', shortLabel: 'Камин', icon: '🔥', file: 'sounds/ambient/fireplace.mp3', visible: true, builtin: true },
+    { id: 'cafe', label: 'Кафе', shortLabel: 'Кафе', icon: '☕', file: 'sounds/ambient/cafe.mp3', visible: true, builtin: true },
+  ],
+  decorativeFont: null,
+};
+
 // Дефолтная книга
 const DEFAULT_BOOK = {
   id: 'default',
@@ -75,40 +107,19 @@ const DEFAULT_BOOK = {
       bgMobile: 'images/backgrounds/part_3-mobile.webp',
     },
   ],
+  ...structuredClone(DEFAULT_BOOK_SETTINGS),
 };
 
 // Дефолтная конфигурация
 const DEFAULT_CONFIG = {
   books: [structuredClone(DEFAULT_BOOK)],
   activeBookId: 'default',
-  sounds: {
-    pageFlip: 'sounds/page-flip.mp3',
-    bookOpen: 'sounds/cover-flip.mp3',
-    bookClose: 'sounds/cover-flip.mp3',
-  },
-  ambients: [
-    { id: 'none', label: 'Без звука', shortLabel: 'Нет', icon: '✕', file: null, visible: true, builtin: true },
-    { id: 'rain', label: 'Дождь', shortLabel: 'Дождь', icon: '🌧️', file: 'sounds/ambient/rain.mp3', visible: true, builtin: true },
-    { id: 'fireplace', label: 'Камин', shortLabel: 'Камин', icon: '🔥', file: 'sounds/ambient/fireplace.mp3', visible: true, builtin: true },
-    { id: 'cafe', label: 'Кафе', shortLabel: 'Кафе', icon: '☕', file: 'sounds/ambient/cafe.mp3', visible: true, builtin: true },
-  ],
-  defaultSettings: {
-    font: 'georgia',
-    fontSize: 18,
-    theme: 'light',
-    soundEnabled: true,
-    soundVolume: 0.3,
-    ambientType: 'none',
-    ambientVolume: 0.5,
-  },
-  appearance: {
-    fontMin: 14,
-    fontMax: 22,
-    light: { ...LIGHT_DEFAULTS },
-    dark: { ...DARK_DEFAULTS },
-  },
-  decorativeFont: null,
+  // Global: диапазон шрифтов
+  fontMin: 14,
+  fontMax: 22,
+  // Global: шрифты для чтения
   readingFonts: structuredClone(DEFAULT_READING_FONTS),
+  // Global: видимость настроек
   settingsVisibility: {
     fontSize: true,
     theme: true,
@@ -178,29 +189,11 @@ export class AdminConfigStore {
 
   /** Гарантируем наличие всех полей после загрузки */
   _mergeWithDefaults(saved) {
-    const appearance = saved.appearance || {};
-
-    // Миграция: если нет light/dark — переносим плоскую структуру в light
-    const hasPerTheme = appearance.light || appearance.dark;
-    let light, dark;
-
-    if (hasPerTheme) {
-      light = { ...structuredClone(LIGHT_DEFAULTS), ...(appearance.light || {}) };
-      dark = { ...structuredClone(DARK_DEFAULTS), ...(appearance.dark || {}) };
-    } else {
-      const rest = { ...appearance };
-      delete rest.fontMin;
-      delete rest.fontMax;
-      light = { ...structuredClone(LIGHT_DEFAULTS), ...rest };
-      dark = structuredClone(DARK_DEFAULTS);
-    }
-
-    // Миграция: старый формат (cover + chapters) → books[]
+    // --- Миграция книг из старого формата ---
     let books;
     if (Array.isArray(saved.books) && saved.books.length > 0) {
       books = saved.books;
     } else if (saved.cover || saved.chapters) {
-      // Старый формат — мигрируем в одну книгу
       books = [{
         id: 'default',
         cover: {
@@ -213,27 +206,38 @@ export class AdminConfigStore {
       books = structuredClone(DEFAULT_CONFIG.books);
     }
 
+    // --- Миграция per-book настроек из top-level (старый формат) ---
+    // Если настройки были на верхнем уровне, копируем их в каждую книгу
+    const topLevel = {
+      defaultSettings: saved.defaultSettings || null,
+      appearance: saved.appearance || null,
+      sounds: saved.sounds || null,
+      ambients: saved.ambients || null,
+      decorativeFont: saved.decorativeFont !== undefined ? saved.decorativeFont : undefined,
+    };
+
+    for (const book of books) {
+      this._ensureBookSettings(book, topLevel);
+    }
+
     const activeBookId = saved.activeBookId || (books.length > 0 ? books[0].id : 'default');
+
+    // --- Global: fontMin/fontMax ---
+    // Миграция: раньше были в appearance, теперь на верхнем уровне
+    let fontMin = saved.fontMin;
+    let fontMax = saved.fontMax;
+    if (fontMin === undefined && saved.appearance) {
+      fontMin = saved.appearance.fontMin;
+    }
+    if (fontMax === undefined && saved.appearance) {
+      fontMax = saved.appearance.fontMax;
+    }
 
     return {
       books,
       activeBookId,
-      sounds: {
-        ...structuredClone(DEFAULT_CONFIG.sounds),
-        ...(saved.sounds || {}),
-      },
-      ambients: Array.isArray(saved.ambients) ? saved.ambients : structuredClone(DEFAULT_CONFIG.ambients),
-      defaultSettings: {
-        ...structuredClone(DEFAULT_CONFIG.defaultSettings),
-        ...(saved.defaultSettings || {}),
-      },
-      appearance: {
-        fontMin: appearance.fontMin ?? DEFAULT_CONFIG.appearance.fontMin,
-        fontMax: appearance.fontMax ?? DEFAULT_CONFIG.appearance.fontMax,
-        light,
-        dark,
-      },
-      decorativeFont: saved.decorativeFont || null,
+      fontMin: fontMin ?? DEFAULT_CONFIG.fontMin,
+      fontMax: fontMax ?? DEFAULT_CONFIG.fontMax,
       readingFonts: Array.isArray(saved.readingFonts)
         ? saved.readingFonts
         : structuredClone(DEFAULT_READING_FONTS),
@@ -242,6 +246,61 @@ export class AdminConfigStore {
         ...(saved.settingsVisibility || {}),
       },
     };
+  }
+
+  /** Обеспечить наличие per-book настроек в объекте книги */
+  _ensureBookSettings(book, fallback) {
+    // defaultSettings
+    if (!book.defaultSettings) {
+      book.defaultSettings = {
+        ...structuredClone(DEFAULT_BOOK_SETTINGS.defaultSettings),
+        ...(fallback.defaultSettings || {}),
+      };
+    }
+
+    // appearance (с миграцией light/dark)
+    if (!book.appearance) {
+      const src = fallback.appearance || {};
+      const hasPerTheme = src.light || src.dark;
+      let light, dark;
+      if (hasPerTheme) {
+        light = { ...structuredClone(LIGHT_DEFAULTS), ...(src.light || {}) };
+        dark = { ...structuredClone(DARK_DEFAULTS), ...(src.dark || {}) };
+      } else {
+        const rest = { ...src };
+        delete rest.fontMin;
+        delete rest.fontMax;
+        light = { ...structuredClone(LIGHT_DEFAULTS), ...rest };
+        dark = structuredClone(DARK_DEFAULTS);
+      }
+      book.appearance = { light, dark };
+    } else {
+      // Убедиться что light/dark полные
+      book.appearance.light = { ...structuredClone(LIGHT_DEFAULTS), ...(book.appearance.light || {}) };
+      book.appearance.dark = { ...structuredClone(DARK_DEFAULTS), ...(book.appearance.dark || {}) };
+    }
+
+    // sounds
+    if (!book.sounds) {
+      book.sounds = {
+        ...structuredClone(DEFAULT_BOOK_SETTINGS.sounds),
+        ...(fallback.sounds || {}),
+      };
+    }
+
+    // ambients
+    if (!book.ambients) {
+      book.ambients = Array.isArray(fallback.ambients)
+        ? structuredClone(fallback.ambients)
+        : structuredClone(DEFAULT_BOOK_SETTINGS.ambients);
+    }
+
+    // decorativeFont
+    if (book.decorativeFont === undefined) {
+      book.decorativeFont = fallback.decorativeFont !== undefined
+        ? (fallback.decorativeFont ? structuredClone(fallback.decorativeFont) : null)
+        : null;
+    }
   }
 
   /** Сохранить конфиг в IndexedDB (fire-and-forget) */
@@ -357,12 +416,14 @@ export class AdminConfigStore {
       || this._config.books[0];
   }
 
-  /** Добавить новую книгу */
+  /** Добавить новую книгу (per-book настройки берутся из дефолтов) */
   addBook(book) {
     this._config.books.push({
       id: book.id || `book_${Date.now()}`,
       cover: book.cover || { title: '', author: '', bg: '', bgMobile: '' },
       chapters: book.chapters || [],
+      // Per-book: всегда дефолтные значения
+      ...structuredClone(DEFAULT_BOOK_SETTINGS),
     });
     this._save();
   }
@@ -447,73 +508,81 @@ export class AdminConfigStore {
     this._save();
   }
 
-  // --- Амбиенты ---
+  // --- Амбиенты (per-book, активной книги) ---
 
   getAmbients() {
-    return structuredClone(this._config.ambients);
+    const book = this._getActiveBook();
+    return book ? structuredClone(book.ambients) : structuredClone(DEFAULT_BOOK_SETTINGS.ambients);
   }
 
   addAmbient(ambient) {
-    this._config.ambients.push({ ...ambient });
+    const book = this._getActiveBook();
+    if (!book) return;
+    book.ambients.push({ ...ambient });
     this._save();
   }
 
   updateAmbient(index, data) {
-    if (index >= 0 && index < this._config.ambients.length) {
-      this._config.ambients[index] = { ...this._config.ambients[index], ...data };
+    const book = this._getActiveBook();
+    if (!book) return;
+    if (index >= 0 && index < book.ambients.length) {
+      book.ambients[index] = { ...book.ambients[index], ...data };
       this._save();
     }
   }
 
   removeAmbient(index) {
-    if (index >= 0 && index < this._config.ambients.length) {
-      this._config.ambients.splice(index, 1);
+    const book = this._getActiveBook();
+    if (!book) return;
+    if (index >= 0 && index < book.ambients.length) {
+      book.ambients.splice(index, 1);
       this._save();
     }
   }
 
-  // --- Звуки ---
+  // --- Звуки (per-book, активной книги) ---
 
   getSounds() {
-    return structuredClone(this._config.sounds);
+    const book = this._getActiveBook();
+    return book ? structuredClone(book.sounds) : structuredClone(DEFAULT_BOOK_SETTINGS.sounds);
   }
 
   updateSounds(sounds) {
-    this._config.sounds = {
-      ...this._config.sounds,
-      ...sounds,
-    };
+    const book = this._getActiveBook();
+    if (!book) return;
+    book.sounds = { ...book.sounds, ...sounds };
     this._save();
   }
 
-  // --- Настройки ---
+  // --- Настройки по умолчанию (per-book, активной книги) ---
 
   getDefaultSettings() {
-    return structuredClone(this._config.defaultSettings);
+    const book = this._getActiveBook();
+    return book ? structuredClone(book.defaultSettings) : structuredClone(DEFAULT_BOOK_SETTINGS.defaultSettings);
   }
 
   updateDefaultSettings(settings) {
-    this._config.defaultSettings = {
-      ...this._config.defaultSettings,
-      ...settings,
-    };
+    const book = this._getActiveBook();
+    if (!book) return;
+    book.defaultSettings = { ...book.defaultSettings, ...settings };
     this._save();
   }
 
-  // --- Декоративный шрифт ---
+  // --- Декоративный шрифт (per-book, активной книги) ---
 
   getDecorativeFont() {
-    return this._config.decorativeFont
-      ? { ...this._config.decorativeFont }
-      : null;
+    const book = this._getActiveBook();
+    return book?.decorativeFont ? { ...book.decorativeFont } : null;
   }
 
   setDecorativeFont(fontData) {
-    this._config.decorativeFont = fontData ? { ...fontData } : null;
+    const book = this._getActiveBook();
+    if (!book) return;
+    book.decorativeFont = fontData ? { ...fontData } : null;
     this._save();
   }
 
-  // --- Шрифты для чтения ---
+  // --- Шрифты для чтения (global) ---
 
   getReadingFonts() {
     return structuredClone(this._config.readingFonts);
@@ -543,28 +612,38 @@ export class AdminConfigStore {
 
   // --- Оформление ---
 
+  /** Получить оформление: global fontMin/fontMax + per-book light/dark */
   getAppearance() {
-    return structuredClone(this._config.appearance);
+    const book = this._getActiveBook();
+    const appearance = book?.appearance || structuredClone(DEFAULT_BOOK_SETTINGS.appearance);
+    return structuredClone({
+      fontMin: this._config.fontMin,
+      fontMax: this._config.fontMax,
+      light: appearance.light,
+      dark: appearance.dark,
+    });
   }
 
   /** Обновить глобальные поля оформления (fontMin, fontMax) */
   updateAppearanceGlobal(data) {
-    if (data.fontMin !== undefined) this._config.appearance.fontMin = data.fontMin;
-    if (data.fontMax !== undefined) this._config.appearance.fontMax = data.fontMax;
+    if (data.fontMin !== undefined) this._config.fontMin = data.fontMin;
+    if (data.fontMax !== undefined) this._config.fontMax = data.fontMax;
     this._save();
   }
 
-  /** Обновить per-theme поля оформления */
+  /** Обновить per-theme поля оформления (активной книги) */
   updateAppearanceTheme(theme, data) {
     if (theme !== 'light' && theme !== 'dark') return;
-    this._config.appearance[theme] = {
-      ...this._config.appearance[theme],
+    const book = this._getActiveBook();
+    if (!book) return;
+    book.appearance[theme] = {
+      ...book.appearance[theme],
       ...data,
     };
     this._save();
   }
 
-  // --- Видимость настроек ---
+  // --- Видимость настроек (global) ---
 
   getSettingsVisibility() {
     return { ...this._config.settingsVisibility };
