@@ -240,8 +240,8 @@ describe('LifecycleDelegate', () => {
       await openPromise;
 
       expect(mockDeps.contentLoader.load).toHaveBeenCalledWith([
-        'content/part_1.html',
-        'content/part_2.html',
+        { file: 'content/part_1.html', id: 'ch1', htmlContent: undefined },
+        { file: 'content/part_2.html', id: 'ch2', htmlContent: undefined },
       ]);
     });
 

@@ -79,7 +79,7 @@
   inset: 0;
   overflow: hidden;
   background-color: var(--bg-page);
-  background-image: url("/images/backgrounds/bg-page.webp");
+  background-image: var(--bg-page-image);
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;

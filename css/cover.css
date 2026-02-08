@@ -36,6 +36,8 @@
   align-items: center;
   justify-content: center;
   background: var(--cover-front-bg);
+  background-size: cover;
+  background-position: center;
   color: var(--cover-front-text);
   box-shadow:
     inset 0 1px 0 rgb(255, 255, 255, 0.08),

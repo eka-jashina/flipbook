@@ -75,6 +75,15 @@ export class SettingsDelegate extends BaseDelegate {
       this.ambientManager.setVolume(this.settings.get("ambientVolume"));
     }
 
+    // Загрузить кастомные шрифты
+    this._loadCustomFonts();
+
+    // Применить настройки оформления из админки
+    this._applyAppearance();
+
+    // Скрыть/показать секции настроек по конфигу админки
+    this._applySettingsVisibility();
+
     cssVars.invalidateCache();
   }
 
@@ -209,6 +218,9 @@ export class SettingsDelegate extends BaseDelegate {
       html.dataset.theme = theme === "light" ? "" : theme;
     }
 
+    // Переприменить оформление для новой темы
+    this._applyAppearance();
+
     // Названия тем для объявления
     const themeNames = {
       light: 'Светлая тема',
@@ -315,6 +327,175 @@ export class SettingsDelegate extends BaseDelegate {
           console.warn("Не удалось выйти из полноэкранного режима:", err.message);
         });
       }
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // ЗАГРУЗКА КАСТОМНЫХ ШРИФТОВ
+  // ═══════════════════════════════════════════
+
+  /**
+   * Загрузить кастомные шрифты (декоративный + шрифты для чтения) через FontFace API.
+   * Вызывается один раз при apply().
+   * @private
+   */
+  _loadCustomFonts() {
+    // Декоративный шрифт
+    const decorative = CONFIG.DECORATIVE_FONT;
+    if (decorative?.dataUrl) {
+      this._registerFont('CustomDecorativeFont', decorative.dataUrl).then(() => {
+        const html = this.dom.get("html");
+        if (html) {
+          html.style.setProperty("--decorative-font", "CustomDecorativeFont, sans-serif");
+        }
+      });
+    }
+
+    // Кастомные шрифты для чтения
+    const customFonts = CONFIG.CUSTOM_FONTS;
+    if (customFonts?.length) {
+      for (const f of customFonts) {
+        const fontName = `CustomReading_${f.id}`;
+        this._registerFont(fontName, f.dataUrl).then(() => {
+          // Обновить CONFIG.FONTS чтобы использовать загруженное имя
+          // Семейство уже содержит fallback, просто добавляем загруженное имя
+          CONFIG.FONTS[f.id] = `${fontName}, ${f.family.split(',').pop().trim()}`;
+        });
+      }
+    }
+
+    // Динамически заполнить <select> шрифтов из конфига
+    this._populateFontSelect();
+  }
+
+  /**
+   * Зарегистрировать шрифт через FontFace API
+   * @private
+   */
+  _registerFont(familyName, dataUrl) {
+    const fontFace = new FontFace(familyName, `url(${dataUrl})`);
+    return fontFace.load().then((loaded) => {
+      document.fonts.add(loaded);
+    }).catch((err) => {
+      console.warn(`Не удалось загрузить шрифт ${familyName}:`, err.message);
+    });
+  }
+
+  /**
+   * Заполнить <select> шрифтов из CONFIG.FONTS_LIST
+   * @private
+   */
+  _populateFontSelect() {
+    const fontsList = CONFIG.FONTS_LIST;
+    if (!fontsList) return; // Нет данных из админки — используем статический HTML
+
+    const select = this.dom.get("fontSelect");
+    if (!select) return;
+
+    select.innerHTML = fontsList.map(f =>
+      `<option value="${f.id}">${f.label}</option>`
+    ).join('');
+
+    // Восстановить текущее значение
+    const currentFont = this.settings.get("font");
+    if (fontsList.some(f => f.id === currentFont)) {
+      select.value = currentFont;
+    } else if (fontsList.length > 0) {
+      select.value = fontsList[0].id;
+      this.settings.set("font", fontsList[0].id);
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // ОФОРМЛЕНИЕ ИЗ АДМИНКИ
+  // ═══════════════════════════════════════════
+
+  /**
+   * Применить настройки оформления из CONFIG.APPEARANCE к CSS-переменным.
+   * Значения задаются в админке (admin.html) и читаются через config.js.
+   * @private
+   */
+  _applyAppearance() {
+    const html = this.dom.get("html");
+    if (!html) return;
+
+    const a = CONFIG.APPEARANCE;
+    if (!a) return;
+
+    // Заголовок и автор на обложке (глобальные)
+    const cover = this.dom.get("cover");
+    if (cover) {
+      const spans = cover.querySelectorAll(".cover-front h1 span");
+      if (spans.length >= 2) {
+        spans[0].textContent = a.coverTitle;
+        spans[1].textContent = a.coverAuthor;
+      }
+    }
+
+    // Определить текущую тему для per-theme значений
+    const currentTheme = this.settings.get("theme");
+    // bw наследует от light
+    const themeKey = currentTheme === "dark" ? "dark" : "light";
+    const t = a[themeKey] || a.light;
+
+    // Фон обложки: градиент или изображение
+    if (t.coverBgImage) {
+      html.style.setProperty("--cover-front-bg", `url(${t.coverBgImage})`);
+    } else {
+      html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${t.coverBgStart}, ${t.coverBgEnd})`);
+    }
+    html.style.setProperty("--cover-front-text", t.coverText);
+
+    // Текстура страницы
+    if (t.pageTexture === "custom" && t.customTextureData) {
+      html.style.setProperty("--bg-page-image", `url(${t.customTextureData})`);
+    } else if (t.pageTexture === "none") {
+      html.style.setProperty("--bg-page-image", "none");
+    } else {
+      html.style.removeProperty("--bg-page-image");
+    }
+
+    html.style.setProperty("--bg-page", t.bgPage);
+    html.style.setProperty("--bg-app", t.bgApp);
+
+    // Ограничения шрифтов (глобальные)
+    html.style.setProperty("--font-min", `${a.fontMin}px`);
+    html.style.setProperty("--font-max", `${a.fontMax}px`);
+  }
+
+  // ═══════════════════════════════════════════
+  // ВИДИМОСТЬ НАСТРОЕК
+  // ═══════════════════════════════════════════
+
+  /**
+   * Скрыть/показать секции пользовательских настроек по конфигу из админки.
+   * Если все секции внутри pod-а скрыты — скрываем сам pod.
+   * @private
+   */
+  _applySettingsVisibility() {
+    const v = CONFIG.SETTINGS_VISIBILITY;
+    if (!v) return;
+
+    // Найти все секции с data-setting
+    const sections = document.querySelectorAll('[data-setting]');
+    sections.forEach(section => {
+      const key = section.dataset.setting;
+      if (key in v) {
+        section.hidden = !v[key];
+      }
+    });
+
+    // Скрыть pod-ы, если все их видимые секции скрыты
+    const settingsPod = document.querySelector('.settings-pod');
+    if (settingsPod) {
+      const visibleSections = settingsPod.querySelectorAll('.settings-section:not([hidden])');
+      settingsPod.hidden = visibleSections.length === 0;
+    }
+
+    const audioPod = document.querySelector('.audio-pod');
+    if (audioPod) {
+      const visibleSections = audioPod.querySelectorAll('.audio-section:not([hidden])');
+      audioPod.hidden = visibleSections.length === 0;
     }
   }
 

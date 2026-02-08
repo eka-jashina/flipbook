@@ -23,15 +23,29 @@
   border-radius: 12px;
 }
 
+.audio-pod[hidden] {
+  display: none;
+}
+
 .audio-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
+.audio-section[hidden] {
+  display: none;
+}
+
 .audio-section:not(:last-child) {
   padding-bottom: 12px;
   border-bottom: 1px solid var(--pod-divider);
+}
+
+/* Убираем border у последней видимой секции, если за ней только скрытые */
+.audio-section:not([hidden], :has(~ .audio-section:not([hidden]))) {
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .audio-section-header {

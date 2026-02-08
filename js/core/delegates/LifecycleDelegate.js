@@ -94,12 +94,12 @@ export class LifecycleDelegate extends BaseDelegate {
       // ─── Этап 3: Параллельная загрузка (анимация + контент) ───
       // Связываем операции: если одна упадёт — отменяем вторую,
       // чтобы избежать рассогласования состояния.
-      const chapterUrls = CONFIG.CHAPTERS.map(c => c.file);
+      const chapters = CONFIG.CHAPTERS.map(c => ({ file: c.file, id: c.id, htmlContent: c.htmlContent }));
 
       const animationPromise = this.animator.runOpenAnimation()
         .catch((err) => { this.contentLoader.abort(); throw err; });
 
-      const contentPromise = this.contentLoader.load(chapterUrls)
+      const contentPromise = this.contentLoader.load(chapters)
         .catch((err) => { this.animator.abort(); throw err; });
 
       const [signal, html] = await Promise.all([
@@ -255,8 +255,8 @@ export class LifecycleDelegate extends BaseDelegate {
       }
 
       // ─── Этап 2: Загрузка контента ───
-      const chapterUrls = CONFIG.CHAPTERS.map(c => c.file);
-      const html = await this.contentLoader.load(chapterUrls);
+      const chapters = CONFIG.CHAPTERS.map(c => ({ file: c.file, id: c.id, htmlContent: c.htmlContent }));
+      const html = await this.contentLoader.load(chapters);
 
       // Проверка после await: делегат мог быть уничтожен
       if (this.isDestroyed) return;
