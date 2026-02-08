@@ -43,7 +43,19 @@ export class BookParser {
       return BookParser.parseFb2(file);
     }
 
-    throw new Error(`Неподдерживаемый формат: ${ext}. Допустимы .epub и .fb2`);
+    if (ext === '.txt') {
+      return BookParser.parseTxt(file);
+    }
+
+    if (ext === '.docx') {
+      return BookParser.parseDocx(file);
+    }
+
+    if (ext === '.doc') {
+      return BookParser.parseDoc(file);
+    }
+
+    throw new Error(`Неподдерживаемый формат: ${ext}. Допустимы .epub, .fb2, .docx, .doc, .txt`);
   }
 
   // --- EPUB ---
@@ -800,6 +812,381 @@ export class BookParser {
     }
 
     return parts.filter(Boolean).join('\n');
+  }
+
+  // --- TXT ---
+
+  /**
+   * Парсинг TXT файла
+   * @param {File} file
+   * @returns {Promise<ParsedBook>}
+   */
+  static async parseTxt(file) {
+    const text = await file.text();
+    const title = file.name.replace(/\.txt$/i, '');
+
+    if (!text.trim()) {
+      throw new Error('Файл пуст');
+    }
+
+    // Разделить на абзацы по пустым строкам
+    const paragraphs = text.split(/\n\s*\n/)
+      .map(p => p.trim())
+      .filter(Boolean);
+
+    const html = paragraphs
+      .map(p => `<p>${BookParser._escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+      .join('\n');
+
+    return {
+      title,
+      author: '',
+      chapters: [{
+        id: 'chapter_1',
+        title,
+        html: `<article>\n<h2>${BookParser._escapeHtml(title)}</h2>\n${html}\n</article>`,
+      }],
+    };
+  }
+
+  // --- DOCX ---
+
+  /**
+   * Парсинг DOCX файла (Office Open XML)
+   * @param {File} file
+   * @returns {Promise<ParsedBook>}
+   */
+  static async parseDocx(file) {
+    const zip = await JSZip.loadAsync(file);
+    const title = file.name.replace(/\.docx$/i, '');
+
+    // Метаданные из docProps/core.xml
+    let author = '';
+    let docTitle = '';
+    const coreXml = zip.file('docProps/core.xml');
+    if (coreXml) {
+      const coreText = await coreXml.async('string');
+      const coreDoc = BookParser._parseXml(coreText);
+      docTitle = BookParser._getTextContent(coreDoc, 'dc\\:title, title') || '';
+      author = BookParser._getTextContent(coreDoc, 'dc\\:creator, creator') || '';
+    }
+
+    const finalTitle = docTitle || title;
+
+    // Загрузить изображения из word/media/
+    const imageMap = await BookParser._loadDocxImages(zip);
+
+    // Загрузить связи для изображений (word/_rels/document.xml.rels)
+    const relsMap = await BookParser._loadDocxRels(zip);
+
+    // Парсить word/document.xml
+    const docXmlFile = zip.file('word/document.xml');
+    if (!docXmlFile) {
+      throw new Error('Не найден word/document.xml в архиве');
+    }
+    const docXml = await docXmlFile.async('string');
+    const doc = BookParser._parseXml(docXml);
+
+    // Извлечь параграфы
+    const body = doc.querySelector('body') || doc.documentElement;
+    const html = BookParser._convertDocxBody(body, imageMap, relsMap);
+
+    if (!html.trim()) {
+      throw new Error('Не удалось извлечь текст из DOCX');
+    }
+
+    return {
+      title: finalTitle,
+      author,
+      chapters: [{
+        id: 'chapter_1',
+        title: finalTitle,
+        html: `<article>\n<h2>${BookParser._escapeHtml(finalTitle)}</h2>\n${html}\n</article>`,
+      }],
+    };
+  }
+
+  /**
+   * Загрузить изображения из word/media/
+   * @private
+   */
+  static async _loadDocxImages(zip) {
+    const imageMap = new Map();
+
+    for (const [path, file] of Object.entries(zip.files)) {
+      if (!path.startsWith('word/media/')) continue;
+      if (file.dir) continue;
+
+      const ext = path.substring(path.lastIndexOf('.')).toLowerCase();
+      const mimeTypes = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.bmp': 'image/bmp',
+        '.svg': 'image/svg+xml',
+        '.webp': 'image/webp',
+      };
+      const mime = mimeTypes[ext];
+      if (!mime) continue;
+
+      const base64 = await file.async('base64');
+      const dataUrl = `data:${mime};base64,${base64}`;
+      // Ключ — относительный путь от word/ (media/image1.png)
+      const relPath = path.substring('word/'.length);
+      imageMap.set(relPath, dataUrl);
+    }
+
+    return imageMap;
+  }
+
+  /**
+   * Загрузить связи (relationships) из word/_rels/document.xml.rels
+   * @private
+   */
+  static async _loadDocxRels(zip) {
+    const relsMap = new Map();
+    const relsFile = zip.file('word/_rels/document.xml.rels');
+    if (!relsFile) return relsMap;
+
+    const relsXml = await relsFile.async('string');
+    const relsDoc = BookParser._parseXml(relsXml);
+
+    for (const rel of relsDoc.querySelectorAll('Relationship')) {
+      const id = rel.getAttribute('Id');
+      const target = rel.getAttribute('Target');
+      if (id && target) {
+        relsMap.set(id, target);
+      }
+    }
+
+    return relsMap;
+  }
+
+  /**
+   * Конвертировать body из DOCX document.xml в HTML
+   * @private
+   */
+  static _convertDocxBody(body, imageMap, relsMap) {
+    const parts = [];
+
+    // OOXML namespace — параграфы: w:p, таблицы: w:tbl
+    const children = body.children;
+    for (const el of children) {
+      const tag = el.tagName?.toLowerCase() || el.localName;
+
+      if (tag === 'w:p' || tag === 'p') {
+        const result = BookParser._convertDocxParagraph(el, imageMap, relsMap);
+        if (result) parts.push(result);
+      } else if (tag === 'w:tbl' || tag === 'tbl') {
+        // Таблицы — извлечь текст ячеек как параграфы
+        const rows = el.querySelectorAll('w\\:tr, tr');
+        for (const row of rows) {
+          const cells = row.querySelectorAll('w\\:tc, tc');
+          const cellTexts = [];
+          for (const cell of cells) {
+            const paras = cell.querySelectorAll('w\\:p, p');
+            for (const p of paras) {
+              const result = BookParser._convertDocxParagraph(p, imageMap, relsMap);
+              if (result) cellTexts.push(result);
+            }
+          }
+          parts.push(...cellTexts);
+        }
+      }
+    }
+
+    return parts.join('\n');
+  }
+
+  /**
+   * Конвертировать один DOCX параграф (w:p) в HTML
+   * @private
+   */
+  static _convertDocxParagraph(pEl, imageMap, relsMap) {
+    // Проверить стиль параграфа (заголовки)
+    const pStyle = pEl.querySelector('w\\:pPr > w\\:pStyle, pPr > pStyle');
+    const styleVal = pStyle?.getAttribute('w:val') || pStyle?.getAttribute('val') || '';
+
+    // Собрать текст из w:r (run) элементов
+    const runs = pEl.querySelectorAll('w\\:r, r');
+    let text = '';
+    let hasImage = false;
+    let imageHtml = '';
+
+    for (const run of runs) {
+      // Проверить изображения (w:drawing / w:pict)
+      const drawing = run.querySelector('w\\:drawing, drawing');
+      if (drawing) {
+        const blip = drawing.querySelector('a\\:blip, blip');
+        const embed = blip?.getAttribute('r:embed') || blip?.getAttribute('embed') || '';
+        if (embed) {
+          const target = relsMap.get(embed);
+          if (target) {
+            const dataUrl = imageMap.get(target);
+            if (dataUrl) {
+              hasImage = true;
+              imageHtml += `<img src="${dataUrl}" alt="">`;
+            }
+          }
+        }
+        continue;
+      }
+
+      // Текстовый контент (w:t)
+      const tEls = run.querySelectorAll('w\\:t, t');
+      const rPr = run.querySelector('w\\:rPr, rPr');
+      const isBold = rPr?.querySelector('w\\:b, b');
+      const isItalic = rPr?.querySelector('w\\:i, i');
+
+      for (const t of tEls) {
+        let chunk = BookParser._escapeHtml(t.textContent);
+        if (isBold) chunk = `<strong>${chunk}</strong>`;
+        if (isItalic) chunk = `<em>${chunk}</em>`;
+        text += chunk;
+      }
+
+      // Перенос строки (w:br)
+      if (run.querySelector('w\\:br, br')) {
+        text += '<br>';
+      }
+    }
+
+    if (hasImage) {
+      return imageHtml;
+    }
+
+    if (!text.trim()) return '';
+
+    // Заголовки по имени стиля
+    if (/^heading\s*1$/i.test(styleVal) || /^1$/i.test(styleVal)) {
+      return `<h2>${text}</h2>`;
+    }
+    if (/^heading\s*[2-6]$/i.test(styleVal)) {
+      return `<h2>${text}</h2>`;
+    }
+
+    return `<p>${text}</p>`;
+  }
+
+  // --- DOC ---
+
+  /**
+   * Парсинг DOC файла (базовое извлечение текста из бинарного формата)
+   * @param {File} file
+   * @returns {Promise<ParsedBook>}
+   */
+  static async parseDoc(file) {
+    const title = file.name.replace(/\.doc$/i, '');
+    const buffer = await file.arrayBuffer();
+    const text = BookParser._extractDocText(buffer);
+
+    if (!text.trim()) {
+      throw new Error('Не удалось извлечь текст из DOC');
+    }
+
+    // Разделить на абзацы по пустым строкам
+    const paragraphs = text.split(/\n\s*\n/)
+      .map(p => p.trim())
+      .filter(Boolean);
+
+    const html = paragraphs
+      .map(p => `<p>${BookParser._escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+      .join('\n');
+
+    return {
+      title,
+      author: '',
+      chapters: [{
+        id: 'chapter_1',
+        title,
+        html: `<article>\n<h2>${BookParser._escapeHtml(title)}</h2>\n${html}\n</article>`,
+      }],
+    };
+  }
+
+  /**
+   * Извлечь текст из бинарного DOC (OLE2 Compound Document)
+   * Базовая реализация: ищет текстовый поток в бинарных данных
+   * @private
+   */
+  static _extractDocText(buffer) {
+    const bytes = new Uint8Array(buffer);
+
+    // Попробовать извлечь Unicode (UTF-16LE) текст
+    // DOC хранит текст как последовательность символов в WordDocument stream
+    const chunks = [];
+    let current = '';
+    let consecutivePrintable = 0;
+
+    for (let i = 0; i < bytes.length - 1; i += 2) {
+      const code = bytes[i] | (bytes[i + 1] << 8);
+
+      // Печатные символы Unicode + переносы строк
+      if ((code >= 0x20 && code <= 0xFFFF && code !== 0xFFFE && code !== 0xFFFF) ||
+          code === 0x0A || code === 0x0D || code === 0x09) {
+        const char = String.fromCharCode(code);
+        current += char;
+        consecutivePrintable++;
+      } else {
+        // Сохранить блок, если он достаточно длинный (>20 символов)
+        if (consecutivePrintable > 20) {
+          chunks.push(current);
+        }
+        current = '';
+        consecutivePrintable = 0;
+      }
+    }
+
+    if (consecutivePrintable > 20) {
+      chunks.push(current);
+    }
+
+    if (chunks.length === 0) {
+      // Fallback: попробовать как ASCII
+      return BookParser._extractDocTextAscii(bytes);
+    }
+
+    // Взять самый длинный блок (обычно это основной текст)
+    let text = chunks.sort((a, b) => b.length - a.length)[0] || '';
+
+    // Очистить управляющие символы, оставив переносы
+    text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+    // Нормализовать переносы строк
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    return text;
+  }
+
+  /**
+   * Fallback: извлечь ASCII-текст из DOC
+   * @private
+   */
+  static _extractDocTextAscii(bytes) {
+    const chunks = [];
+    let current = '';
+    let consecutivePrintable = 0;
+
+    for (let i = 0; i < bytes.length; i++) {
+      const b = bytes[i];
+      if ((b >= 0x20 && b <= 0x7E) || b === 0x0A || b === 0x0D || b === 0x09) {
+        current += String.fromCharCode(b);
+        consecutivePrintable++;
+      } else {
+        if (consecutivePrintable > 30) {
+          chunks.push(current);
+        }
+        current = '';
+        consecutivePrintable = 0;
+      }
+    }
+
+    if (consecutivePrintable > 30) {
+      chunks.push(current);
+    }
+
+    const text = chunks.sort((a, b) => b.length - a.length)[0] || '';
+    return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   }
 
   // --- Утилиты ---

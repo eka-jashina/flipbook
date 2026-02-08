@@ -337,8 +337,9 @@ export class ChaptersModule extends BaseModule {
 
   async _processBookFile(file) {
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    if (ext !== '.epub' && ext !== '.fb2') {
-      this._showToast('Допустимые форматы: .epub, .fb2');
+    const supportedFormats = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
+    if (!supportedFormats.includes(ext)) {
+      this._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
       return;
     }
 
