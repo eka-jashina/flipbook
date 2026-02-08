@@ -111,8 +111,26 @@ export class BookParser {
     // 5. Разделить на главы по заголовкам
     const chapters = BookParser._splitEpubChapters(rawChapters, imageMap);
 
+    // Fallback: если не удалось разбить на главы — весь контент как одна глава
     if (chapters.length === 0) {
-      throw new Error('Не удалось извлечь главы из EPUB');
+      const allContent = rawChapters
+        .map(({ html, dir }) => {
+          const doc = BookParser._parseHtml(html);
+          const body = doc.body || doc.documentElement;
+          return BookParser._extractElements(body, imageMap, dir);
+        })
+        .filter(c => c.trim())
+        .join('\n');
+
+      if (!allContent.trim()) {
+        throw new Error('Не удалось извлечь текст из EPUB');
+      }
+
+      chapters.push({
+        id: 'chapter_1',
+        title: title || 'Глава 1',
+        html: `<article>\n<h2>${BookParser._escapeHtml(title || 'Глава 1')}</h2>\n${allContent}\n</article>`,
+      });
     }
 
     return { title, author, chapters };
@@ -451,8 +469,19 @@ export class BookParser {
 
     const chapters = BookParser._parseFb2Sections(bodyEl, imageMap);
 
+    // Fallback: если не удалось разбить на главы — весь body как одна глава
     if (chapters.length === 0) {
-      throw new Error('Не удалось извлечь главы из FB2');
+      const allContent = BookParser._convertFb2AllContent(bodyEl, imageMap);
+
+      if (!allContent.trim()) {
+        throw new Error('Не удалось извлечь текст из FB2');
+      }
+
+      chapters.push({
+        id: 'chapter_1',
+        title: title || 'Глава 1',
+        html: `<article>\n<h2>${BookParser._escapeHtml(title || 'Глава 1')}</h2>\n${allContent}\n</article>`,
+      });
     }
 
     return { title, author, chapters };
@@ -748,6 +777,29 @@ export class BookParser {
     }
 
     return lines.filter(Boolean).join('\n');
+  }
+
+  /**
+   * Конвертировать всё содержимое FB2 body в HTML (включая вложенные секции)
+   * Используется как fallback, когда не удалось разбить на главы
+   * @private
+   */
+  static _convertFb2AllContent(bodyEl, imageMap) {
+    const parts = [];
+
+    for (const child of bodyEl.children) {
+      const tag = child.tagName.toLowerCase();
+      if (tag === 'section') {
+        // Рекурсивно извлечь содержимое секции
+        parts.push(BookParser._convertFb2AllContent(child, imageMap));
+      } else if (tag === 'title') {
+        parts.push(`<h2>${BookParser._escapeHtml(child.textContent.trim())}</h2>`);
+      } else {
+        parts.push(BookParser._convertFb2Element(child, imageMap));
+      }
+    }
+
+    return parts.filter(Boolean).join('\n');
   }
 
   // --- Утилиты ---
