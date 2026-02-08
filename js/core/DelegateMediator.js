@@ -134,6 +134,12 @@ export class DelegateMediator {
     this._renderer.setPageContents(pages);
     this._state.chapterStarts = chapterStarts;
     this.updateNavigationUI();
+
+    // Скрыть кнопку содержания если только одна глава
+    const tocBtn = this._dom.get('tocBtn');
+    if (tocBtn) {
+      tocBtn.hidden = chapterStarts.length <= 1;
+    }
   }
 
   /**
