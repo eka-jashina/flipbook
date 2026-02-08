@@ -170,10 +170,9 @@ export class AdminConfigStore {
         const parsed = JSON.parse(raw);
         const config = this._mergeWithDefaults(parsed);
 
-        // Мигрировать в IndexedDB и очистить localStorage
+        // Мигрировать в IndexedDB (localStorage не удаляем — ридер читает оттуда)
         try {
           await this._idbPut(STORAGE_KEY, config);
-          localStorage.removeItem(STORAGE_KEY);
         } catch {
           // Не удалось мигрировать — не критично, данные уже в памяти
         }
@@ -303,9 +302,18 @@ export class AdminConfigStore {
     }
   }
 
-  /** Сохранить конфиг в IndexedDB (fire-and-forget) */
+  /** Сохранить конфиг в IndexedDB и localStorage (для ридера) */
   _save() {
-    this._savePromise = this._idbPut(STORAGE_KEY, structuredClone(this._config))
+    const snapshot = structuredClone(this._config);
+
+    // Синхронизируем в localStorage — ридер (config.js) читает оттуда
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    } catch {
+      // localStorage переполнен — не критично, IndexedDB основной
+    }
+
+    this._savePromise = this._idbPut(STORAGE_KEY, snapshot)
       .catch(err => {
         console.error('AdminConfigStore: ошибка сохранения в IndexedDB', err);
         throw err;
