@@ -69,8 +69,8 @@ export class DelegateMediator {
     });
 
     // События делегата жизненного цикла
-    lifecycle.on(DelegateEvents.PAGINATION_COMPLETE, ({ pages, chapterStarts }) => {
-      this.handlePaginationComplete(pages, chapterStarts);
+    lifecycle.on(DelegateEvents.PAGINATION_COMPLETE, ({ pageData, chapterStarts }) => {
+      this.handlePaginationComplete(pageData, chapterStarts);
     });
     lifecycle.on(DelegateEvents.INDEX_CHANGE, (newIndex) => {
       this.handleIndexChange(newIndex);
@@ -114,7 +114,7 @@ export class DelegateMediator {
     this.updateNavigationUI();
 
     // Объявление для screen reader
-    const totalPages = this._renderer.pageContents.length;
+    const totalPages = this._renderer.totalPages;
     const newChapter = this._delegates.chapter.getCurrentChapter(newIndex);
 
     if (oldChapter !== newChapter && CONFIG.CHAPTERS[newChapter]) {
@@ -127,11 +127,11 @@ export class DelegateMediator {
 
   /**
    * Обработать результаты пагинации
-   * @param {string[]} pages
+   * @param {Object|null} pageData - Данные для ленивой материализации
    * @param {number[]} chapterStarts
    */
-  handlePaginationComplete(pages, chapterStarts) {
-    this._renderer.setPageContents(pages);
+  handlePaginationComplete(pageData, chapterStarts) {
+    this._renderer.setPaginationData(pageData);
     this._state.chapterStarts = chapterStarts;
     this.updateNavigationUI();
 
@@ -182,7 +182,7 @@ export class DelegateMediator {
   updateDebug() {
     this._debugPanel.update({
       state: this._stateMachine.state,
-      totalPages: this._renderer.pageContents.length,
+      totalPages: this._renderer.totalPages,
       currentPage: this._state.index,
       cacheSize: this._renderer.cacheSize,
       cacheLimit: CONFIG.VIRTUALIZATION.cacheLimit,
@@ -194,7 +194,7 @@ export class DelegateMediator {
    * Обновить навигационный UI (счётчик страниц и прогресс-бар)
    */
   updateNavigationUI() {
-    const totalPages = this._renderer.pageContents.length;
+    const totalPages = this._renderer.totalPages;
     const currentPage = this._state.index + 1; // 1-based для отображения
 
     // Обновить счётчик страниц

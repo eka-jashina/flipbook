@@ -134,7 +134,7 @@ describe('Full Reading Session', () => {
 
     mockPaginator = {
       paginate: vi.fn().mockResolvedValue({
-        pages: Array.from({ length: 31 }, (_, i) => `<p>Page ${i}</p>`),
+        pageData: { sourceElement: document.createElement('div'), pageCount: 31, pageWidth: 400, pageHeight: 600 },
         chapterStarts: [0, 10, 20],
       }),
     };
@@ -212,9 +212,9 @@ describe('Full Reading Session', () => {
     });
 
     // Wire delegates
-    lifecycleDelegate.on(DelegateEvents.PAGINATION_COMPLETE, ({ pages, chapterStarts }) => {
+    lifecycleDelegate.on(DelegateEvents.PAGINATION_COMPLETE, ({ pageData, chapterStarts }) => {
       mockState.chapterStarts = chapterStarts;
-      mockRenderer.getMaxIndex.mockReturnValue(pages.length - 1);
+      mockRenderer.getMaxIndex.mockReturnValue(pageData.pageCount - 1);
     });
 
     lifecycleDelegate.on(DelegateEvents.INDEX_CHANGE, (index) => {

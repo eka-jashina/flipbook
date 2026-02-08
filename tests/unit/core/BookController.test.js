@@ -179,8 +179,8 @@ vi.mock('../../../js/core/ComponentFactory.js', () => ({
     createRenderServices() {
       mockInstances.renderServices = {
         renderer: {
-          pageContents: [],
-          setPageContents: vi.fn(),
+          totalPages: 0,
+          setPaginationData: vi.fn(),
           renderSpread: vi.fn(),
           cacheSize: 0,
         },
@@ -189,7 +189,7 @@ vi.mock('../../../js/core/ComponentFactory.js', () => ({
         },
         paginator: {
           on: vi.fn(),
-          paginate: vi.fn().mockResolvedValue({ pages: [], chapterStarts: [] }),
+          paginate: vi.fn().mockResolvedValue({ pageData: null, chapterStarts: [] }),
         },
         loadingIndicator: {
           show: vi.fn(),

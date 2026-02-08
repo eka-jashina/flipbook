@@ -240,7 +240,7 @@ export const CONFIG = Object.freeze({
   },
 
   VIRTUALIZATION: {
-    cacheLimit: 12,
+    cacheLimit: 50,
   },
 
   LAYOUT: {

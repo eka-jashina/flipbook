@@ -93,7 +93,7 @@ describe('Settings → Repagination', () => {
 
     mockPaginator = {
       paginate: vi.fn().mockResolvedValue({
-        pages: Array.from({ length: 21 }, (_, i) => `<p>Page ${i}</p>`),
+        pageData: { sourceElement: document.createElement('div'), pageCount: 21, pageWidth: 400, pageHeight: 600 },
         chapterStarts: [0, 8],
       }),
     };
@@ -143,9 +143,9 @@ describe('Settings → Repagination', () => {
       await lifecycleDelegate.repaginate(keepIndex);
     });
 
-    lifecycleDelegate.on(DelegateEvents.PAGINATION_COMPLETE, ({ pages, chapterStarts }) => {
+    lifecycleDelegate.on(DelegateEvents.PAGINATION_COMPLETE, ({ pageData, chapterStarts }) => {
       mockState.chapterStarts = chapterStarts;
-      mockRenderer.getMaxIndex.mockReturnValue(pages.length - 1);
+      mockRenderer.getMaxIndex.mockReturnValue(pageData.pageCount - 1);
     });
 
     lifecycleDelegate.on(DelegateEvents.INDEX_CHANGE, (index) => {

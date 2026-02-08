@@ -85,7 +85,7 @@ describe('LifecycleDelegate', () => {
       },
       paginator: {
         paginate: vi.fn().mockResolvedValue({
-          pages: [document.createElement('div')],
+          pageData: { sourceElement: document.createElement('div'), pageCount: 1, pageWidth: 400, pageHeight: 600 },
           chapterStarts: [0],
         }),
       },
@@ -541,7 +541,7 @@ describe('LifecycleDelegate', () => {
       delegate.destroy();
 
       // Emitting events after destroy should not call handlers
-      delegate.emit(DelegateEvents.PAGINATION_COMPLETE, { pages: [], chapterStarts: [] });
+      delegate.emit(DelegateEvents.PAGINATION_COMPLETE, { pageData: null, chapterStarts: [] });
       delegate.emit(DelegateEvents.INDEX_CHANGE, 5);
       delegate.emit(DelegateEvents.CHAPTER_UPDATE);
 

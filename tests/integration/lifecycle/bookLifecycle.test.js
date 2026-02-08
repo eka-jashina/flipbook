@@ -78,7 +78,7 @@ describe('Book Lifecycle Integration', () => {
     // Mock paginator
     mockPaginator = {
       paginate: vi.fn().mockResolvedValue({
-        pages: ['<p>Page 1</p>', '<p>Page 2</p>', '<p>Page 3</p>', '<p>Page 4</p>'],
+        pageData: { sourceElement: document.createElement('div'), pageCount: 4, pageWidth: 400, pageHeight: 600 },
         chapterStarts: [0, 2],
       }),
     };
@@ -299,7 +299,7 @@ describe('Book Lifecycle Integration', () => {
       await openPromise;
 
       expect(handler).toHaveBeenCalledWith({
-        pages: expect.any(Array),
+        pageData: expect.any(Object),
         chapterStarts: expect.any(Array),
       });
     });
