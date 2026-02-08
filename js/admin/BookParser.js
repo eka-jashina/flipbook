@@ -1151,6 +1151,7 @@ export class BookParser {
     let text = chunks.sort((a, b) => b.length - a.length)[0] || '';
 
     // Очистить управляющие символы, оставив переносы
+    // eslint-disable-next-line no-control-regex
     text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
     // Нормализовать переносы строк
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
