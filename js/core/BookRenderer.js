@@ -4,12 +4,11 @@
  *
  * Особенности:
  * - Двойная буферизация (active/buffer) для плавных переходов
- * - LRU-кэш DOM-элементов страниц для производительности
+ * - Viewport reuse: один клон source на контейнер, переключение через translateX
  * - Раздельный рендеринг для desktop (разворот) и mobile (одна страница)
  * - Подготовка sheet (перелистываемый лист) для анимации
  */
 
-import { LRUCache } from '../utils/LRUCache.js';
 import { BoolStr } from '../config.js';
 
 /** @constant {number} Максимальное количество URL изображений в кэше */
@@ -18,7 +17,6 @@ const IMAGE_URL_CACHE_LIMIT = 100;
 export class BookRenderer {
   /**
    * @param {Object} options - Конфигурация рендерера
-   * @param {number} options.cacheLimit - Максимальный размер LRU-кэша
    * @param {HTMLElement} options.leftActive - Левая активная страница
    * @param {HTMLElement} options.rightActive - Правая активная страница
    * @param {HTMLElement} options.leftBuffer - Левый буфер
@@ -28,11 +26,10 @@ export class BookRenderer {
    */
 
   constructor(options) {
-    this.cache = new LRUCache(options.cacheLimit || 12);
     /** @type {Set<string>} Уже загруженные URL изображений (ограниченный размер) */
     this.loadedImageUrls = new Set();
 
-    // Данные для ленивой материализации страниц (вместо массива pageContents)
+    // Данные для ленивой материализации страниц
     /** @type {HTMLElement|null} Исходный multi-column элемент */
     this._sourceElement = null;
     /** @type {number} Общее количество страниц */
@@ -41,6 +38,8 @@ export class BookRenderer {
     this._pageWidth = 0;
     /** @type {number} Высота одной страницы (px) */
     this._pageHeight = 0;
+    /** @type {boolean} Есть ли оглавление (TOC) на первой странице */
+    this._hasTOC = false;
 
     this.elements = {
       leftActive: options.leftActive,
@@ -61,105 +60,119 @@ export class BookRenderer {
   }
 
   /**
-   * Установить данные пагинации для ленивой материализации страниц
+   * Установить данные пагинации (viewport reuse)
    *
-   * Вместо хранения N DOM-клонов (один на страницу), хранит один
-   * исходный элемент и создаёт страницы по требованию через LRU-кэш.
+   * Вместо хранения N DOM-клонов, хранит один исходный элемент.
+   * При fill() создаётся один клон на контейнер (viewport), дальнейшие
+   * переключения страниц — только через CSS translateX (мгновенно, GPU).
    *
    * @param {Object|null} pageData - Данные пагинации
    * @param {HTMLElement} pageData.sourceElement - Исходный multi-column элемент
    * @param {number} pageData.pageCount - Количество страниц
    * @param {number} pageData.pageWidth - Ширина страницы
    * @param {number} pageData.pageHeight - Высота страницы
+   * @param {boolean} [pageData.hasTOC=false] - Есть ли оглавление на первой странице
    */
   setPaginationData(pageData) {
     this._sourceElement = pageData?.sourceElement || null;
     this._totalPages = pageData?.pageCount || 0;
     this._pageWidth = pageData?.pageWidth || 0;
     this._pageHeight = pageData?.pageHeight || 0;
-    this.cache.clear();
+    this._hasTOC = pageData?.hasTOC || false;
+    // Очищаем все viewport'ы — при смене контента нужны новые клоны
+    this._clearAllViewports();
     // Очищаем loadedImageUrls при смене контента для предотвращения утечки памяти
-    // Браузер всё равно кэширует изображения, поэтому placeholder покажется кратко
     this.loadedImageUrls.clear();
   }
 
   /**
-   * Получить DOM-элемент страницы (с кэшированием и ленивой материализацией)
+   * Заполнить контейнер содержимым страницы (viewport reuse)
    *
-   * Страница создаётся из исходного multi-column элемента по требованию,
-   * а не хранится заранее. LRU-кэш предотвращает повторную материализацию.
+   * Если контейнер уже содержит viewport — обновляет только translateX (мгновенно).
+   * Если нет — создаёт viewport с одним cloneNode исходного элемента.
+   * Итого: максимум 6 клонов (по числу контейнеров), все перелистывания — CSS.
    *
-   * @param {number} index - Индекс страницы
-   * @returns {HTMLElement|null} Клон DOM-элемента или null
+   * @param {HTMLElement} container - Контейнер страницы
+   * @param {number} pageIndex - Индекс страницы
    */
-  getPageDOM(index) {
-    if (index < 0 || index >= this._totalPages) {
-      return null;
+  fill(container, pageIndex) {
+    if (!container) return;
+
+    // Невалидный индекс — очищаем контейнер
+    if (pageIndex < 0 || pageIndex >= this._totalPages || !this._sourceElement) {
+      this._clearViewport(container);
+      const page = container.closest(".page");
+      if (page) page.classList.remove("page--toc");
+      return;
     }
 
-    const cached = this.cache.get(index);
-    if (cached) {
-      return cached.cloneNode(true);
+    const viewport = container.firstElementChild;
+
+    if (viewport && viewport._isBookViewport) {
+      // Viewport уже есть — обновляем только translateX (мгновенно, GPU)
+      viewport.firstChild.style.transform =
+        `translateX(${-pageIndex * this._pageWidth}px)`;
+    } else {
+      // Первый раз для этого контейнера — создаём viewport с клоном
+      const newViewport = this._createViewport(pageIndex);
+      container.replaceChildren(newViewport);
+      this._setupImageBlurPlaceholders(container);
     }
 
-    // Ленивая материализация: создаём страницу из исходного элемента
-    const page = this._materializePage(index);
+    // Пометить страницу с оглавлением (по метаданным, без DOM-поиска)
+    const page = container.closest(".page");
     if (page) {
-      this.cache.set(index, page);
-      return page.cloneNode(true);
+      page.classList.toggle("page--toc", this._hasTOC && pageIndex === 0);
     }
-
-    return null;
   }
 
   /**
-   * Материализовать DOM-элемент страницы из исходного multi-column элемента
+   * Создать viewport с клоном исходного элемента
    *
-   * Создаёт viewport div с overflow:hidden и вставляет клон
-   * исходного контента с translateX для отображения нужной колонки.
+   * Viewport — div с overflow:hidden, внутри клон всего контента.
+   * Нужная страница отображается через translateX.
    *
-   * @param {number} index - Индекс страницы
-   * @returns {HTMLElement|null} DOM-элемент страницы или null
+   * @param {number} pageIndex - Индекс страницы для отображения
+   * @returns {HTMLElement} Viewport элемент
    * @private
    */
-  _materializePage(index) {
-    if (!this._sourceElement) return null;
-
+  _createViewport(pageIndex) {
     const snap = document.createElement("div");
-    snap.style.cssText = `
-      width: ${this._pageWidth}px;
-      height: ${this._pageHeight}px;
-      overflow: hidden;
-    `;
+    snap._isBookViewport = true;
+    snap.style.cssText =
+      `width:${this._pageWidth}px;height:${this._pageHeight}px;overflow:hidden;`;
 
     const clone = this._sourceElement.cloneNode(true);
     clone.style.width = `${this._totalPages * this._pageWidth}px`;
-    clone.style.transform = `translateX(${-index * this._pageWidth}px)`;
+    clone.style.transform = `translateX(${-pageIndex * this._pageWidth}px)`;
     snap.appendChild(clone);
 
     return snap;
   }
 
   /**
-   * Заполнить контейнер содержимым страницы
+   * Очистить viewport в контейнере
    * @param {HTMLElement} container - Контейнер страницы
-   * @param {number} pageIndex - Индекс страницы
+   * @private
    */
-  fill(container, pageIndex) {
-    if (!container) return;
-    const dom = this.getPageDOM(pageIndex);
+  _clearViewport(container) {
+    container.replaceChildren();
+  }
 
-    if (dom) {
-      container.replaceChildren(dom);
-      this._setupImageBlurPlaceholders(container);
-    } else {
-      container.replaceChildren();
-    }
-
-    // Пометить страницу с оглавлением
-    const page = container.closest(".page");
-    if (page) {
-      page.classList.toggle("page--toc", !!container.querySelector(".toc"));
+  /**
+   * Очистить все viewport'ы во всех контейнерах
+   * Вызывается при смене контента (setPaginationData)
+   * @private
+   */
+  _clearAllViewports() {
+    if (!this.elements) return;
+    const containers = [
+      this.elements.leftActive, this.elements.rightActive,
+      this.elements.leftBuffer, this.elements.rightBuffer,
+      this.elements.sheetFront, this.elements.sheetBack,
+    ];
+    for (const container of containers) {
+      if (container) this._clearViewport(container);
     }
   }
 
@@ -317,18 +330,10 @@ export class BookRenderer {
   }
 
   /**
-   * Очистить кэш DOM-элементов
+   * Очистить все viewport'ы (аналог clearCache для нового подхода)
    */
   clearCache() {
-    this.cache.clear();
-  }
-
-  /**
-   * Текущий размер кэша
-   * @returns {number}
-   */
-  get cacheSize() {
-    return this.cache.size;
+    this._clearAllViewports();
   }
 
   /**
@@ -346,12 +351,13 @@ export class BookRenderer {
    * Очистка ресурсов
    */
   destroy() {
-    this.cache.clear();
+    this._clearAllViewports();
     this.loadedImageUrls.clear();
     this._sourceElement = null;
     this._totalPages = 0;
     this._pageWidth = 0;
     this._pageHeight = 0;
+    this._hasTOC = false;
     this.elements = null;
   }
 }
