@@ -247,7 +247,9 @@ export class DragDelegate extends BaseDelegate {
   }
 
   /**
-   * Применить текущий угол к CSS-переменным sheet и теням
+   * Применить текущий угол к sheet transform и теням.
+   * Используем style.transform напрямую (не CSS-переменную),
+   * чтобы избежать cascade через подэлементы sheet.
    * @private
    */
   _render() {
@@ -255,7 +257,7 @@ export class DragDelegate extends BaseDelegate {
 
     const sheet = this.dom.get("sheet");
     if (sheet) {
-      sheet.style.setProperty("--sheet-angle", `${angle}deg`);
+      sheet.style.transform = `translateZ(1px) rotateY(${angle}deg)`;
     }
 
     this.shadowRenderer.update(this.currentAngle, this.direction, this.isMobile);

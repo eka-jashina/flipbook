@@ -34,19 +34,19 @@ describe('Drag Interaction Integration', () => {
       // Create shadow elements matching actual implementation
       shadowElements = {
         flipShadow: document.createElement('div'),
-        book: document.createElement('div'),
+        sheet: document.createElement('div'),
       };
 
       shadowElements.flipShadow.className = 'flip-shadow';
-      shadowElements.book.className = 'book';
+      shadowElements.sheet.className = 'sheet';
 
       document.body.appendChild(shadowElements.flipShadow);
-      document.body.appendChild(shadowElements.book);
+      document.body.appendChild(shadowElements.sheet);
 
       mockDom = {
         get: vi.fn((id) => {
           if (id === 'flipShadow') return shadowElements.flipShadow;
-          if (id === 'book') return shadowElements.book;
+          if (id === 'sheet') return shadowElements.sheet;
           return null;
         }),
       };
@@ -85,10 +85,10 @@ describe('Drag Interaction Integration', () => {
       expect(opacity).toBeTruthy();
     });
 
-    it('should update spine shadow on book', () => {
+    it('should update spine shadow on sheet', () => {
       shadowRenderer.update(90, Direction.NEXT, false);
 
-      const spineShadowAlpha = shadowElements.book.style.getPropertyValue('--spine-shadow-alpha');
+      const spineShadowAlpha = shadowElements.sheet.style.getPropertyValue('--spine-shadow-alpha');
       expect(spineShadowAlpha).toBeTruthy();
     });
 
