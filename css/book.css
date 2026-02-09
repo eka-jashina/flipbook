@@ -47,25 +47,17 @@
   transform-style: preserve-3d;
   transform-style: preserve-3d;
   transform-origin: left;
-  /* Плавные переходы включая animatable CSS properties */
+  /* Плавные переходы */
   transition:
     background-color var(--timing-transition),
-    box-shadow var(--timing-transition),
-    --spine-shadow-size 0.2s ease-out,
-    --spine-shadow-blur-amount 0.2s ease-out,
-    --spine-shadow-alpha 0.2s ease-out;
+    box-shadow var(--timing-transition);
 }
 
 /* ═══════════════════════════════════════════
    СОСТОЯНИЯ КНИГИ
    ═══════════════════════════════════════════ */
 
-/* Уменьшаем тени во время переворота */
-.book[data-state="flipping"] {
-  --spine-shadow-size: 14px;
-  --spine-shadow-blur-amount: 10px;
-  --spine-shadow-alpha: 0.24;
-}
+/* Состояние переворота (тени теперь управляются через opacity на sheet) */
 
 /* При закрытии убираем фон */
 .book[data-state="closing"] {

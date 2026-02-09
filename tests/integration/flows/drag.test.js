@@ -88,8 +88,8 @@ describe('Drag Interaction Integration', () => {
     it('should update spine shadow on sheet', () => {
       shadowRenderer.update(90, Direction.NEXT, false);
 
-      const spineShadowAlpha = shadowElements.sheet.style.getPropertyValue('--spine-shadow-alpha');
-      expect(spineShadowAlpha).toBeTruthy();
+      const spineOpacity = shadowElements.sheet.style.getPropertyValue('--spine-shadow-opacity');
+      expect(spineOpacity).toBeTruthy();
     });
 
     it('should reset shadows', () => {

@@ -52,8 +52,7 @@ export class DragShadowRenderer {
     const flipShadow = this.dom?.get("flipShadow");
 
     if (sheet) {
-      sheet.style.removeProperty("--spine-shadow-alpha");
-      sheet.style.removeProperty("--spine-shadow-size");
+      sheet.style.removeProperty("--spine-shadow-opacity");
     }
 
     if (flipShadow) {
@@ -67,9 +66,11 @@ export class DragShadowRenderer {
 
   /**
    * Обновить тень на корешке книги.
-   * Ставим CSS-переменные на sheet (не на book!) — это критично для производительности.
-   * На book каскад затрагивает все 6 viewport-клонов с сотнями страниц.
-   * На sheet — только 2 side-элемента.
+   *
+   * Производительность: управляем только opacity (compositing-only),
+   * без изменения width, gradient-color или blur. CSS ::after использует
+   * фиксированные размеры/blur и переменную --spine-shadow-opacity.
+   *
    * @private
    * @param {number} progress - Прогресс (0-1)
    */
@@ -77,11 +78,10 @@ export class DragShadowRenderer {
     const sheet = this.dom.get("sheet");
     if (!sheet) return;
 
-    const shadowOpacity = Math.sin(progress * Math.PI) * 0.35;
-    const shadowSize = Math.sin(progress * Math.PI) * 25;
+    // sin(π*progress) даёт 0→1→0 кривую с максимумом при 90° (progress=0.5)
+    const opacity = Math.sin(progress * Math.PI);
 
-    sheet.style.setProperty("--spine-shadow-alpha", shadowOpacity.toFixed(2));
-    sheet.style.setProperty("--spine-shadow-size", `${shadowSize}px`);
+    sheet.style.setProperty("--spine-shadow-opacity", opacity.toFixed(3));
   }
 
   /**

@@ -99,16 +99,23 @@
    ТЕНИ ЛИСТА
    ═══════════════════════════════════════════ */
 
+/*
+ * Тени корешка на sheet.
+ *
+ * Производительность: background, filter: blur() и width ФИКСИРОВАНЫ.
+ * Интенсивность управляется только через opacity (compositing-only,
+ * без layout/paint). Это критично при drag — 60fps обновлений.
+ *
+ * Ранее каждый кадр менял width + gradient-color + blur → layout + paint + blur.
+ */
 .sheet .side::after {
   position: absolute;
   top: 0;
-  width: var(--spine-shadow-size);
+  width: 25px;
   height: 100%;
-  opacity: 1;
-  transition:
-    width 0.35s ease-in-out,
-    filter 0.35s ease-in-out,
-    opacity 0.35s ease-in-out;
+  opacity: var(--spine-shadow-opacity, 0);
+  will-change: opacity;
+  transition: opacity 0.35s ease-in-out;
   pointer-events: none;
   content: "";
 }
@@ -117,20 +124,20 @@
   left: 0;
   background: radial-gradient(
     ellipse at left center,
-    rgb(0, 0, 0, var(--spine-shadow-alpha)),
+    rgb(0, 0, 0, 0.35),
     transparent 70%
   );
-  filter: blur(var(--spine-shadow-blur-amount));
+  filter: blur(18px);
 }
 
 .book[data-state="flipping"] .sheet .side[data-face="back"]::after {
   right: 0;
   background: radial-gradient(
     ellipse at right center,
-    rgb(0, 0, 0, var(--spine-shadow-alpha)),
+    rgb(0, 0, 0, 0.35),
     transparent 70%
   );
-  filter: blur(var(--spine-shadow-blur-amount));
+  filter: blur(18px);
 }
 
 /* Инверсия для направления "prev" */
