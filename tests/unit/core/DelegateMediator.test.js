@@ -80,7 +80,6 @@ const createDeps = (overrides = {}) => {
     renderer: {
       totalPages: 100,
       setPaginationData: vi.fn(),
-      cacheSize: 8,
     },
     dom: {
       get: vi.fn((key) => {
@@ -269,8 +268,6 @@ describe('DelegateMediator', () => {
           state: 'OPENED',
           totalPages: 100,
           currentPage: 5,
-          cacheSize: 8,
-          cacheLimit: 50,
           listenerCount: 5,
         })
       );

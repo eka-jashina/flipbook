@@ -184,8 +184,6 @@ export class DelegateMediator {
       state: this._stateMachine.state,
       totalPages: this._renderer.totalPages,
       currentPage: this._state.index,
-      cacheSize: this._renderer.cacheSize,
-      cacheLimit: CONFIG.VIRTUALIZATION.cacheLimit,
       listenerCount: this._eventManager.count,
     });
   }

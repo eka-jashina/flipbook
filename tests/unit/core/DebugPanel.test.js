@@ -101,8 +101,6 @@ describe('DebugPanel', () => {
       state: 'OPENED',
       totalPages: 100,
       currentPage: 42,
-      cacheSize: 5,
-      cacheLimit: 12,
       listenerCount: 15,
     };
 
@@ -135,11 +133,11 @@ describe('DebugPanel', () => {
       expect(mockElements.current.textContent).toBe('42');
     });
 
-    it('should update cache element with size/limit format', () => {
+    it('should update cache element with viewport reuse label', () => {
       panel.visible = true;
       panel.update(testData);
 
-      expect(mockElements.cache.textContent).toBe('5/12');
+      expect(mockElements.cache.textContent).toBe('viewport reuse');
     });
 
     it('should update listeners element', () => {
@@ -202,14 +200,12 @@ describe('DebugPanel', () => {
         state: 'CLOSED',
         totalPages: 0,
         currentPage: 0,
-        cacheSize: 0,
-        cacheLimit: 12,
         listenerCount: 0,
       });
 
       expect(mockElements.total.textContent).toBe('0');
       expect(mockElements.current.textContent).toBe('0');
-      expect(mockElements.cache.textContent).toBe('0/12');
+      expect(mockElements.cache.textContent).toBe('viewport reuse');
       expect(mockElements.listeners.textContent).toBe('0');
     });
 
@@ -219,14 +215,12 @@ describe('DebugPanel', () => {
         state: 'OPENED',
         totalPages: 10000,
         currentPage: 5000,
-        cacheSize: 100,
-        cacheLimit: 200,
         listenerCount: 999,
       });
 
       expect(mockElements.total.textContent).toBe('10000');
       expect(mockElements.current.textContent).toBe('5000');
-      expect(mockElements.cache.textContent).toBe('100/200');
+      expect(mockElements.cache.textContent).toBe('viewport reuse');
       expect(mockElements.listeners.textContent).toBe('999');
     });
 
@@ -272,8 +266,6 @@ describe('DebugPanel', () => {
         state: 'FLIPPING',
         totalPages: 50,
         currentPage: 25,
-        cacheSize: 10,
-        cacheLimit: 12,
         listenerCount: 8,
       };
 
@@ -289,8 +281,6 @@ describe('DebugPanel', () => {
         state: 'OPENED',
         totalPages: 100,
         currentPage: 1,
-        cacheSize: 1,
-        cacheLimit: 12,
         listenerCount: 5,
       };
 

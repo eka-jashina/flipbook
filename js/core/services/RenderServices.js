@@ -3,7 +3,7 @@
  * Группирует компоненты для рендеринга и анимации.
  *
  * Содержит:
- * - BookRenderer - рендеринг страниц (double buffering, LRU cache)
+ * - BookRenderer - рендеринг страниц (double buffering, viewport reuse)
  * - BookAnimator - CSS анимации (lift, rotate, drop)
  * - AsyncPaginator - пагинация контента
  * - LoadingIndicator - индикатор загрузки
@@ -14,7 +14,6 @@ import { BookAnimator } from '../BookAnimator.js';
 import { LoadingIndicator } from '../LoadingIndicator.js';
 import { AsyncPaginator } from '../../managers/AsyncPaginator.js';
 import { sanitizer } from '../../utils/HTMLSanitizer.js';
-import { CONFIG } from '../../config.js';
 
 export class RenderServices {
   /**
@@ -43,7 +42,6 @@ export class RenderServices {
       );
 
     return new BookRenderer({
-      cacheLimit: CONFIG.VIRTUALIZATION.cacheLimit,
       leftActive: leftA,
       rightActive: rightA,
       leftBuffer: leftB,

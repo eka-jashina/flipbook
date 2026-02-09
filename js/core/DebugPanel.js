@@ -33,8 +33,6 @@
  * @property {string} state - Текущее состояние (CLOSED, OPENED, FLIPPING, etc.)
  * @property {number} totalPages - Общее количество страниц
  * @property {number} currentPage - Номер текущей страницы
- * @property {number} cacheSize - Текущий размер кэша
- * @property {number} cacheLimit - Максимальный размер кэша
  * @property {number} listenerCount - Количество зарегистрированных слушателей
  */
 
@@ -79,7 +77,7 @@ export class DebugPanel {
     this.elements.state.textContent = data.state;
     this.elements.total.textContent = data.totalPages;
     this.elements.current.textContent = data.currentPage;
-    this.elements.cache.textContent = `${data.cacheSize}/${data.cacheLimit}`;
+    this.elements.cache.textContent = 'viewport reuse';
     this.elements.listeners.textContent = data.listenerCount;
 
     if (performance.memory) {

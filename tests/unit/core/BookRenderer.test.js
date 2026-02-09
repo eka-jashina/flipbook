@@ -1,16 +1,16 @@
 /**
  * Unit tests for BookRenderer
- * Page rendering with double buffering, LRU cache, and lazy materialization
+ * Page rendering with double buffering and viewport reuse
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BookRenderer } from '../../../js/core/BookRenderer.js';
 
 /**
- * Создать mock pageData для тестирования ленивой материализации.
+ * Создать mock pageData для тестирования.
  * Имитирует результат AsyncPaginator._buildPageData().
  */
-function createMockPageData(pageCount, pageWidth = 400, pageHeight = 600) {
+function createMockPageData(pageCount, pageWidth = 400, pageHeight = 600, hasTOC = false) {
   const cols = document.createElement('div');
   cols.className = 'cols';
 
@@ -27,7 +27,7 @@ function createMockPageData(pageCount, pageWidth = 400, pageHeight = 600) {
   flow.appendChild(pageContent);
   cols.appendChild(flow);
 
-  return { sourceElement: cols, pageCount, pageWidth, pageHeight };
+  return { sourceElement: cols, pageCount, pageWidth, pageHeight, hasTOC };
 }
 
 describe('BookRenderer', () => {
@@ -53,7 +53,6 @@ describe('BookRenderer', () => {
     });
 
     renderer = new BookRenderer({
-      cacheLimit: 5,
       ...mockElements,
     });
   });
@@ -63,22 +62,6 @@ describe('BookRenderer', () => {
   });
 
   describe('constructor', () => {
-    it('should initialize with default cache limit if not provided', () => {
-      const r = new BookRenderer({
-        leftActive: mockElements.leftActive,
-        rightActive: mockElements.rightActive,
-        leftBuffer: mockElements.leftBuffer,
-        rightBuffer: mockElements.rightBuffer,
-        sheetFront: mockElements.sheetFront,
-        sheetBack: mockElements.sheetBack,
-      });
-      expect(r.cacheSize).toBe(0);
-    });
-
-    it('should initialize with provided cache limit', () => {
-      expect(renderer.cacheSize).toBe(0);
-    });
-
     it('should initialize with zero total pages', () => {
       expect(renderer.totalPages).toBe(0);
     });
@@ -101,14 +84,14 @@ describe('BookRenderer', () => {
       expect(renderer.totalPages).toBe(10);
     });
 
-    it('should clear cache when setting new data', () => {
+    it('should clear all viewports when setting new data', () => {
       const pageData = createMockPageData(3);
       renderer.setPaginationData(pageData);
-      renderer.getPageDOM(0);
-      expect(renderer.cacheSize).toBe(1);
+      renderer.fill(mockElements.leftActive, 0);
+      expect(mockElements.leftActive.children.length).toBe(1);
 
       renderer.setPaginationData(createMockPageData(5));
-      expect(renderer.cacheSize).toBe(0);
+      expect(mockElements.leftActive.children.length).toBe(0);
     });
 
     it('should clear loadedImageUrls to prevent memory leaks', () => {
@@ -121,48 +104,10 @@ describe('BookRenderer', () => {
       renderer.setPaginationData(null);
       expect(renderer.totalPages).toBe(0);
     });
-  });
 
-  describe('getPageDOM', () => {
-    beforeEach(() => {
-      renderer.setPaginationData(createMockPageData(3));
-    });
-
-    it('should return null for negative index', () => {
-      expect(renderer.getPageDOM(-1)).toBeNull();
-    });
-
-    it('should return null for index beyond page count', () => {
-      expect(renderer.getPageDOM(100)).toBeNull();
-    });
-
-    it('should return a DOM element via lazy materialization', () => {
-      const dom = renderer.getPageDOM(0);
-      expect(dom).toBeInstanceOf(HTMLElement);
-    });
-
-    it('should return element with overflow:hidden viewport', () => {
-      const dom = renderer.getPageDOM(0);
-      expect(dom.style.overflow).toBe('hidden');
-      expect(dom.style.width).toBe('400px');
-      expect(dom.style.height).toBe('600px');
-    });
-
-    it('should cache DOM elements', () => {
-      renderer.getPageDOM(0);
-      expect(renderer.cacheSize).toBe(1);
-    });
-
-    it('should return different clones on subsequent calls', () => {
-      const dom1 = renderer.getPageDOM(0);
-      const dom2 = renderer.getPageDOM(0);
-      expect(dom1.innerHTML).toBe(dom2.innerHTML);
-      expect(dom1).not.toBe(dom2);
-    });
-
-    it('should return null when no pagination data', () => {
-      renderer.setPaginationData(null);
-      expect(renderer.getPageDOM(0)).toBeNull();
+    it('should store hasTOC flag', () => {
+      renderer.setPaginationData(createMockPageData(3, 400, 600, true));
+      expect(renderer._hasTOC).toBe(true);
     });
   });
 
@@ -182,9 +127,10 @@ describe('BookRenderer', () => {
       expect(() => renderer.fill(null, 0)).not.toThrow();
     });
 
-    it('should fill container with page content', () => {
+    it('should fill container with viewport on first call', () => {
       renderer.fill(container, 0);
       expect(container.children.length).toBe(1);
+      expect(container.firstElementChild._isBookViewport).toBe(true);
     });
 
     it('should clear container if page does not exist', () => {
@@ -193,30 +139,37 @@ describe('BookRenderer', () => {
       expect(container.children.length).toBe(0);
     });
 
-    it('should add page--toc class when page contains TOC', () => {
-      // Create pageData with TOC content
-      const cols = document.createElement('div');
-      const flow = document.createElement('div');
-      const pageContent = document.createElement('div');
-      pageContent.className = 'page-content';
-      const toc = document.createElement('div');
-      toc.className = 'toc';
-      toc.textContent = 'Table of Contents';
-      pageContent.appendChild(toc);
-      flow.appendChild(pageContent);
-      cols.appendChild(flow);
+    it('should reuse existing viewport on subsequent calls (translateX only)', () => {
+      renderer.fill(container, 0);
+      const viewport = container.firstElementChild;
 
-      renderer.setPaginationData({
-        sourceElement: cols,
-        pageCount: 1,
-        pageWidth: 400,
-        pageHeight: 600,
-      });
+      renderer.fill(container, 2);
+      // Same viewport element reused
+      expect(container.firstElementChild).toBe(viewport);
+      // translateX updated
+      expect(viewport.firstChild.style.transform).toBe('translateX(-800px)');
+    });
+
+    it('should set correct translateX based on page index', () => {
+      renderer.fill(container, 1);
+      const inner = container.firstElementChild.firstChild;
+      expect(inner.style.transform).toBe('translateX(-400px)');
+    });
+
+    it('should add page--toc class when hasTOC and pageIndex is 0', () => {
+      renderer.setPaginationData(createMockPageData(3, 400, 600, true));
 
       renderer.fill(container, 0);
-
       const page = container.closest('.page');
       expect(page.classList.contains('page--toc')).toBe(true);
+    });
+
+    it('should not add page--toc class when hasTOC but pageIndex is not 0', () => {
+      renderer.setPaginationData(createMockPageData(3, 400, 600, true));
+
+      renderer.fill(container, 1);
+      const page = container.closest('.page');
+      expect(page.classList.contains('page--toc')).toBe(false);
     });
 
     it('should remove page--toc class when page has no TOC', () => {
@@ -225,6 +178,65 @@ describe('BookRenderer', () => {
 
       renderer.fill(container, 0);
       expect(page.classList.contains('page--toc')).toBe(false);
+    });
+
+    it('should remove page--toc on invalid index', () => {
+      const page = container.closest('.page');
+      page.classList.add('page--toc');
+
+      renderer.fill(container, -1);
+      expect(page.classList.contains('page--toc')).toBe(false);
+    });
+
+    it('should clear container for negative index', () => {
+      renderer.fill(container, 0);
+      expect(container.children.length).toBe(1);
+
+      renderer.fill(container, -1);
+      expect(container.children.length).toBe(0);
+    });
+  });
+
+  describe('_createViewport', () => {
+    it('should create viewport with correct dimensions', () => {
+      renderer.setPaginationData(createMockPageData(5, 300, 500));
+      const viewport = renderer._createViewport(0);
+      expect(viewport.style.width).toBe('300px');
+      expect(viewport.style.height).toBe('500px');
+      expect(viewport.style.overflow).toBe('hidden');
+    });
+
+    it('should mark viewport with _isBookViewport flag', () => {
+      renderer.setPaginationData(createMockPageData(5));
+      const viewport = renderer._createViewport(0);
+      expect(viewport._isBookViewport).toBe(true);
+    });
+
+    it('should set translateX based on page index', () => {
+      renderer.setPaginationData(createMockPageData(5, 300, 500));
+      const viewport = renderer._createViewport(2);
+      const inner = viewport.firstChild;
+      expect(inner.style.transform).toBe('translateX(-600px)');
+    });
+
+    it('should set inner width based on total pages', () => {
+      renderer.setPaginationData(createMockPageData(5, 300, 500));
+      const viewport = renderer._createViewport(0);
+      const inner = viewport.firstChild;
+      expect(inner.style.width).toBe('1500px'); // 5 * 300
+    });
+  });
+
+  describe('_clearAllViewports', () => {
+    it('should clear all containers', () => {
+      renderer.setPaginationData(createMockPageData(4));
+      renderer.fill(mockElements.leftActive, 0);
+      renderer.fill(mockElements.rightActive, 1);
+
+      renderer._clearAllViewports();
+
+      expect(mockElements.leftActive.children.length).toBe(0);
+      expect(mockElements.rightActive.children.length).toBe(0);
     });
   });
 
@@ -408,25 +420,13 @@ describe('BookRenderer', () => {
   });
 
   describe('clearCache', () => {
-    it('should clear the LRU cache', () => {
+    it('should clear all viewports', () => {
       renderer.setPaginationData(createMockPageData(3));
-      renderer.getPageDOM(0);
-      expect(renderer.cacheSize).toBe(1);
+      renderer.fill(mockElements.leftActive, 0);
+      expect(mockElements.leftActive.children.length).toBe(1);
 
       renderer.clearCache();
-      expect(renderer.cacheSize).toBe(0);
-    });
-  });
-
-  describe('cacheSize', () => {
-    it('should return current cache size', () => {
-      expect(renderer.cacheSize).toBe(0);
-
-      renderer.setPaginationData(createMockPageData(3));
-      renderer.getPageDOM(0);
-      renderer.getPageDOM(1);
-
-      expect(renderer.cacheSize).toBe(2);
+      expect(mockElements.leftActive.children.length).toBe(0);
     });
   });
 
@@ -459,18 +459,6 @@ describe('BookRenderer', () => {
     });
   });
 
-  describe('cache eviction', () => {
-    it('should evict oldest entries when cache limit is reached', () => {
-      renderer.setPaginationData(createMockPageData(10));
-
-      for (let i = 0; i <= 5; i++) {
-        renderer.getPageDOM(i);
-      }
-
-      expect(renderer.cacheSize).toBe(5);
-    });
-  });
-
   describe('totalPages', () => {
     it('should return 0 when no pagination data set', () => {
       expect(renderer.totalPages).toBe(0);
@@ -488,24 +476,20 @@ describe('BookRenderer', () => {
     });
   });
 
-  describe('_materializePage', () => {
-    it('should return null when no source element', () => {
-      expect(renderer._materializePage(0)).toBeNull();
-    });
+  describe('viewport reuse performance', () => {
+    it('should not call cloneNode on subsequent fills to same container', () => {
+      renderer.setPaginationData(createMockPageData(10));
 
-    it('should create viewport with correct dimensions', () => {
-      renderer.setPaginationData(createMockPageData(5, 300, 500));
-      const page = renderer._materializePage(0);
-      expect(page.style.width).toBe('300px');
-      expect(page.style.height).toBe('500px');
-      expect(page.style.overflow).toBe('hidden');
-    });
+      // First fill creates viewport
+      renderer.fill(mockElements.leftActive, 0);
+      const viewport = mockElements.leftActive.firstElementChild;
+      const inner = viewport.firstChild;
+      const cloneSpy = vi.spyOn(renderer._sourceElement, 'cloneNode');
 
-    it('should set translateX based on page index', () => {
-      renderer.setPaginationData(createMockPageData(5, 300, 500));
-      const page = renderer._materializePage(2);
-      const inner = page.firstChild;
-      expect(inner.style.transform).toBe('translateX(-600px)');
+      // Subsequent fills reuse viewport — no cloneNode
+      renderer.fill(mockElements.leftActive, 5);
+      expect(cloneSpy).not.toHaveBeenCalled();
+      expect(inner.style.transform).toBe('translateX(-2000px)');
     });
   });
 });

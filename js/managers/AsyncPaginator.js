@@ -29,6 +29,7 @@ import { mediaQueries } from '../utils/MediaQueryManager.js';
  * @property {number} pageCount - Общее количество страниц
  * @property {number} pageWidth - Ширина одной страницы (px)
  * @property {number} pageHeight - Высота одной страницы (px)
+ * @property {boolean} hasTOC - Есть ли оглавление (TOC) на первой странице
  */
 
 /**
@@ -148,8 +149,9 @@ export class AsyncPaginator extends EventEmitter {
 
         // Подготовка данных для ленивой материализации страниц
         this.emit("progress", { phase: "slice", progress: 75 });
+        const hasTOC = articles.length > 1;
         result.pageData = this._buildPageData(
-          cols, pageContent, pageWidth, pageHeight
+          cols, pageContent, pageWidth, pageHeight, hasTOC
         );
 
       } finally {
@@ -382,7 +384,7 @@ export class AsyncPaginator extends EventEmitter {
    * @returns {PageData} Метаданные для ленивой материализации
    * @private
    */
-  _buildPageData(cols, pageContent, pageWidth, pageHeight) {
+  _buildPageData(cols, pageContent, pageWidth, pageHeight, hasTOC = false) {
     const probe = document.createElement("div");
     probe.style.width = "1px";
     probe.style.height = `${pageHeight}px`;
@@ -402,7 +404,7 @@ export class AsyncPaginator extends EventEmitter {
 
     this.emit("progress", { phase: "slice", progress: 100 });
 
-    return { sourceElement, pageCount, pageWidth, pageHeight };
+    return { sourceElement, pageCount, pageWidth, pageHeight, hasTOC };
   }
 
   /**

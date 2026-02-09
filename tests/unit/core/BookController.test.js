@@ -182,7 +182,6 @@ vi.mock('../../../js/core/ComponentFactory.js', () => ({
           totalPages: 0,
           setPaginationData: vi.fn(),
           renderSpread: vi.fn(),
-          cacheSize: 0,
         },
         animator: {
           runFlip: vi.fn().mockResolvedValue(undefined),
