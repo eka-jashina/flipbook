@@ -147,13 +147,13 @@ describe('BookRenderer', () => {
       // Same viewport element reused
       expect(container.firstElementChild).toBe(viewport);
       // translateX updated
-      expect(viewport.firstChild.style.transform).toBe('translateX(-800px)');
+      expect(viewport.firstChild.style.transform).toBe('translate3d(-800px, 0px, 0px)');
     });
 
     it('should set correct translateX based on page index', () => {
       renderer.fill(container, 1);
       const inner = container.firstElementChild.firstChild;
-      expect(inner.style.transform).toBe('translateX(-400px)');
+      expect(inner.style.transform).toBe('translate3d(-400px, 0px, 0px)');
     });
 
     it('should add page--toc class when hasTOC and pageIndex is 0', () => {
@@ -216,7 +216,7 @@ describe('BookRenderer', () => {
       renderer.setPaginationData(createMockPageData(5, 300, 500));
       const viewport = renderer._createViewport(2);
       const inner = viewport.firstChild;
-      expect(inner.style.transform).toBe('translateX(-600px)');
+      expect(inner.style.transform).toBe('translate3d(-600px, 0px, 0px)');
     });
 
     it('should set inner width based on total pages', () => {
@@ -489,7 +489,7 @@ describe('BookRenderer', () => {
       // Subsequent fills reuse viewport — no cloneNode
       renderer.fill(mockElements.leftActive, 5);
       expect(cloneSpy).not.toHaveBeenCalled();
-      expect(inner.style.transform).toBe('translateX(-2000px)');
+      expect(inner.style.transform).toBe('translate3d(-2000px, 0px, 0px)');
     });
   });
 });

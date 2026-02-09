@@ -40,6 +40,8 @@ export class BookRenderer {
     this._pageHeight = 0;
     /** @type {boolean} Есть ли оглавление (TOC) на первой странице */
     this._hasTOC = false;
+    /** @type {boolean} Запланирован ли pre-warm viewport'ов */
+    this._preWarmScheduled = false;
 
     this.elements = {
       leftActive: options.leftActive,
@@ -109,9 +111,9 @@ export class BookRenderer {
     const viewport = container.firstElementChild;
 
     if (viewport && viewport._isBookViewport) {
-      // Viewport уже есть — обновляем только translateX (мгновенно, GPU)
+      // Viewport уже есть — обновляем только translate3d (мгновенно, GPU-слой)
       viewport.firstChild.style.transform =
-        `translateX(${-pageIndex * this._pageWidth}px)`;
+        `translate3d(${-pageIndex * this._pageWidth}px, 0px, 0px)`;
     } else {
       // Первый раз для этого контейнера — создаём viewport с клоном
       const newViewport = this._createViewport(pageIndex);
@@ -139,12 +141,16 @@ export class BookRenderer {
   _createViewport(pageIndex) {
     const snap = document.createElement("div");
     snap._isBookViewport = true;
+    // contain:strict — изолирует layout/paint от остального DOM,
+    // критично для производительности при большом контенте (400+ страниц)
     snap.style.cssText =
-      `width:${this._pageWidth}px;height:${this._pageHeight}px;overflow:hidden;`;
+      `width:${this._pageWidth}px;height:${this._pageHeight}px;overflow:hidden;contain:strict;`;
 
     const clone = this._sourceElement.cloneNode(true);
     clone.style.width = `${this._totalPages * this._pageWidth}px`;
-    clone.style.transform = `translateX(${-pageIndex * this._pageWidth}px)`;
+    // translate3d форсирует GPU-слой, will-change подсказывает браузеру
+    clone.style.transform = `translate3d(${-pageIndex * this._pageWidth}px, 0px, 0px)`;
+    clone.style.willChange = "transform";
     snap.appendChild(clone);
 
     return snap;
@@ -173,6 +179,32 @@ export class BookRenderer {
     ];
     for (const container of containers) {
       if (container) this._clearViewport(container);
+    }
+  }
+
+  /**
+   * Pre-warm viewports для всех контейнеров, где их ещё нет.
+   *
+   * Создаёт viewport'ы заранее (страница 0), чтобы при первом
+   * перелистывании fill() делал только translate3d (мгновенно),
+   * а не cloneNode (тяжело для 400+ страниц).
+   *
+   * Вызывается после renderSpread через requestAnimationFrame.
+   */
+  _preWarmViewports() {
+    if (!this._sourceElement || !this.elements) return;
+
+    const containers = [
+      this.elements.leftActive, this.elements.rightActive,
+      this.elements.leftBuffer, this.elements.rightBuffer,
+      this.elements.sheetFront, this.elements.sheetBack,
+    ];
+
+    for (const container of containers) {
+      if (!container) continue;
+      if (container.firstElementChild?._isBookViewport) continue;
+      // Создаём viewport без image placeholder setup (контейнер скрыт)
+      container.replaceChildren(this._createViewport(0));
     }
   }
 
@@ -258,6 +290,27 @@ export class BookRenderer {
       this.fill(leftActive, index);
       this.fill(rightActive, index + 1);
     }
+
+    // Pre-warm: создаём viewport'ы для buffer/sheet контейнеров заранее,
+    // чтобы первый flip не тратил время на cloneNode
+    this._schedulePreWarm();
+  }
+
+  /**
+   * Запланировать pre-warm viewport'ов на следующий idle/RAF.
+   * Не блокирует текущий рендер.
+   * @private
+   */
+  _schedulePreWarm() {
+    if (this._preWarmScheduled) return;
+    this._preWarmScheduled = true;
+
+    // requestAnimationFrame даёт браузеру отрисовать текущий кадр,
+    // затем создаём оставшиеся viewport'ы
+    requestAnimationFrame(() => {
+      this._preWarmScheduled = false;
+      this._preWarmViewports();
+    });
   }
 
   /**
@@ -351,6 +404,7 @@ export class BookRenderer {
    * Очистка ресурсов
    */
   destroy() {
+    this._preWarmScheduled = false;
     this._clearAllViewports();
     this.loadedImageUrls.clear();
     this._sourceElement = null;
