@@ -183,29 +183,35 @@ export class BookRenderer {
   }
 
   /**
-   * Pre-warm viewports для всех контейнеров, где их ещё нет.
+   * Pre-warm viewports для контейнеров, где их ещё нет.
    *
-   * Создаёт viewport'ы заранее (страница 0), чтобы при первом
-   * перелистывании fill() делал только translate3d (мгновенно),
-   * а не cloneNode (тяжело для 400+ страниц).
+   * Создаёт по ОДНОМУ viewport'у за кадр (staggered), чтобы не блокировать
+   * рендер тяжёлыми cloneNode операциями. Для книги 400+ страниц
+   * один cloneNode занимает десятки миллисекунд — 4 за раз = длинный фрейм.
    *
    * Вызывается после renderSpread через requestAnimationFrame.
+   * @private
    */
   _preWarmViewports() {
     if (!this._sourceElement || !this.elements) return;
 
     const containers = [
-      this.elements.leftActive, this.elements.rightActive,
       this.elements.leftBuffer, this.elements.rightBuffer,
       this.elements.sheetFront, this.elements.sheetBack,
+      this.elements.leftActive, this.elements.rightActive,
     ];
 
+    // Находим первый контейнер без viewport'а
     for (const container of containers) {
       if (!container) continue;
       if (container.firstElementChild?._isBookViewport) continue;
-      // Создаём viewport без image placeholder setup (контейнер скрыт)
+
+      // Создаём ОДИН viewport и планируем следующий на следующий кадр
       container.replaceChildren(this._createViewport(0));
+      this._schedulePreWarm();
+      return;
     }
+    // Все контейнеры прогреты — больше не планируем
   }
 
   /**

@@ -11,22 +11,10 @@
    Позволяют браузеру анимировать значения через transitions
    ═══════════════════════════════════════════ */
 
-@property --spine-shadow-size {
-  syntax: '<length>';
-  initial-value: 22px;
-  inherits: false;
-}
-
-@property --spine-shadow-blur-amount {
-  syntax: '<length>';
-  initial-value: 18px;
-  inherits: false;
-}
-
-@property --spine-shadow-alpha {
+@property --spine-shadow-opacity {
   syntax: '<number>';
-  initial-value: 0.22;
-  inherits: false;
+  initial-value: 0;
+  inherits: true;
 }
 
 :root {

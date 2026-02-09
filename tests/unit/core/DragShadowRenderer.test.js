@@ -61,14 +61,11 @@ describe('DragShadowRenderer', () => {
   });
 
   describe('update', () => {
-    it('should set spine shadow CSS variables on sheet', () => {
+    it('should set spine shadow opacity on sheet', () => {
       renderer.update(90, 'next', false);
 
-      const alpha = sheetEl.style.getPropertyValue('--spine-shadow-alpha');
-      const size = sheetEl.style.getPropertyValue('--spine-shadow-size');
-
-      expect(alpha).toBeTruthy();
-      expect(size).toBeTruthy();
+      const opacity = sheetEl.style.getPropertyValue('--spine-shadow-opacity');
+      expect(opacity).toBeTruthy();
     });
 
     it('should set flip shadow CSS variables on flipShadow', () => {
@@ -85,26 +82,26 @@ describe('DragShadowRenderer', () => {
 
     it('should have maximum shadow intensity at 90 degrees', () => {
       renderer.update(45, 'next', false);
-      const alpha45 = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-alpha'));
+      const o45 = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-opacity'));
 
       renderer.update(90, 'next', false);
-      const alpha90 = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-alpha'));
+      const o90 = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-opacity'));
 
-      expect(alpha90).toBeGreaterThan(alpha45);
+      expect(o90).toBeGreaterThan(o45);
     });
 
     it('should have zero shadow intensity at 0 degrees', () => {
       renderer.update(0, 'next', false);
 
-      const alpha = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-alpha'));
-      expect(alpha).toBeCloseTo(0, 1);
+      const opacity = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-opacity'));
+      expect(opacity).toBeCloseTo(0, 1);
     });
 
     it('should have zero shadow intensity at 180 degrees', () => {
       renderer.update(180, 'next', false);
 
-      const alpha = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-alpha'));
-      expect(alpha).toBeCloseTo(0, 1);
+      const opacity = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-opacity'));
+      expect(opacity).toBeCloseTo(0, 1);
     });
 
     it('should use 50% spine position on desktop', () => {
@@ -151,12 +148,11 @@ describe('DragShadowRenderer', () => {
   });
 
   describe('reset', () => {
-    it('should remove spine shadow CSS variables from sheet', () => {
+    it('should remove spine shadow opacity from sheet', () => {
       renderer.update(90, 'next', false);
       renderer.reset();
 
-      expect(sheetEl.style.getPropertyValue('--spine-shadow-alpha')).toBe('');
-      expect(sheetEl.style.getPropertyValue('--spine-shadow-size')).toBe('');
+      expect(sheetEl.style.getPropertyValue('--spine-shadow-opacity')).toBe('');
     });
 
     it('should remove flip shadow CSS variables', () => {
