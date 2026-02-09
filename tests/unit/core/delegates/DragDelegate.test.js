@@ -395,18 +395,18 @@ describe('DragDelegate', () => {
       delegate.currentAngle = 90;
     });
 
-    it('should set CSS variable on sheet for next direction', () => {
+    it('should set inline transform on sheet for next direction', () => {
       delegate.direction = 'next';
       delegate._render();
 
-      expect(mockSheet.style.getPropertyValue('--sheet-angle')).toBe('-90deg');
+      expect(mockSheet.style.transform).toBe('translateZ(1px) rotateY(-90deg)');
     });
 
-    it('should set CSS variable on sheet for prev direction', () => {
+    it('should set inline transform on sheet for prev direction', () => {
       delegate.direction = 'prev';
       delegate._render();
 
-      expect(mockSheet.style.getPropertyValue('--sheet-angle')).toBe('90deg');
+      expect(mockSheet.style.transform).toBe('translateZ(1px) rotateY(90deg)');
     });
 
     it('should update shadow renderer', () => {

@@ -9,16 +9,16 @@ import { DragShadowRenderer } from '../../../js/core/delegates/DragShadowRendere
 describe('DragShadowRenderer', () => {
   let renderer;
   let mockDom;
-  let bookEl;
+  let sheetEl;
   let flipShadowEl;
 
   beforeEach(() => {
-    bookEl = document.createElement('div');
+    sheetEl = document.createElement('div');
     flipShadowEl = document.createElement('div');
 
     mockDom = {
       get: vi.fn((id) => {
-        if (id === 'book') return bookEl;
+        if (id === 'sheet') return sheetEl;
         if (id === 'flipShadow') return flipShadowEl;
         return null;
       }),
@@ -61,11 +61,11 @@ describe('DragShadowRenderer', () => {
   });
 
   describe('update', () => {
-    it('should set spine shadow CSS variables on book', () => {
+    it('should set spine shadow CSS variables on sheet', () => {
       renderer.update(90, 'next', false);
 
-      const alpha = bookEl.style.getPropertyValue('--spine-shadow-alpha');
-      const size = bookEl.style.getPropertyValue('--spine-shadow-size');
+      const alpha = sheetEl.style.getPropertyValue('--spine-shadow-alpha');
+      const size = sheetEl.style.getPropertyValue('--spine-shadow-size');
 
       expect(alpha).toBeTruthy();
       expect(size).toBeTruthy();
@@ -85,10 +85,10 @@ describe('DragShadowRenderer', () => {
 
     it('should have maximum shadow intensity at 90 degrees', () => {
       renderer.update(45, 'next', false);
-      const alpha45 = parseFloat(bookEl.style.getPropertyValue('--spine-shadow-alpha'));
+      const alpha45 = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-alpha'));
 
       renderer.update(90, 'next', false);
-      const alpha90 = parseFloat(bookEl.style.getPropertyValue('--spine-shadow-alpha'));
+      const alpha90 = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-alpha'));
 
       expect(alpha90).toBeGreaterThan(alpha45);
     });
@@ -96,14 +96,14 @@ describe('DragShadowRenderer', () => {
     it('should have zero shadow intensity at 0 degrees', () => {
       renderer.update(0, 'next', false);
 
-      const alpha = parseFloat(bookEl.style.getPropertyValue('--spine-shadow-alpha'));
+      const alpha = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-alpha'));
       expect(alpha).toBeCloseTo(0, 1);
     });
 
     it('should have zero shadow intensity at 180 degrees', () => {
       renderer.update(180, 'next', false);
 
-      const alpha = parseFloat(bookEl.style.getPropertyValue('--spine-shadow-alpha'));
+      const alpha = parseFloat(sheetEl.style.getPropertyValue('--spine-shadow-alpha'));
       expect(alpha).toBeCloseTo(0, 1);
     });
 
@@ -131,7 +131,7 @@ describe('DragShadowRenderer', () => {
       expect(leftNext).not.toBe(leftPrev);
     });
 
-    it('should handle missing book element', () => {
+    it('should handle missing sheet element', () => {
       mockDom.get = vi.fn((id) => {
         if (id === 'flipShadow') return flipShadowEl;
         return null;
@@ -142,7 +142,7 @@ describe('DragShadowRenderer', () => {
 
     it('should handle missing flipShadow element', () => {
       mockDom.get = vi.fn((id) => {
-        if (id === 'book') return bookEl;
+        if (id === 'sheet') return sheetEl;
         return null;
       });
 
@@ -151,12 +151,12 @@ describe('DragShadowRenderer', () => {
   });
 
   describe('reset', () => {
-    it('should remove spine shadow CSS variables from book', () => {
+    it('should remove spine shadow CSS variables from sheet', () => {
       renderer.update(90, 'next', false);
       renderer.reset();
 
-      expect(bookEl.style.getPropertyValue('--spine-shadow-alpha')).toBe('');
-      expect(bookEl.style.getPropertyValue('--spine-shadow-size')).toBe('');
+      expect(sheetEl.style.getPropertyValue('--spine-shadow-alpha')).toBe('');
+      expect(sheetEl.style.getPropertyValue('--spine-shadow-size')).toBe('');
     });
 
     it('should remove flip shadow CSS variables', () => {

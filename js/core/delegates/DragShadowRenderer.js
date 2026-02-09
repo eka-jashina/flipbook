@@ -46,12 +46,14 @@ export class DragShadowRenderer {
    * Очистить все тени и сбросить состояние
    */
   reset() {
-    const book = this.dom?.get("book");
+    // Тени ставятся на sheet (а не book!) чтобы не тригерить
+    // style recalc на всём DOM книги при каждом кадре drag
+    const sheet = this.dom?.get("sheet");
     const flipShadow = this.dom?.get("flipShadow");
 
-    if (book) {
-      book.style.removeProperty("--spine-shadow-alpha");
-      book.style.removeProperty("--spine-shadow-size");
+    if (sheet) {
+      sheet.style.removeProperty("--spine-shadow-alpha");
+      sheet.style.removeProperty("--spine-shadow-size");
     }
 
     if (flipShadow) {
@@ -64,19 +66,22 @@ export class DragShadowRenderer {
   }
 
   /**
-   * Обновить тень на корешке книги
+   * Обновить тень на корешке книги.
+   * Ставим CSS-переменные на sheet (не на book!) — это критично для производительности.
+   * На book каскад затрагивает все 6 viewport-клонов с сотнями страниц.
+   * На sheet — только 2 side-элемента.
    * @private
    * @param {number} progress - Прогресс (0-1)
    */
   _updateSpineShadow(progress) {
-    const book = this.dom.get("book");
-    if (!book) return;
+    const sheet = this.dom.get("sheet");
+    if (!sheet) return;
 
     const shadowOpacity = Math.sin(progress * Math.PI) * 0.35;
     const shadowSize = Math.sin(progress * Math.PI) * 25;
 
-    book.style.setProperty("--spine-shadow-alpha", shadowOpacity.toFixed(2));
-    book.style.setProperty("--spine-shadow-size", `${shadowSize}px`);
+    sheet.style.setProperty("--spine-shadow-alpha", shadowOpacity.toFixed(2));
+    sheet.style.setProperty("--spine-shadow-size", `${shadowSize}px`);
   }
 
   /**

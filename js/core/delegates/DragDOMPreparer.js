@@ -78,7 +78,8 @@ export class DragDOMPreparer {
     const sheet = this.dom.get("sheet");
     if (sheet) {
       sheet.classList.remove("no-transition");
-      sheet.style.removeProperty("--sheet-angle");
+      // Убираем inline transform (ставился напрямую в _render для perf)
+      sheet.style.removeProperty("transform");
       delete sheet.dataset.phase;
       delete sheet.dataset.direction;
     }

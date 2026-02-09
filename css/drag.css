@@ -227,7 +227,10 @@
   display: none;
 }
 
-/* Отключаем transition на время swap чтобы не было мигания */
+/* Отключаем transition на время swap/drag чтобы не было мигания.
+   ВАЖНО: book включён — без этого CSS transitions на --spine-shadow-*
+   борются с JS-обновлениями 60fps и вызывают лишние style recalc. */
+.book[data-no-transition="true"],
 .book[data-no-transition="true"] .page,
 .book[data-no-transition="true"] .page[data-active="true"],
 .book[data-no-transition="true"] .page[data-buffer="true"],

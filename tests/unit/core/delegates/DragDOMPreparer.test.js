@@ -175,7 +175,7 @@ describe('DragDOMPreparer', () => {
       mockSheet.dataset.phase = 'drag';
       mockSheet.dataset.direction = 'next';
       mockSheet.classList.add('no-transition');
-      mockSheet.style.setProperty('--sheet-angle', '-90deg');
+      mockSheet.style.transform = 'translateZ(1px) rotateY(-90deg)';
       mockBook.dataset.dragging = '';
     });
 
@@ -185,10 +185,10 @@ describe('DragDOMPreparer', () => {
       expect(mockSheet.classList.contains('no-transition')).toBe(false);
     });
 
-    it('should remove --sheet-angle style', () => {
+    it('should remove inline transform from sheet', () => {
       preparer.cleanupSheet();
 
-      expect(mockSheet.style.getPropertyValue('--sheet-angle')).toBe('');
+      expect(mockSheet.style.transform).toBe('');
     });
 
     it('should delete phase and direction from sheet dataset', () => {
