@@ -52,22 +52,10 @@
     height: 72dvh;
   }
 
-  /* Фотоальбом: на мобильных горизонтальные раскладки → вертикальные */
-  .photo-album[data-layout="2h"] {
-    grid-template: 1fr 1fr / 1fr;
-  }
-
-  .photo-album[data-layout="3"] {
-    grid-template: 1fr auto auto / 1fr;
-  }
-
-  .photo-album[data-layout="3"] .photo-album__item:first-child {
-    grid-row: auto;
-  }
-
+  /* Фотоальбом: адаптация высоты под мобильную книгу */
   .photo-album {
-    height: calc(72vh - 4em);
-    height: calc(72dvh - 4em);
+    height: calc(72vh - 5em);
+    height: calc(72dvh - 5em);
   }
 
   /* Жесты */
