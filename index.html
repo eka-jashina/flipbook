@@ -62,6 +62,9 @@
     <!-- Screen reader announcements (visually hidden) -->
     <div id="sr-announcer" class="sr-only" aria-live="polite" aria-atomic="true" role="status"></div>
 
+    <!-- Книжный шкаф (показывается при наличии нескольких книг) -->
+    <div class="bookshelf-screen" id="bookshelf-screen" hidden></div>
+
     <main class="scene">
       <div class="book-wrap" data-state="closed" id="book-wrap">
         <div
@@ -158,6 +161,12 @@
           </div>
 
           <div class="nav-actions">
+            <button class="back-to-shelf-btn" type="button" id="backToShelfBtn" aria-label="Назад к книжной полке">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M21 11H6.83l3.58-3.59L9 6l-6 6 6 6 1.41-1.41L6.83 13H21z"/>
+              </svg>
+              К полке
+            </button>
             <button class="continue-btn" type="button" id="continueBtn" hidden>
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
                 <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 6h-4v2h4v2l3-3-3-3v2zm-2 6H9v-2h4v-2l3 3-3 3v-2z"/>
