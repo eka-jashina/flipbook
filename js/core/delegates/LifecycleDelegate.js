@@ -94,7 +94,7 @@ export class LifecycleDelegate extends BaseDelegate {
       // ─── Этап 3: Параллельная загрузка (анимация + контент) ───
       // Связываем операции: если одна упадёт — отменяем вторую,
       // чтобы избежать рассогласования состояния.
-      const chapters = CONFIG.CHAPTERS.map(c => ({ file: c.file, id: c.id, htmlContent: c.htmlContent }));
+      const chapters = CONFIG.CHAPTERS.map(c => ({ file: c.file, id: c.id, htmlContent: c.htmlContent, _idb: c._idb }));
 
       const animationPromise = this.animator.runOpenAnimation()
         .catch((err) => { this.contentLoader.abort(); throw err; });
@@ -255,7 +255,7 @@ export class LifecycleDelegate extends BaseDelegate {
       }
 
       // ─── Этап 2: Загрузка контента ───
-      const chapters = CONFIG.CHAPTERS.map(c => ({ file: c.file, id: c.id, htmlContent: c.htmlContent }));
+      const chapters = CONFIG.CHAPTERS.map(c => ({ file: c.file, id: c.id, htmlContent: c.htmlContent, _idb: c._idb }));
       const html = await this.contentLoader.load(chapters);
 
       // Проверка после await: делегат мог быть уничтожен
