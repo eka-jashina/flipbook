@@ -147,6 +147,9 @@ export class EventController {
         // Исключаем зоны захвата углов - там работает drag
         if (e.target.closest(".corner-zone")) return;
 
+        // Исключаем фото в альбоме - там открывается лайтбокс
+        if (e.target.closest(".photo-album__item")) return;
+
         const rect = this.book.getBoundingClientRect();
         const x = e.clientX - rect.left;
 
