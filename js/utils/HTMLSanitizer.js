@@ -46,7 +46,7 @@ export class HTMLSanitizer {
 
     /** @type {Set<string>} Разрешённые data-* атрибуты */
     this.ALLOWED_DATA_ATTRS = new Set(
-      options.allowedDataAttrs || ["data-chapter", "data-chapter-start", "data-index"]
+      options.allowedDataAttrs || ["data-chapter", "data-chapter-start", "data-index", "data-layout"]
     );
 
     /** @type {Set<string>} Чёрный список опасных тегов */
