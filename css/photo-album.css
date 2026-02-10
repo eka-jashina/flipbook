@@ -1,0 +1,178 @@
+/**
+ * PHOTO ALBUM
+ *
+ * Шаблоны фотоальбома для размещения 1–4 изображений на странице.
+ * Используется CSS Grid для адаптивных раскладок.
+ *
+ * Разметка:
+ *   <div class="photo-album" data-layout="1|2|2h|3|3t|4">
+ *     <figure class="photo-album__item">
+ *       <img src="..." alt="...">
+ *       <figcaption>Подпись (опционально)</figcaption>
+ *     </figure>
+ *     ...
+ *   </div>
+ *
+ * Шаблоны:
+ *   data-layout="1"  — одна фотография на всю страницу
+ *   data-layout="2"  — две фотографии друг над другом
+ *   data-layout="2h" — две фотографии рядом (горизонтально)
+ *   data-layout="3"  — одна большая слева + две маленькие справа
+ *   data-layout="3t" — одна большая сверху + две маленькие снизу
+ *   data-layout="4"  — сетка 2×2
+ */
+
+/* ═══════════════════════════════════════════
+   БАЗОВЫЕ СТИЛИ КОНТЕЙНЕРА
+   ═══════════════════════════════════════════ */
+
+.photo-album {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  min-height: 60vh;
+  min-height: 60dvh;
+  box-sizing: border-box;
+  break-inside: avoid;
+  break-inside: avoid-column;
+}
+
+/* ═══════════════════════════════════════════
+   ЭЛЕМЕНТ АЛЬБОМА (figure)
+   ═══════════════════════════════════════════ */
+
+.photo-album__item {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.photo-album__item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  float: none;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 4px;
+}
+
+/* Подпись к фотографии */
+.photo-album__item figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 0.4em 0.6em;
+  font-size: 0.75em;
+  color: #fff;
+  text-align: center;
+  text-indent: 0;
+  text-shadow: 0 1px 3px rgb(0, 0, 0, 0.6);
+  background: linear-gradient(to top, rgb(0, 0, 0, 0.5), transparent);
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════
+   ШАБЛОН: 1 фото (на всю страницу)
+   ═══════════════════════════════════════════ */
+
+.photo-album[data-layout="1"] {
+  grid-template: 1fr / 1fr;
+}
+
+/* ═══════════════════════════════════════════
+   ШАБЛОН: 2 фото (вертикально)
+   ┌──────────┐
+   │    1     │
+   ├──────────┤
+   │    2     │
+   └──────────┘
+   ═══════════════════════════════════════════ */
+
+.photo-album[data-layout="2"] {
+  grid-template: 1fr 1fr / 1fr;
+}
+
+/* ═══════════════════════════════════════════
+   ШАБЛОН: 2 фото (горизонтально)
+   ┌─────┬─────┐
+   │  1  │  2  │
+   └─────┴─────┘
+   ═══════════════════════════════════════════ */
+
+.photo-album[data-layout="2h"] {
+  grid-template: 1fr / 1fr 1fr;
+}
+
+/* ═══════════════════════════════════════════
+   ШАБЛОН: 3 фото (большое слева + 2 справа)
+   ┌──────┬─────┐
+   │      │  2  │
+   │  1   ├─────┤
+   │      │  3  │
+   └──────┴─────┘
+   ═══════════════════════════════════════════ */
+
+.photo-album[data-layout="3"] {
+  grid-template: 1fr 1fr / 1fr 1fr;
+}
+
+.photo-album[data-layout="3"] .photo-album__item:first-child {
+  grid-row: 1 / 3;
+}
+
+/* ═══════════════════════════════════════════
+   ШАБЛОН: 3 фото (большое сверху + 2 снизу)
+   ┌──────────┐
+   │    1     │
+   ├─────┬────┤
+   │  2  │ 3  │
+   └─────┴────┘
+   ═══════════════════════════════════════════ */
+
+.photo-album[data-layout="3t"] {
+  grid-template: 1fr 1fr / 1fr 1fr;
+}
+
+.photo-album[data-layout="3t"] .photo-album__item:first-child {
+  grid-column: 1 / 3;
+}
+
+/* ═══════════════════════════════════════════
+   ШАБЛОН: 4 фото (сетка 2×2)
+   ┌─────┬─────┐
+   │  1  │  2  │
+   ├─────┼─────┤
+   │  3  │  4  │
+   └─────┴─────┘
+   ═══════════════════════════════════════════ */
+
+.photo-album[data-layout="4"] {
+  grid-template: 1fr 1fr / 1fr 1fr;
+}
+
+/* ═══════════════════════════════════════════
+   ТЁМНАЯ ТЕМА
+   ═══════════════════════════════════════════ */
+
+html[data-theme="dark"] .photo-album__item {
+  box-shadow: 0 1px 3px rgb(0, 0, 0, 0.4);
+}
+
+/* ═══════════════════════════════════════════
+   FIREFOX FIXES
+   ═══════════════════════════════════════════ */
+
+@supports (-moz-appearance: none) {
+  .photo-album {
+    contain: paint layout;
+  }
+
+  .photo-album__item img {
+    float: none !important;
+  }
+}

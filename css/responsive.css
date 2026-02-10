@@ -52,6 +52,24 @@
     height: 72dvh;
   }
 
+  /* Фотоальбом: на мобильных горизонтальные раскладки → вертикальные */
+  .photo-album[data-layout="2h"] {
+    grid-template: 1fr 1fr / 1fr;
+  }
+
+  .photo-album[data-layout="3"] {
+    grid-template: 1fr auto auto / 1fr;
+  }
+
+  .photo-album[data-layout="3"] .photo-album__item:first-child {
+    grid-row: auto;
+  }
+
+  .photo-album {
+    min-height: 50vh;
+    min-height: 50dvh;
+  }
+
   /* Жесты */
   html,
   body {
