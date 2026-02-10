@@ -16,8 +16,7 @@ export class ChaptersModule extends BaseModule {
     super(app);
     this._editingIndex = null;
     this._pendingParsedBook = null;
-    this._albumLayout = '1';
-    this._albumImages = []; // [{dataUrl, caption}]
+    this._albumPages = []; // [{ layout: '1', images: [{dataUrl, caption}] }]
   }
 
   cacheDOM() {
@@ -71,8 +70,8 @@ export class ChaptersModule extends BaseModule {
     this.albumForm = document.getElementById('albumForm');
     this.albumTitleInput = document.getElementById('albumTitle');
     this.albumHideTitle = document.getElementById('albumHideTitle');
-    this.albumLayoutsEl = document.getElementById('albumLayouts');
-    this.albumImagesEl = document.getElementById('albumImages');
+    this.albumPagesEl = document.getElementById('albumPages');
+    this.albumAddPageBtn = document.getElementById('albumAddPage');
     this.cancelAlbumModal = document.getElementById('cancelAlbumModal');
   }
 
@@ -86,11 +85,7 @@ export class ChaptersModule extends BaseModule {
     this.addAlbumBtn.addEventListener('click', () => this._openAlbumModal());
     this.cancelAlbumModal.addEventListener('click', () => this.albumModal.close());
     this.albumForm.addEventListener('submit', (e) => this._handleAlbumSubmit(e));
-    this.albumLayoutsEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-layout]');
-      if (!btn) return;
-      this._selectAlbumLayout(btn.dataset.layout);
-    });
+    this.albumAddPageBtn.addEventListener('click', () => this._addAlbumPage());
 
     // Под-табы (Создать / Загрузить)
     this.subtabBtns.forEach(btn => {
@@ -356,44 +351,116 @@ export class ChaptersModule extends BaseModule {
   }
 
   // ═══════════════════════════════════════════
-  // ФОТОАЛЬБОМ
+  // ФОТОАЛЬБОМ (мульти-страничный)
   // ═══════════════════════════════════════════
 
   _openAlbumModal() {
-    this._albumLayout = '1';
-    this._albumImages = [];
+    this._albumPages = [{ layout: '1', images: [] }];
     this.albumForm.reset();
     this.albumHideTitle.checked = true;
 
-    // Сбросить активный шаблон
-    this.albumLayoutsEl.querySelectorAll('.album-layout-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.layout === '1');
-    });
-
-    this._renderAlbumImageSlots();
+    this._renderAlbumPages();
     this.albumModal.showModal();
   }
 
-  _selectAlbumLayout(layout) {
-    this._albumLayout = layout;
+  _addAlbumPage() {
+    this._albumPages.push({ layout: '1', images: [] });
+    this._renderAlbumPages();
+  }
 
-    this.albumLayoutsEl.querySelectorAll('.album-layout-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.layout === layout);
-    });
+  _removeAlbumPage(pageIndex) {
+    if (this._albumPages.length <= 1) return;
+    this._albumPages.splice(pageIndex, 1);
+    this._renderAlbumPages();
+  }
+
+  _selectPageLayout(pageIndex, layout) {
+    const page = this._albumPages[pageIndex];
+    page.layout = layout;
 
     // Обрезать массив изображений если нужно
     const count = LAYOUT_IMAGE_COUNT[layout] || 1;
-    this._albumImages = this._albumImages.slice(0, count);
+    page.images = page.images.slice(0, count);
 
-    this._renderAlbumImageSlots();
+    this._renderAlbumPages();
   }
 
-  _renderAlbumImageSlots() {
-    const count = LAYOUT_IMAGE_COUNT[this._albumLayout] || 1;
+  /** Отрисовать все страницы альбома в модалке */
+  _renderAlbumPages() {
+    this.albumPagesEl.innerHTML = '';
 
-    this.albumImagesEl.innerHTML = '';
+    this._albumPages.forEach((page, pageIndex) => {
+      const card = document.createElement('div');
+      card.className = 'album-page-card';
+
+      // Заголовок страницы
+      const header = document.createElement('div');
+      header.className = 'album-page-header';
+
+      const title = document.createElement('span');
+      title.className = 'album-page-title';
+      title.textContent = `Страница ${pageIndex + 1}`;
+
+      header.appendChild(title);
+
+      if (this._albumPages.length > 1) {
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'album-page-remove';
+        removeBtn.title = 'Удалить страницу';
+        removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+        removeBtn.addEventListener('click', () => this._removeAlbumPage(pageIndex));
+        header.appendChild(removeBtn);
+      }
+
+      card.appendChild(header);
+
+      // Шаблон раскладки
+      const layoutsWrap = document.createElement('div');
+      layoutsWrap.className = 'album-layouts';
+      layoutsWrap.innerHTML = this._buildLayoutButtons(page.layout);
+      layoutsWrap.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-layout]');
+        if (!btn) return;
+        this._selectPageLayout(pageIndex, btn.dataset.layout);
+      });
+      card.appendChild(layoutsWrap);
+
+      // Слоты изображений
+      const imagesWrap = document.createElement('div');
+      imagesWrap.className = 'album-images';
+      this._renderPageImageSlots(imagesWrap, page, pageIndex);
+      card.appendChild(imagesWrap);
+
+      this.albumPagesEl.appendChild(card);
+    });
+  }
+
+  /** Сгенерировать HTML кнопок выбора шаблона */
+  _buildLayoutButtons(activeLayout) {
+    const layouts = [
+      { id: '1', title: '1 фото', items: 1 },
+      { id: '2', title: '2 фото (вертикально)', items: 2 },
+      { id: '2h', title: '2 фото (горизонтально)', items: 2 },
+      { id: '3', title: 'Большое слева + 2 справа', items: 3 },
+      { id: '3r', title: 'Большое справа + 2 слева', items: 3 },
+      { id: '3t', title: 'Большое сверху + 2 снизу', items: 3 },
+      { id: '3b', title: 'Большое снизу + 2 сверху', items: 3 },
+      { id: '4', title: 'Сетка 2x2', items: 4 },
+    ];
+    return layouts.map(l => {
+      const active = l.id === activeLayout ? ' active' : '';
+      const icons = Array.from({ length: l.items }, () => '<i></i>').join('');
+      return `<button class="album-layout-btn${active}" type="button" data-layout="${l.id}" title="${l.title}"><span class="album-layout-preview album-layout-preview--${l.id}">${icons}</span><span class="album-layout-label">${l.id}</span></button>`;
+    }).join('');
+  }
+
+  /** Отрисовать слоты изображений для одной страницы */
+  _renderPageImageSlots(container, page, pageIndex) {
+    const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
+
     for (let i = 0; i < count; i++) {
-      const img = this._albumImages[i] || null;
+      const img = page.images[i] || null;
       const group = document.createElement('div');
       group.className = 'album-image-group';
 
@@ -421,53 +488,50 @@ export class ChaptersModule extends BaseModule {
       fileInput.accept = 'image/*';
       fileInput.hidden = true;
 
-      // Клик на слот — открыть выбор файла
       slot.addEventListener('click', (e) => {
         if (e.target.closest('.album-image-slot-remove')) return;
         fileInput.click();
       });
 
-      // Загрузка файла
       fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
         if (!file) return;
-        this._readImageFile(file, i);
+        this._readPageImageFile(file, pageIndex, i);
         fileInput.value = '';
       });
 
-      // Удаление
       slot.querySelector('.album-image-slot-remove').addEventListener('click', () => {
-        this._albumImages[i] = null;
-        this._renderAlbumImageSlots();
+        page.images[i] = null;
+        this._renderAlbumPages();
       });
 
       group.appendChild(slot);
       group.appendChild(fileInput);
 
-      // Поле для подписи
       const captionInput = document.createElement('input');
       captionInput.type = 'text';
       captionInput.className = 'album-image-slot-caption';
       captionInput.placeholder = 'Подпись...';
       captionInput.value = img?.caption || '';
       captionInput.addEventListener('input', () => {
-        if (!this._albumImages[i]) this._albumImages[i] = { dataUrl: '', caption: '' };
-        this._albumImages[i].caption = captionInput.value;
+        if (!page.images[i]) page.images[i] = { dataUrl: '', caption: '' };
+        page.images[i].caption = captionInput.value;
       });
       group.appendChild(captionInput);
 
-      this.albumImagesEl.appendChild(group);
+      container.appendChild(group);
     }
   }
 
-  _readImageFile(file, index) {
+  _readPageImageFile(file, pageIndex, imageIndex) {
     const reader = new FileReader();
     reader.onload = () => {
-      this._albumImages[index] = {
+      const page = this._albumPages[pageIndex];
+      page.images[imageIndex] = {
         dataUrl: reader.result,
-        caption: this._albumImages[index]?.caption || '',
+        caption: page.images[imageIndex]?.caption || '',
       };
-      this._renderAlbumImageSlots();
+      this._renderAlbumPages();
     };
     reader.readAsDataURL(file);
   }
@@ -478,14 +542,16 @@ export class ChaptersModule extends BaseModule {
     const title = this.albumTitleInput.value.trim();
     if (!title) return;
 
-    const count = LAYOUT_IMAGE_COUNT[this._albumLayout] || 1;
-    const hasAnyImage = this._albumImages.some(img => img?.dataUrl);
+    // Проверить, что хотя бы на одной странице есть изображение
+    const hasAnyImage = this._albumPages.some(page =>
+      page.images.some(img => img?.dataUrl)
+    );
     if (!hasAnyImage) {
       this._showToast('Добавьте хотя бы одно изображение');
       return;
     }
 
-    const htmlContent = this._buildAlbumHtml(title, this._albumLayout, this._albumImages.slice(0, count));
+    const htmlContent = this._buildAlbumHtml(title, this._albumPages);
 
     const chapterId = `album_${Date.now()}`;
     this.store.addChapter({
@@ -503,23 +569,28 @@ export class ChaptersModule extends BaseModule {
   }
 
   /**
-   * Сгенерировать HTML-разметку фотоальбома
+   * Сгенерировать HTML-разметку мульти-страничного фотоальбома
    */
-  _buildAlbumHtml(title, layout, images) {
+  _buildAlbumHtml(title, pages) {
     const hideTitle = this.albumHideTitle.checked;
     const h2Class = hideTitle ? ' class="sr-only"' : '';
 
-    const figures = images.map(img => {
-      if (!img?.dataUrl) {
-        return '<figure class="photo-album__item"><img src="" alt=""></figure>';
-      }
-      const caption = img.caption
-        ? `<figcaption>${this._escapeHtml(img.caption)}</figcaption>`
-        : '';
-      return `<figure class="photo-album__item"><img src="${img.dataUrl}" alt="${this._escapeHtml(img.caption || '')}">${caption}</figure>`;
+    const albumDivs = pages.map(page => {
+      const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
+      const images = page.images.slice(0, count);
+      const figures = images.map(img => {
+        if (!img?.dataUrl) {
+          return '<figure class="photo-album__item"><img src="" alt=""></figure>';
+        }
+        const caption = img.caption
+          ? `<figcaption>${this._escapeHtml(img.caption)}</figcaption>`
+          : '';
+        return `<figure class="photo-album__item"><img src="${img.dataUrl}" alt="${this._escapeHtml(img.caption || '')}">${caption}</figure>`;
+      });
+      return `<div class="photo-album" data-layout="${page.layout}">${figures.join('')}</div>`;
     });
 
-    return `<article><h2${h2Class}>${this._escapeHtml(title)}</h2><div class="photo-album" data-layout="${layout}">${figures.join('')}</div></article>`;
+    return `<article><h2${h2Class}>${this._escapeHtml(title)}</h2>${albumDivs.join('')}</article>`;
   }
 
   // --- Загрузка книги ---
