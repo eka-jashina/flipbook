@@ -131,6 +131,12 @@
                 </svg>
                 Добавить главу
               </button>
+              <button class="btn btn-secondary" id="addAlbum" type="button">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path fill="currentColor" d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/>
+                </svg>
+                Фотоальбом
+              </button>
             </div>
 
             <div class="chapters-list" id="chaptersList">
@@ -759,6 +765,77 @@
         <div class="modal-actions">
           <button class="btn btn-secondary" type="button" id="cancelReadingFontModal">Отмена</button>
           <button class="btn btn-primary" type="submit" id="saveReadingFont">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Модальное окно фотоальбома -->
+    <dialog class="admin-modal admin-modal--wide" id="albumModal">
+      <form class="modal-form" id="albumForm" method="dialog">
+        <h3 class="modal-title">Фотоальбом</h3>
+
+        <div class="form-group">
+          <label class="form-label" for="albumTitle">Название (для оглавления)</label>
+          <input class="form-input" type="text" id="albumTitle" placeholder="Иллюстрации" required>
+        </div>
+
+        <div class="form-group">
+          <label class="admin-toggle album-hide-toggle">
+            <input type="checkbox" id="albumHideTitle" checked>
+            <span class="admin-toggle-slider"></span>
+          </label>
+          <span class="album-hide-label">Скрыть заголовок на странице</span>
+          <span class="form-hint">Заголовок будет виден только в оглавлении</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Шаблон раскладки</label>
+          <div class="album-layouts" id="albumLayouts">
+            <button class="album-layout-btn active" type="button" data-layout="1" title="1 фото">
+              <span class="album-layout-preview album-layout-preview--1"><i></i></span>
+              <span class="album-layout-label">1</span>
+            </button>
+            <button class="album-layout-btn" type="button" data-layout="2" title="2 фото (вертикально)">
+              <span class="album-layout-preview album-layout-preview--2"><i></i><i></i></span>
+              <span class="album-layout-label">2</span>
+            </button>
+            <button class="album-layout-btn" type="button" data-layout="2h" title="2 фото (горизонтально)">
+              <span class="album-layout-preview album-layout-preview--2h"><i></i><i></i></span>
+              <span class="album-layout-label">2h</span>
+            </button>
+            <button class="album-layout-btn" type="button" data-layout="3" title="Большое слева + 2 справа">
+              <span class="album-layout-preview album-layout-preview--3"><i></i><i></i><i></i></span>
+              <span class="album-layout-label">3</span>
+            </button>
+            <button class="album-layout-btn" type="button" data-layout="3r" title="Большое справа + 2 слева">
+              <span class="album-layout-preview album-layout-preview--3r"><i></i><i></i><i></i></span>
+              <span class="album-layout-label">3r</span>
+            </button>
+            <button class="album-layout-btn" type="button" data-layout="3t" title="Большое сверху + 2 снизу">
+              <span class="album-layout-preview album-layout-preview--3t"><i></i><i></i><i></i></span>
+              <span class="album-layout-label">3t</span>
+            </button>
+            <button class="album-layout-btn" type="button" data-layout="3b" title="Большое снизу + 2 сверху">
+              <span class="album-layout-preview album-layout-preview--3b"><i></i><i></i><i></i></span>
+              <span class="album-layout-label">3b</span>
+            </button>
+            <button class="album-layout-btn" type="button" data-layout="4" title="Сетка 2×2">
+              <span class="album-layout-preview album-layout-preview--4"><i></i><i></i><i></i><i></i></span>
+              <span class="album-layout-label">4</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Изображения</label>
+          <div class="album-images" id="albumImages">
+            <!-- Слоты генерируются динамически -->
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-secondary" type="button" id="cancelAlbumModal">Отмена</button>
+          <button class="btn btn-primary" type="submit" id="saveAlbum">Добавить альбом</button>
         </div>
       </form>
     </dialog>
