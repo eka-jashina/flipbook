@@ -1530,7 +1530,11 @@ img.texture-thumb {
 .album-layout-preview--3 i:first-child { grid-row: 1 / 3; }
 
 .album-layout-preview--3r { grid-template: 1fr 1fr / 1fr 1fr; }
-.album-layout-preview--3r i:nth-child(3) { grid-row: 1 / 3; grid-column: 2; }
+
+.album-layout-preview--3r i:nth-child(3) {
+  grid-row: 1 / 3;
+  grid-column: 2;
+}
 
 .album-layout-preview--3t { grid-template: 1fr 1fr / 1fr 1fr; }
 .album-layout-preview--3t i:first-child { grid-column: 1 / 3; }
