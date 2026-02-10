@@ -2,15 +2,19 @@
  * MAIN ENTRY POINT
  *
  * Инициализация приложения после загрузки DOM.
+ * Если в админке несколько книг и ни одна не выбрана —
+ * показывается книжный шкаф вместо ридера.
  */
 
 import { BookController } from './core/BookController.js';
+import { BookshelfScreen, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
 import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
 
 // Глобальная ссылка на контроллер (для отладки)
 let app = null;
+let bookshelf = null;
 
 // Регистрация Service Worker для PWA
 const updateSW = registerSW({
@@ -76,20 +80,77 @@ function setupInstallButton() {
 }
 
 /**
+ * Настройка кнопки "Назад к полке"
+ */
+function setupBackToShelfButton() {
+  const btn = document.getElementById('backToShelfBtn');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    clearActiveBook();
+    location.reload();
+  });
+}
+
+/**
+ * Показать книжный шкаф
+ */
+function showBookshelf(books) {
+  const container = document.getElementById('bookshelf-screen');
+  if (!container) return;
+
+  document.body.dataset.hasBookshelf = 'true';
+
+  bookshelf = new BookshelfScreen({
+    container,
+    books,
+    onBookSelect: () => {
+      // После сохранения activeBookId перезагружаем —
+      // config.js подхватит новый activeBookId
+      location.reload();
+    },
+  });
+
+  bookshelf.render();
+  bookshelf.show();
+}
+
+/**
+ * Инициализация ридера (книги)
+ */
+async function initReader() {
+  app = new BookController();
+  await app.init();
+
+  // Настраиваем кнопку установки PWA
+  setupInstallButton();
+
+  // Экспортируем в window для отладки
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    window.bookApp = app;
+  }
+}
+
+/**
  * Инициализация приложения
  */
 async function init() {
   try {
-    app = new BookController();
-    await app.init();
+    // Проверяем, нужно ли показать книжный шкаф
+    const { shouldShow, books } = getBookshelfData();
 
-    // Настраиваем кнопку установки PWA
-    setupInstallButton();
-
-    // Экспортируем в window для отладки
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-      window.bookApp = app;
+    if (shouldShow) {
+      showBookshelf(books);
+      return;
     }
+
+    // Если есть несколько книг — показываем кнопку «К полке»
+    if (books.length > 1) {
+      document.body.dataset.hasBookshelf = 'true';
+      setupBackToShelfButton();
+    }
+
+    await initReader();
   } catch (error) {
     console.error('Failed to initialize Book Reader:', error);
   }
@@ -99,6 +160,10 @@ async function init() {
  * Очистка при выгрузке страницы
  */
 function cleanup() {
+  if (bookshelf) {
+    bookshelf.destroy();
+    bookshelf = null;
+  }
   if (app) {
     app.destroy();
     app = null;

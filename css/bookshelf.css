@@ -1,0 +1,490 @@
+/**
+ * BOOKSHELF SCREEN
+ *
+ * Экран книжного шкафа: деревянные полки с 3D-книгами.
+ * Показывается когда в админке несколько книг и ни одна не выбрана.
+ */
+
+/* ═══════════════════════════════════════════
+   КОНТЕЙНЕР ЭКРАНА
+   ═══════════════════════════════════════════ */
+
+.bookshelf-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden auto;
+  background:
+    /* Верхняя тень */
+    linear-gradient(180deg, rgb(0, 0, 0, 0.3) 0%, transparent 120px),
+    /* Дерево — волокна */
+    repeating-linear-gradient(
+      87deg,
+      transparent,
+      transparent 2px,
+      rgb(0, 0, 0, 0.03) 2px,
+      rgb(0, 0, 0, 0.03) 4px
+    ),
+    /* Дерево — основа */
+    linear-gradient(180deg, #4a3728 0%, #3d2e22 40%, #35261b 100%);
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.bookshelf-screen[hidden] {
+  display: none;
+}
+
+.bookshelf-screen.hiding {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   ЗАГОЛОВОК
+   ═══════════════════════════════════════════ */
+
+.bookshelf-header {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 960px;
+  padding: 40px 24px 20px;
+  text-align: center;
+}
+
+.bookshelf-title {
+  margin: 0;
+  font-family: var(--decorative-font, Georgia, serif);
+  font-size: 28px;
+  font-weight: 400;
+  color: #e8dcc8;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 4px rgb(0, 0, 0, 0.4);
+}
+
+.bookshelf-subtitle {
+  display: block;
+  margin-top: 6px;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgb(232, 220, 200, 0.5);
+  letter-spacing: 0.02em;
+}
+
+/* ═══════════════════════════════════════════
+   ПОЛКА (SHELF)
+   ═══════════════════════════════════════════ */
+
+.bookshelf-shelves {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  max-width: 960px;
+  padding: 10px 24px 60px;
+}
+
+.bookshelf-shelf {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ряд книг на полке */
+.bookshelf-books {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  padding: 20px 30px 0;
+  min-height: 200px;
+  align-items: flex-end;
+}
+
+/* Деревянная планка полки */
+.bookshelf-plank {
+  position: relative;
+  height: 18px;
+  border-radius: 2px 2px 0 0;
+  background:
+    /* Блик сверху */
+    linear-gradient(180deg,
+      rgb(255, 255, 255, 0.12) 0%,
+      transparent 40%
+    ),
+    /* Волокна дерева */
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 8px,
+      rgb(0, 0, 0, 0.04) 8px,
+      rgb(0, 0, 0, 0.04) 9px
+    ),
+    /* Основной цвет планки */
+    linear-gradient(180deg, #6b5340 0%, #5a4535 60%, #4d3a2b 100%);
+  box-shadow:
+    0 4px 8px rgb(0, 0, 0, 0.4),
+    0 2px 3px rgb(0, 0, 0, 0.3),
+    inset 0 1px 0 rgb(255, 255, 255, 0.1);
+}
+
+/* Передняя грань полки (3D-глубина) */
+.bookshelf-plank::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 10px;
+  background:
+    linear-gradient(180deg, #4d3a2b 0%, #3d2e22 100%);
+  box-shadow:
+    0 4px 12px rgb(0, 0, 0, 0.5),
+    inset 0 1px 0 rgb(0, 0, 0, 0.2);
+}
+
+/* Боковые опоры полки */
+.bookshelf-plank::before {
+  content: '';
+  position: absolute;
+  inset: -2px -4px;
+  bottom: auto;
+  height: 4px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, #7a6350, #6b5340);
+  box-shadow: 0 -1px 2px rgb(0, 0, 0, 0.2);
+}
+
+/* ═══════════════════════════════════════════
+   КНИГА НА ПОЛКЕ
+   ═══════════════════════════════════════════ */
+
+.bookshelf-book {
+  position: relative;
+  flex-shrink: 0;
+  width: 130px;
+  height: 185px;
+  padding: 0;
+  border: none;
+  border-radius: 4px 8px 8px 4px;
+  cursor: pointer;
+  perspective: 600px;
+  transition: transform 0.3s ease, filter 0.3s ease;
+  /* Сброс стилей кнопки */
+  background: none;
+  font: inherit;
+  outline: none;
+}
+
+.bookshelf-book:hover {
+  transform: translateY(-8px);
+  z-index: 2;
+}
+
+.bookshelf-book:active {
+  transform: translateY(-4px) scale(0.98);
+}
+
+.bookshelf-book:focus-visible {
+  outline: 2px solid #e8dcc8;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Обложка книги */
+.bookshelf-book-cover {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  border-radius: 4px 8px 8px 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+  /* По умолчанию - тёмная обложка */
+  background: linear-gradient(135deg, #3a2d1f, #2a2016);
+  color: #f2e9d8;
+  box-shadow:
+    /* Тень от книги на полке */
+    2px 4px 12px rgb(0, 0, 0, 0.5),
+    /* Внутренний блик на краю */
+    inset -2px 0 4px rgb(0, 0, 0, 0.2),
+    inset 2px 0 4px rgb(255, 255, 255, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.bookshelf-book:hover .bookshelf-book-cover {
+  box-shadow:
+    4px 8px 20px rgb(0, 0, 0, 0.6),
+    inset -2px 0 4px rgb(0, 0, 0, 0.2),
+    inset 2px 0 4px rgb(255, 255, 255, 0.08);
+}
+
+/* Корешок книги (левая грань) */
+.bookshelf-book-cover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  background:
+    linear-gradient(90deg,
+      rgb(0, 0, 0, 0.3) 0%,
+      rgb(0, 0, 0, 0.1) 40%,
+      rgb(255, 255, 255, 0.05) 60%,
+      transparent 100%
+    );
+  border-radius: 4px 0 0 4px;
+}
+
+/* Текстура обложки */
+.bookshelf-book-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      rgb(255, 255, 255, 0.02) 1px,
+      rgb(255, 255, 255, 0.02) 2px
+    );
+  pointer-events: none;
+  border-radius: 4px 8px 8px 4px;
+}
+
+/* Декоративная рамка на обложке */
+.bookshelf-book-frame {
+  position: absolute;
+  inset: 10px 8px;
+  border: 1px solid rgb(255, 255, 255, 0.12);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Название книги */
+.bookshelf-book-title {
+  position: relative;
+  z-index: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: var(--decorative-font, Georgia, serif);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.3;
+  text-align: center;
+  text-shadow: 0 1px 3px rgb(0, 0, 0, 0.5);
+  overflow-wrap: break-word;
+}
+
+/* Автор */
+.bookshelf-book-author {
+  position: relative;
+  z-index: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: auto;
+  padding-top: 8px;
+  font-family: Georgia, serif;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.3;
+  text-align: center;
+  opacity: 0.7;
+  text-shadow: 0 1px 2px rgb(0, 0, 0, 0.4);
+}
+
+/* Тень под книгой на полке */
+.bookshelf-book-shadow {
+  position: absolute;
+  bottom: -4px;
+  left: 5%;
+  right: 5%;
+  height: 8px;
+  background: radial-gradient(
+    ellipse at center,
+    rgb(0, 0, 0, 0.5) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.bookshelf-book:hover .bookshelf-book-shadow {
+  opacity: 0.3;
+}
+
+/* ═══════════════════════════════════════════
+   КНОПКА "НАЗАД К ПОЛКЕ" (в ридере)
+   ═══════════════════════════════════════════ */
+
+.back-to-shelf-btn {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: rgb(0, 0, 0, 0.06);
+  color: var(--text-muted, #555);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background-color var(--timing-transition, 300ms),
+    color var(--timing-transition, 300ms);
+}
+
+.back-to-shelf-btn:hover {
+  background: rgb(0, 0, 0, 0.1);
+  color: var(--text-main, #1f1f1f);
+}
+
+.back-to-shelf-btn svg {
+  flex-shrink: 0;
+}
+
+/* Показываем только если есть полка */
+body[data-has-bookshelf="true"] .back-to-shelf-btn {
+  display: inline-flex;
+}
+
+/* Прячем ридер когда показана полка */
+body[data-screen="bookshelf"] .scene,
+body[data-screen="bookshelf"] .chapter-bg {
+  display: none;
+}
+
+body[data-screen="reader"] .bookshelf-screen {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════
+   АНИМАЦИЯ ПОЯВЛЕНИЯ КНИГ
+   ═══════════════════════════════════════════ */
+
+@keyframes bookshelf-book-appear {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bookshelf-book {
+  animation: bookshelf-book-appear 0.4s ease backwards;
+}
+
+.bookshelf-book:nth-child(1) { animation-delay: 0.05s; }
+.bookshelf-book:nth-child(2) { animation-delay: 0.1s; }
+.bookshelf-book:nth-child(3) { animation-delay: 0.15s; }
+.bookshelf-book:nth-child(4) { animation-delay: 0.2s; }
+.bookshelf-book:nth-child(5) { animation-delay: 0.25s; }
+.bookshelf-book:nth-child(6) { animation-delay: 0.3s; }
+
+/* ═══════════════════════════════════════════
+   ПУСТОЕ СОСТОЯНИЕ
+   ═══════════════════════════════════════════ */
+
+.bookshelf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  color: rgb(232, 220, 200, 0.4);
+  text-align: center;
+}
+
+.bookshelf-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.bookshelf-empty-text {
+  font-family: Georgia, serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════
+   АДАПТИВНОСТЬ
+   ═══════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .bookshelf-header {
+    padding: 24px 16px 12px;
+  }
+
+  .bookshelf-title {
+    font-size: 22px;
+  }
+
+  .bookshelf-shelves {
+    padding: 8px 12px 40px;
+  }
+
+  .bookshelf-books {
+    gap: 16px;
+    padding: 16px 16px 0;
+    flex-wrap: wrap;
+  }
+
+  .bookshelf-book {
+    width: 110px;
+    height: 158px;
+  }
+
+  .bookshelf-book-title {
+    font-size: 13px;
+  }
+
+  .bookshelf-book-author {
+    font-size: 10px;
+  }
+
+  .bookshelf-plank::after {
+    height: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bookshelf-books {
+    gap: 12px;
+    padding: 12px 8px 0;
+  }
+
+  .bookshelf-book {
+    width: 95px;
+    height: 136px;
+  }
+
+  .bookshelf-book-cover {
+    padding: 12px 8px;
+  }
+
+  .bookshelf-book-title {
+    font-size: 12px;
+  }
+
+  .bookshelf-book-frame {
+    inset: 6px 5px;
+  }
+}
