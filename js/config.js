@@ -49,11 +49,13 @@ function getActiveBook(config) {
 const activeBook = getActiveBook(adminConfig);
 
 // Главы: из активной книги (с добавлением BASE_URL) или дефолтные
+// ch._idb — маркер: htmlContent хранится только в IndexedDB (в localStorage он убран для экономии места)
 const CHAPTERS = activeBook?.chapters?.length
   ? activeBook.chapters.map(ch => ({
       id: ch.id,
       file: resolveAssetPath(ch.file),
       htmlContent: ch.htmlContent || null,
+      _idb: ch._idb || false,
       bg: resolveAssetPath(ch.bg),
       bgMobile: resolveAssetPath(ch.bgMobile),
     }))

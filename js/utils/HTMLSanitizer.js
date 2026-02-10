@@ -158,9 +158,14 @@ export class HTMLSanitizer {
       el.removeAttribute(attrName);
     }
 
-    // Дополнительная проверка URL-атрибутов на опасные схемы
-    if (el.hasAttribute("src") && this.DANGEROUS_URL_SCHEMES.test(el.getAttribute("src"))) {
-      el.removeAttribute("src");
+    // Дополнительная проверка URL-атрибутов на опасные схемы.
+    // Разрешаем data:image/ для безопасных растровых форматов — они используются
+    // для встроенных изображений из EPUB/FB2. SVG не разрешаем (может содержать скрипты).
+    if (el.hasAttribute("src")) {
+      const srcValue = el.getAttribute("src");
+      if (this.DANGEROUS_URL_SCHEMES.test(srcValue) && !this._isSafeImageDataUrl(srcValue)) {
+        el.removeAttribute("src");
+      }
     }
 
     if (el.hasAttribute("href")) {
@@ -175,6 +180,18 @@ export class HTMLSanitizer {
         el.setAttribute("target", "_blank");
       }
     }
+  }
+
+  /**
+   * Проверить, является ли data: URL безопасным изображением (растровый формат).
+   * SVG не считается безопасным, т.к. может содержать <script>.
+   * @private
+   * @param {string} url - URL для проверки
+   * @returns {boolean} true если это безопасный растровый data:image/ URL
+   */
+  _isSafeImageDataUrl(url) {
+    if (!url) return false;
+    return /^data:image\/(?:png|jpe?g|gif|webp|bmp|tiff?|ico|avif);base64,/i.test(url);
   }
 
   /**

@@ -459,7 +459,7 @@ export class BookParser {
    * @returns {Promise<ParsedBook>}
    */
   static async parseFb2(file) {
-    const text = await file.text();
+    const text = await BookParser._readFileWithEncoding(file);
     const doc = BookParser._parseXml(text);
 
     // Метаданные
@@ -1191,6 +1191,33 @@ export class BookParser {
   }
 
   // --- Утилиты ---
+
+  /**
+   * Прочитать файл с автоопределением кодировки из XML-декларации.
+   * Многие FB2-файлы используют windows-1251, а file.text() по умолчанию UTF-8.
+   * @private
+   * @param {File} file
+   * @returns {Promise<string>}
+   */
+  static async _readFileWithEncoding(file) {
+    const buffer = await file.arrayBuffer();
+
+    // Считываем первые байты как ASCII для поиска encoding в XML-декларации
+    const peekBytes = new Uint8Array(buffer.slice(0, 512));
+    const ascii = Array.from(peekBytes, b => String.fromCharCode(b)).join('');
+    const match = ascii.match(/encoding=["']([^"']+)["']/i);
+
+    if (match) {
+      const encoding = match[1].trim();
+      try {
+        return new TextDecoder(encoding).decode(buffer);
+      } catch {
+        // Неизвестная кодировка — продолжим с UTF-8
+      }
+    }
+
+    return new TextDecoder('utf-8').decode(buffer);
+  }
 
   /**
    * Парсинг XML-строки
