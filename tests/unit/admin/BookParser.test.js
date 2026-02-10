@@ -156,9 +156,9 @@ describe('BookParser', () => {
         .toBe('dir/file.txt');
     });
 
-    it('should return non-relative path as-is', () => {
+    it('should resolve non-dot-relative path against base directory', () => {
       expect(BookParser._resolveRelativePath('dir/', 'images/img.png'))
-        .toBe('images/img.png');
+        .toBe('dir/images/img.png');
     });
 
     it('should handle multiple ../ levels', () => {
