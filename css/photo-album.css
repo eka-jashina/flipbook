@@ -2,7 +2,9 @@
  * PHOTO ALBUM
  *
  * Шаблоны фотоальбома для размещения 1–4 изображений на странице.
- * Используется CSS Grid для адаптивных раскладок.
+ * Абсолютное позиционирование элементов внутри relative-контейнера,
+ * чтобы альбом оставался единым атомарным блоком в CSS multi-column
+ * пагинаторе (grid/flex ломаются при column fragmentation).
  *
  * Разметка:
  *   <div class="photo-album" data-layout="1|2|2h|3|3t|4">
@@ -22,17 +24,23 @@
  *   data-layout="4"  — сетка 2×2
  */
 
+/* Зазор между фото */
+:root {
+  --album-gap: 6px;
+  --album-half: calc(50% - var(--album-gap) / 2);
+}
+
 /* ═══════════════════════════════════════════
    БАЗОВЫЕ СТИЛИ КОНТЕЙНЕРА
    ═══════════════════════════════════════════ */
 
-/* Высота альбома = высота страницы книги минус padding-ы .cols (2em+2em) */
+/* Высота = высота книги минус padding-ы .cols (2em сверху + 2em снизу)
+   и небольшой запас, чтобы break-inside: avoid мог сработать */
 .photo-album {
-  display: grid;
-  gap: 6px;
+  position: relative;
   width: 100%;
-  height: calc(80vh - 4em);
-  height: calc(80dvh - 4em);
+  height: calc(80vh - 5em);
+  height: calc(80dvh - 5em);
   box-sizing: border-box;
   overflow: hidden;
   break-inside: avoid;
@@ -40,12 +48,11 @@
 }
 
 /* ═══════════════════════════════════════════
-   ЭЛЕМЕНТ АЛЬБОМА (figure)
+   ЭЛЕМЕНТ АЛЬБОМА (figure) — абсолютное позиционирование
    ═══════════════════════════════════════════ */
 
 .photo-album__item {
-  position: relative;
-  min-height: 0;
+  position: absolute;
   margin: 0;
   overflow: hidden;
   border-radius: 4px;
@@ -83,10 +90,15 @@
 
 /* ═══════════════════════════════════════════
    ШАБЛОН: 1 фото (на всю страницу)
+   ┌──────────┐
+   │          │
+   │    1     │
+   │          │
+   └──────────┘
    ═══════════════════════════════════════════ */
 
-.photo-album[data-layout="1"] {
-  grid-template: 1fr / 1fr;
+.photo-album[data-layout="1"] .photo-album__item {
+  inset: 0;
 }
 
 /* ═══════════════════════════════════════════
@@ -98,19 +110,41 @@
    └──────────┘
    ═══════════════════════════════════════════ */
 
-.photo-album[data-layout="2"] {
-  grid-template: 1fr 1fr / 1fr;
+.photo-album[data-layout="2"] .photo-album__item:nth-child(1) {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--album-half);
+}
+
+.photo-album[data-layout="2"] .photo-album__item:nth-child(2) {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--album-half);
 }
 
 /* ═══════════════════════════════════════════
-   ШАБЛОН: 2 фото (горизонтально)
+   ШАБЛОН: 2h фото (горизонтально)
    ┌─────┬─────┐
+   │     │     │
    │  1  │  2  │
+   │     │     │
    └─────┴─────┘
    ═══════════════════════════════════════════ */
 
-.photo-album[data-layout="2h"] {
-  grid-template: 1fr / 1fr 1fr;
+.photo-album[data-layout="2h"] .photo-album__item:nth-child(1) {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--album-half);
+}
+
+.photo-album[data-layout="2h"] .photo-album__item:nth-child(2) {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--album-half);
 }
 
 /* ═══════════════════════════════════════════
@@ -122,16 +156,29 @@
    └──────┴─────┘
    ═══════════════════════════════════════════ */
 
-.photo-album[data-layout="3"] {
-  grid-template: 1fr 1fr / 1fr 1fr;
+.photo-album[data-layout="3"] .photo-album__item:nth-child(1) {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--album-half);
 }
 
-.photo-album[data-layout="3"] .photo-album__item:first-child {
-  grid-row: 1 / 3;
+.photo-album[data-layout="3"] .photo-album__item:nth-child(2) {
+  top: 0;
+  right: 0;
+  width: var(--album-half);
+  height: var(--album-half);
+}
+
+.photo-album[data-layout="3"] .photo-album__item:nth-child(3) {
+  right: 0;
+  bottom: 0;
+  width: var(--album-half);
+  height: var(--album-half);
 }
 
 /* ═══════════════════════════════════════════
-   ШАБЛОН: 3 фото (большое сверху + 2 снизу)
+   ШАБЛОН: 3t фото (большое сверху + 2 снизу)
    ┌──────────┐
    │    1     │
    ├─────┬────┤
@@ -139,12 +186,25 @@
    └─────┴────┘
    ═══════════════════════════════════════════ */
 
-.photo-album[data-layout="3t"] {
-  grid-template: 1fr 1fr / 1fr 1fr;
+.photo-album[data-layout="3t"] .photo-album__item:nth-child(1) {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--album-half);
 }
 
-.photo-album[data-layout="3t"] .photo-album__item:first-child {
-  grid-column: 1 / 3;
+.photo-album[data-layout="3t"] .photo-album__item:nth-child(2) {
+  bottom: 0;
+  left: 0;
+  width: var(--album-half);
+  height: var(--album-half);
+}
+
+.photo-album[data-layout="3t"] .photo-album__item:nth-child(3) {
+  right: 0;
+  bottom: 0;
+  width: var(--album-half);
+  height: var(--album-half);
 }
 
 /* ═══════════════════════════════════════════
@@ -156,8 +216,32 @@
    └─────┴─────┘
    ═══════════════════════════════════════════ */
 
-.photo-album[data-layout="4"] {
-  grid-template: 1fr 1fr / 1fr 1fr;
+.photo-album[data-layout="4"] .photo-album__item:nth-child(1) {
+  top: 0;
+  left: 0;
+  width: var(--album-half);
+  height: var(--album-half);
+}
+
+.photo-album[data-layout="4"] .photo-album__item:nth-child(2) {
+  top: 0;
+  right: 0;
+  width: var(--album-half);
+  height: var(--album-half);
+}
+
+.photo-album[data-layout="4"] .photo-album__item:nth-child(3) {
+  bottom: 0;
+  left: 0;
+  width: var(--album-half);
+  height: var(--album-half);
+}
+
+.photo-album[data-layout="4"] .photo-album__item:nth-child(4) {
+  right: 0;
+  bottom: 0;
+  width: var(--album-half);
+  height: var(--album-half);
 }
 
 /* ═══════════════════════════════════════════
@@ -177,7 +261,7 @@ html[data-theme="dark"] .photo-album__item {
     contain: paint layout;
   }
 
-  .photo-album__item img {
+  .photo-album .photo-album__item img {
     float: none !important;
   }
 }
