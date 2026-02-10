@@ -110,14 +110,25 @@ export class BookParser {
 
     // 4. Загрузить и парсить контент глав
     const rawChapters = [];
+    const loadedPaths = new Set();
     for (const item of spineItems) {
       if (!item.mediaType?.includes('html') && !item.mediaType?.includes('xml')) {
         continue;
       }
-      const filePath = opfDir + item.href;
-      const html = await BookParser._readZipFile(zip, filePath);
-      const chapterDir = filePath.includes('/') ? filePath.substring(0, filePath.lastIndexOf('/') + 1) : '';
-      rawChapters.push({ html, dir: chapterDir });
+      // href может содержать фрагмент (#section) и относительные сегменты (../text/ch.xhtml)
+      const href = item.href.split('#')[0];
+      const filePath = BookParser._resolveEpubHref(opfDir, href);
+      // Пропускаем дубликаты (один файл может быть в spine несколько раз с разными фрагментами)
+      if (loadedPaths.has(filePath)) continue;
+      loadedPaths.add(filePath);
+      try {
+        const html = await BookParser._readZipFile(zip, filePath);
+        const chapterDir = filePath.includes('/') ? filePath.substring(0, filePath.lastIndexOf('/') + 1) : '';
+        rawChapters.push({ html, dir: chapterDir });
+      } catch {
+        // Пропускаем файлы, которые не удалось загрузить (обложки, nav и т.д.)
+        continue;
+      }
     }
 
     // 5. Разделить на главы по заголовкам
@@ -153,13 +164,70 @@ export class BookParser {
    * @private
    */
   static async _readZipFile(zip, path) {
-    // Попробовать точный путь, затем без начального слеша
-    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    const file = zip.file(cleanPath);
+    const file = BookParser._findZipFile(zip, path);
     if (!file) {
-      throw new Error(`Файл не найден в архиве: ${cleanPath}`);
+      throw new Error(`Файл не найден в архиве: ${path}`);
     }
     return file.async('string');
+  }
+
+  /**
+   * Найти файл в ZIP-архиве с учётом URL-кодирования, регистра и т.д.
+   * EPUB-файлы из разных генераторов хранят пути по-разному:
+   * OPF может ссылаться на URL-кодированный путь, а ZIP содержит декодированный (или наоборот).
+   * @private
+   * @param {JSZip} zip
+   * @param {string} path
+   * @returns {JSZip.JSZipObject|null}
+   */
+  static _findZipFile(zip, path) {
+    // Убираем фрагмент (#section) и начальный слеш
+    const noFragment = path.split('#')[0];
+    const cleanPath = noFragment.startsWith('/') ? noFragment.substring(1) : noFragment;
+
+    // 1. Точное совпадение
+    let file = zip.file(cleanPath);
+    if (file) return file;
+
+    // 2. URL-декодированный путь (OPF: %D0%93%D0%BB%D0%B0%D0%B2%D0%B0.xhtml → ZIP: Глава.xhtml)
+    try {
+      const decoded = decodeURIComponent(cleanPath);
+      if (decoded !== cleanPath) {
+        file = zip.file(decoded);
+        if (file) return file;
+      }
+    } catch { /* невалидный URI — пропускаем */ }
+
+    // 3. URL-кодированный путь (OPF: Глава.xhtml → ZIP: %D0%93...xhtml)
+    try {
+      const encoded = cleanPath.split('/').map(p => encodeURIComponent(p)).join('/');
+      if (encoded !== cleanPath) {
+        file = zip.file(encoded);
+        if (file) return file;
+      }
+    } catch { /* */ }
+
+    // 4. Регистронезависимый поиск (некоторые архиваторы меняют регистр)
+    const lowerPath = cleanPath.toLowerCase();
+    for (const [name, entry] of Object.entries(zip.files)) {
+      if (!entry.dir && name.toLowerCase() === lowerPath) {
+        return entry;
+      }
+    }
+
+    // 5. Также попробовать декодированный вариант регистронезависимо
+    try {
+      const decodedLower = decodeURIComponent(cleanPath).toLowerCase();
+      if (decodedLower !== lowerPath) {
+        for (const [name, entry] of Object.entries(zip.files)) {
+          if (!entry.dir && name.toLowerCase() === decodedLower) {
+            return entry;
+          }
+        }
+      }
+    } catch { /* */ }
+
+    return null;
   }
 
   /**
@@ -171,21 +239,30 @@ export class BookParser {
 
     for (const [, entry] of manifest) {
       if (!entry.mediaType?.startsWith('image/')) continue;
-      const imgPath = opfDir + entry.href;
-      const cleanPath = imgPath.startsWith('/') ? imgPath.substring(1) : imgPath;
-      const imgFile = zip.file(cleanPath);
+      const imgPath = BookParser._resolveEpubHref(opfDir, entry.href);
+      const imgFile = BookParser._findZipFile(zip, imgPath);
       if (!imgFile) continue;
 
       const imgData = await imgFile.async('base64');
       const dataUrl = `data:${entry.mediaType};base64,${imgData}`;
 
       // Сохраняем по нескольким ключам для сопоставления
-      imageMap.set(cleanPath, dataUrl);
+      imageMap.set(imgFile.name, dataUrl);
+      imageMap.set(imgPath, dataUrl);
       imageMap.set(entry.href, dataUrl);
+      // Декодированный вариант пути (для сопоставления из HTML-атрибутов)
+      try {
+        const decoded = decodeURIComponent(entry.href);
+        if (decoded !== entry.href) imageMap.set(decoded, dataUrl);
+      } catch { /* */ }
       // Часто в EPUB src="../images/foo.jpg" — нужен только basename
       const basename = entry.href.split('/').pop();
       if (basename) {
         imageMap.set(basename, dataUrl);
+        try {
+          const decodedBasename = decodeURIComponent(basename);
+          if (decodedBasename !== basename) imageMap.set(decodedBasename, dataUrl);
+        } catch { /* */ }
       }
     }
 
@@ -419,6 +496,12 @@ export class BookParser {
     // Прямое совпадение
     if (imageMap.has(src)) return imageMap.get(src);
 
+    // Попробовать URL-декодированный вариант
+    try {
+      const decoded = decodeURIComponent(src);
+      if (decoded !== src && imageMap.has(decoded)) return imageMap.get(decoded);
+    } catch { /* */ }
+
     // Относительный путь от директории главы
     const resolved = BookParser._resolveRelativePath(dir, src);
     if (imageMap.has(resolved)) return imageMap.get(resolved);
@@ -426,16 +509,22 @@ export class BookParser {
     // Только имя файла
     const basename = src.split('/').pop();
     if (basename && imageMap.has(basename)) return imageMap.get(basename);
+    // Декодированный basename
+    try {
+      const decodedBasename = decodeURIComponent(basename);
+      if (decodedBasename !== basename && imageMap.has(decodedBasename)) return imageMap.get(decodedBasename);
+    } catch { /* */ }
 
     return null;
   }
 
   /**
-   * Резолвить относительный путь
+   * Резолвить относительный путь (поддерживает ../ и ./ в любой позиции)
    * @private
    */
   static _resolveRelativePath(base, relative) {
-    if (!relative.startsWith('.')) return relative;
+    // Абсолютные пути не резолвим
+    if (relative.startsWith('/')) return relative.substring(1);
 
     const baseParts = base.split('/').filter(Boolean);
     const relParts = relative.split('/');
@@ -443,12 +532,25 @@ export class BookParser {
     for (const part of relParts) {
       if (part === '..') {
         baseParts.pop();
-      } else if (part !== '.') {
+      } else if (part !== '.' && part !== '') {
         baseParts.push(part);
       }
     }
 
     return baseParts.join('/');
+  }
+
+  /**
+   * Резолвить href из OPF-манифеста относительно директории OPF.
+   * Обрабатывает относительные пути и URL-кодирование.
+   * @private
+   */
+  static _resolveEpubHref(opfDir, href) {
+    if (!href) return href;
+    // Если href начинается с / — абсолютный путь внутри архива
+    if (href.startsWith('/')) return href.substring(1);
+    // Резолвим относительно директории OPF
+    return BookParser._resolveRelativePath(opfDir, href);
   }
 
   // --- FB2 ---
