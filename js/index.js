@@ -11,6 +11,7 @@ import { BookshelfScreen, getBookshelfData, clearActiveBook } from './core/Books
 import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
+import { photoLightbox } from './utils/PhotoLightbox.js';
 
 // Глобальная ссылка на контроллер (для отладки)
 let app = null;
@@ -122,6 +123,12 @@ async function initReader() {
   app = new BookController();
   await app.init();
 
+  // Лайтбокс для фотоальбомов — привязать к контейнеру книги
+  const bookEl = document.querySelector('.book');
+  if (bookEl) {
+    photoLightbox.attach(bookEl);
+  }
+
   // Настраиваем кнопку установки PWA
   setupInstallButton();
 
@@ -170,6 +177,7 @@ function cleanup() {
   }
   offlineIndicator.destroy();
   installPrompt.destroy();
+  photoLightbox.destroy();
 }
 
 // Запуск после загрузки DOM

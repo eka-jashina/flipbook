@@ -1437,3 +1437,221 @@ img.texture-thumb {
     flex-wrap: wrap;
   }
 }
+
+/* ═══════════════════════════════════════════
+   ФОТОАЛЬБОМ — КОНСТРУКТОР
+   ═══════════════════════════════════════════ */
+
+.admin-modal--wide {
+  max-width: 600px;
+}
+
+/* Переключатель «скрыть заголовок» */
+.album-hide-toggle {
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.album-hide-label {
+  font-size: 14px;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+/* --- Выбор шаблона --- */
+
+.album-layouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.album-layout-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 2px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-surface);
+  cursor: pointer;
+  transition: all var(--admin-transition);
+}
+
+.album-layout-btn:hover {
+  border-color: var(--admin-primary);
+}
+
+.album-layout-btn.active {
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 2px rgb(0, 122, 255, 0.2);
+}
+
+.album-layout-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--admin-text-secondary);
+  font-family: var(--admin-font);
+}
+
+.album-layout-btn.active .album-layout-label {
+  color: var(--admin-primary);
+  font-weight: 600;
+}
+
+/* Миниатюры раскладок */
+.album-layout-preview {
+  display: grid;
+  width: 52px;
+  height: 40px;
+  gap: 2px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.album-layout-preview i {
+  background: var(--admin-border);
+  border-radius: 2px;
+  transition: background var(--admin-transition);
+}
+
+.album-layout-btn.active .album-layout-preview i {
+  background: var(--admin-primary);
+  opacity: 0.5;
+}
+
+.album-layout-preview--1 { grid-template: 1fr / 1fr; }
+.album-layout-preview--2 { grid-template: 1fr 1fr / 1fr; }
+.album-layout-preview--2h { grid-template: 1fr / 1fr 1fr; }
+.album-layout-preview--4 { grid-template: 1fr 1fr / 1fr 1fr; }
+
+.album-layout-preview--3 { grid-template: 1fr 1fr / 1fr 1fr; }
+.album-layout-preview--3 i:first-child { grid-row: 1 / 3; }
+
+.album-layout-preview--3r { grid-template: 1fr 1fr / 1fr 1fr; }
+
+.album-layout-preview--3r i:nth-child(3) {
+  grid-row: 1 / 3;
+  grid-column: 2;
+}
+
+.album-layout-preview--3t { grid-template: 1fr 1fr / 1fr 1fr; }
+.album-layout-preview--3t i:first-child { grid-column: 1 / 3; }
+
+.album-layout-preview--3b { grid-template: 1fr 1fr / 1fr 1fr; }
+.album-layout-preview--3b i:nth-child(3) { grid-column: 1 / 3; }
+
+/* --- Слоты изображений --- */
+
+.album-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.album-image-slot {
+  position: relative;
+  width: 120px;
+  height: 90px;
+  border: 2px dashed var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--admin-transition);
+  overflow: hidden;
+}
+
+.album-image-slot:hover {
+  border-color: var(--admin-primary);
+  background: rgb(0, 122, 255, 0.04);
+}
+
+.album-image-slot.has-image {
+  border-style: solid;
+  border-color: var(--admin-border);
+}
+
+.album-image-slot-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--admin-text-secondary);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.album-image-slot.has-image .album-image-slot-placeholder {
+  display: none;
+}
+
+.album-image-slot-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.album-image-slot-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgb(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.album-image-slot.has-image .album-image-slot-remove {
+  display: flex;
+}
+
+.album-image-slot-num {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgb(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.album-image-slot-caption {
+  width: 120px;
+  padding: 4px 8px;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  font-family: var(--admin-font);
+  font-size: 12px;
+}
+
+.album-image-slot-caption::placeholder {
+  color: var(--admin-text-secondary);
+}
+
+.album-image-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

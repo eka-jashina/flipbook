@@ -227,3 +227,108 @@ html[data-theme="dark"] .photo-album__item {
     float: none !important;
   }
 }
+
+/* ═══════════════════════════════════════════
+   LIGHTBOX — полноэкранный просмотр фото
+   ═══════════════════════════════════════════ */
+
+/* Курсор zoom-in на фотографиях альбома */
+.photo-album__item img {
+  cursor: zoom-in;
+}
+
+/* Оверлей */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0, 0, 0, 0);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    background 300ms ease,
+    opacity 200ms ease,
+    visibility 0ms 300ms;
+}
+
+.lightbox--visible {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    background 300ms ease,
+    opacity 200ms ease,
+    visibility 0ms;
+}
+
+.lightbox--active {
+  background: rgb(0, 0, 0, 0.92);
+}
+
+/* Полноэкранная картинка */
+.lightbox__img {
+  display: block;
+  max-width: calc(100vw - 80px);
+  max-height: calc(100vh - 80px);
+  max-height: calc(100dvh - 80px);
+  width: auto;
+  height: auto;
+  margin: 0;
+  float: none;
+  object-fit: contain;
+  border-radius: 4px;
+  will-change: transform;
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Кнопка закрытия */
+.lightbox__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgb(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 200ms ease, background 200ms ease;
+}
+
+.lightbox--active .lightbox__close {
+  opacity: 1;
+}
+
+.lightbox__close:hover {
+  background: rgb(255, 255, 255, 0.3);
+}
+
+/* Подпись */
+.lightbox__caption {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 80%;
+  padding: 8px 20px;
+  font-size: 14px;
+  color: rgb(255, 255, 255, 0.85);
+  text-align: center;
+  background: rgb(0, 0, 0, 0.5);
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 200ms ease 100ms;
+  pointer-events: none;
+}
+
+.lightbox--active .lightbox__caption {
+  opacity: 1;
+}
