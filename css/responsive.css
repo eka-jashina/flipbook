@@ -66,8 +66,8 @@
   }
 
   .photo-album {
-    min-height: 50vh;
-    min-height: 50dvh;
+    height: calc(72vh - 4em);
+    height: calc(72dvh - 4em);
   }
 
   /* Жесты */
