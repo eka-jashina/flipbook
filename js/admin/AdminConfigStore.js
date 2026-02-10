@@ -306,11 +306,25 @@ export class AdminConfigStore {
   _save() {
     const snapshot = structuredClone(this._config);
 
-    // Синхронизируем в localStorage — ридер (config.js) читает оттуда
+    // Синхронизируем в localStorage — ридер (config.js) читает оттуда.
+    // Сохраняем облегчённую версию: без htmlContent (он может быть очень большим
+    // из-за base64-изображений из EPUB/FB2, и не помещается в лимит localStorage,
+    // особенно на мобильных устройствах — обычно 5 МБ).
+    // Полная версия хранится в IndexedDB, ридер дозагрузит htmlContent оттуда.
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+      const lsSnapshot = structuredClone(snapshot);
+      for (const book of lsSnapshot.books) {
+        if (!book.chapters) continue;
+        for (const ch of book.chapters) {
+          if (ch.htmlContent) {
+            ch._idb = true;    // маркер: контент в IndexedDB
+            delete ch.htmlContent;
+          }
+        }
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lsSnapshot));
     } catch {
-      // localStorage переполнен — не критично, IndexedDB основной
+      // localStorage переполнен даже без htmlContent — не критично, IndexedDB основной
     }
 
     this._savePromise = this._idbPut(STORAGE_KEY, snapshot)

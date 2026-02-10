@@ -8,9 +8,15 @@
  * - Поддержка отмены через AbortController
  * - Автоматический пропуск уже закэшированных URL
  * - Retry с exponential backoff при сетевых ошибках
+ * - Загрузка inline-контента из IndexedDB (для книг, загруженных из EPUB/FB2)
  */
 
 import { CONFIG } from '../config.js';
+
+const IDB_NAME = 'flipbook-admin';
+const IDB_STORE = 'config';
+const IDB_VERSION = 1;
+const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
 
 export class ContentLoader {
   constructor() {
@@ -83,7 +89,7 @@ export class ContentLoader {
 
   /**
    * Загрузить контент глав
-   * @param {Array<{file: string, htmlContent?: string}>} chapters - Главы (URL или inline-контент)
+   * @param {Array<{file: string, htmlContent?: string, _idb?: boolean}>} chapters - Главы (URL, inline-контент или IDB)
    * @returns {Promise<string>} Объединённый HTML всех глав
    * @throws {Error} При ошибке загрузки
    */
@@ -98,6 +104,12 @@ export class ContentLoader {
     this.controller = new AbortController();
     const { signal } = this.controller;
 
+    // Загружаем контент из IndexedDB для глав с маркером _idb
+    const idbItems = items.filter(item => item._idb && !item.htmlContent);
+    if (idbItems.length > 0) {
+      await this._loadChaptersFromIDB(idbItems);
+    }
+
     // Кэшируем inline-контент и определяем что нужно загружать
     for (const item of items) {
       if (item.htmlContent) {
@@ -111,7 +123,7 @@ export class ContentLoader {
     }
 
     // Загружаем только URL, которых нет в кэше
-    const missing = items.filter(item => !item.htmlContent && !this.cache.has(item.file));
+    const missing = items.filter(item => !item.htmlContent && item.file && !this.cache.has(item.file));
 
     if (missing.length) {
       await Promise.all(
@@ -123,7 +135,85 @@ export class ContentLoader {
     }
 
     // Возвращаем объединённый контент в порядке глав
-    return items.map(item => this.cache.get(item._cacheKey)).join("\n");
+    return items.map(item => this.cache.get(item._cacheKey)).filter(Boolean).join("\n");
+  }
+
+  /**
+   * Загрузить htmlContent глав из IndexedDB (админ-конфиг)
+   * Используется когда localStorage содержит только метаданные (htmlContent убран для экономии места)
+   * @private
+   * @param {Array} items - Главы, которым нужно подгрузить htmlContent
+   */
+  async _loadChaptersFromIDB(items) {
+    try {
+      const config = await this._readAdminConfigFromIDB();
+      if (!config) return;
+
+      const book = config.books?.find(b => b.id === config.activeBookId) || config.books?.[0];
+      if (!book?.chapters) return;
+
+      // Сопоставляем главы по id
+      const chapterMap = new Map();
+      for (const ch of book.chapters) {
+        if (ch.id && ch.htmlContent) {
+          chapterMap.set(ch.id, ch.htmlContent);
+        }
+      }
+
+      for (const item of items) {
+        const content = chapterMap.get(item.id);
+        if (content) {
+          item.htmlContent = content;
+        }
+      }
+    } catch (err) {
+      console.warn('ContentLoader: не удалось загрузить контент из IndexedDB', err);
+    }
+  }
+
+  /**
+   * Прочитать админ-конфиг из IndexedDB
+   * @private
+   * @returns {Promise<Object|null>}
+   */
+  async _readAdminConfigFromIDB() {
+    return new Promise((resolve) => {
+      try {
+        const request = indexedDB.open(IDB_NAME, IDB_VERSION);
+
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(IDB_STORE)) {
+            db.createObjectStore(IDB_STORE);
+          }
+        };
+
+        request.onsuccess = () => {
+          const db = request.result;
+          try {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const store = tx.objectStore(IDB_STORE);
+            const getReq = store.get(ADMIN_CONFIG_KEY);
+
+            getReq.onsuccess = () => {
+              db.close();
+              resolve(getReq.result ?? null);
+            };
+            getReq.onerror = () => {
+              db.close();
+              resolve(null);
+            };
+          } catch {
+            db.close();
+            resolve(null);
+          }
+        };
+
+        request.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
   }
 
   /**
