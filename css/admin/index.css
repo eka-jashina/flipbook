@@ -1655,3 +1655,55 @@ img.texture-thumb {
   flex-direction: column;
   gap: 4px;
 }
+
+/* --- Мульти-страничный альбом --- */
+
+.album-page-card {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-surface);
+}
+
+.album-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.album-page-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.album-page-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--admin-radius-sm);
+  background: transparent;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: all var(--admin-transition);
+}
+
+.album-page-remove:hover {
+  background: rgb(255, 59, 48, 0.1);
+  color: #ff3b30;
+}
+
+.album-page-card .album-layouts {
+  margin-bottom: 10px;
+}
+
+.album-add-page-btn {
+  width: 100%;
+  margin-bottom: 16px;
+}
