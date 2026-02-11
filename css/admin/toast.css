@@ -1,0 +1,21 @@
+/* Админ-панель — toast-уведомления */
+
+.admin-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--admin-text);
+  color: white;
+  padding: 12px 24px;
+  border-radius: var(--admin-radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: var(--admin-shadow-md);
+  z-index: 1000;
+  transition: transform 300ms ease;
+}
+
+.admin-toast.visible {
+  transform: translateX(-50%) translateY(0);
+}

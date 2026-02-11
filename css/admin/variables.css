@@ -1,0 +1,21 @@
+/* Админ-панель — переменные */
+
+:root {
+  --admin-bg: #f5f5f7;
+  --admin-surface: #fff;
+  --admin-border: #e0e0e0;
+  --admin-text: #1d1d1f;
+  --admin-text-secondary: #6e6e73;
+  --admin-primary: #007aff;
+  --admin-primary-hover: #0062cc;
+  --admin-danger: #ff3b30;
+  --admin-danger-hover: #d63029;
+  --admin-success: #34c759;
+  --admin-radius: 12px;
+  --admin-radius-sm: 8px;
+  --admin-shadow: 0 1px 3px rgb(0, 0, 0, 0.08);
+  --admin-shadow-md: 0 4px 12px rgb(0, 0, 0, 0.1);
+  --admin-transition: 200ms ease;
+  --admin-max-width: 960px;
+  --admin-font: "Inter", -apple-system, blinkmacsystemfont, "Segoe UI", sans-serif;
+}

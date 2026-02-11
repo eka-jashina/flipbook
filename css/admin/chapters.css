@@ -1,0 +1,103 @@
+/* Админ-панель — список глав */
+
+.chapters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chapter-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--admin-surface);
+  border-radius: var(--admin-radius);
+  box-shadow: var(--admin-shadow);
+  transition: box-shadow var(--admin-transition);
+}
+
+.chapter-card:hover {
+  box-shadow: var(--admin-shadow-md);
+}
+
+.chapter-drag {
+  cursor: grab;
+  color: var(--admin-text-secondary);
+  flex-shrink: 0;
+}
+
+.chapter-drag:active {
+  cursor: grabbing;
+}
+
+.chapter-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.chapter-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.chapter-meta {
+  font-size: 13px;
+  color: var(--admin-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapter-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.chapter-action-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-surface);
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: all var(--admin-transition);
+}
+
+.chapter-action-btn:hover {
+  color: var(--admin-text);
+  border-color: var(--admin-text-secondary);
+}
+
+.chapter-action-btn.delete:hover {
+  color: var(--admin-danger);
+  border-color: var(--admin-danger);
+}
+
+/* === Empty state === */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--admin-text-secondary);
+}
+
+.empty-state svg {
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.empty-state p {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.empty-hint {
+  font-size: 14px;
+  opacity: 0.7;
+}
