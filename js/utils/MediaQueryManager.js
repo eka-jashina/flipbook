@@ -13,6 +13,8 @@ class MediaQueryManager {
   constructor() {
     /** @type {Map<string, MediaQueryList>} Зарегистрированные запросы */
     this._queries = new Map();
+    /** @type {Map<string, Function>} Функции отписки от change-событий */
+    this._unsubscribers = new Map();
     /** @type {Set<Function>} Подписчики на изменения */
     this._listeners = new Set();
   }
@@ -24,13 +26,22 @@ class MediaQueryManager {
    * @returns {Function} Функция для отписки от события change
    */
   register(name, query) {
+    // Удаляем предыдущий listener, если запрос с таким именем уже существует
+    if (this._unsubscribers.has(name)) {
+      this._unsubscribers.get(name)();
+      this._unsubscribers.delete(name);
+    }
+
     const mql = window.matchMedia(query);
     this._queries.set(name, mql);
 
     const handler = () => this._notifyListeners();
     mql.addEventListener("change", handler);
 
-    return () => mql.removeEventListener("change", handler);
+    const unsubscribe = () => mql.removeEventListener("change", handler);
+    this._unsubscribers.set(name, unsubscribe);
+
+    return unsubscribe;
   }
 
   /**
@@ -79,6 +90,10 @@ class MediaQueryManager {
    * Очистить все запросы и подписчиков
    */
   destroy() {
+    for (const unsubscribe of this._unsubscribers.values()) {
+      unsubscribe();
+    }
+    this._unsubscribers.clear();
     this._queries.clear();
     this._listeners.clear();
   }

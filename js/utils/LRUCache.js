@@ -59,8 +59,10 @@ export class LRUCache {
 
     // Если превышен лимит - удаляем самый старый
     if (this.cache.size >= this.limit) {
-      const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      const first = this.cache.keys().next();
+      if (!first.done) {
+        this.cache.delete(first.value);
+      }
     }
 
     this.cache.set(key, value);

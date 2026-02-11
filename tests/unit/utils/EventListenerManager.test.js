@@ -144,8 +144,8 @@ describe('EventListenerManager', () => {
       const key1 = manager._createKey(handler, { capture: true });
       const key2 = manager._createKey(handler, { capture: false });
 
-      expect(key1).toBe('true');
-      expect(key2).toBe('false');
+      expect(key1).toBe('true|false|false');
+      expect(key2).toBe('false|false|false');
     });
 
     it('should handle boolean options', () => {
@@ -154,8 +154,8 @@ describe('EventListenerManager', () => {
       const key1 = manager._createKey(handler, true);
       const key2 = manager._createKey(handler, false);
 
-      expect(key1).toBe('true');
-      expect(key2).toBe('false');
+      expect(key1).toBe('true|false|false');
+      expect(key2).toBe('false|false|false');
     });
 
     it('should default to false capture', () => {
@@ -163,7 +163,21 @@ describe('EventListenerManager', () => {
 
       const key = manager._createKey(handler, {});
 
-      expect(key).toBe('false');
+      expect(key).toBe('false|false|false');
+    });
+
+    it('should differentiate by passive and once options', () => {
+      const handler = vi.fn();
+
+      const key1 = manager._createKey(handler, { capture: false, passive: true });
+      const key2 = manager._createKey(handler, { capture: false, passive: false });
+      const key3 = manager._createKey(handler, { capture: false, once: true });
+
+      expect(key1).toBe('false|true|false');
+      expect(key2).toBe('false|false|false');
+      expect(key3).toBe('false|false|true');
+      expect(key1).not.toBe(key2);
+      expect(key2).not.toBe(key3);
     });
   });
 
