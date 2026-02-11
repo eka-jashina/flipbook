@@ -291,15 +291,20 @@ export class DragDelegate extends BaseDelegate {
     const willComplete = this.currentAngle > 90;
     const targetAngle = willComplete ? 180 : 0;
 
-    this.dragAnimator.animate(
-      this.currentAngle,
-      targetAngle,
-      (angle) => {
-        this.currentAngle = angle;
-        this._render();
-      },
-      () => this._finish(willComplete)
-    );
+    try {
+      this.dragAnimator.animate(
+        this.currentAngle,
+        targetAngle,
+        (angle) => {
+          this.currentAngle = angle;
+          this._render();
+        },
+        () => this._finish(willComplete)
+      );
+    } catch (error) {
+      console.error("DragDelegate: animation failed, recovering state", error);
+      this._finish(willComplete);
+    }
   }
 
   /**

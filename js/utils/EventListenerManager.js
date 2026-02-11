@@ -19,8 +19,14 @@ export class EventListenerManager {
    */
   _createKey(handler, options) {
     // Нормализуем options для сравнения
-    const capture = typeof options === 'boolean' ? options : !!options.capture;
-    return `${capture}`;
+    // capture влияет на removeEventListener, passive и once — на идентификацию listener
+    if (typeof options === 'boolean') {
+      return `${options}|false|false`;
+    }
+    const capture = !!options.capture;
+    const passive = !!options.passive;
+    const once = !!options.once;
+    return `${capture}|${passive}|${once}`;
   }
 
   /**
