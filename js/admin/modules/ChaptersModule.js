@@ -1,22 +1,17 @@
 /**
- * Модуль управления главами, обложкой, книгами и загрузкой книг
+ * Модуль управления главами, обложкой и книгами
+ * Делегирует фотоальбом → AlbumManager, загрузку книг → BookUploadManager
  */
-import { BookParser } from '../BookParser.js';
 import { BaseModule } from './BaseModule.js';
-
-/** Количество изображений для каждого шаблона */
-const LAYOUT_IMAGE_COUNT = {
-  '1': 1, '2': 2, '2h': 2,
-  '3': 3, '3r': 3, '3t': 3, '3b': 3,
-  '4': 4,
-};
+import { AlbumManager } from './AlbumManager.js';
+import { BookUploadManager } from './BookUploadManager.js';
 
 export class ChaptersModule extends BaseModule {
   constructor(app) {
     super(app);
     this._editingIndex = null;
-    this._pendingParsedBook = null;
-    this._albumPages = []; // [{ layout: '1', images: [{dataUrl, caption}] }]
+    this._album = new AlbumManager(this);
+    this._bookUpload = new BookUploadManager(this);
   }
 
   cacheDOM() {
@@ -35,19 +30,6 @@ export class ChaptersModule extends BaseModule {
     this.subtabBtns = document.querySelectorAll('.book-subtab');
     this.subtabContents = document.querySelectorAll('.book-subtab-content');
 
-    // Загрузка книги
-    this.bookUploadArea = document.getElementById('bookUploadArea');
-    this.bookDropzone = document.getElementById('bookDropzone');
-    this.bookFileInput = document.getElementById('bookFileInput');
-    this.bookUploadProgress = document.getElementById('bookUploadProgress');
-    this.bookUploadStatus = document.getElementById('bookUploadStatus');
-    this.bookUploadResult = document.getElementById('bookUploadResult');
-    this.bookUploadTitle = document.getElementById('bookUploadTitle');
-    this.bookUploadAuthor = document.getElementById('bookUploadAuthor');
-    this.bookUploadChaptersCount = document.getElementById('bookUploadChaptersCount');
-    this.bookUploadConfirm = document.getElementById('bookUploadConfirm');
-    this.bookUploadCancel = document.getElementById('bookUploadCancel');
-
     // Обложка (в табе Главы)
     this.coverTitle = document.getElementById('coverTitle');
     this.coverAuthor = document.getElementById('coverAuthor');
@@ -65,14 +47,9 @@ export class ChaptersModule extends BaseModule {
     this.inputBg = document.getElementById('chapterBg');
     this.inputBgMobile = document.getElementById('chapterBgMobile');
 
-    // Модальное окно фотоальбома
-    this.albumModal = document.getElementById('albumModal');
-    this.albumForm = document.getElementById('albumForm');
-    this.albumTitleInput = document.getElementById('albumTitle');
-    this.albumHideTitle = document.getElementById('albumHideTitle');
-    this.albumPagesEl = document.getElementById('albumPages');
-    this.albumAddPageBtn = document.getElementById('albumAddPage');
-    this.cancelAlbumModal = document.getElementById('cancelAlbumModal');
+    // Делегаты
+    this._album.cacheDOM();
+    this._bookUpload.cacheDOM();
   }
 
   bindEvents() {
@@ -80,12 +57,6 @@ export class ChaptersModule extends BaseModule {
     this.addChapterBtn.addEventListener('click', () => this._openModal());
     this.cancelModal.addEventListener('click', () => this.modal.close());
     this.chapterForm.addEventListener('submit', (e) => this._handleChapterSubmit(e));
-
-    // Фотоальбом
-    this.addAlbumBtn.addEventListener('click', () => this._openAlbumModal());
-    this.cancelAlbumModal.addEventListener('click', () => this.albumModal.close());
-    this.albumForm.addEventListener('submit', (e) => this._handleAlbumSubmit(e));
-    this.albumAddPageBtn.addEventListener('click', () => this._addAlbumPage());
 
     // Под-табы (Создать / Загрузить)
     this.subtabBtns.forEach(btn => {
@@ -112,27 +83,12 @@ export class ChaptersModule extends BaseModule {
       this._handleDeleteBook(this.store.getActiveBookId());
     });
 
-    // Загрузка книги
-    this.bookDropzone.addEventListener('click', () => this.bookFileInput.click());
-    this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
-    this.bookDropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      this.bookDropzone.classList.add('dragover');
-    });
-    this.bookDropzone.addEventListener('dragleave', () => {
-      this.bookDropzone.classList.remove('dragover');
-    });
-    this.bookDropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      this.bookDropzone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file) this._processBookFile(file);
-    });
-    this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook());
-    this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
-
     // Обложка (таб Главы)
     this.saveCoverBtn.addEventListener('click', () => this._saveCover());
+
+    // Делегаты
+    this._album.bindEvents(this.addAlbumBtn);
+    this._bookUpload.bindEvents();
   }
 
   render() {
@@ -348,333 +304,5 @@ export class ChaptersModule extends BaseModule {
 
     this._renderJsonPreview();
     this._showToast('Обложка сохранена');
-  }
-
-  // ═══════════════════════════════════════════
-  // ФОТОАЛЬБОМ (мульти-страничный)
-  // ═══════════════════════════════════════════
-
-  _openAlbumModal() {
-    this._albumPages = [{ layout: '1', images: [] }];
-    this.albumForm.reset();
-    this.albumHideTitle.checked = true;
-
-    this._renderAlbumPages();
-    this.albumModal.showModal();
-  }
-
-  _addAlbumPage() {
-    this._albumPages.push({ layout: '1', images: [] });
-    this._renderAlbumPages();
-  }
-
-  _removeAlbumPage(pageIndex) {
-    if (this._albumPages.length <= 1) return;
-    this._albumPages.splice(pageIndex, 1);
-    this._renderAlbumPages();
-  }
-
-  _selectPageLayout(pageIndex, layout) {
-    const page = this._albumPages[pageIndex];
-    page.layout = layout;
-
-    // Обрезать массив изображений если нужно
-    const count = LAYOUT_IMAGE_COUNT[layout] || 1;
-    page.images = page.images.slice(0, count);
-
-    this._renderAlbumPages();
-  }
-
-  /** Отрисовать все страницы альбома в модалке */
-  _renderAlbumPages() {
-    this.albumPagesEl.innerHTML = '';
-
-    this._albumPages.forEach((page, pageIndex) => {
-      const card = document.createElement('div');
-      card.className = 'album-page-card';
-
-      // Заголовок страницы
-      const header = document.createElement('div');
-      header.className = 'album-page-header';
-
-      const title = document.createElement('span');
-      title.className = 'album-page-title';
-      title.textContent = `Страница ${pageIndex + 1}`;
-
-      header.appendChild(title);
-
-      if (this._albumPages.length > 1) {
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'album-page-remove';
-        removeBtn.title = 'Удалить страницу';
-        removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
-        removeBtn.addEventListener('click', () => this._removeAlbumPage(pageIndex));
-        header.appendChild(removeBtn);
-      }
-
-      card.appendChild(header);
-
-      // Шаблон раскладки
-      const layoutsWrap = document.createElement('div');
-      layoutsWrap.className = 'album-layouts';
-      layoutsWrap.innerHTML = this._buildLayoutButtons(page.layout);
-      layoutsWrap.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-layout]');
-        if (!btn) return;
-        this._selectPageLayout(pageIndex, btn.dataset.layout);
-      });
-      card.appendChild(layoutsWrap);
-
-      // Слоты изображений
-      const imagesWrap = document.createElement('div');
-      imagesWrap.className = 'album-images';
-      this._renderPageImageSlots(imagesWrap, page, pageIndex);
-      card.appendChild(imagesWrap);
-
-      this.albumPagesEl.appendChild(card);
-    });
-  }
-
-  /** Сгенерировать HTML кнопок выбора шаблона */
-  _buildLayoutButtons(activeLayout) {
-    const layouts = [
-      { id: '1', title: '1 фото', items: 1 },
-      { id: '2', title: '2 фото (вертикально)', items: 2 },
-      { id: '2h', title: '2 фото (горизонтально)', items: 2 },
-      { id: '3', title: 'Большое слева + 2 справа', items: 3 },
-      { id: '3r', title: 'Большое справа + 2 слева', items: 3 },
-      { id: '3t', title: 'Большое сверху + 2 снизу', items: 3 },
-      { id: '3b', title: 'Большое снизу + 2 сверху', items: 3 },
-      { id: '4', title: 'Сетка 2x2', items: 4 },
-    ];
-    return layouts.map(l => {
-      const active = l.id === activeLayout ? ' active' : '';
-      const icons = Array.from({ length: l.items }, () => '<i></i>').join('');
-      return `<button class="album-layout-btn${active}" type="button" data-layout="${l.id}" title="${l.title}"><span class="album-layout-preview album-layout-preview--${l.id}">${icons}</span><span class="album-layout-label">${l.id}</span></button>`;
-    }).join('');
-  }
-
-  /** Отрисовать слоты изображений для одной страницы */
-  _renderPageImageSlots(container, page, pageIndex) {
-    const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
-
-    for (let i = 0; i < count; i++) {
-      const img = page.images[i] || null;
-      const group = document.createElement('div');
-      group.className = 'album-image-group';
-
-      const slot = document.createElement('div');
-      slot.className = `album-image-slot${img ? ' has-image' : ''}`;
-
-      slot.innerHTML = `
-        <span class="album-image-slot-placeholder">
-          <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/></svg>
-          Фото ${i + 1}
-        </span>
-        <span class="album-image-slot-num">${i + 1}</span>
-        <button class="album-image-slot-remove" type="button" title="Удалить">&times;</button>
-      `;
-
-      if (img) {
-        const imgEl = document.createElement('img');
-        imgEl.className = 'album-image-slot-img';
-        imgEl.src = img.dataUrl;
-        slot.insertBefore(imgEl, slot.firstChild);
-      }
-
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*';
-      fileInput.hidden = true;
-
-      slot.addEventListener('click', (e) => {
-        if (e.target.closest('.album-image-slot-remove')) return;
-        fileInput.click();
-      });
-
-      fileInput.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        if (!file) return;
-        this._readPageImageFile(file, pageIndex, i);
-        fileInput.value = '';
-      });
-
-      slot.querySelector('.album-image-slot-remove').addEventListener('click', () => {
-        page.images[i] = null;
-        this._renderAlbumPages();
-      });
-
-      group.appendChild(slot);
-      group.appendChild(fileInput);
-
-      const captionInput = document.createElement('input');
-      captionInput.type = 'text';
-      captionInput.className = 'album-image-slot-caption';
-      captionInput.placeholder = 'Подпись...';
-      captionInput.value = img?.caption || '';
-      captionInput.addEventListener('input', () => {
-        if (!page.images[i]) page.images[i] = { dataUrl: '', caption: '' };
-        page.images[i].caption = captionInput.value;
-      });
-      group.appendChild(captionInput);
-
-      container.appendChild(group);
-    }
-  }
-
-  _readPageImageFile(file, pageIndex, imageIndex) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const page = this._albumPages[pageIndex];
-      page.images[imageIndex] = {
-        dataUrl: reader.result,
-        caption: page.images[imageIndex]?.caption || '',
-      };
-      this._renderAlbumPages();
-    };
-    reader.readAsDataURL(file);
-  }
-
-  _handleAlbumSubmit(e) {
-    e.preventDefault();
-
-    const title = this.albumTitleInput.value.trim();
-    if (!title) return;
-
-    // Проверить, что хотя бы на одной странице есть изображение
-    const hasAnyImage = this._albumPages.some(page =>
-      page.images.some(img => img?.dataUrl)
-    );
-    if (!hasAnyImage) {
-      this._showToast('Добавьте хотя бы одно изображение');
-      return;
-    }
-
-    const htmlContent = this._buildAlbumHtml(title, this._albumPages);
-
-    const chapterId = `album_${Date.now()}`;
-    this.store.addChapter({
-      id: chapterId,
-      file: '',
-      htmlContent,
-      bg: '',
-      bgMobile: '',
-    });
-
-    this.albumModal.close();
-    this._renderChapters();
-    this._renderJsonPreview();
-    this._showToast('Фотоальбом добавлен');
-  }
-
-  /**
-   * Сгенерировать HTML-разметку мульти-страничного фотоальбома
-   */
-  _buildAlbumHtml(title, pages) {
-    const hideTitle = this.albumHideTitle.checked;
-    const h2Class = hideTitle ? ' class="sr-only"' : '';
-
-    const albumDivs = pages.map(page => {
-      const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
-      const images = page.images.slice(0, count);
-      const figures = images.map(img => {
-        if (!img?.dataUrl) {
-          return '<figure class="photo-album__item"><img src="" alt=""></figure>';
-        }
-        const caption = img.caption
-          ? `<figcaption>${this._escapeHtml(img.caption)}</figcaption>`
-          : '';
-        return `<figure class="photo-album__item"><img src="${img.dataUrl}" alt="${this._escapeHtml(img.caption || '')}">${caption}</figure>`;
-      });
-      return `<div class="photo-album" data-layout="${page.layout}">${figures.join('')}</div>`;
-    });
-
-    return `<article><h2${h2Class}>${this._escapeHtml(title)}</h2>${albumDivs.join('')}</article>`;
-  }
-
-  // --- Загрузка книги ---
-
-  _handleBookUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    this._processBookFile(file);
-    e.target.value = '';
-  }
-
-  async _processBookFile(file) {
-    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    const supportedFormats = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
-    if (!supportedFormats.includes(ext)) {
-      this._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
-      return;
-    }
-
-    this.bookDropzone.hidden = true;
-    this.bookUploadProgress.hidden = false;
-    this.bookUploadResult.hidden = true;
-    this.bookUploadStatus.textContent = 'Обработка файла...';
-
-    try {
-      const parsed = await BookParser.parse(file);
-      this._pendingParsedBook = parsed;
-
-      this.bookUploadProgress.hidden = true;
-      this.bookUploadResult.hidden = false;
-      this.bookUploadTitle.textContent = parsed.title || 'Без названия';
-      this.bookUploadAuthor.textContent = parsed.author ? `Автор: ${parsed.author}` : '';
-      this.bookUploadChaptersCount.textContent = `Найдено глав: ${parsed.chapters.length}`;
-    } catch (err) {
-      this._showToast(`Ошибка: ${err.message}`);
-      this._resetBookUpload();
-    }
-  }
-
-  async _applyParsedBook() {
-    if (!this._pendingParsedBook) return;
-
-    const { title, author, chapters } = this._pendingParsedBook;
-
-    const newChapters = chapters.map(ch => ({
-      id: ch.id,
-      file: '',
-      htmlContent: ch.html,
-      bg: '',
-      bgMobile: '',
-    }));
-
-    const bookId = `book_${Date.now()}`;
-
-    this.store.addBook({
-      id: bookId,
-      cover: {
-        title: title || 'Без названия',
-        author: author || '',
-        bg: '',
-        bgMobile: '',
-      },
-      chapters: newChapters,
-    });
-
-    try {
-      await this.store.waitForSave();
-    } catch {
-      this.store.removeBook(bookId);
-      this._showToast('Ошибка сохранения: недостаточно места в хранилище');
-      return;
-    }
-
-    this.store.setActiveBook(bookId);
-
-    this.app._render();
-    this._resetBookUpload();
-    this._showToast(`Книга «${title || 'Без названия'}» добавлена (${chapters.length} гл.)`);
-  }
-
-  _resetBookUpload() {
-    this._pendingParsedBook = null;
-    this.bookDropzone.hidden = false;
-    this.bookUploadProgress.hidden = true;
-    this.bookUploadResult.hidden = true;
   }
 }
