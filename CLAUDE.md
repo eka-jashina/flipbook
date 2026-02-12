@@ -4,17 +4,23 @@ This document provides essential context for AI assistants working on this codeb
 
 ## Project Overview
 
-**Flipbook** is an interactive e-book reader web application with realistic 3D page-flip animations. Built with vanilla JavaScript (ES Modules) and CSS, using Vite as the build tool.
+**Flipbook** is an interactive e-book reader web application with realistic 3D page-flip animations. Built with vanilla JavaScript (ES Modules) and CSS, using Vite as the build tool. Includes an admin panel for managing multiple books, chapters, fonts, sounds, and appearance customization.
 
 **Key Features:**
 - 3D page flip animations with realistic physics
-- Multi-chapter support (currently 3 chapters of Tolkien's "The Hobbit" in Russian)
+- Multi-chapter support (default: 3 chapters of Tolkien's "The Hobbit" in Russian)
+- Admin panel for book management (upload, chapters, fonts, sounds, appearance, export)
+- Multi-book support with bookshelf screen
 - Customizable reading experience (fonts, sizes, themes, sounds)
+- Per-book appearance customization (cover colors, page textures, decorative fonts)
 - Responsive design (desktop & mobile)
-- Background ambient sounds (rain, fireplace, cafe)
-- Page-turn sound effects
+- Background ambient sounds (rain, fireplace, cafe) — configurable via admin
+- Page-turn sound effects — configurable via admin
+- Photo album / lightbox support
 - Persistent user settings via localStorage
+- Admin config persistence via localStorage (large content via IndexedDB)
 - PWA — installable as native app, offline access via Service Worker
+- Book import from txt, doc, docx, epub, fb2 formats
 
 **Live Demo:** Deployed to GitHub Pages at `/flipbook/`
 
@@ -71,7 +77,8 @@ npm run deploy:vercel  # Deploy to Vercel
 
 ```
 flipbook/
-├── index.html                 # Entry HTML file
+├── index.html                 # Reader entry HTML file
+├── admin.html                 # Admin panel HTML file
 ├── css/                       # Modular CSS (import order matters)
 │   ├── index.css             # Main entry (imports all modules)
 │   ├── variables.css         # Design tokens (CSS custom properties)
@@ -91,17 +98,39 @@ flipbook/
 │   ├── accessibility.css     # Skip-link, focus styles
 │   ├── install-prompt.css    # PWA install prompt
 │   ├── offline.css           # Offline status indicator
+│   ├── bookshelf.css         # Bookshelf screen (multi-book)
+│   ├── photo-album.css       # Photo album / lightbox
 │   ├── responsive.css        # Mobile/responsive
-│   └── controls/             # UI control panels
-│       ├── index.css         # Entry + shared styles
-│       ├── pod-variables.css # Pod-specific CSS variables
-│       ├── navigation-pod.css # Navigation & progress bar
-│       ├── settings-pod.css  # Settings panel
-│       └── audio-pod.css     # Audio controls
+│   ├── controls/             # UI control panels
+│   │   ├── index.css         # Entry + shared styles
+│   │   ├── pod-variables.css # Pod-specific CSS variables
+│   │   ├── navigation-pod.css # Navigation & progress bar
+│   │   ├── settings-pod.css  # Settings panel
+│   │   └── audio-pod.css     # Audio controls
+│   └── admin/                # Admin panel styles
+│       ├── index.css         # Admin entry point
+│       ├── base.css          # Admin base styles
+│       ├── variables.css     # Admin CSS variables
+│       ├── buttons.css       # Button styles
+│       ├── modal.css         # Modal dialogs
+│       ├── tabs.css          # Tab interface
+│       ├── screens.css       # Screen layouts
+│       ├── responsive.css    # Admin responsive design
+│       ├── book-selector.css # Book selection UI
+│       ├── book-upload.css   # Book upload UI
+│       ├── chapters.css      # Chapters management
+│       ├── fonts.css         # Fonts management
+│       ├── sounds.css        # Sounds management
+│       ├── ambients.css      # Ambient sounds UI
+│       ├── appearance.css    # Appearance customization
+│       ├── settings.css      # Settings panel
+│       ├── album.css         # Album/gallery management
+│       ├── export.css        # Export functionality
+│       └── toast.css         # Toast notifications
 │
 ├── js/                        # JavaScript modules
-│   ├── index.js              # Application entry point
-│   ├── config.js             # Configuration constants
+│   ├── index.js              # Reader application entry point
+│   ├── config.js             # Configuration (admin-aware, multi-book)
 │   │
 │   ├── utils/                # Low-level utilities
 │   │   ├── CSSVariables.js   # Read CSS custom properties
@@ -119,7 +148,8 @@ flipbook/
 │   │   ├── RateLimiter.js    # Call rate limiting
 │   │   ├── InstallPrompt.js  # PWA install prompt
 │   │   ├── OfflineIndicator.js   # Offline status indicator
-│   │   └── ScreenReaderAnnouncer.js # Screen reader announcements (a11y)
+│   │   ├── ScreenReaderAnnouncer.js # Screen reader announcements (a11y)
+│   │   └── PhotoLightbox.js  # Photo album lightbox
 │   │
 │   ├── managers/             # Business logic & data
 │   │   ├── BookStateMachine.js    # State machine (CLOSED→OPENING→OPENED⇄FLIPPING)
@@ -128,36 +158,60 @@ flipbook/
 │   │   ├── ContentLoader.js       # Fetch chapter HTML
 │   │   └── AsyncPaginator.js      # CSS multi-column pagination
 │   │
-│   └── core/                 # Application orchestration
-│       ├── BookController.js      # Main coordinator (DI container)
-│       ├── ComponentFactory.js    # Factory pattern
-│       ├── DOMManager.js          # DOM element references
-│       ├── BookRenderer.js        # Page rendering (double buffering)
-│       ├── BookAnimator.js        # CSS animation orchestration
-│       ├── EventController.js     # Input handling
-│       ├── LoadingIndicator.js    # Loading UI
-│       ├── DebugPanel.js          # Development tools
-│       ├── AppInitializer.js      # Startup logic
-│       ├── SubscriptionManager.js # Event subscriptions
-│       ├── ResizeHandler.js       # Window resize
-│       ├── DelegateMediator.js    # Delegate communication
-│       │
-│       ├── services/              # Service groups (DI bundles)
-│       │   ├── CoreServices.js        # DOM, events, timers, storage
-│       │   ├── AudioServices.js       # Sounds & ambient
-│       │   ├── RenderServices.js      # Rendering & animations
-│       │   └── ContentServices.js     # Loading & pagination
-│       │
-│       └── delegates/             # Responsibility delegation
-│           ├── BaseDelegate.js        # Abstract base
-│           ├── NavigationDelegate.js  # Page flip logic
-│           ├── SettingsDelegate.js    # Settings UI
-│           ├── LifecycleDelegate.js   # Book open/close
-│           ├── ChapterDelegate.js     # Chapter switching
-│           ├── DragDelegate.js        # Touch drag coordination
-│           ├── DragAnimator.js        # Drag rotation animation
-│           ├── DragDOMPreparer.js     # Drag DOM setup
-│           └── DragShadowRenderer.js  # Drag shadow effects
+│   ├── core/                 # Application orchestration
+│   │   ├── BookController.js      # Main coordinator (DI container)
+│   │   ├── ComponentFactory.js    # Factory pattern
+│   │   ├── DOMManager.js          # DOM element references
+│   │   ├── BookRenderer.js        # Page rendering (double buffering)
+│   │   ├── BookAnimator.js        # CSS animation orchestration
+│   │   ├── EventController.js     # Input handling
+│   │   ├── LoadingIndicator.js    # Loading UI
+│   │   ├── DebugPanel.js          # Development tools
+│   │   ├── AppInitializer.js      # Startup logic
+│   │   ├── SubscriptionManager.js # Event subscriptions
+│   │   ├── ResizeHandler.js       # Window resize
+│   │   ├── DelegateMediator.js    # Delegate communication
+│   │   ├── BookshelfScreen.js     # Bookshelf display (multi-book)
+│   │   │
+│   │   ├── services/              # Service groups (DI bundles)
+│   │   │   ├── CoreServices.js        # DOM, events, timers, storage
+│   │   │   ├── AudioServices.js       # Sounds & ambient
+│   │   │   ├── RenderServices.js      # Rendering & animations
+│   │   │   └── ContentServices.js     # Loading & pagination
+│   │   │
+│   │   └── delegates/             # Responsibility delegation
+│   │       ├── BaseDelegate.js        # Abstract base
+│   │       ├── NavigationDelegate.js  # Page flip logic
+│   │       ├── SettingsDelegate.js    # Settings UI
+│   │       ├── LifecycleDelegate.js   # Book open/close
+│   │       ├── ChapterDelegate.js     # Chapter switching
+│   │       ├── DragDelegate.js        # Touch drag coordination
+│   │       ├── DragAnimator.js        # Drag rotation animation
+│   │       ├── DragDOMPreparer.js     # Drag DOM setup
+│   │       └── DragShadowRenderer.js  # Drag shadow effects
+│   │
+│   └── admin/                 # Admin panel
+│       ├── index.js               # Admin entry point
+│       ├── AdminConfigStore.js    # Persistent admin config storage
+│       ├── BookParser.js          # Book parsing dispatch
+│       ├── modules/               # Admin functional modules
+│       │   ├── BaseModule.js          # Abstract module base
+│       │   ├── AlbumManager.js        # Photo album management
+│       │   ├── AmbientsModule.js      # Ambient sounds config
+│       │   ├── AppearanceModule.js    # Book appearance customization
+│       │   ├── BookUploadManager.js   # Book upload handling
+│       │   ├── ChaptersModule.js      # Chapter management
+│       │   ├── ExportModule.js        # Config export
+│       │   ├── FontsModule.js         # Font management
+│       │   ├── SettingsModule.js      # Global settings
+│       │   └── SoundsModule.js        # Sound effects management
+│       └── parsers/               # Book format parsers
+│           ├── parserUtils.js         # Shared parser utilities
+│           ├── TxtParser.js           # Plain text (.txt)
+│           ├── DocParser.js           # Word 97-2003 (.doc)
+│           ├── DocxParser.js          # Word (.docx)
+│           ├── EpubParser.js          # EPUB (.epub)
+│           └── Fb2Parser.js           # FictionBook (.fb2)
 │
 ├── public/                    # Static assets (copied as-is)
 │   ├── content/              # Chapter HTML files (part_1.html, etc.)
@@ -170,8 +224,20 @@ flipbook/
 │   ├── setup.js              # Test environment setup
 │   ├── helpers/              # Test utilities
 │   ├── unit/                 # Unit tests (Vitest)
+│   │   ├── utils/            # Utility tests
+│   │   ├── managers/         # Manager tests
+│   │   ├── core/             # Core + delegates + services tests
+│   │   └── admin/            # Admin module tests
 │   ├── integration/          # Integration tests (Vitest + jsdom)
+│   │   ├── smoke.test.js
+│   │   ├── flows/            # User flow tests
+│   │   ├── lifecycle/        # Lifecycle tests
+│   │   └── services/         # Service tests
 │   └── e2e/                  # E2E tests (Playwright)
+│       ├── fixtures/         # Test fixtures
+│       ├── pages/            # Page Object models
+│       ├── flows/            # Test scenarios
+│       └── performance/      # Performance tests
 │
 ├── scripts/                   # Build scripts
 │   └── generate-icons.js     # PWA icon generation (sharp)
@@ -245,6 +311,7 @@ DOM + CSS Animations
 | AsyncPaginator | `managers/AsyncPaginator.js` | Content pagination |
 | EventController | `core/EventController.js` | Input handling |
 | DelegateMediator | `core/DelegateMediator.js` | Delegate communication |
+| BookshelfScreen | `core/BookshelfScreen.js` | Multi-book bookshelf display |
 | NavigationDelegate | `core/delegates/NavigationDelegate.js` | Page flip logic |
 | DragDelegate | `core/delegates/DragDelegate.js` | Touch drag coordination |
 | DragAnimator | `core/delegates/DragAnimator.js` | Drag rotation animation |
@@ -254,6 +321,9 @@ DOM + CSS Animations
 | AudioServices | `core/services/AudioServices.js` | Sounds & ambient |
 | RenderServices | `core/services/RenderServices.js` | Rendering & animations |
 | ContentServices | `core/services/ContentServices.js` | Loading & pagination |
+| PhotoLightbox | `utils/PhotoLightbox.js` | Photo album lightbox |
+| AdminConfigStore | `admin/AdminConfigStore.js` | Persistent admin configuration |
+| BookParser | `admin/BookParser.js` | Book format parsing dispatch |
 
 ## Code Conventions
 
@@ -266,6 +336,7 @@ DOM + CSS Animations
 - Each file exports one class/function
 - Index files (`index.js`) re-export from folder
 - Clear separation: utils → managers → core
+- Admin panel code isolated in `js/admin/`
 
 ### CSS Architecture
 - **Design Tokens:** All magic values in `variables.css`
@@ -273,11 +344,12 @@ DOM + CSS Animations
 - **Themes:** Override CSS variables in `themes.css`
 - **Import Order:** Variables → Reset → Themes → Components → Animations → Responsive
 - **Controls:** Separate `controls/` subdirectory with pod-based architecture
+- **Admin:** Separate `admin/` subdirectory with modular styles
 
 ### JavaScript Patterns
 - ES Modules (import/export)
 - Classes for components
-- No external frameworks
+- No external frameworks (jszip is the only runtime dependency)
 - Async/await for asynchronous operations
 - Destructuring in function parameters
 
@@ -291,44 +363,54 @@ DOM + CSS Animations
 
 ### Main Config (`js/config.js`)
 
+The config system supports two modes:
+1. **Default mode** — hardcoded chapters and settings (Tolkien's "The Hobbit")
+2. **Admin mode** — chapters, fonts, sounds, appearance loaded from admin config in localStorage (`flipbook-admin-config`)
+
 ```javascript
 const BASE_URL = import.meta.env.BASE_URL || '/';
 
+// Admin config is loaded from localStorage if available
+const adminConfig = loadAdminConfig();  // from 'flipbook-admin-config'
+const activeBook = getActiveBook(adminConfig);  // supports multi-book: books[] + activeBookId
+
 export const CONFIG = Object.freeze({
   STORAGE_KEY: "reader-settings",
-  COVER_BG: `${BASE_URL}images/backgrounds/bg-cover.webp`,
-  COVER_BG_MOBILE: `${BASE_URL}images/backgrounds/bg-cover-mobile.webp`,
-  CHAPTERS: [
-    {
-      id: "part_1",
-      file: `${BASE_URL}content/part_1.html`,
-      bg: `${BASE_URL}images/backgrounds/part_1.webp`,
-      bgMobile: `${BASE_URL}images/backgrounds/part_1-mobile.webp`,
-    },
-    // part_2, part_3...
-  ],
-  FONTS: {
-    georgia: "Georgia, serif",
-    merriweather: '"Merriweather", serif',
-    "libre-baskerville": '"Libre Baskerville", serif',
-    inter: "Inter, sans-serif",
-    roboto: "Roboto, sans-serif",
-    "open-sans": '"Open Sans", sans-serif',
+  COVER_BG: resolveCoverBg(...),        // From admin or default
+  COVER_BG_MOBILE: resolveCoverBg(...),
+
+  CHAPTERS,        // From active book or default 3 chapters
+  FONTS,           // From admin readingFonts (enabled only) or defaults
+  FONTS_LIST,      // Font metadata list for <select> generation
+  CUSTOM_FONTS,    // Custom fonts requiring FontFace loading
+  DECORATIVE_FONT, // Per-book decorative font (for titles)
+
+  SOUNDS: { pageFlip, bookOpen, bookClose },
+  AMBIENT: { none, rain, fireplace, cafe, ... },  // Filtered by visible flag
+
+  DEFAULT_SETTINGS: {
+    font: "georgia", fontSize: 18, theme: "light", page: 0,
+    soundEnabled: true, soundVolume: 0.3,
+    ambientType: 'none', ambientVolume: 0.5,
   },
-  SOUNDS: {
-    pageFlip: `${BASE_URL}sounds/page-flip.mp3`,
-    bookOpen: `${BASE_URL}sounds/cover-flip.mp3`,
-    bookClose: `${BASE_URL}sounds/cover-flip.mp3`,
+
+  APPEARANCE: {
+    coverTitle, coverAuthor, fontMin, fontMax,
+    light: { coverBgStart, coverBgEnd, coverText, coverBgImage, pageTexture, bgPage, bgApp },
+    dark:  { coverBgStart, coverBgEnd, coverText, coverBgImage, pageTexture, bgPage, bgApp },
   },
-  AMBIENT: {
-    none: { label: "Без звука", icon: "✕", file: null },
-    rain: { label: "Дождь", icon: "🌧️", file: `${BASE_URL}sounds/ambient/rain.mp3` },
-    fireplace: { label: "Камин", icon: "🔥", file: `${BASE_URL}sounds/ambient/fireplace.mp3` },
-    cafe: { label: "Кафе", icon: "☕", file: `${BASE_URL}sounds/ambient/cafe.mp3` },
+
+  SETTINGS_VISIBILITY: {
+    fontSize, theme, font, fullscreen, sound, ambient,  // Admin controls which settings are shown
   },
-  DEFAULT_SETTINGS: { /* ... */ },
-  VIRTUALIZATION: { cacheLimit: 12 },
-  // ...
+
+  VIRTUALIZATION: { cacheLimit: 50 },
+  LAYOUT: { MIN_PAGE_WIDTH_RATIO: 0.4, SETTLE_DELAY: 100 },
+  TIMING: { FLIP_THROTTLE: 100 },
+  UI: { ERROR_HIDE_TIMEOUT: 5000 },
+  NETWORK: { MAX_RETRIES: 3, INITIAL_RETRY_DELAY: 1000 },
+  AUDIO: { VISIBILITY_RESUME_DELAY: 100 },
+  TIMING_SAFETY_MARGIN: 100,
 });
 
 export const BookState = Object.freeze({
@@ -341,22 +423,44 @@ export const FlipPhase = Object.freeze({
 });
 
 export const Direction = Object.freeze({ NEXT: "next", PREV: "prev" });
+
+export const BoolStr = Object.freeze({ TRUE: "true", FALSE: "false" });
 ```
 
 ### CSS Variables (`css/variables.css`)
 
 ```css
 :root {
-  --timing-lift: 240ms;      /* Page lift animation */
-  --timing-rotate: 900ms;    /* Page rotation */
-  --timing-drop: 160ms;      /* Page drop */
-  --timing-cover: 1200ms;    /* Cover open/close */
-  --timing-wrap: 300ms;      /* Container expand */
-  --timing-transition: 300ms; /* General transitions */
+  /* Animation timings */
+  --timing-lift: 240ms;           /* Page lift */
+  --timing-rotate: 900ms;        /* Page rotation */
+  --timing-drop: 160ms;          /* Page drop */
+  --timing-cover: 1200ms;        /* Cover open/close */
+  --timing-wrap: 300ms;          /* Container expand */
+  --timing-transition: 300ms;    /* General transitions */
+  --timing-blur: 600ms;          /* Blur placeholder removal */
+  --timing-swap-next: 30ms;      /* Buffer swap delay (forward) */
+  --timing-swap-prev: 100ms;     /* Buffer swap delay (backward) */
+  --timing-resize-debounce: 150ms; /* Resize debounce */
+
+  /* Sizes & thresholds */
   --font-min: 14px;
   --font-max: 22px;
-  --font-default: 18px;      /* Default font size */
-  --swipe-threshold: 20px;   /* Touch swipe sensitivity */
+  --font-default: 18px;
+  --swipe-threshold: 20px;       /* Min swipe distance */
+  --swipe-vertical-limit: 30px;  /* Max vertical deviation */
+
+  /* 3D & shadows */
+  --perspective: 1600px;
+  --spine-shadow-width: 8px;
+  --page-edge-noise: 2.6px;
+  --pages-depth: 10px;
+  --pages-count: 6;
+
+  /* Pagination */
+  --pages-per-flip: 2;
+  --pagination-chunk-size: 5;
+  --pagination-yield-interval: 16ms;
 }
 ```
 
@@ -398,6 +502,19 @@ export const Direction = Object.freeze({ NEXT: "next", PREV: "prev" });
 }
 ```
 
+### Admin Config (`flipbook-admin-config` in localStorage)
+
+```javascript
+{
+  books: [{ id, cover, chapters, sounds, ambients, appearance, decorativeFont, defaultSettings }],
+  activeBookId: "...",
+  readingFonts: [{ id, label, family, builtin, enabled, dataUrl }],
+  settingsVisibility: { fontSize, theme, font, fullscreen, sound, ambient },
+  fontMin: 14,
+  fontMax: 22,
+}
+```
+
 ## Testing
 
 ### Strategy
@@ -417,15 +534,23 @@ tests/
 │   ├── testUtils.js      # Unit test utilities
 │   └── integrationUtils.js # Integration test utilities
 ├── unit/                 # Unit tests
+│   ├── config.test.js
+│   ├── utils/            # All utility tests
+│   ├── managers/         # All manager tests
+│   ├── core/             # Core, delegates, services tests
+│   └── admin/            # Admin module tests (10 files)
 ├── integration/          # Integration tests
 │   ├── smoke.test.js
-│   ├── flows/            # User flow tests
+│   ├── flows/            # User flow tests (12 files)
+│   │   ├── navigation, settings, chapters, drag, events
+│   │   ├── accessibility, chapterRepagination, settingsRepagination
+│   │   ├── dragNavConflict, errorRecovery, fullReadingSession, resizeFlow
 │   ├── lifecycle/        # Lifecycle tests
 │   └── services/         # Service tests
 └── e2e/                  # E2E tests (Playwright)
     ├── fixtures/         # Test fixtures
     ├── pages/            # Page Object models
-    ├── flows/            # Test scenarios
+    ├── flows/            # Test scenarios (reading, navigation, settings, responsive, accessibility)
     └── performance/      # Performance tests
 ```
 
@@ -461,17 +586,16 @@ npm run lint:css:fix      # Stylelint autofix
 
 ### Adding a New Chapter
 
+**Via admin panel (recommended):**
+1. Open `admin.html`
+2. Upload a book file (txt, doc, docx, epub, fb2) or add chapters manually
+3. Configure backgrounds and settings
+4. Save — config is persisted to localStorage
+
+**Via code (default chapters):**
 1. Create HTML file in `public/content/` (e.g., `part_4.html`)
 2. Add background images to `public/images/backgrounds/` (desktop + mobile variants)
-3. Update `CONFIG.CHAPTERS` in `js/config.js`:
-   ```javascript
-   {
-     id: "part_4",
-     file: `${BASE_URL}content/part_4.html`,
-     bg: `${BASE_URL}images/backgrounds/part_4.webp`,
-     bgMobile: `${BASE_URL}images/backgrounds/part_4-mobile.webp`,
-   }
-   ```
+3. Update the default chapters array in `js/config.js`
 
 ### Adding a New Theme
 
@@ -488,8 +612,11 @@ npm run lint:css:fix      # Stylelint autofix
 
 ### Adding a New Font
 
+**Via admin panel:** Configure in Fonts section — supports custom font upload (woff2/ttf/otf as data URL).
+
+**Via code:**
 1. Add font to `css/typography.css` or import from Google Fonts
-2. Update `CONFIG.FONTS` in `js/config.js`
+2. Update default fonts in `js/config.js` `buildFontsConfig()`
 3. Add option to font selector in HTML
 
 ### Modifying Animation Timings
@@ -532,10 +659,24 @@ Manual configuration in `vite.config.js`:
 const base = mode === 'production' ? '/flipbook/' : '/';
 ```
 
+## Dependencies
+
+### Runtime
+- **jszip** `^3.10.1` — ZIP operations (admin export, docx/epub parsing)
+
+### Dev Dependencies (key)
+- **vite** `^5.0.0` — Bundler
+- **vitest** `^4.0.18` — Unit/integration testing
+- **@playwright/test** `^1.58.1` — E2E testing
+- **eslint** `^9.39.2` — JS linting
+- **stylelint** `^17.1.1` — CSS linting
+- **sharp** `^0.34.5` — Image processing (icon generation)
+- **vite-plugin-pwa** `^1.2.0` — PWA/Service Worker support
+
 ## Important Considerations
 
 ### Performance
-- LRU cache limits DOM parsing overhead (default: 12 pages)
+- LRU cache limits DOM parsing overhead (default: 50 pages)
 - Only visible pages are rendered
 - CSS animations are GPU-accelerated
 - Resize handling is debounced
