@@ -31,6 +31,13 @@
     align-items: flex-start;
   }
 
+  .panel-header-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
   .chapter-card {
     flex-wrap: wrap;
   }

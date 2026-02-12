@@ -1,5 +1,6 @@
 /**
  * Модуль оформления: темы, текстуры, фон обложки, цвета
+ * Работает внутри табов «Обложка» (cover colors) и «Оформление» (page textures/colors)
  */
 import { BaseModule } from './BaseModule.js';
 
@@ -10,10 +11,10 @@ export class AppearanceModule extends BaseModule {
   }
 
   cacheDOM() {
-    // Переключатель темы
+    // Переключатель темы (в editor → cover tab)
     this.appearanceThemeBtns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn');
 
-    // Per-theme поля
+    // Cover per-theme fields (editor → cover tab)
     this.coverBgStart = document.getElementById('coverBgStart');
     this.coverBgEnd = document.getElementById('coverBgEnd');
     this.coverText = document.getElementById('coverText');
@@ -22,6 +23,8 @@ export class AppearanceModule extends BaseModule {
     this.coverBgPreview = document.getElementById('coverBgPreview');
     this.coverBgPreviewEmpty = document.getElementById('coverBgPreviewEmpty');
     this.coverBgRemove = document.getElementById('coverBgRemove');
+
+    // Page appearance fields (editor → appearance tab)
     this.pageTexture = document.getElementById('pageTexture');
     this.textureOptions = document.querySelectorAll('.texture-option[data-texture]');
     this.textureFileInput = document.getElementById('textureFileInput');
@@ -33,12 +36,15 @@ export class AppearanceModule extends BaseModule {
     this.bgPageSwatch = document.getElementById('bgPageSwatch');
     this.bgApp = document.getElementById('bgApp');
     this.bgAppSwatch = document.getElementById('bgAppSwatch');
+    this.saveAppearanceBtn = document.getElementById('saveAppearance');
+    this.resetAppearanceBtn = document.getElementById('resetAppearance');
+
+    // Platform settings: fontMin/fontMax
     this.fontMin = document.getElementById('fontMin');
     this.fontMinValue = document.getElementById('fontMinValue');
     this.fontMax = document.getElementById('fontMax');
     this.fontMaxValue = document.getElementById('fontMaxValue');
-    this.saveAppearanceBtn = document.getElementById('saveAppearance');
-    this.resetAppearanceBtn = document.getElementById('resetAppearance');
+    this.savePlatformBtn = document.getElementById('savePlatform');
   }
 
   bindEvents() {
@@ -47,14 +53,14 @@ export class AppearanceModule extends BaseModule {
       btn.addEventListener('click', () => this._switchEditTheme(btn.dataset.editTheme));
     });
 
-    // Живой предпросмотр
+    // Живой предпросмотр (cover)
     this.coverBgStart.addEventListener('input', () => this._updateAppearancePreview());
     this.coverBgEnd.addEventListener('input', () => this._updateAppearancePreview());
     this.coverText.addEventListener('input', () => this._updateAppearancePreview());
     this.coverBgFileInput.addEventListener('change', (e) => this._handleCoverBgUpload(e));
     this.coverBgRemove.addEventListener('click', () => this._removeCoverBg());
 
-    // Текстура — выбор варианта
+    // Текстура — выбор варианта (appearance tab)
     this.textureOptions.forEach(btn => {
       btn.addEventListener('click', () => this._selectTexture(btn.dataset.texture));
     });
@@ -67,6 +73,8 @@ export class AppearanceModule extends BaseModule {
     this.bgApp.addEventListener('input', () => {
       this.bgAppSwatch.style.background = this.bgApp.value;
     });
+
+    // Platform font limits
     this.fontMin.addEventListener('input', () => {
       this.fontMinValue.textContent = `${this.fontMin.value}px`;
     });
@@ -76,6 +84,9 @@ export class AppearanceModule extends BaseModule {
 
     this.saveAppearanceBtn.addEventListener('click', () => this._saveAppearance());
     this.resetAppearanceBtn.addEventListener('click', () => this._resetAppearance());
+
+    // Platform save (visibility + fonts + fontMin/fontMax)
+    this.savePlatformBtn.addEventListener('click', () => this._savePlatform());
   }
 
   render() {
@@ -112,7 +123,7 @@ export class AppearanceModule extends BaseModule {
   _renderAppearance() {
     const a = this.store.getAppearance();
 
-    // Глобальные поля
+    // Platform font limits
     this.fontMin.value = a.fontMin;
     this.fontMinValue.textContent = `${a.fontMin}px`;
     this.fontMax.value = a.fontMax;
@@ -277,21 +288,15 @@ export class AppearanceModule extends BaseModule {
     this._showToast('Своя текстура удалена');
   }
 
+  // --- Сохранение per-book (appearance tab) ---
+
   _saveAppearance() {
-    this.store.updateAppearanceGlobal({
-      fontMin: parseInt(this.fontMin.value, 10),
-      fontMax: parseInt(this.fontMax.value, 10),
-    });
-
     this._saveCurrentThemeFromForm();
-
     this._renderJsonPreview();
     this._showToast('Оформление сохранено');
   }
 
   _resetAppearance() {
-    this.store.updateAppearanceGlobal({ fontMin: 14, fontMax: 22 });
-
     this.store.updateAppearanceTheme('light', {
       coverBgStart: '#3a2d1f',
       coverBgEnd: '#2a2016',
@@ -314,8 +319,21 @@ export class AppearanceModule extends BaseModule {
       bgApp: '#121212',
     });
 
-    this._renderAppearance();
+    this._renderAppearanceThemeFields();
+    this._updateAppearancePreview();
     this._renderJsonPreview();
     this._showToast('Оформление сброшено');
+  }
+
+  // --- Сохранение platform settings (fontMin/fontMax + visibility) ---
+
+  _savePlatform() {
+    this.store.updateAppearanceGlobal({
+      fontMin: parseInt(this.fontMin.value, 10),
+      fontMax: parseInt(this.fontMax.value, 10),
+    });
+
+    this._renderJsonPreview();
+    this._showToast('Настройки платформы сохранены');
   }
 }

@@ -122,6 +122,9 @@ export class BookUploadManager {
     this._module.app._render();
     this._resetBookUpload();
     this._module._showToast(`Книга «${title || 'Без названия'}» добавлена (${chapters.length} гл.)`);
+
+    // Открыть редактор загруженной книги
+    this._module.app.openEditor();
   }
 
   _resetBookUpload() {

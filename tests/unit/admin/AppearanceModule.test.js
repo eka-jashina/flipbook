@@ -76,6 +76,7 @@ function setupDOM() {
     <span id="fontMaxValue">22px</span>
     <button id="saveAppearance"></button>
     <button id="resetAppearance"></button>
+    <button id="savePlatform"></button>
   `;
 }
 
@@ -339,22 +340,10 @@ describe('AppearanceModule', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // _saveAppearance
+  // _saveAppearance (now only saves per-theme data)
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_saveAppearance()', () => {
-    it('should save global fontMin/fontMax', () => {
-      mod.fontMin.value = '12';
-      mod.fontMax.value = '26';
-
-      mod._saveAppearance();
-
-      expect(app.store.updateAppearanceGlobal).toHaveBeenCalledWith({
-        fontMin: 12,
-        fontMax: 26,
-      });
-    });
-
     it('should save current theme form data', () => {
       mod.coverBgStart.value = '#ff0000';
       mod.coverBgEnd.value = '#00ff00';
@@ -379,14 +368,31 @@ describe('AppearanceModule', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // _savePlatform (saves fontMin/fontMax)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_savePlatform()', () => {
+    it('should save global fontMin/fontMax', () => {
+      mod.fontMin.value = '12';
+      mod.fontMax.value = '26';
+
+      mod._savePlatform();
+
+      expect(app.store.updateAppearanceGlobal).toHaveBeenCalledWith({
+        fontMin: 12,
+        fontMax: 26,
+      });
+      expect(app._showToast).toHaveBeenCalledWith('Настройки платформы сохранены');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // _resetAppearance
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_resetAppearance()', () => {
-    it('should reset global and per-theme values', () => {
+    it('should reset per-theme values', () => {
       mod._resetAppearance();
-
-      expect(app.store.updateAppearanceGlobal).toHaveBeenCalledWith({ fontMin: 14, fontMax: 22 });
 
       expect(app.store.updateAppearanceTheme).toHaveBeenCalledWith('light', expect.objectContaining({
         coverBgStart: '#3a2d1f',
