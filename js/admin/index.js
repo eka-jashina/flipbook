@@ -1,5 +1,6 @@
 /**
  * Точка входа админ-панели
+ * Роутер экранов + инициализация модулей
  */
 import { AdminConfigStore } from './AdminConfigStore.js';
 import { ChaptersModule } from './modules/ChaptersModule.js';
@@ -37,9 +38,27 @@ class AdminApp {
   // --- DOM ---
 
   _cacheDOM() {
-    // Табы (общая навигация)
+    // Табы верхнего уровня
     this.tabs = document.querySelectorAll('.admin-tab');
     this.panels = document.querySelectorAll('.admin-panel');
+
+    // Экраны (вью) внутри таба «Мои книги»
+    this.screenViews = document.querySelectorAll('.screen-view');
+
+    // Табы редактора книги
+    this.editorTabs = document.querySelectorAll('.editor-tab');
+    this.editorPanels = document.querySelectorAll('.editor-panel');
+    this.editorTitle = document.getElementById('editorTitle');
+
+    // Кнопки навигации между экранами
+    this.addBookBtn = document.getElementById('addBookBtn');
+    this.modeSelectorBack = document.getElementById('modeSelectorBack');
+    this.uploadBack = document.getElementById('uploadBack');
+    this.editorBack = document.getElementById('editorBack');
+    this.albumBack = document.getElementById('albumBack');
+
+    // Карточки режимов
+    this.modeCards = document.querySelectorAll('.mode-card');
 
     // Toast
     this.toast = document.getElementById('toast');
@@ -52,9 +71,26 @@ class AdminApp {
   // --- Привязка событий ---
 
   _bindEvents() {
-    // Табы
+    // Табы верхнего уровня
     this.tabs.forEach(tab => {
       tab.addEventListener('click', () => this._switchTab(tab.dataset.tab));
+    });
+
+    // Навигация по экранам
+    this.addBookBtn.addEventListener('click', () => this._showView('mode-selector'));
+    this.modeSelectorBack.addEventListener('click', () => this._showView('bookshelf'));
+    this.uploadBack.addEventListener('click', () => this._showView('mode-selector'));
+    this.editorBack.addEventListener('click', () => this._showView('bookshelf'));
+    this.albumBack.addEventListener('click', () => this._showView('editor'));
+
+    // Карточки выбора режима
+    this.modeCards.forEach(card => {
+      card.addEventListener('click', () => this._handleModeSelect(card.dataset.mode));
+    });
+
+    // Табы редактора
+    this.editorTabs.forEach(tab => {
+      tab.addEventListener('click', () => this._switchEditorTab(tab.dataset.editorTab));
     });
 
     // События модулей
@@ -71,7 +107,7 @@ class AdminApp {
     this.export.renderJsonPreview();
   }
 
-  // --- Табы ---
+  // --- Табы верхнего уровня ---
 
   _switchTab(tabName) {
     this.tabs.forEach(t => {
@@ -89,6 +125,62 @@ class AdminApp {
     if (tabName === 'export') {
       this._renderJsonPreview();
     }
+  }
+
+  // --- Навигация по экранам (вью) ---
+
+  _showView(viewName) {
+    this.screenViews.forEach(v => {
+      const isActive = v.dataset.view === viewName;
+      v.classList.toggle('active', isActive);
+      v.hidden = !isActive;
+    });
+  }
+
+  _handleModeSelect(mode) {
+    switch (mode) {
+      case 'upload':
+        this._showView('upload');
+        break;
+      case 'manual': {
+        // Создать новую пустую книгу и открыть редактор
+        const bookId = `book_${Date.now()}`;
+        this.store.addBook({
+          id: bookId,
+          cover: { title: 'Новая книга', author: '', bg: '', bgMobile: '' },
+          chapters: [],
+        });
+        this.store.setActiveBook(bookId);
+        this._render();
+        this.openEditor();
+        break;
+      }
+      case 'album':
+        this._showView('album');
+        this.chapters._album.openInView();
+        break;
+    }
+  }
+
+  /** Открыть редактор для текущей активной книги */
+  openEditor() {
+    const cover = this.store.getCover();
+    this.editorTitle.textContent = cover.title || 'Редактор книги';
+    this._switchEditorTab('cover');
+    this._showView('editor');
+  }
+
+  // --- Табы редактора ---
+
+  _switchEditorTab(tabName) {
+    this.editorTabs.forEach(t => {
+      t.classList.toggle('active', t.dataset.editorTab === tabName);
+    });
+    this.editorPanels.forEach(p => {
+      const isActive = p.dataset.editorPanel === tabName;
+      p.classList.toggle('active', isActive);
+      p.hidden = !isActive;
+    });
   }
 
   // --- Утилиты ---

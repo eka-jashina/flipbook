@@ -1,6 +1,7 @@
 /**
  * Менеджер фотоальбомов
  * Управляет созданием мульти-страничных фотоальбомов с раскладками
+ * Работает как полноэкранный вид (screen-view), а не модалка
  */
 
 /** Количество изображений для каждого шаблона */
@@ -19,29 +20,30 @@ export class AlbumManager {
   get store() { return this._module.store; }
 
   cacheDOM() {
-    this.albumModal = document.getElementById('albumModal');
-    this.albumForm = document.getElementById('albumForm');
     this.albumTitleInput = document.getElementById('albumTitle');
     this.albumHideTitle = document.getElementById('albumHideTitle');
     this.albumPagesEl = document.getElementById('albumPages');
     this.albumAddPageBtn = document.getElementById('albumAddPage');
-    this.cancelAlbumModal = document.getElementById('cancelAlbumModal');
+    this.saveAlbumBtn = document.getElementById('saveAlbum');
+    this.cancelAlbumBtn = document.getElementById('cancelAlbum');
   }
 
-  bindEvents(addAlbumBtn) {
-    addAlbumBtn.addEventListener('click', () => this.open());
-    this.cancelAlbumModal.addEventListener('click', () => this.albumModal.close());
-    this.albumForm.addEventListener('submit', (e) => this._handleAlbumSubmit(e));
+  bindEvents() {
     this.albumAddPageBtn.addEventListener('click', () => this._addAlbumPage());
+    this.saveAlbumBtn.addEventListener('click', () => this._handleAlbumSubmit());
+    this.cancelAlbumBtn.addEventListener('click', () => this._cancelAlbum());
   }
 
-  open() {
+  /** Открыть как полноэкранный вид (вызывается из роутера) */
+  openInView() {
     this._albumPages = [{ layout: '1', images: [] }];
-    this.albumForm.reset();
+    this.albumTitleInput.value = '';
     this.albumHideTitle.checked = true;
-
     this._renderAlbumPages();
-    this.albumModal.showModal();
+  }
+
+  _cancelAlbum() {
+    this._module.app._showView('editor');
   }
 
   _addAlbumPage() {
@@ -59,14 +61,13 @@ export class AlbumManager {
     const page = this._albumPages[pageIndex];
     page.layout = layout;
 
-    // Обрезать массив изображений если нужно
     const count = LAYOUT_IMAGE_COUNT[layout] || 1;
     page.images = page.images.slice(0, count);
 
     this._renderAlbumPages();
   }
 
-  /** Отрисовать все страницы альбома в модалке */
+  /** Отрисовать все страницы альбома */
   _renderAlbumPages() {
     this.albumPagesEl.innerHTML = '';
 
@@ -217,11 +218,12 @@ export class AlbumManager {
     reader.readAsDataURL(file);
   }
 
-  _handleAlbumSubmit(e) {
-    e.preventDefault();
-
+  _handleAlbumSubmit() {
     const title = this.albumTitleInput.value.trim();
-    if (!title) return;
+    if (!title) {
+      this._module._showToast('Укажите название альбома');
+      return;
+    }
 
     // Проверить, что хотя бы на одной странице есть изображение
     const hasAnyImage = this._albumPages.some(page =>
@@ -243,9 +245,10 @@ export class AlbumManager {
       bgMobile: '',
     });
 
-    this.albumModal.close();
+    // Вернуться к редактору и обновить список глав
     this._module._renderChapters();
     this._module._renderJsonPreview();
+    this._module.app._showView('editor');
     this._module._showToast('Фотоальбом добавлен');
   }
 

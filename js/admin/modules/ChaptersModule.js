@@ -21,16 +21,11 @@ export class ChaptersModule extends BaseModule {
     this.addChapterBtn = document.getElementById('addChapter');
     this.addAlbumBtn = document.getElementById('addAlbum');
 
-    // Переключатель книг
+    // Переключатель книг (bookshelf view)
     this.bookSelector = document.getElementById('bookSelector');
     this.deleteBookBtn = document.getElementById('deleteBook');
 
-    // Под-табы
-    this.bookSubtabs = document.getElementById('bookSubtabs');
-    this.subtabBtns = document.querySelectorAll('.book-subtab');
-    this.subtabContents = document.querySelectorAll('.book-subtab-content');
-
-    // Обложка (в табе Главы)
+    // Обложка (в editor → cover tab)
     this.coverTitle = document.getElementById('coverTitle');
     this.coverAuthor = document.getElementById('coverAuthor');
     this.coverBgInput = document.getElementById('coverBg');
@@ -58,12 +53,7 @@ export class ChaptersModule extends BaseModule {
     this.cancelModal.addEventListener('click', () => this.modal.close());
     this.chapterForm.addEventListener('submit', (e) => this._handleChapterSubmit(e));
 
-    // Под-табы (Создать / Загрузить)
-    this.subtabBtns.forEach(btn => {
-      btn.addEventListener('click', () => this._switchSubtab(btn.dataset.subtab));
-    });
-
-    // Переключатель книг (делегирование)
+    // Переключатель книг (делегирование) — клик на карточку книги
     this.bookSelector.addEventListener('click', (e) => {
       const card = e.target.closest('[data-book-id]');
       if (!card) return;
@@ -75,19 +65,25 @@ export class ChaptersModule extends BaseModule {
         return;
       }
 
+      // Выбрать книгу и открыть редактор
       this._handleSelectBook(card.dataset.bookId);
     });
 
-    // Удаление активной книги
+    // Удаление активной книги (кнопка в editor)
     this.deleteBookBtn.addEventListener('click', () => {
       this._handleDeleteBook(this.store.getActiveBookId());
     });
 
-    // Обложка (таб Главы)
+    // Обложка
     this.saveCoverBtn.addEventListener('click', () => this._saveCover());
 
+    // Альбом — кнопка в табе «Главы» (переход в album view)
+    this.addAlbumBtn.addEventListener('click', () => {
+      this.app._showView('album');
+      this._album.openInView();
+    });
+
     // Делегаты
-    this._album.bindEvents(this.addAlbumBtn);
     this._bookUpload.bindEvents();
   }
 
@@ -181,7 +177,7 @@ export class ChaptersModule extends BaseModule {
     };
   }
 
-  // --- Переключатель книг ---
+  // --- Переключатель книг (bookshelf) ---
 
   _renderBookSelector() {
     const books = this.store.getBooks();
@@ -206,10 +202,11 @@ export class ChaptersModule extends BaseModule {
   }
 
   _handleSelectBook(bookId) {
-    if (bookId === this.store.getActiveBookId()) return;
-    this.store.setActiveBook(bookId);
-    this.app._render();
-    this._showToast('Книга переключена');
+    if (bookId !== this.store.getActiveBookId()) {
+      this.store.setActiveBook(bookId);
+      this.app._render();
+    }
+    this.app.openEditor();
   }
 
   _handleDeleteBook(bookId) {
@@ -223,20 +220,8 @@ export class ChaptersModule extends BaseModule {
 
     this.store.removeBook(bookId);
     this.app._render();
+    this.app._showView('bookshelf');
     this._showToast('Книга удалена');
-  }
-
-  // --- Под-табы ---
-
-  _switchSubtab(subtabName) {
-    this.subtabBtns.forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.subtab === subtabName);
-    });
-    this.subtabContents.forEach(content => {
-      const isActive = content.dataset.subtabContent === subtabName;
-      content.classList.toggle('active', isActive);
-      content.hidden = !isActive;
-    });
   }
 
   // --- Модальное окно главы ---
@@ -302,6 +287,10 @@ export class ChaptersModule extends BaseModule {
       bgMobile: this.coverBgMobileInput.value.trim(),
     });
 
+    // Обновить заголовок редактора
+    this.app.editorTitle.textContent = this.coverTitle.value.trim() || 'Редактор книги';
+
+    this._renderBookSelector();
     this._renderJsonPreview();
     this._showToast('Обложка сохранена');
   }

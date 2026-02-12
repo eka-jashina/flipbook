@@ -29,10 +29,13 @@ function createMockApp() {
       waitForSave: vi.fn().mockResolvedValue(undefined),
     },
     settings: { render: vi.fn() },
+    editorTitle: { textContent: '' },
     _showToast: vi.fn(),
     _escapeHtml: vi.fn((s) => s),
     _renderJsonPreview: vi.fn(),
     _render: vi.fn(),
+    _showView: vi.fn(),
+    openEditor: vi.fn(),
   };
 }
 
@@ -44,12 +47,6 @@ function setupDOM() {
     <button id="addAlbum"></button>
     <div id="bookSelector"></div>
     <button id="deleteBook" hidden></button>
-    <div id="bookSubtabs">
-      <button class="book-subtab active" data-subtab="create">Create</button>
-      <button class="book-subtab" data-subtab="upload">Upload</button>
-    </div>
-    <div class="book-subtab-content active" data-subtab-content="create"></div>
-    <div class="book-subtab-content" data-subtab-content="upload" hidden></div>
     <div id="bookUploadArea">
       <div id="bookDropzone"></div>
       <input id="bookFileInput" type="file">
@@ -77,15 +74,12 @@ function setupDOM() {
         <button id="cancelModal" type="button"></button>
       </form>
     </dialog>
-    <dialog id="albumModal">
-      <form id="albumForm">
-        <input id="albumTitle" type="text">
-        <input id="albumHideTitle" type="checkbox">
-        <div id="albumPages"></div>
-        <button id="albumAddPage" type="button"></button>
-        <button id="cancelAlbumModal" type="button"></button>
-      </form>
-    </dialog>
+    <input id="albumTitle" type="text">
+    <input id="albumHideTitle" type="checkbox">
+    <div id="albumPages"></div>
+    <button id="albumAddPage" type="button"></button>
+    <button id="saveAlbum" type="button"></button>
+    <button id="cancelAlbum" type="button"></button>
   `;
 }
 
@@ -112,8 +106,8 @@ describe('ChaptersModule', () => {
   describe('constructor', () => {
     it('should initialize state', () => {
       expect(mod._editingIndex).toBeNull();
-      expect(mod._pendingParsedBook).toBeNull();
-      expect(mod._albumPages).toEqual([]);
+      expect(mod._album).toBeDefined();
+      expect(mod._bookUpload).toBeDefined();
     });
   });
 
@@ -358,17 +352,19 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_handleSelectBook()', () => {
-    it('should switch active book and re-render', () => {
+    it('should switch active book, re-render and open editor', () => {
       mod._handleSelectBook('book2');
 
       expect(app.store.setActiveBook).toHaveBeenCalledWith('book2');
       expect(app._render).toHaveBeenCalled();
+      expect(app.openEditor).toHaveBeenCalled();
     });
 
-    it('should not switch if already active', () => {
+    it('should open editor even if already active (without switching)', () => {
       mod._handleSelectBook('default');
 
       expect(app.store.setActiveBook).not.toHaveBeenCalled();
+      expect(app.openEditor).toHaveBeenCalled();
     });
   });
 
@@ -391,6 +387,7 @@ describe('ChaptersModule', () => {
 
       expect(app.store.removeBook).toHaveBeenCalledWith('book2');
       expect(app._render).toHaveBeenCalled();
+      expect(app._showView).toHaveBeenCalledWith('bookshelf');
 
       global.confirm.mockRestore();
     });
@@ -411,81 +408,63 @@ describe('ChaptersModule', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // _switchSubtab
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  describe('_switchSubtab()', () => {
-    it('should switch active subtab', () => {
-      mod._switchSubtab('upload');
-
-      const uploadBtn = document.querySelector('[data-subtab="upload"]');
-      const createBtn = document.querySelector('[data-subtab="create"]');
-      expect(uploadBtn.classList.contains('active')).toBe(true);
-      expect(createBtn.classList.contains('active')).toBe(false);
-    });
-  });
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PHOTO ALBUM
+  // PHOTO ALBUM (delegated to AlbumManager)
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('photo album', () => {
-    describe('_openAlbumModal()', () => {
-      it('should initialize with one page and open modal', () => {
-        const showModalSpy = vi.spyOn(mod.albumModal, 'showModal');
+    describe('openInView()', () => {
+      it('should initialize with one page', () => {
+        mod._album.openInView();
 
-        mod._openAlbumModal();
-
-        expect(mod._albumPages).toEqual([{ layout: '1', images: [] }]);
-        expect(showModalSpy).toHaveBeenCalled();
+        expect(mod._album._albumPages).toEqual([{ layout: '1', images: [] }]);
       });
     });
 
     describe('_addAlbumPage()', () => {
       it('should add new page', () => {
-        mod._albumPages = [{ layout: '1', images: [] }];
-        mod._addAlbumPage();
-        expect(mod._albumPages.length).toBe(2);
+        mod._album._albumPages = [{ layout: '1', images: [] }];
+        mod._album._addAlbumPage();
+        expect(mod._album._albumPages.length).toBe(2);
       });
     });
 
     describe('_removeAlbumPage()', () => {
       it('should remove page if more than one', () => {
-        mod._albumPages = [{ layout: '1', images: [] }, { layout: '2', images: [] }];
-        mod._removeAlbumPage(0);
-        expect(mod._albumPages.length).toBe(1);
+        mod._album._albumPages = [{ layout: '1', images: [] }, { layout: '2', images: [] }];
+        mod._album._removeAlbumPage(0);
+        expect(mod._album._albumPages.length).toBe(1);
       });
 
       it('should not remove last page', () => {
-        mod._albumPages = [{ layout: '1', images: [] }];
-        mod._removeAlbumPage(0);
-        expect(mod._albumPages.length).toBe(1);
+        mod._album._albumPages = [{ layout: '1', images: [] }];
+        mod._album._removeAlbumPage(0);
+        expect(mod._album._albumPages.length).toBe(1);
       });
     });
 
     describe('_selectPageLayout()', () => {
       it('should update layout for page', () => {
-        mod._albumPages = [{ layout: '1', images: [{ dataUrl: 'a', caption: '' }, { dataUrl: 'b', caption: '' }] }];
-        mod._selectPageLayout(0, '1');
+        mod._album._albumPages = [{ layout: '1', images: [{ dataUrl: 'a', caption: '' }, { dataUrl: 'b', caption: '' }] }];
+        mod._album._selectPageLayout(0, '1');
         // Layout '1' supports only 1 image, so images array is truncated
-        expect(mod._albumPages[0].layout).toBe('1');
-        expect(mod._albumPages[0].images.length).toBe(1);
+        expect(mod._album._albumPages[0].layout).toBe('1');
+        expect(mod._album._albumPages[0].images.length).toBe(1);
       });
 
       it('should keep images that fit the layout', () => {
-        mod._albumPages = [{ layout: '1', images: [{ dataUrl: 'a', caption: '' }] }];
-        mod._selectPageLayout(0, '4');
+        mod._album._albumPages = [{ layout: '1', images: [{ dataUrl: 'a', caption: '' }] }];
+        mod._album._selectPageLayout(0, '4');
         // Layout '4' supports 4 images, existing 1 should stay
-        expect(mod._albumPages[0].images.length).toBe(1);
+        expect(mod._album._albumPages[0].images.length).toBe(1);
       });
     });
 
     describe('_buildAlbumHtml()', () => {
       it('should generate article HTML with title', () => {
-        mod.albumHideTitle.checked = false;
+        mod._album.albumHideTitle.checked = false;
         const pages = [{ layout: '1', images: [{ dataUrl: 'data:img', caption: 'My photo' }] }];
 
-        const html = mod._buildAlbumHtml('Test Album', pages);
+        const html = mod._album._buildAlbumHtml('Test Album', pages);
 
         expect(html).toContain('<article>');
         expect(html).toContain('<h2>Test Album</h2>');
@@ -495,19 +474,19 @@ describe('ChaptersModule', () => {
       });
 
       it('should add sr-only class when title hidden', () => {
-        mod.albumHideTitle.checked = true;
+        mod._album.albumHideTitle.checked = true;
         const pages = [{ layout: '1', images: [{ dataUrl: 'data:img', caption: '' }] }];
 
-        const html = mod._buildAlbumHtml('Hidden Title', pages);
+        const html = mod._album._buildAlbumHtml('Hidden Title', pages);
 
         expect(html).toContain('class="sr-only"');
       });
 
       it('should handle pages with empty image slots', () => {
-        mod.albumHideTitle.checked = false;
+        mod._album.albumHideTitle.checked = false;
         const pages = [{ layout: '2', images: [null, { dataUrl: 'data:img', caption: '' }] }];
 
-        const html = mod._buildAlbumHtml('Test', pages);
+        const html = mod._album._buildAlbumHtml('Test', pages);
 
         // Null image produces empty src
         expect(html).toContain('src=""');
@@ -516,12 +495,11 @@ describe('ChaptersModule', () => {
 
     describe('_handleAlbumSubmit()', () => {
       it('should add album chapter to store', () => {
-        mod._albumPages = [{ layout: '1', images: [{ dataUrl: 'data:img', caption: 'Photo' }] }];
-        mod.albumTitleInput.value = 'My Album';
-        mod.albumHideTitle.checked = true;
-        vi.spyOn(mod.albumModal, 'close');
+        mod._album._albumPages = [{ layout: '1', images: [{ dataUrl: 'data:img', caption: 'Photo' }] }];
+        mod._album.albumTitleInput.value = 'My Album';
+        mod._album.albumHideTitle.checked = true;
 
-        mod._handleAlbumSubmit({ preventDefault: vi.fn() });
+        mod._album._handleAlbumSubmit();
 
         expect(app.store.addChapter).toHaveBeenCalledWith(expect.objectContaining({
           file: '',
@@ -532,22 +510,23 @@ describe('ChaptersModule', () => {
         expect(chapter.id).toMatch(/^album_\d+$/);
         expect(chapter.htmlContent).toContain('My Album');
         expect(app._showToast).toHaveBeenCalledWith('Фотоальбом добавлен');
+        expect(app._showView).toHaveBeenCalledWith('editor');
       });
 
       it('should reject if title empty', () => {
-        mod.albumTitleInput.value = '';
-        mod._albumPages = [{ layout: '1', images: [{ dataUrl: 'data:img', caption: '' }] }];
+        mod._album.albumTitleInput.value = '';
+        mod._album._albumPages = [{ layout: '1', images: [{ dataUrl: 'data:img', caption: '' }] }];
 
-        mod._handleAlbumSubmit({ preventDefault: vi.fn() });
+        mod._album._handleAlbumSubmit();
 
         expect(app.store.addChapter).not.toHaveBeenCalled();
       });
 
       it('should reject if no images uploaded', () => {
-        mod.albumTitleInput.value = 'Test';
-        mod._albumPages = [{ layout: '1', images: [] }];
+        mod._album.albumTitleInput.value = 'Test';
+        mod._album._albumPages = [{ layout: '1', images: [] }];
 
-        mod._handleAlbumSubmit({ preventDefault: vi.fn() });
+        mod._album._handleAlbumSubmit();
 
         expect(app._showToast).toHaveBeenCalledWith('Добавьте хотя бы одно изображение');
       });
@@ -555,13 +534,13 @@ describe('ChaptersModule', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // BOOK UPLOAD
+  // BOOK UPLOAD (delegated to BookUploadManager)
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('book upload', () => {
     describe('_processBookFile()', () => {
       it('should reject unsupported formats', async () => {
-        await mod._processBookFile({ name: 'book.pdf' });
+        await mod._bookUpload._processBookFile({ name: 'book.pdf' });
 
         expect(app._showToast).toHaveBeenCalledWith('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
       });
@@ -569,15 +548,15 @@ describe('ChaptersModule', () => {
 
     describe('_applyParsedBook()', () => {
       it('should do nothing without pending book', async () => {
-        mod._pendingParsedBook = null;
+        mod._bookUpload._pendingParsedBook = null;
 
-        await mod._applyParsedBook();
+        await mod._bookUpload._applyParsedBook();
 
         expect(app.store.addBook).not.toHaveBeenCalled();
       });
 
       it('should add parsed book to store', async () => {
-        mod._pendingParsedBook = {
+        mod._bookUpload._pendingParsedBook = {
           title: 'Test Book',
           author: 'Test Author',
           chapters: [
@@ -585,7 +564,7 @@ describe('ChaptersModule', () => {
           ],
         };
 
-        await mod._applyParsedBook();
+        await mod._bookUpload._applyParsedBook();
 
         expect(app.store.addBook).toHaveBeenCalledWith(expect.objectContaining({
           cover: expect.objectContaining({
@@ -601,17 +580,18 @@ describe('ChaptersModule', () => {
         }));
         expect(app.store.setActiveBook).toHaveBeenCalled();
         expect(app._render).toHaveBeenCalled();
+        expect(app.openEditor).toHaveBeenCalled();
       });
 
       it('should rollback on save failure', async () => {
         app.store.waitForSave.mockRejectedValue(new Error('quota'));
-        mod._pendingParsedBook = {
+        mod._bookUpload._pendingParsedBook = {
           title: 'Big Book',
           author: '',
           chapters: [{ id: 'ch1', title: '', html: '<article>x</article>' }],
         };
 
-        await mod._applyParsedBook();
+        await mod._bookUpload._applyParsedBook();
 
         expect(app.store.removeBook).toHaveBeenCalled();
         expect(app._showToast).toHaveBeenCalledWith('Ошибка сохранения: недостаточно места в хранилище');
@@ -621,17 +601,17 @@ describe('ChaptersModule', () => {
 
     describe('_resetBookUpload()', () => {
       it('should reset upload state', () => {
-        mod._pendingParsedBook = { some: 'data' };
-        mod.bookDropzone.hidden = true;
-        mod.bookUploadProgress.hidden = false;
-        mod.bookUploadResult.hidden = false;
+        mod._bookUpload._pendingParsedBook = { some: 'data' };
+        mod._bookUpload.bookDropzone.hidden = true;
+        mod._bookUpload.bookUploadProgress.hidden = false;
+        mod._bookUpload.bookUploadResult.hidden = false;
 
-        mod._resetBookUpload();
+        mod._bookUpload._resetBookUpload();
 
-        expect(mod._pendingParsedBook).toBeNull();
-        expect(mod.bookDropzone.hidden).toBe(false);
-        expect(mod.bookUploadProgress.hidden).toBe(true);
-        expect(mod.bookUploadResult.hidden).toBe(true);
+        expect(mod._bookUpload._pendingParsedBook).toBeNull();
+        expect(mod._bookUpload.bookDropzone.hidden).toBe(false);
+        expect(mod._bookUpload.bookUploadProgress.hidden).toBe(true);
+        expect(mod._bookUpload.bookUploadResult.hidden).toBe(true);
       });
     });
   });
