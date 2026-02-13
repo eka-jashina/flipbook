@@ -52,23 +52,22 @@ export class BookUploadManager {
 
   _handleBookUpload(e) {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+      this._module._showToast('[debug] change event: файл не выбран');
+      return;
+    }
 
-    // Считываем файл через FileReader СИНХРОННО в контексте события change.
-    // На мобильных браузерах File-объект, привязанный к input, может стать
-    // невалидным после завершения синхронной части обработчика события.
-    // FileReader.readAsArrayBuffer() начинает чтение немедленно при вызове,
-    // гарантируя удержание файловой ссылки. file.arrayBuffer() (Promise API)
-    // может отложить начало чтения до следующего микротаска, когда ссылка
-    // уже инвалидирована.
+    this._module._showToast(`[1/3] Файл выбран: ${file.name} (${(file.size / 1024).toFixed(0)} КБ)`);
+
     const reader = new FileReader();
     reader.onload = () => {
+      this._module._showToast(`[2/3] Файл прочитан: ${(reader.result.byteLength / 1024).toFixed(0)} КБ`);
       const safeFile = new File([reader.result], file.name, { type: file.type });
       e.target.value = '';
       this._processBookFile(safeFile);
     };
     reader.onerror = () => {
-      this._module._showToast(`Ошибка чтения файла: ${reader.error?.message || 'неизвестная ошибка'}`);
+      this._module._showToast(`[ОШИБКА] FileReader: ${reader.error?.name}: ${reader.error?.message}`);
       e.target.value = '';
     };
     reader.readAsArrayBuffer(file);
@@ -91,13 +90,15 @@ export class BookUploadManager {
       const parsed = await BookParser.parse(file);
       this._pendingParsedBook = parsed;
 
+      this._module._showToast(`[3/3] Парсинг ОК: «${parsed.title}», ${parsed.chapters.length} гл.`);
+
       this.bookUploadProgress.hidden = true;
       this.bookUploadResult.hidden = false;
       this.bookUploadTitle.textContent = parsed.title || 'Без названия';
       this.bookUploadAuthor.textContent = parsed.author ? `Автор: ${parsed.author}` : '';
       this.bookUploadChaptersCount.textContent = `Найдено глав: ${parsed.chapters.length}`;
     } catch (err) {
-      this._module._showToast(`Ошибка: ${err.message}`);
+      this._module._showToast(`[ОШИБКА] Парсинг: ${err.name}: ${err.message}`);
       this._resetBookUpload();
     }
   }
