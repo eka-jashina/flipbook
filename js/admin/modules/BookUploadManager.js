@@ -53,23 +53,34 @@ export class BookUploadManager {
   async _handleBookUpload(e) {
     const file = e.target.files[0];
     if (!file) {
-      this._module._showToast('[debug] change: файл не выбран');
+      alert('[debug] change event сработал, но файл не выбран');
       return;
     }
 
     const ua = navigator.userAgent;
-    const browser = /CriOS/.test(ua) ? 'Chrome iOS'
-      : /FxiOS/.test(ua) ? 'Firefox iOS'
-      : /Safari/.test(ua) && /iPhone|iPad/.test(ua) ? 'Safari iOS'
-      : /Chrome/.test(ua) && /Android/.test(ua) ? 'Chrome Android'
-      : ua.slice(0, 50);
+    const lines = [];
+    lines.push(`UA: ${ua}`);
+    lines.push(`File: ${file.name}`);
+    lines.push(`Size: ${file.size} bytes`);
+    lines.push(`Type: "${file.type}"`);
+    lines.push(`LastModified: ${file.lastModified}`);
+    lines.push(`Constructor: ${file.constructor?.name}`);
+    lines.push(`Is File: ${file instanceof File}`);
+    lines.push(`Is Blob: ${file instanceof Blob}`);
 
-    const toast = (msg) => this._module._showToast(msg);
-
-    toast(`[info] ${browser} | ${file.name} | ${file.size}б | type="${file.type}"`);
-
-    // Пробуем все способы чтения — находим, что работает
-    const results = [];
+    // 0) Тест: создаём File в памяти и читаем — работает ли File API вообще?
+    const syntheticTest = await new Promise((resolve) => {
+      try {
+        const fake = new File([new Uint8Array([1, 2, 3])], 'test.bin');
+        const r = new FileReader();
+        r.onload = () => resolve(`OK (${r.result.byteLength}б)`);
+        r.onerror = () => resolve(`FAIL: ${r.error?.name}`);
+        r.readAsArrayBuffer(fake);
+      } catch (ex) {
+        resolve(`THROW: ${ex.message}`);
+      }
+    });
+    lines.push(`Synthetic file read: ${syntheticTest}`);
 
     // 1) FileReader.readAsArrayBuffer
     const frResult = await new Promise((resolve) => {
@@ -82,39 +93,19 @@ export class BookUploadManager {
         resolve({ ok: false, err: `throw: ${ex.name}: ${ex.message}` });
       }
     });
-    results.push(`FR.arrayBuf: ${frResult.ok ? `OK ${frResult.size}б` : frResult.err}`);
+    lines.push(`FR.readAsArrayBuffer: ${frResult.ok ? `OK ${frResult.size}б` : frResult.err}`);
 
-    // 2) FileReader.readAsDataURL
-    const frDataUrl = await new Promise((resolve) => {
-      try {
-        const r = new FileReader();
-        r.onload = () => resolve({ ok: true, len: r.result.length });
-        r.onerror = () => resolve({ ok: false, err: `${r.error?.name}: ${r.error?.message}` });
-        r.readAsDataURL(file);
-      } catch (ex) {
-        resolve({ ok: false, err: `throw: ${ex.name}: ${ex.message}` });
-      }
-    });
-    results.push(`FR.dataURL: ${frDataUrl.ok ? `OK ${frDataUrl.len}ch` : frDataUrl.err}`);
-
-    // 3) file.text()
+    // 2) file.text()
     const textResult = await file.text().then(
       t => ({ ok: true, len: t.length }),
       ex => ({ ok: false, err: `${ex.name}: ${ex.message}` })
     );
-    results.push(`file.text: ${textResult.ok ? `OK ${textResult.len}ch` : textResult.err}`);
+    lines.push(`file.text(): ${textResult.ok ? `OK ${textResult.len}ch` : textResult.err}`);
 
-    // 4) file.arrayBuffer()
-    const abResult = await file.arrayBuffer().then(
-      buf => ({ ok: true, size: buf.byteLength }),
-      ex => ({ ok: false, err: `${ex.name}: ${ex.message}` })
-    );
-    results.push(`file.arrayBuf: ${abResult.ok ? `OK ${abResult.size}б` : abResult.err}`);
-
-    // 5) file.slice + read (маленький кусочек)
+    // 3) file.slice(0,100) + read
     const sliceResult = await new Promise((resolve) => {
       try {
-        const slice = file.slice(0, 100);
+        const slice = file.slice(0, Math.min(100, file.size));
         const r = new FileReader();
         r.onload = () => resolve({ ok: true, size: r.result.byteLength });
         r.onerror = () => resolve({ ok: false, err: `${r.error?.name}: ${r.error?.message}` });
@@ -123,9 +114,9 @@ export class BookUploadManager {
         resolve({ ok: false, err: `throw: ${ex.name}: ${ex.message}` });
       }
     });
-    results.push(`slice(100): ${sliceResult.ok ? `OK ${sliceResult.size}б` : sliceResult.err}`);
+    lines.push(`slice(0,100): ${sliceResult.ok ? `OK ${sliceResult.size}б` : sliceResult.err}`);
 
-    // 6) createObjectURL + fetch
+    // 4) createObjectURL + fetch
     const fetchResult = await (async () => {
       try {
         const url = URL.createObjectURL(file);
@@ -137,17 +128,14 @@ export class BookUploadManager {
         return { ok: false, err: `${ex.name}: ${ex.message}` };
       }
     })();
-    results.push(`blobURL: ${fetchResult.ok ? `OK ${fetchResult.size}б` : fetchResult.err}`);
+    lines.push(`blobURL+fetch: ${fetchResult.ok ? `OK ${fetchResult.size}б` : fetchResult.err}`);
 
-    // Показываем результаты (по 2 на toast, чтобы поместились)
-    for (let i = 0; i < results.length; i += 2) {
-      toast(results.slice(i, i + 2).join(' | '));
-    }
+    // Показываем ВСЕ результаты одним alert — он не исчезнет, пока не нажмут OK
+    alert(lines.join('\n'));
 
     // Пробуем обработать файл первым успешным способом
     let buffer = null;
     if (frResult.ok) buffer = frResult.data;
-    else if (abResult.ok) buffer = await file.arrayBuffer();
     else if (fetchResult.ok) {
       const url = URL.createObjectURL(file);
       buffer = await fetch(url).then(r => r.arrayBuffer());
@@ -157,11 +145,10 @@ export class BookUploadManager {
     e.target.value = '';
 
     if (buffer) {
-      toast(`[OK] Используем буфер ${buffer.byteLength}б`);
       const safeFile = new File([buffer], file.name, { type: file.type });
       this._processBookFile(safeFile);
     } else {
-      toast('[FAIL] Ни один способ чтения не сработал');
+      this._module._showToast('Не удалось прочитать файл. Попробуйте сохранить файл в память устройства и повторить.');
     }
   }
 
