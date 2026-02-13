@@ -29,11 +29,9 @@ export class BookUploadManager {
   }
 
   bindEvents() {
-    this.bookDropzone.addEventListener('click', (e) => {
-      // Не открывать пикер повторно, если клик пришёл от самого input
-      if (e.target === this.bookFileInput) return;
-      this.bookFileInput.click();
-    });
+    // Клик по dropzone открывает пикер нативно через <label for="bookFileInput">.
+    // Программный .click() не используется — на мобильных он создаёт
+    // нестабильную файловую ссылку, что приводит к NotFoundError при чтении.
     this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
     this.bookDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
