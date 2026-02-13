@@ -140,16 +140,16 @@
             </div>
 
             <div class="book-upload-area" id="bookUploadArea">
-              <div class="book-upload-dropzone" id="bookDropzone">
+              <label class="book-upload-dropzone" id="bookDropzone" for="bookFileInput">
                 <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
                   <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
                 </svg>
                 <p class="book-upload-text">Перетащите файл сюда или нажмите для выбора</p>
                 <p class="book-upload-hint">Форматы: .epub, .fb2, .docx, .doc, .txt</p>
-                <input type="file" id="bookFileInput"
-                  accept=".epub,.fb2,.docx,.doc,.txt,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/plain,text/xml,application/xml,application/octet-stream"
-                  style="position:absolute;width:0;height:0;overflow:hidden;opacity:0">
-              </div>
+              </label>
+              <input type="file" id="bookFileInput"
+                accept=".epub,.fb2,.docx,.doc,.txt,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/plain,text/xml,application/xml,application/octet-stream"
+                style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0">
 
               <div class="book-upload-progress" id="bookUploadProgress" hidden>
                 <div class="book-upload-spinner"></div>
