@@ -52,10 +52,13 @@ export class BookUploadManager {
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
   }
 
-  _handleBookUpload(e) {
+  async _handleBookUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-    this._processBookFile(file);
+    // Сбрасываем input только ПОСЛЕ полного чтения файла:
+    // на мобильных (iOS Safari, Android Chrome) сброс value = ''
+    // инвалидирует временный файл до его прочтения парсером.
+    await this._processBookFile(file);
     e.target.value = '';
   }
 
