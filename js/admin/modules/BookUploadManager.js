@@ -3,22 +3,17 @@
  * Обрабатывает загрузку файлов (EPUB, FB2, DOCX, DOC, TXT),
  * парсинг через BookParser и добавление книги в store
  *
- * На Android Chrome файлы, выбранные через <input type="file">,
- * могут быть нечитаемыми (NotFoundError) из-за проблем с content:// URI
- * в Storage Access Framework. FileReader и file.arrayBuffer() оба
- * подвержены этому багу.
+ * Файл передаётся напрямую в BookParser.parse(file) — так же, как это
+ * делают epub.js, foliate-js и другие веб-ридеры. Каждый парсер сам
+ * решает, как читать файл (file.text(), JSZip.loadAsync(file),
+ * file.arrayBuffer()), и это работает на всех платформах.
  *
- * showOpenFilePicker (File System Access API) НЕ используется —
- * на Android он открывает полноэкранную Activity, Android убивает
- * вкладку (белый экран), и после восстановления файл тоже нечитаем.
+ * ВАЖНО: e.target.value = '' инвалидирует File-ссылку на мобильных.
+ * Поэтому input сбрасывается только ПОСЛЕ завершения парсинга (await).
  *
- * Решение:
- * 1. Input[type=file] как прозрачный оверлей поверх dropzone —
- *    нативный клик, без программного .click(), минимальная вероятность
- *    убийства вкладки.
- * 2. URL.createObjectURL(file) + fetch() для чтения — использует
- *    другой код-путь в Chromium и обходит баг SAF.
- *    Каскадный fallback: arrayBuffer → FileReader.
+ * showOpenFilePicker НЕ используется — на Android Chrome он открывает
+ * полноэкранную Activity, Android убивает вкладку (белый экран).
+ * Input[type=file] — прозрачный оверлей поверх dropzone (нативный клик).
  */
 
 import { BookParser } from '../BookParser.js';
@@ -48,11 +43,9 @@ export class BookUploadManager {
   }
 
   bindEvents() {
-    // Input[type=file] — прозрачный оверлей поверх dropzone (position:absolute
-    // в HTML). Пользователь кликает прямо на input, файловый пикер открывается
-    // нативно без программного .click() и без showOpenFilePicker.
-    // showOpenFilePicker НЕ используется: на Android он открывает полноэкранную
-    // Activity → Android убивает вкладку → белый экран.
+    // Input[type=file] — прозрачный оверлей поверх dropzone.
+    // Нативный клик прямо по input, без программного .click() и без
+    // showOpenFilePicker (который убивает вкладку на Android Chrome).
     this.bookFileInput.addEventListener('change', (e) => this._handleInputChange(e));
     this.bookDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -79,40 +72,73 @@ export class BookUploadManager {
 
   /**
    * Обработчик change на input[type=file].
-   * Читаем файл с каскадными стратегиями (createObjectURL+fetch → arrayBuffer → FileReader).
+   *
+   * Передаём File напрямую в _processBookFile → BookParser.parse(file),
+   * как это делают epub.js и foliate-js. ОБЯЗАТЕЛЬНО await перед сбросом
+   * input — на мобильных e.target.value = '' инвалидирует файл.
+   *
+   * Если прямой парсинг падает (например, SAF content:// URI на Android),
+   * пробуем сначала прочитать файл в память и передать копию.
    */
   async _handleInputChange(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!SUPPORTED_EXTENSIONS.includes(ext)) {
+      e.target.value = '';
+      this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
+      return;
+    }
+
+    // Показываем прогресс
+    this.bookDropzone.hidden = true;
+    this.bookUploadProgress.hidden = false;
+    this.bookUploadResult.hidden = true;
+    this.bookUploadStatus.textContent = 'Обработка файла...';
+
     try {
-      const buffer = await this._readFileBuffer(file);
-      const safeFile = new File([buffer], file.name, { type: file.type });
+      // Основной путь: передаём File напрямую парсеру (как epub.js)
+      const parsed = await BookParser.parse(file);
       e.target.value = '';
-      this._processBookFile(safeFile);
-    } catch {
-      e.target.value = '';
-      this._module._showToast(
-        'Не удалось прочитать файл. Попробуйте сохранить файл в память устройства (не на SD-карту / облако) и повторить.'
-      );
+      this._showParsedResult(parsed);
+    } catch (firstErr) {
+      // Fallback: пробуем прочитать файл в память и передать копию.
+      // Помогает если SAF content:// URI работает с одними API, но не с другими.
+      try {
+        const buffer = await this._readFileBuffer(file);
+        const safeFile = new File([buffer], file.name, { type: file.type });
+        e.target.value = '';
+        const parsed = await BookParser.parse(safeFile);
+        this._showParsedResult(parsed);
+      } catch {
+        e.target.value = '';
+        this._module._showToast(
+          `Ошибка: ${firstErr.message || 'не удалось прочитать файл'}`
+        );
+        this._resetBookUpload();
+      }
     }
   }
 
   /**
-   * Чтение файла в ArrayBuffer с каскадом стратегий.
-   *
-   * На Android Chrome файлы из SAF (content:// URI) могут быть нечитаемыми
-   * через FileReader и file.arrayBuffer() (NotFoundError).
-   * URL.createObjectURL + fetch использует другой код-путь в Chromium
-   * и обходит эту проблему.
-   *
-   * Стратегии (по приоритету):
-   * 1. createObjectURL + fetch — обходит баги Android SAF
-   * 2. file.arrayBuffer() — современный API
-   * 3. FileReader — классический fallback
+   * Показать результат парсинга
+   */
+  _showParsedResult(parsed) {
+    this._pendingParsedBook = parsed;
+    this.bookUploadProgress.hidden = true;
+    this.bookUploadResult.hidden = false;
+    this.bookUploadTitle.textContent = parsed.title || 'Без названия';
+    this.bookUploadAuthor.textContent = parsed.author ? `Автор: ${parsed.author}` : '';
+    this.bookUploadChaptersCount.textContent = `Найдено глав: ${parsed.chapters.length}`;
+  }
+
+  /**
+   * Чтение файла в ArrayBuffer — fallback для проблемных SAF-файлов.
+   * createObjectURL+fetch → file.arrayBuffer() → FileReader
    */
   async _readFileBuffer(file) {
-    // Стратегия 1: Blob URL + fetch — обходит баги Android SAF
+    // Стратегия 1: Blob URL + fetch
     if (typeof URL.createObjectURL === 'function') {
       const url = URL.createObjectURL(file);
       try {
@@ -151,13 +177,7 @@ export class BookUploadManager {
 
     try {
       const parsed = await BookParser.parse(file);
-      this._pendingParsedBook = parsed;
-
-      this.bookUploadProgress.hidden = true;
-      this.bookUploadResult.hidden = false;
-      this.bookUploadTitle.textContent = parsed.title || 'Без названия';
-      this.bookUploadAuthor.textContent = parsed.author ? `Автор: ${parsed.author}` : '';
-      this.bookUploadChaptersCount.textContent = `Найдено глав: ${parsed.chapters.length}`;
+      this._showParsedResult(parsed);
     } catch (err) {
       this._module._showToast(`Ошибка: ${err.message}`);
       this._resetBookUpload();
