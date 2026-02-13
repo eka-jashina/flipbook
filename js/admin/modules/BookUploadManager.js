@@ -2,9 +2,28 @@
  * Менеджер загрузки книг
  * Обрабатывает загрузку файлов (EPUB, FB2, DOCX, DOC, TXT),
  * парсинг через BookParser и добавление книги в store
+ *
+ * На Android 10+ Chrome файлы, выбранные через <input type="file">,
+ * могут быть нечитаемыми (NotFoundError) из-за проблем с content:// URI
+ * в Storage Access Framework. Поэтому используется File System Access API
+ * (showOpenFilePicker) как основной способ — он работает через другой
+ * механизм доступа к файлам и обходит эту проблему.
  */
 
 import { BookParser } from '../BookParser.js';
+
+const SUPPORTED_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
+
+const FILE_PICKER_TYPES = [{
+  description: 'Книги',
+  accept: {
+    'application/epub+zip': ['.epub'],
+    'application/x-fictionbook+xml': ['.fb2'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    'application/msword': ['.doc'],
+    'text/plain': ['.txt'],
+  },
+}];
 
 export class BookUploadManager {
   constructor(chaptersModule) {
@@ -29,10 +48,17 @@ export class BookUploadManager {
   }
 
   bindEvents() {
-    // Клик по dropzone открывает пикер нативно через <label for="bookFileInput">.
-    // Программный .click() не используется — на мобильных он создаёт
-    // нестабильную файловую ссылку, что приводит к NotFoundError при чтении.
-    this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
+    // На мобильных Android (Chrome) файлы из <input type="file"> могут быть
+    // нечитаемыми (NotFoundError) из-за багов Storage Access Framework.
+    // showOpenFilePicker (File System Access API) использует другой путь
+    // доступа к файлам и обходит эту проблему.
+    // Клик по dropzone: пробуем showOpenFilePicker, при неудаче — input.
+    this.bookDropzone.addEventListener('click', (e) => {
+      // Не перехватываем клик по самому input (он внутри dropzone)
+      if (e.target === this.bookFileInput) return;
+      this._openFilePicker();
+    });
+    this.bookFileInput.addEventListener('change', (e) => this._handleInputChange(e));
     this.bookDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
       this.bookDropzone.classList.add('dragover');
@@ -50,112 +76,62 @@ export class BookUploadManager {
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
   }
 
-  async _handleBookUpload(e) {
+  /**
+   * Основной метод выбора файла.
+   * Пробуем showOpenFilePicker (File System Access API) — он обходит
+   * баг Android SAF с нечитаемыми content:// URI.
+   * Если API недоступен — открываем обычный input[type=file].
+   */
+  async _openFilePicker() {
+    if (typeof window.showOpenFilePicker === 'function') {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: FILE_PICKER_TYPES,
+          multiple: false,
+        });
+        const file = await handle.getFile();
+        const buffer = await file.arrayBuffer();
+        const safeFile = new File([buffer], file.name, { type: file.type });
+        this._processBookFile(safeFile);
+        return;
+      } catch (err) {
+        // AbortError = пользователь отменил выбор — просто выходим
+        if (err.name === 'AbortError') return;
+        // Другая ошибка — пробуем fallback через input
+      }
+    }
+
+    // Fallback: обычный input[type=file]
+    this.bookFileInput.click();
+  }
+
+  /**
+   * Обработчик change на input[type=file] — fallback путь.
+   * Читаем файл через FileReader синхронно в обработчике события.
+   * Если чтение не удаётся (Android SAF баг) — показываем ошибку.
+   */
+  _handleInputChange(e) {
     const file = e.target.files[0];
-    if (!file) {
-      alert('[debug] change event сработал, но файл не выбран');
-      return;
-    }
+    if (!file) return;
 
-    const ua = navigator.userAgent;
-    const lines = [];
-    lines.push(`UA: ${ua}`);
-    lines.push(`File: ${file.name}`);
-    lines.push(`Size: ${file.size} bytes`);
-    lines.push(`Type: "${file.type}"`);
-    lines.push(`LastModified: ${file.lastModified}`);
-    lines.push(`Constructor: ${file.constructor?.name}`);
-    lines.push(`Is File: ${file instanceof File}`);
-    lines.push(`Is Blob: ${file instanceof Blob}`);
-
-    // 0) Тест: создаём File в памяти и читаем — работает ли File API вообще?
-    const syntheticTest = await new Promise((resolve) => {
-      try {
-        const fake = new File([new Uint8Array([1, 2, 3])], 'test.bin');
-        const r = new FileReader();
-        r.onload = () => resolve(`OK (${r.result.byteLength}б)`);
-        r.onerror = () => resolve(`FAIL: ${r.error?.name}`);
-        r.readAsArrayBuffer(fake);
-      } catch (ex) {
-        resolve(`THROW: ${ex.message}`);
-      }
-    });
-    lines.push(`Synthetic file read: ${syntheticTest}`);
-
-    // 1) FileReader.readAsArrayBuffer
-    const frResult = await new Promise((resolve) => {
-      try {
-        const r = new FileReader();
-        r.onload = () => resolve({ ok: true, size: r.result.byteLength, data: r.result });
-        r.onerror = () => resolve({ ok: false, err: `${r.error?.name}: ${r.error?.message}` });
-        r.readAsArrayBuffer(file);
-      } catch (ex) {
-        resolve({ ok: false, err: `throw: ${ex.name}: ${ex.message}` });
-      }
-    });
-    lines.push(`FR.readAsArrayBuffer: ${frResult.ok ? `OK ${frResult.size}б` : frResult.err}`);
-
-    // 2) file.text()
-    const textResult = await file.text().then(
-      t => ({ ok: true, len: t.length }),
-      ex => ({ ok: false, err: `${ex.name}: ${ex.message}` })
-    );
-    lines.push(`file.text(): ${textResult.ok ? `OK ${textResult.len}ch` : textResult.err}`);
-
-    // 3) file.slice(0,100) + read
-    const sliceResult = await new Promise((resolve) => {
-      try {
-        const slice = file.slice(0, Math.min(100, file.size));
-        const r = new FileReader();
-        r.onload = () => resolve({ ok: true, size: r.result.byteLength });
-        r.onerror = () => resolve({ ok: false, err: `${r.error?.name}: ${r.error?.message}` });
-        r.readAsArrayBuffer(slice);
-      } catch (ex) {
-        resolve({ ok: false, err: `throw: ${ex.name}: ${ex.message}` });
-      }
-    });
-    lines.push(`slice(0,100): ${sliceResult.ok ? `OK ${sliceResult.size}б` : sliceResult.err}`);
-
-    // 4) createObjectURL + fetch
-    const fetchResult = await (async () => {
-      try {
-        const url = URL.createObjectURL(file);
-        const resp = await fetch(url);
-        const buf = await resp.arrayBuffer();
-        URL.revokeObjectURL(url);
-        return { ok: true, size: buf.byteLength };
-      } catch (ex) {
-        return { ok: false, err: `${ex.name}: ${ex.message}` };
-      }
-    })();
-    lines.push(`blobURL+fetch: ${fetchResult.ok ? `OK ${fetchResult.size}б` : fetchResult.err}`);
-
-    // Показываем ВСЕ результаты одним alert — он не исчезнет, пока не нажмут OK
-    alert(lines.join('\n'));
-
-    // Пробуем обработать файл первым успешным способом
-    let buffer = null;
-    if (frResult.ok) buffer = frResult.data;
-    else if (fetchResult.ok) {
-      const url = URL.createObjectURL(file);
-      buffer = await fetch(url).then(r => r.arrayBuffer());
-      URL.revokeObjectURL(url);
-    }
-
-    e.target.value = '';
-
-    if (buffer) {
-      const safeFile = new File([buffer], file.name, { type: file.type });
+    const reader = new FileReader();
+    reader.onload = () => {
+      const safeFile = new File([reader.result], file.name, { type: file.type });
+      e.target.value = '';
       this._processBookFile(safeFile);
-    } else {
-      this._module._showToast('Не удалось прочитать файл. Попробуйте сохранить файл в память устройства и повторить.');
-    }
+    };
+    reader.onerror = () => {
+      e.target.value = '';
+      this._module._showToast(
+        'Не удалось прочитать файл. Попробуйте сохранить файл в память устройства (не на SD-карту / облако) и повторить.'
+      );
+    };
+    reader.readAsArrayBuffer(file);
   }
 
   async _processBookFile(file) {
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    const supportedFormats = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
-    if (!supportedFormats.includes(ext)) {
+    if (!SUPPORTED_EXTENSIONS.includes(ext)) {
       this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
       return;
     }
@@ -169,15 +145,13 @@ export class BookUploadManager {
       const parsed = await BookParser.parse(file);
       this._pendingParsedBook = parsed;
 
-      this._module._showToast(`[3/3] Парсинг ОК: «${parsed.title}», ${parsed.chapters.length} гл.`);
-
       this.bookUploadProgress.hidden = true;
       this.bookUploadResult.hidden = false;
       this.bookUploadTitle.textContent = parsed.title || 'Без названия';
       this.bookUploadAuthor.textContent = parsed.author ? `Автор: ${parsed.author}` : '';
       this.bookUploadChaptersCount.textContent = `Найдено глав: ${parsed.chapters.length}`;
     } catch (err) {
-      this._module._showToast(`[ОШИБКА] Парсинг: ${err.name}: ${err.message}`);
+      this._module._showToast(`Ошибка: ${err.message}`);
       this._resetBookUpload();
     }
   }
