@@ -5,6 +5,7 @@
 }
 
 .book-upload-dropzone {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -16,6 +17,19 @@
   background: #f8f7f5;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
+}
+
+/* Прозрачный оверлей input[type=file] поверх dropzone.
+ * На мобильных: нативный клик по input, без программного .click()
+ * и без showOpenFilePicker (который убивает вкладку на Android). */
+.book-upload-input-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+  /* font-size: 0 убирает «Файл не выбран» текст в некоторых браузерах */
+  font-size: 0;
 }
 
 .book-upload-dropzone:hover,

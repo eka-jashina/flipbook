@@ -3,31 +3,27 @@
  * Обрабатывает загрузку файлов (EPUB, FB2, DOCX, DOC, TXT),
  * парсинг через BookParser и добавление книги в store
  *
- * На Android Chrome файлы, выбранные через <input type="file"> или
- * showOpenFilePicker, могут быть нечитаемыми (NotFoundError) из-за
- * проблем с content:// URI в Storage Access Framework.
- * FileReader и file.arrayBuffer() оба подвержены этому багу.
+ * На Android Chrome файлы, выбранные через <input type="file">,
+ * могут быть нечитаемыми (NotFoundError) из-за проблем с content:// URI
+ * в Storage Access Framework. FileReader и file.arrayBuffer() оба
+ * подвержены этому багу.
  *
- * Решение: URL.createObjectURL(file) + fetch() как основной способ
- * чтения — использует другой код-путь в Chromium и обходит баг SAF.
- * При недоступности — каскадный fallback через file.arrayBuffer()
- * и FileReader.
+ * showOpenFilePicker (File System Access API) НЕ используется —
+ * на Android он открывает полноэкранную Activity, Android убивает
+ * вкладку (белый экран), и после восстановления файл тоже нечитаем.
+ *
+ * Решение:
+ * 1. Input[type=file] как прозрачный оверлей поверх dropzone —
+ *    нативный клик, без программного .click(), минимальная вероятность
+ *    убийства вкладки.
+ * 2. URL.createObjectURL(file) + fetch() для чтения — использует
+ *    другой код-путь в Chromium и обходит баг SAF.
+ *    Каскадный fallback: arrayBuffer → FileReader.
  */
 
 import { BookParser } from '../BookParser.js';
 
 const SUPPORTED_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
-
-const FILE_PICKER_TYPES = [{
-  description: 'Книги',
-  accept: {
-    'application/epub+zip': ['.epub'],
-    'application/x-fictionbook+xml': ['.fb2'],
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-    'application/msword': ['.doc'],
-    'text/plain': ['.txt'],
-  },
-}];
 
 export class BookUploadManager {
   constructor(chaptersModule) {
@@ -52,16 +48,11 @@ export class BookUploadManager {
   }
 
   bindEvents() {
-    // На мобильных Android (Chrome) файлы из <input type="file"> могут быть
-    // нечитаемыми (NotFoundError) из-за багов Storage Access Framework.
-    // showOpenFilePicker (File System Access API) использует другой путь
-    // доступа к файлам и обходит эту проблему.
-    // Клик по dropzone: пробуем showOpenFilePicker, при неудаче — input.
-    this.bookDropzone.addEventListener('click', (e) => {
-      // Не перехватываем клик по самому input (он внутри dropzone)
-      if (e.target === this.bookFileInput) return;
-      this._openFilePicker();
-    });
+    // Input[type=file] — прозрачный оверлей поверх dropzone (position:absolute
+    // в HTML). Пользователь кликает прямо на input, файловый пикер открывается
+    // нативно без программного .click() и без showOpenFilePicker.
+    // showOpenFilePicker НЕ используется: на Android он открывает полноэкранную
+    // Activity → Android убивает вкладку → белый экран.
     this.bookFileInput.addEventListener('change', (e) => this._handleInputChange(e));
     this.bookDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -78,51 +69,16 @@ export class BookUploadManager {
     });
     this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook());
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
-  }
 
-  /**
-   * Основной метод выбора файла.
-   * Пробуем showOpenFilePicker (File System Access API).
-   * Если API недоступен (Firefox, Safari) — открываем обычный input[type=file].
-   * Если файл выбран, но чтение не удалось — показываем ошибку сразу,
-   * НЕ переключаемся на input (там будет тот же баг SAF).
-   */
-  async _openFilePicker() {
-    if (typeof window.showOpenFilePicker === 'function') {
-      let file;
-      try {
-        const [handle] = await window.showOpenFilePicker({
-          types: FILE_PICKER_TYPES,
-          multiple: false,
-        });
-        file = await handle.getFile();
-      } catch (err) {
-        // AbortError = пользователь отменил выбор
-        if (err.name === 'AbortError') return;
-        // API не работает — fallback на input
-        this.bookFileInput.click();
-        return;
-      }
-
-      // Файл выбран через picker — читаем с каскадными стратегиями
-      try {
-        const buffer = await this._readFileBuffer(file);
-        const safeFile = new File([buffer], file.name, { type: file.type });
-        this._processBookFile(safeFile);
-      } catch {
-        this._module._showToast(
-          'Не удалось прочитать файл. Попробуйте сохранить файл в память устройства (не на SD-карту / облако) и повторить.'
-        );
-      }
-      return;
+    // Восстановление после Android page kill: если браузер восстановил
+    // страницу и input уже содержит файл (browser form restoration)
+    if (this.bookFileInput.files && this.bookFileInput.files.length > 0) {
+      Promise.resolve().then(() => this._handleInputChange({ target: this.bookFileInput }));
     }
-
-    // Fallback: обычный input[type=file]
-    this.bookFileInput.click();
   }
 
   /**
-   * Обработчик change на input[type=file] — fallback путь.
+   * Обработчик change на input[type=file].
    * Читаем файл с каскадными стратегиями (createObjectURL+fetch → arrayBuffer → FileReader).
    */
   async _handleInputChange(e) {
