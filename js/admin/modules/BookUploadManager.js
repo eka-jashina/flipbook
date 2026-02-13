@@ -3,11 +3,15 @@
  * Обрабатывает загрузку файлов (EPUB, FB2, DOCX, DOC, TXT),
  * парсинг через BookParser и добавление книги в store
  *
- * На Android 10+ Chrome файлы, выбранные через <input type="file">,
- * могут быть нечитаемыми (NotFoundError) из-за проблем с content:// URI
- * в Storage Access Framework. Поэтому используется File System Access API
- * (showOpenFilePicker) как основной способ — он работает через другой
- * механизм доступа к файлам и обходит эту проблему.
+ * На Android Chrome файлы, выбранные через <input type="file"> или
+ * showOpenFilePicker, могут быть нечитаемыми (NotFoundError) из-за
+ * проблем с content:// URI в Storage Access Framework.
+ * FileReader и file.arrayBuffer() оба подвержены этому багу.
+ *
+ * Решение: URL.createObjectURL(file) + fetch() как основной способ
+ * чтения — использует другой код-путь в Chromium и обходит баг SAF.
+ * При недоступности — каскадный fallback через file.arrayBuffer()
+ * и FileReader.
  */
 
 import { BookParser } from '../BookParser.js';
@@ -78,27 +82,39 @@ export class BookUploadManager {
 
   /**
    * Основной метод выбора файла.
-   * Пробуем showOpenFilePicker (File System Access API) — он обходит
-   * баг Android SAF с нечитаемыми content:// URI.
-   * Если API недоступен — открываем обычный input[type=file].
+   * Пробуем showOpenFilePicker (File System Access API).
+   * Если API недоступен (Firefox, Safari) — открываем обычный input[type=file].
+   * Если файл выбран, но чтение не удалось — показываем ошибку сразу,
+   * НЕ переключаемся на input (там будет тот же баг SAF).
    */
   async _openFilePicker() {
     if (typeof window.showOpenFilePicker === 'function') {
+      let file;
       try {
         const [handle] = await window.showOpenFilePicker({
           types: FILE_PICKER_TYPES,
           multiple: false,
         });
-        const file = await handle.getFile();
-        const buffer = await file.arrayBuffer();
+        file = await handle.getFile();
+      } catch (err) {
+        // AbortError = пользователь отменил выбор
+        if (err.name === 'AbortError') return;
+        // API не работает — fallback на input
+        this.bookFileInput.click();
+        return;
+      }
+
+      // Файл выбран через picker — читаем с каскадными стратегиями
+      try {
+        const buffer = await this._readFileBuffer(file);
         const safeFile = new File([buffer], file.name, { type: file.type });
         this._processBookFile(safeFile);
-        return;
-      } catch (err) {
-        // AbortError = пользователь отменил выбор — просто выходим
-        if (err.name === 'AbortError') return;
-        // Другая ошибка — пробуем fallback через input
+      } catch {
+        this._module._showToast(
+          'Не удалось прочитать файл. Попробуйте сохранить файл в память устройства (не на SD-карту / облако) и повторить.'
+        );
       }
+      return;
     }
 
     // Fallback: обычный input[type=file]
@@ -107,26 +123,62 @@ export class BookUploadManager {
 
   /**
    * Обработчик change на input[type=file] — fallback путь.
-   * Читаем файл через FileReader синхронно в обработчике события.
-   * Если чтение не удаётся (Android SAF баг) — показываем ошибку.
+   * Читаем файл с каскадными стратегиями (createObjectURL+fetch → arrayBuffer → FileReader).
    */
-  _handleInputChange(e) {
+  async _handleInputChange(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const safeFile = new File([reader.result], file.name, { type: file.type });
+    try {
+      const buffer = await this._readFileBuffer(file);
+      const safeFile = new File([buffer], file.name, { type: file.type });
       e.target.value = '';
       this._processBookFile(safeFile);
-    };
-    reader.onerror = () => {
+    } catch {
       e.target.value = '';
       this._module._showToast(
         'Не удалось прочитать файл. Попробуйте сохранить файл в память устройства (не на SD-карту / облако) и повторить.'
       );
-    };
-    reader.readAsArrayBuffer(file);
+    }
+  }
+
+  /**
+   * Чтение файла в ArrayBuffer с каскадом стратегий.
+   *
+   * На Android Chrome файлы из SAF (content:// URI) могут быть нечитаемыми
+   * через FileReader и file.arrayBuffer() (NotFoundError).
+   * URL.createObjectURL + fetch использует другой код-путь в Chromium
+   * и обходит эту проблему.
+   *
+   * Стратегии (по приоритету):
+   * 1. createObjectURL + fetch — обходит баги Android SAF
+   * 2. file.arrayBuffer() — современный API
+   * 3. FileReader — классический fallback
+   */
+  async _readFileBuffer(file) {
+    // Стратегия 1: Blob URL + fetch — обходит баги Android SAF
+    if (typeof URL.createObjectURL === 'function') {
+      const url = URL.createObjectURL(file);
+      try {
+        const resp = await fetch(url);
+        return await resp.arrayBuffer();
+      } catch { /* fall through */ } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    // Стратегия 2: file.arrayBuffer()
+    try {
+      return await file.arrayBuffer();
+    } catch { /* fall through */ }
+
+    // Стратегия 3: FileReader
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file);
+    });
   }
 
   async _processBookFile(file) {
