@@ -91,16 +91,17 @@ export class BookUploadManager {
       return;
     }
 
-    // Показываем прогресс
-    this.bookDropzone.hidden = true;
-    this.bookUploadProgress.hidden = false;
-    this.bookUploadResult.hidden = true;
-    this.bookUploadStatus.textContent = 'Обработка файла...';
+    // НЕ скрываем dropzone до завершения парсинга!
+    // Input находится внутри dropzone — на мобильных скрытие родителя
+    // (hidden / display:none) инвалидирует File-ссылку.
+    // Визуальный фидбек — через CSS-класс, без скрытия элементов.
+    this.bookDropzone.classList.add('processing');
 
     try {
       // Основной путь: передаём File напрямую парсеру (как epub.js)
       const parsed = await BookParser.parse(file);
       e.target.value = '';
+      this.bookDropzone.classList.remove('processing');
       this._showParsedResult(parsed);
     } catch (firstErr) {
       // Fallback: пробуем прочитать файл в память и передать копию.
@@ -109,10 +110,12 @@ export class BookUploadManager {
         const buffer = await this._readFileBuffer(file);
         const safeFile = new File([buffer], file.name, { type: file.type });
         e.target.value = '';
+        this.bookDropzone.classList.remove('processing');
         const parsed = await BookParser.parse(safeFile);
         this._showParsedResult(parsed);
       } catch {
         e.target.value = '';
+        this.bookDropzone.classList.remove('processing');
         this._module._showToast(
           `Ошибка: ${firstErr.message || 'не удалось прочитать файл'}`
         );
@@ -126,6 +129,7 @@ export class BookUploadManager {
    */
   _showParsedResult(parsed) {
     this._pendingParsedBook = parsed;
+    this.bookDropzone.hidden = true;
     this.bookUploadProgress.hidden = true;
     this.bookUploadResult.hidden = false;
     this.bookUploadTitle.textContent = parsed.title || 'Без названия';
