@@ -15,8 +15,13 @@
 
 - **3D-анимация** — реалистичное перелистывание страниц с CSS 3D-трансформациями
 - **Мультиглавная навигация** — поддержка книг с несколькими главами
+- **Админ-панель** — управление книгами, главами, шрифтами, звуками, оформлением
+- **Мультикнижность** — поддержка нескольких книг с экраном книжной полки
+- **Импорт книг** — загрузка из форматов txt, doc, docx, epub, fb2
 - **Персонализация** — выбор шрифта, размера текста, темы оформления
-- **Ambient-звуки** — фоновая атмосфера (дождь, камин, кафе)
+- **Кастомизация оформления** — per-book настройка цветов обложки, текстур страниц, декоративных шрифтов
+- **Ambient-звуки** — фоновая атмосфера (дождь, камин, кафе) — настраиваемые через админку
+- **Фотоальбом** — поддержка фотоальбома с лайтбоксом
 - **Адаптивный дизайн** — корректная работа на десктопе и мобильных устройствах
 - **Сохранение прогресса** — автоматическое запоминание позиции чтения
 - **PWA** — установка как приложение, офлайн-доступ через Service Worker
@@ -91,9 +96,12 @@ User Input (click / touch / keyboard)
 
 ```
 flipbook/
+├── index.html                     # Точка входа — читалка
+├── admin.html                     # Админ-панель
+│
 ├── js/
 │   ├── index.js                    # Точка входа
-│   ├── config.js                   # Конфигурация глав, шрифтов, звуков
+│   ├── config.js                   # Конфигурация (admin-aware, мультикнижная)
 │   │
 │   ├── utils/                      # Низкоуровневые утилиты
 │   │   ├── EventEmitter.js         # Реализация паттерна Observer
@@ -111,7 +119,8 @@ flipbook/
 │   │   ├── RateLimiter.js          # Ограничение частоты вызовов
 │   │   ├── InstallPrompt.js        # PWA-промпт установки
 │   │   ├── OfflineIndicator.js     # Индикатор офлайн-режима
-│   │   └── ScreenReaderAnnouncer.js # Анонсы для скринридеров
+│   │   ├── ScreenReaderAnnouncer.js # Анонсы для скринридеров
+│   │   └── PhotoLightbox.js        # Лайтбокс фотоальбома
 │   │
 │   ├── managers/                   # Бизнес-логика и данные
 │   │   ├── BookStateMachine.js     # Конечный автомат состояний
@@ -120,36 +129,60 @@ flipbook/
 │   │   ├── AsyncPaginator.js       # CSS multi-column пагинация
 │   │   └── BackgroundManager.js    # Кроссфейд фонов глав
 │   │
-│   └── core/                       # Ядро приложения
-│       ├── BookController.js       # Главный координатор (DI-контейнер)
-│       ├── ComponentFactory.js     # Фабрика компонентов
-│       ├── DOMManager.js           # Централизованный доступ к DOM
-│       ├── BookRenderer.js         # Рендеринг страниц (double buffering)
-│       ├── BookAnimator.js         # Оркестрация CSS-анимаций
-│       ├── EventController.js      # Обработка пользовательского ввода
-│       ├── LoadingIndicator.js     # UI индикатора загрузки
-│       ├── DebugPanel.js           # Панель отладки (dev)
-│       ├── AppInitializer.js       # Инициализация приложения
-│       ├── SubscriptionManager.js  # Управление подписками на события
-│       ├── ResizeHandler.js        # Обработка изменения размера окна
-│       ├── DelegateMediator.js     # Коммуникация между делегатами
-│       │
-│       ├── services/               # Сервисные группы (DI)
-│       │   ├── CoreServices.js         # DOM, события, таймеры, storage
-│       │   ├── AudioServices.js        # Звуки и ambient
-│       │   ├── RenderServices.js       # Рендеринг и анимации
-│       │   └── ContentServices.js      # Загрузка и пагинация контента
-│       │
-│       └── delegates/              # Делегаты по доменам
-│           ├── BaseDelegate.js         # Абстрактный базовый класс
-│           ├── NavigationDelegate.js   # Логика перелистывания
-│           ├── DragDelegate.js         # Touch-перетаскивание страниц
-│           ├── DragAnimator.js         # Анимация угла поворота при drag
-│           ├── DragDOMPreparer.js      # Подготовка DOM для drag
-│           ├── DragShadowRenderer.js   # Рендеринг теней при drag
-│           ├── SettingsDelegate.js     # UI настроек
-│           ├── ChapterDelegate.js      # Переключение глав
-│           └── LifecycleDelegate.js    # Открытие/закрытие книги
+│   ├── core/                       # Ядро приложения
+│   │   ├── BookController.js       # Главный координатор (DI-контейнер)
+│   │   ├── ComponentFactory.js     # Фабрика компонентов
+│   │   ├── DOMManager.js           # Централизованный доступ к DOM
+│   │   ├── BookRenderer.js         # Рендеринг страниц (double buffering)
+│   │   ├── BookAnimator.js         # Оркестрация CSS-анимаций
+│   │   ├── EventController.js      # Обработка пользовательского ввода
+│   │   ├── LoadingIndicator.js     # UI индикатора загрузки
+│   │   ├── DebugPanel.js           # Панель отладки (dev)
+│   │   ├── AppInitializer.js       # Инициализация приложения
+│   │   ├── SubscriptionManager.js  # Управление подписками на события
+│   │   ├── ResizeHandler.js        # Обработка изменения размера окна
+│   │   ├── DelegateMediator.js     # Коммуникация между делегатами
+│   │   ├── BookshelfScreen.js      # Экран книжной полки (мультикнижность)
+│   │   │
+│   │   ├── services/               # Сервисные группы (DI)
+│   │   │   ├── CoreServices.js         # DOM, события, таймеры, storage
+│   │   │   ├── AudioServices.js        # Звуки и ambient
+│   │   │   ├── RenderServices.js       # Рендеринг и анимации
+│   │   │   └── ContentServices.js      # Загрузка и пагинация контента
+│   │   │
+│   │   └── delegates/              # Делегаты по доменам
+│   │       ├── BaseDelegate.js         # Абстрактный базовый класс
+│   │       ├── NavigationDelegate.js   # Логика перелистывания
+│   │       ├── DragDelegate.js         # Touch-перетаскивание страниц
+│   │       ├── DragAnimator.js         # Анимация угла поворота при drag
+│   │       ├── DragDOMPreparer.js      # Подготовка DOM для drag
+│   │       ├── DragShadowRenderer.js   # Рендеринг теней при drag
+│   │       ├── SettingsDelegate.js     # UI настроек
+│   │       ├── ChapterDelegate.js      # Переключение глав
+│   │       └── LifecycleDelegate.js    # Открытие/закрытие книги
+│   │
+│   └── admin/                      # Админ-панель
+│       ├── index.js                # Точка входа админки
+│       ├── AdminConfigStore.js     # Персистентное хранилище конфига
+│       ├── BookParser.js           # Диспетчер парсинга книг
+│       ├── modules/                # Функциональные модули админки
+│       │   ├── BaseModule.js           # Абстрактный базовый модуль
+│       │   ├── AlbumManager.js         # Управление фотоальбомом
+│       │   ├── AmbientsModule.js       # Настройка ambient-звуков
+│       │   ├── AppearanceModule.js     # Кастомизация оформления книги
+│       │   ├── BookUploadManager.js    # Загрузка книг
+│       │   ├── ChaptersModule.js       # Управление главами
+│       │   ├── ExportModule.js         # Экспорт конфигурации
+│       │   ├── FontsModule.js          # Управление шрифтами
+│       │   ├── SettingsModule.js       # Глобальные настройки
+│       │   └── SoundsModule.js         # Управление звуковыми эффектами
+│       └── parsers/                # Парсеры форматов книг
+│           ├── parserUtils.js          # Общие утилиты парсеров
+│           ├── TxtParser.js            # Парсер .txt
+│           ├── DocParser.js            # Парсер .doc (Word 97-2003)
+│           ├── DocxParser.js           # Парсер .docx
+│           ├── EpubParser.js           # Парсер .epub
+│           └── Fb2Parser.js            # Парсер .fb2
 │
 ├── css/                            # Модульная CSS-архитектура
 │   ├── index.css                   # Входная точка (импорты)
@@ -170,13 +203,35 @@ flipbook/
 │   ├── accessibility.css           # Стили доступности (skip-link, focus)
 │   ├── install-prompt.css          # PWA-промпт установки
 │   ├── offline.css                 # Индикатор офлайн-режима
+│   ├── bookshelf.css               # Экран книжной полки
+│   ├── photo-album.css             # Фотоальбом / лайтбокс
 │   ├── responsive.css              # Адаптивность
-│   └── controls/                   # Стили UI-контролов
-│       ├── index.css               # Входная точка + общие стили
-│       ├── pod-variables.css       # CSS-переменные контролов
-│       ├── navigation-pod.css      # Навигация и прогресс-бар
-│       ├── settings-pod.css        # Панель настроек
-│       └── audio-pod.css           # Аудио-контролы
+│   ├── controls/                   # Стили UI-контролов
+│   │   ├── index.css               # Входная точка + общие стили
+│   │   ├── pod-variables.css       # CSS-переменные контролов
+│   │   ├── navigation-pod.css      # Навигация и прогресс-бар
+│   │   ├── settings-pod.css        # Панель настроек
+│   │   └── audio-pod.css           # Аудио-контролы
+│   └── admin/                      # Стили админ-панели
+│       ├── index.css               # Входная точка
+│       ├── base.css                # Базовые стили
+│       ├── variables.css           # CSS-переменные админки
+│       ├── buttons.css             # Кнопки
+│       ├── modal.css               # Модальные окна
+│       ├── tabs.css                # Вкладки
+│       ├── screens.css             # Экраны
+│       ├── responsive.css          # Адаптивность админки
+│       ├── book-selector.css       # Выбор книги
+│       ├── book-upload.css         # Загрузка книги
+│       ├── chapters.css            # Управление главами
+│       ├── fonts.css               # Управление шрифтами
+│       ├── sounds.css              # Управление звуками
+│       ├── ambients.css            # Ambient-звуки
+│       ├── appearance.css          # Кастомизация оформления
+│       ├── settings.css            # Настройки
+│       ├── album.css               # Фотоальбом
+│       ├── export.css              # Экспорт
+│       └── toast.css               # Toast-уведомления
 │
 ├── public/                         # Статические ресурсы
 │   ├── content/                    # HTML-контент глав
@@ -193,15 +248,23 @@ flipbook/
     ├── unit/                       # Юнит-тесты (Vitest)
     │   ├── utils/                  # Тесты утилит
     │   ├── managers/               # Тесты менеджеров
-    │   └── core/                   # Тесты ядра
+    │   ├── core/                   # Тесты ядра (core, delegates, services)
+    │   └── admin/                  # Тесты админ-модулей
     ├── integration/                # Интеграционные тесты (Vitest)
     │   ├── smoke.test.js           # Smoke-тесты
     │   ├── flows/                  # Тесты пользовательских сценариев
-    │   │   ├── navigation.test.js  # Навигация по страницам
-    │   │   ├── settings.test.js    # Работа с настройками
-    │   │   ├── chapters.test.js    # Переключение глав
-    │   │   ├── drag.test.js        # Drag-взаимодействие
-    │   │   └── events.test.js      # Обработка событий
+    │   │   ├── navigation.test.js      # Навигация по страницам
+    │   │   ├── settings.test.js        # Работа с настройками
+    │   │   ├── chapters.test.js        # Переключение глав
+    │   │   ├── drag.test.js            # Drag-взаимодействие
+    │   │   ├── events.test.js          # Обработка событий
+    │   │   ├── accessibility.test.js   # Доступность
+    │   │   ├── chapterRepagination.test.js  # Репагинация при смене глав
+    │   │   ├── settingsRepagination.test.js # Репагинация при смене настроек
+    │   │   ├── dragNavConflict.test.js # Конфликт drag/навигации
+    │   │   ├── errorRecovery.test.js   # Восстановление при ошибках
+    │   │   ├── fullReadingSession.test.js   # Полная сессия чтения
+    │   │   └── resizeFlow.test.js      # Обработка ресайза
     │   ├── lifecycle/              # Тесты жизненного цикла
     │   │   ├── bookLifecycle.test.js   # Жизненный цикл книги
     │   │   └── stateMachine.test.js    # Конечный автомат
@@ -218,7 +281,8 @@ flipbook/
         │   ├── reading.spec.js     # Сценарии чтения
         │   ├── navigation.spec.js  # Навигация
         │   ├── settings.spec.js    # Настройки
-        │   └── responsive.spec.js  # Адаптивность
+        │   ├── responsive.spec.js  # Адаптивность
+        │   └── accessibility.spec.js # Доступность
         └── performance/            # Тесты производительности
             └── loading.spec.js     # Производительность загрузки
 ```
@@ -264,6 +328,11 @@ npm run dev
 | `npm run test:e2e:debug` | E2E-тесты в режиме отладки |
 | `npm run test:e2e:headed` | E2E-тесты с видимым браузером |
 | `npm run test:e2e:report` | Показать отчёт E2E-тестов |
+| `npm run lint` | Запуск ESLint + Stylelint |
+| `npm run lint:js` | ESLint на js/ |
+| `npm run lint:css` | Stylelint на css/ |
+| `npm run lint:js:fix` | ESLint с автоисправлением |
+| `npm run lint:css:fix` | Stylelint с автоисправлением |
 | `npm run docs` | Генерация API-документации в `docs/` |
 | `npm run docs:serve` | Генерация и сервер документации (порт 3001) |
 
@@ -281,6 +350,7 @@ npm run dev
 | **EventController** | `core/EventController.js` | Клики, свайпы, клавиатура |
 | **NavigationDelegate** | `core/delegates/NavigationDelegate.js` | Логика навигации по страницам |
 | **DelegateMediator** | `core/DelegateMediator.js` | Коммуникация между делегатами |
+| **BookshelfScreen** | `core/BookshelfScreen.js` | Экран книжной полки (мультикнижность) |
 | **DragDelegate** | `core/delegates/DragDelegate.js` | Touch-перетаскивание страниц |
 | **DragAnimator** | `core/delegates/DragAnimator.js` | Анимация угла поворота при drag |
 | **DragDOMPreparer** | `core/delegates/DragDOMPreparer.js` | Подготовка DOM для drag |
@@ -289,10 +359,32 @@ npm run dev
 | **AudioServices** | `core/services/AudioServices.js` | Группа: звуки и ambient |
 | **RenderServices** | `core/services/RenderServices.js` | Группа: рендеринг и анимации |
 | **ContentServices** | `core/services/ContentServices.js` | Группа: загрузка и пагинация |
+| **PhotoLightbox** | `utils/PhotoLightbox.js` | Лайтбокс фотоальбома |
 | **InstallPrompt** | `utils/InstallPrompt.js` | PWA-промпт установки приложения |
 | **OfflineIndicator** | `utils/OfflineIndicator.js` | Индикатор офлайн-режима |
 | **ScreenReaderAnnouncer** | `utils/ScreenReaderAnnouncer.js` | Анонсы для скринридеров (a11y) |
 | **RateLimiter** | `utils/RateLimiter.js` | Ограничение частоты вызовов |
+| **AdminConfigStore** | `admin/AdminConfigStore.js` | Персистентное хранилище конфига админки |
+| **BookParser** | `admin/BookParser.js` | Диспетчер парсинга книг |
+
+---
+
+## Админ-панель
+
+Админ-панель (`admin.html`) позволяет управлять содержимым и оформлением без изменения кода:
+
+- **Управление книгами** — создание, выбор, удаление книг
+- **Загрузка книг** — импорт из txt, doc, docx, epub, fb2
+- **Управление главами** — добавление, редактирование, переупорядочивание глав
+- **Шрифты** — выбор из встроенных или загрузка кастомных (woff2/ttf/otf)
+- **Звуки** — настройка звуков перелистывания и обложки
+- **Ambient-звуки** — добавление и настройка фоновых звуков
+- **Оформление** — цвета обложки, текстуры страниц, фон приложения (отдельно для light/dark тем)
+- **Фотоальбом** — управление галереей изображений
+- **Настройки видимости** — какие настройки показывать читателю
+- **Экспорт** — экспорт конфигурации
+
+Конфигурация админки сохраняется в localStorage (`flipbook-admin-config`), крупный контент (HTML глав) — в IndexedDB.
 
 ---
 
@@ -339,7 +431,7 @@ E2E-тесты используют Page Object модели для абстра
 ## Технические особенности
 
 ### Производительность
-- **LRU-кэш** для распарсенных страниц (лимит: 12 страниц)
+- **LRU-кэш** для распарсенных страниц (лимит: 50 страниц)
 - **Double buffering** для плавных переходов
 - **GPU-ускоренные** CSS 3D-трансформации
 - **Debounce** обработки resize
@@ -439,6 +531,22 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 ```
 
 </details>
+
+---
+
+## Зависимости
+
+### Runtime
+- **jszip** `^3.10.1` — ZIP-операции (экспорт конфига, парсинг docx/epub)
+
+### Dev Dependencies (ключевые)
+- **vite** `^5.0.0` — Бандлер
+- **vitest** `^4.0.18` — Юнит/интеграционное тестирование
+- **@playwright/test** `^1.58.1` — E2E-тестирование
+- **eslint** `^9.39.2` — Линтинг JS
+- **stylelint** `^17.1.1` — Линтинг CSS
+- **sharp** `^0.34.5` — Обработка изображений (генерация иконок)
+- **vite-plugin-pwa** `^1.2.0` — PWA/Service Worker
 
 ---
 
