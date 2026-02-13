@@ -146,7 +146,9 @@
                 </svg>
                 <p class="book-upload-text">Перетащите файл сюда или нажмите для выбора</p>
                 <p class="book-upload-hint">Форматы: .epub, .fb2, .docx, .doc, .txt</p>
-                <input type="file" id="bookFileInput" accept=".epub,.fb2,.docx,.doc,.txt" hidden>
+                <input type="file" id="bookFileInput"
+                  accept=".epub,.fb2,.docx,.doc,.txt,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/plain,text/xml,application/xml,application/octet-stream"
+                  style="position:absolute;width:0;height:0;overflow:hidden;opacity:0">
               </div>
 
               <div class="book-upload-progress" id="bookUploadProgress" hidden>
