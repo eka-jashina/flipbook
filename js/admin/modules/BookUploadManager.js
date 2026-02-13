@@ -70,13 +70,19 @@ export class BookUploadManager {
       return;
     }
 
+    // Считываем файл в память ДО манипуляций с DOM.
+    // На мобильных браузерах скрытие родительского контейнера (dropzone)
+    // инвалидирует временный файл, привязанный к file input.
+    const buffer = await file.arrayBuffer();
+    const safeFile = new File([buffer], file.name, { type: file.type });
+
     this.bookDropzone.hidden = true;
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
     this.bookUploadStatus.textContent = 'Обработка файла...';
 
     try {
-      const parsed = await BookParser.parse(file);
+      const parsed = await BookParser.parse(safeFile);
       this._pendingParsedBook = parsed;
 
       this.bookUploadProgress.hidden = true;
