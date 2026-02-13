@@ -29,7 +29,11 @@ export class BookUploadManager {
   }
 
   bindEvents() {
-    this.bookDropzone.addEventListener('click', () => this.bookFileInput.click());
+    this.bookDropzone.addEventListener('click', (e) => {
+      // Не открывать пикер повторно, если клик пришёл от самого input
+      if (e.target === this.bookFileInput) return;
+      this.bookFileInput.click();
+    });
     this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
     this.bookDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
