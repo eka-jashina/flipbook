@@ -52,14 +52,28 @@ export class BookUploadManager {
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
   }
 
-  async _handleBookUpload(e) {
+  _handleBookUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-    // Сбрасываем input только ПОСЛЕ полного чтения файла:
-    // на мобильных (iOS Safari, Android Chrome) сброс value = ''
-    // инвалидирует временный файл до его прочтения парсером.
-    await this._processBookFile(file);
-    e.target.value = '';
+
+    // Считываем файл через FileReader СИНХРОННО в контексте события change.
+    // На мобильных браузерах File-объект, привязанный к input, может стать
+    // невалидным после завершения синхронной части обработчика события.
+    // FileReader.readAsArrayBuffer() начинает чтение немедленно при вызове,
+    // гарантируя удержание файловой ссылки. file.arrayBuffer() (Promise API)
+    // может отложить начало чтения до следующего микротаска, когда ссылка
+    // уже инвалидирована.
+    const reader = new FileReader();
+    reader.onload = () => {
+      const safeFile = new File([reader.result], file.name, { type: file.type });
+      e.target.value = '';
+      this._processBookFile(safeFile);
+    };
+    reader.onerror = () => {
+      this._module._showToast(`Ошибка чтения файла: ${reader.error?.message || 'неизвестная ошибка'}`);
+      e.target.value = '';
+    };
+    reader.readAsArrayBuffer(file);
   }
 
   async _processBookFile(file) {
@@ -70,19 +84,13 @@ export class BookUploadManager {
       return;
     }
 
-    // Считываем файл в память ДО манипуляций с DOM.
-    // На мобильных браузерах скрытие родительского контейнера (dropzone)
-    // инвалидирует временный файл, привязанный к file input.
-    const buffer = await file.arrayBuffer();
-    const safeFile = new File([buffer], file.name, { type: file.type });
-
     this.bookDropzone.hidden = true;
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
     this.bookUploadStatus.textContent = 'Обработка файла...';
 
     try {
-      const parsed = await BookParser.parse(safeFile);
+      const parsed = await BookParser.parse(file);
       this._pendingParsedBook = parsed;
 
       this.bookUploadProgress.hidden = true;
