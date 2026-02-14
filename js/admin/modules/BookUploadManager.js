@@ -62,7 +62,9 @@ export class BookUploadManager {
       return;
     }
 
-    this.bookDropzone.hidden = true;
+    // НЕ скрываем dropzone до завершения парсинга!
+    // На мобильных: input внутри dropzone, hidden = display:none,
+    // это убивает File handle до того как парсер прочитает файл.
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
     this.bookUploadStatus.textContent = 'Обработка файла...';
@@ -71,6 +73,8 @@ export class BookUploadManager {
       const parsed = await BookParser.parse(file);
       this._pendingParsedBook = parsed;
 
+      // Теперь файл прочитан — безопасно скрывать dropzone
+      this.bookDropzone.hidden = true;
       this.bookUploadProgress.hidden = true;
       this.bookUploadResult.hidden = false;
       this.bookUploadTitle.textContent = parsed.title || 'Без названия';
