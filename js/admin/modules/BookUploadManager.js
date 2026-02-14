@@ -48,10 +48,10 @@ export class BookUploadManager {
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
   }
 
-  _handleBookUpload(e) {
+  async _handleBookUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-    this._processBookFile(file);
+    await this._processBookFile(file);
     e.target.value = '';
   }
 
@@ -63,13 +63,25 @@ export class BookUploadManager {
       return;
     }
 
+    // На мобильных браузерах (Android Chrome SAF, iOS Safari) ссылка на File
+    // становится невалидной после сброса input или скрытия родительского элемента.
+    // Читаем файл в память ДО любых изменений DOM.
+    let safeFile;
+    try {
+      const buffer = await this._readFileToBuffer(file);
+      safeFile = new File([buffer], file.name, { type: file.type });
+    } catch (err) {
+      this._module._showToast(`Ошибка чтения файла: ${err.message}`);
+      return;
+    }
+
     this.bookDropzone.hidden = true;
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
     this.bookUploadStatus.textContent = 'Обработка файла...';
 
     try {
-      const parsed = await BookParser.parse(file);
+      const parsed = await BookParser.parse(safeFile);
       this._pendingParsedBook = parsed;
 
       this.bookUploadProgress.hidden = true;
@@ -81,6 +93,46 @@ export class BookUploadManager {
       this._module._showToast(`Ошибка: ${err.message}`);
       this._resetBookUpload();
     }
+  }
+
+  /**
+   * Прочитать файл в ArrayBuffer, используя наиболее надёжный доступный метод.
+   * Каскад стратегий для обхода проблем мобильных браузеров
+   * (Android Chrome SAF content:// URI, iOS Safari).
+   * @param {File} file
+   * @returns {Promise<ArrayBuffer>}
+   */
+  async _readFileToBuffer(file) {
+    // Стратегия 1: createObjectURL + fetch
+    // Самый надёжный способ на Android Chrome с SAF content:// URI.
+    // createObjectURL захватывает ссылку на файл синхронно.
+    if (typeof URL !== 'undefined' && URL.createObjectURL) {
+      let blobUrl;
+      try {
+        blobUrl = URL.createObjectURL(file);
+        const response = await fetch(blobUrl);
+        return await response.arrayBuffer();
+      } catch {
+        // Переходим к следующей стратегии
+      } finally {
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+      }
+    }
+
+    // Стратегия 2: FileReader (callback API, широкая совместимость)
+    try {
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(file);
+      });
+    } catch {
+      // Переходим к следующей стратегии
+    }
+
+    // Стратегия 3: file.arrayBuffer() (простейший вариант)
+    return file.arrayBuffer();
   }
 
   async _applyParsedBook() {
