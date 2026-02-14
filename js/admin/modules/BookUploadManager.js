@@ -7,8 +7,8 @@
  * - <input> вынесен из dropzone (скрытие dropzone не инвалидирует File)
  * - <label for="..."> вместо JS click() (нативный триггер на мобильных)
  * - visually-hidden вместо display:none (мобильные браузеры сохраняют File handle)
- * - FileReader инициирует чтение синхронно внутри event handler
- * - createObjectURL+fetch как fallback для Android SAF content:// URI
+ * - Файл передаётся парсеру напрямую без предварительного чтения в буфер
+ * - input сбрасывается только ПОСЛЕ завершения парсинга
  */
 
 import { BookParser } from '../BookParser.js';
@@ -39,9 +39,7 @@ export class BookUploadManager {
 
   bindEvents() {
     // Dropzone — это <label for="bookFileInput">, клик открывает файловый диалог
-    // нативно через браузер, без программного click(). Это ключевое отличие
-    // для мобильных браузеров, где programmatic click() на hidden input ненадёжен.
-
+    // нативно через браузер, без программного click().
     this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
 
     this.bookDropzone.addEventListener('dragover', (e) => {
@@ -55,7 +53,7 @@ export class BookUploadManager {
       e.preventDefault();
       this.bookDropzone.classList.remove('dragover');
       const file = e.dataTransfer.files[0];
-      if (file) this._handleDroppedFile(file);
+      if (file) this._processBookFile(file);
     });
     this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook());
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
@@ -63,11 +61,16 @@ export class BookUploadManager {
 
   /**
    * Обработка выбора файла через <input type="file">.
-   * Ключевой принцип: инициируем чтение файла СИНХРОННО внутри event handler,
-   * ДО любых await/async — чтобы File handle гарантированно оставался валидным.
-   * FileReader.readAsArrayBuffer() начинает чтение немедленно.
+   *
+   * Принцип: передать File парсеру НАПРЯМУЮ, без предварительного чтения в буфер.
+   * Предварительное чтение (FileReader, createObjectURL+fetch) отказало на мобильных.
+   * Парсеры сами вызывают JSZip.loadAsync(file), file.text(), file.arrayBuffer() —
+   * пусть они работают с оригинальным File объектом.
+   *
+   * Input не сбрасывается и не скрывается до завершения парсинга.
+   * Input вынесен из dropzone в HTML, поэтому скрытие dropzone безопасно.
    */
-  _handleBookUpload(e) {
+  async _handleBookUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -78,101 +81,47 @@ export class BookUploadManager {
       return;
     }
 
-    // Сохраняем свойства файла синхронно — они могут стать недоступны позже
-    const fileName = file.name;
-    const fileType = file.type;
-
-    // Стратегия 1: FileReader — начинает чтение СИНХРОННО в контексте event handler.
-    // Это самый надёжный способ: браузер не может освободить file handle
-    // пока идёт активное чтение через FileReader.
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      // Данные в памяти. Безопасно сбросить input.
-      e.target.value = '';
-      const safeFile = new File([reader.result], fileName, { type: fileType });
-      this._processBookFile(safeFile);
-    };
-
-    reader.onerror = () => {
-      // FileReader не смог прочитать — пробуем fallback через createObjectURL+fetch.
-      // Это работает на Android Chrome с SAF content:// URI в некоторых случаях,
-      // где FileReader отказывает.
-      this._readWithFetchFallback(file, fileName, fileType)
-        .then(safeFile => {
-          e.target.value = '';
-          this._processBookFile(safeFile);
-        })
-        .catch(err => {
-          e.target.value = '';
-          this._module._showToast(`Ошибка чтения файла: ${err.message}`);
-        });
-    };
-
-    // Начать чтение НЕМЕДЛЕННО — синхронный вызов внутри event handler
-    reader.readAsArrayBuffer(file);
-  }
-
-  /**
-   * Обработка файла из drag-and-drop.
-   * Drop файлы обычно стабильнее (они уже в памяти браузера),
-   * но всё равно буферизуем для единообразия.
-   */
-  _handleDroppedFile(file) {
-    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    if (!SUPPORTED_FORMATS.includes(ext)) {
-      this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
-      return;
-    }
-
-    const fileName = file.name;
-    const fileType = file.type;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const safeFile = new File([reader.result], fileName, { type: fileType });
-      this._processBookFile(safeFile);
-    };
-    reader.onerror = () => {
-      // Drop файлы обычно стабильны, но на всякий случай — fallback
-      this._readWithFetchFallback(file, fileName, fileType)
-        .then(safeFile => this._processBookFile(safeFile))
-        .catch(err => this._module._showToast(`Ошибка чтения файла: ${err.message}`));
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  /**
-   * Fallback чтение через createObjectURL + fetch.
-   * createObjectURL() захватывает ссылку на Blob синхронно.
-   * fetch(blobUrl) затем читает данные через сетевой стек браузера,
-   * что иногда обходит проблемы с SAF content:// URI.
-   */
-  async _readWithFetchFallback(file, fileName, fileType) {
-    let blobUrl;
-    try {
-      blobUrl = URL.createObjectURL(file);
-      const response = await fetch(blobUrl);
-      const buffer = await response.arrayBuffer();
-      return new File([buffer], fileName, { type: fileType });
-    } finally {
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-    }
-  }
-
-  /**
-   * Обработка файла, который уже безопасно прочитан в память.
-   * На этом этапе safeFile — in-memory File, независимый от DOM.
-   * Любые DOM-изменения (скрытие dropzone и т.д.) безопасны.
-   */
-  async _processBookFile(safeFile) {
+    // Показать прогресс. Dropzone скрывается, но input вне его — File не пострадает.
     this.bookDropzone.hidden = true;
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
     this.bookUploadStatus.textContent = 'Обработка файла...';
 
     try {
-      const parsed = await BookParser.parse(safeFile);
+      // Передаём оригинальный File напрямую парсеру.
+      // Input ещё не сброшен — File handle гарантированно валиден.
+      const parsed = await BookParser.parse(file);
+
+      // Парсинг успешен. Теперь безопасно сбросить input.
+      e.target.value = '';
+
+      this._pendingParsedBook = parsed;
+      this.bookUploadProgress.hidden = true;
+      this.bookUploadResult.hidden = false;
+      this.bookUploadTitle.textContent = parsed.title || 'Без названия';
+      this.bookUploadAuthor.textContent = parsed.author ? `Автор: ${parsed.author}` : '';
+      this.bookUploadChaptersCount.textContent = `Найдено глав: ${parsed.chapters.length}`;
+    } catch (err) {
+      e.target.value = '';
+      this._module._showToast(`Ошибка: ${err.message}`);
+      this._resetBookUpload();
+    }
+  }
+
+  async _processBookFile(file) {
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!SUPPORTED_FORMATS.includes(ext)) {
+      this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
+      return;
+    }
+
+    this.bookDropzone.hidden = true;
+    this.bookUploadProgress.hidden = false;
+    this.bookUploadResult.hidden = true;
+    this.bookUploadStatus.textContent = 'Обработка файла...';
+
+    try {
+      const parsed = await BookParser.parse(file);
       this._pendingParsedBook = parsed;
 
       this.bookUploadProgress.hidden = true;

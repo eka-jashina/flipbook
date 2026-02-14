@@ -539,15 +539,10 @@ describe('ChaptersModule', () => {
 
   describe('book upload', () => {
     describe('_processBookFile()', () => {
-      it('should show error for unsupported formats via BookParser', async () => {
-        // _processBookFile получает уже прочитанный файл; валидация формата
-        // происходит в _handleBookUpload/_handleDroppedFile.
-        // BookParser.parse() выбросит ошибку для неподдерживаемых форматов.
+      it('should reject unsupported formats', async () => {
         await mod._bookUpload._processBookFile({ name: 'book.pdf' });
 
-        expect(app._showToast).toHaveBeenCalledWith(
-          expect.stringContaining('Неподдерживаемый формат'),
-        );
+        expect(app._showToast).toHaveBeenCalledWith('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
       });
     });
 
