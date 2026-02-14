@@ -1,19 +1,10 @@
 /**
  * Менеджер загрузки книг
- * Обрабатывает загрузку файлов (EPUB, FB2, DOCX, DOC, TXT),
- * парсинг через BookParser и добавление книги в store
- *
- * Мобильная совместимость:
- * - <input> вынесен из dropzone (скрытие dropzone не инвалидирует File)
- * - <label for="..."> вместо JS click() (нативный триггер на мобильных)
- * - visually-hidden вместо display:none (мобильные браузеры сохраняют File handle)
- * - Файл передаётся парсеру напрямую без предварительного чтения в буфер
- * - input сбрасывается только ПОСЛЕ завершения парсинга
+ * Самый простой вариант: видимый <input type="file">,
+ * прямая передача File в парсер, сброс input только после парсинга.
  */
 
 import { BookParser } from '../BookParser.js';
-
-const SUPPORTED_FORMATS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
 
 export class BookUploadManager {
   constructor(chaptersModule) {
@@ -38,10 +29,7 @@ export class BookUploadManager {
   }
 
   bindEvents() {
-    // Dropzone — это <label for="bookFileInput">, клик открывает файловый диалог
-    // нативно через браузер, без программного click().
     this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
-
     this.bookDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
       this.bookDropzone.classList.add('dragover');
@@ -59,58 +47,17 @@ export class BookUploadManager {
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
   }
 
-  /**
-   * Обработка выбора файла через <input type="file">.
-   *
-   * Принцип: передать File парсеру НАПРЯМУЮ, без предварительного чтения в буфер.
-   * Предварительное чтение (FileReader, createObjectURL+fetch) отказало на мобильных.
-   * Парсеры сами вызывают JSZip.loadAsync(file), file.text(), file.arrayBuffer() —
-   * пусть они работают с оригинальным File объектом.
-   *
-   * Input не сбрасывается и не скрывается до завершения парсинга.
-   * Input вынесен из dropzone в HTML, поэтому скрытие dropzone безопасно.
-   */
   async _handleBookUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-
-    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    if (!SUPPORTED_FORMATS.includes(ext)) {
-      this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
-      e.target.value = '';
-      return;
-    }
-
-    // Показать прогресс. Dropzone скрывается, но input вне его — File не пострадает.
-    this.bookDropzone.hidden = true;
-    this.bookUploadProgress.hidden = false;
-    this.bookUploadResult.hidden = true;
-    this.bookUploadStatus.textContent = 'Обработка файла...';
-
-    try {
-      // Передаём оригинальный File напрямую парсеру.
-      // Input ещё не сброшен — File handle гарантированно валиден.
-      const parsed = await BookParser.parse(file);
-
-      // Парсинг успешен. Теперь безопасно сбросить input.
-      e.target.value = '';
-
-      this._pendingParsedBook = parsed;
-      this.bookUploadProgress.hidden = true;
-      this.bookUploadResult.hidden = false;
-      this.bookUploadTitle.textContent = parsed.title || 'Без названия';
-      this.bookUploadAuthor.textContent = parsed.author ? `Автор: ${parsed.author}` : '';
-      this.bookUploadChaptersCount.textContent = `Найдено глав: ${parsed.chapters.length}`;
-    } catch (err) {
-      e.target.value = '';
-      this._module._showToast(`Ошибка: ${err.message}`);
-      this._resetBookUpload();
-    }
+    await this._processBookFile(file);
+    e.target.value = '';
   }
 
   async _processBookFile(file) {
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    if (!SUPPORTED_FORMATS.includes(ext)) {
+    const supportedFormats = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
+    if (!supportedFormats.includes(ext)) {
       this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
       return;
     }
