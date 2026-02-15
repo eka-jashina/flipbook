@@ -1,7 +1,14 @@
 /**
  * Менеджер загрузки книг
- * Самый простой вариант: видимый <input type="file">,
- * прямая передача File в парсер, сброс input только после парсинга.
+ *
+ * Чтение файла через FileReader (не async file.arrayBuffer()) —
+ * на мобильных Android/iOS File handle из SAF content:// URI
+ * может стать невалидным после микротаска/await.
+ * FileReader.readAsArrayBuffer() инициирует чтение синхронно
+ * в том же вызове event handler, что сохраняет доступ к файлу.
+ *
+ * После буферизации создаётся новый File([buffer], name) —
+ * полностью в памяти, без зависимости от файловой системы.
  */
 
 import { BookParser } from '../BookParser.js';
@@ -29,7 +36,9 @@ export class BookUploadManager {
   }
 
   bindEvents() {
-    this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
+    // Важно: НЕ async-обработчик. FileReader стартует синхронно.
+    this.bookFileInput.addEventListener('change', (e) => this._handleFileChange(e));
+
     this.bookDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
       this.bookDropzone.classList.add('dragover');
@@ -41,39 +50,78 @@ export class BookUploadManager {
       e.preventDefault();
       this.bookDropzone.classList.remove('dragover');
       const file = e.dataTransfer.files[0];
-      if (file) this._processBookFile(file);
+      if (file) this._bufferAndProcess(file);
     });
+
     this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook());
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
   }
 
-  async _handleBookUpload(e) {
+  /**
+   * Обработчик change на input[type=file].
+   * НЕ async — FileReader.readAsArrayBuffer() вызывается синхронно,
+   * в том же стеке что и event handler. Это критично для мобильных
+   * браузеров, где File handle может стать невалидным после await.
+   */
+  _handleFileChange(e) {
     const file = e.target.files[0];
     if (!file) return;
-    await this._processBookFile(file);
-    e.target.value = '';
+    this._bufferAndProcess(file);
   }
 
-  async _processBookFile(file) {
-    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+  /**
+   * Прочитать файл в память через FileReader (синхронный старт),
+   * затем обработать из буфера.
+   */
+  _bufferAndProcess(file) {
+    const fileName = file.name;
+    const fileType = file.type;
+
+    const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
     const supportedFormats = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
     if (!supportedFormats.includes(ext)) {
       this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
       return;
     }
 
-    // НЕ скрываем dropzone до завершения парсинга!
-    // На мобильных: input внутри dropzone, hidden = display:none,
-    // это убивает File handle до того как парсер прочитает файл.
+    // FileReader — старейший и самый совместимый API для чтения файлов.
+    // readAsArrayBuffer() инициируется синхронно в текущем стеке вызовов.
+    // На мобильных браузерах это сохраняет доступ к content:// URI,
+    // который может стать невалидным после await/microtask boundary.
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const buffer = reader.result;
+      // Создаём новый File из буфера — полностью в памяти,
+      // без ссылки на файловую систему / SAF content:// URI.
+      const memoryFile = new File([buffer], fileName, {
+        type: fileType || 'application/octet-stream',
+      });
+      this._processBufferedFile(memoryFile);
+    };
+
+    reader.onerror = () => {
+      const msg = reader.error?.message || 'неизвестная ошибка';
+      this._module._showToast(`Ошибка чтения файла: ${msg}`);
+      this.bookFileInput.value = '';
+    };
+
+    // Старт чтения — синхронный вызов, запускает I/O до выхода из handler
+    reader.readAsArrayBuffer(file);
+  }
+
+  /**
+   * Обработка файла, уже прочитанного в память (File из ArrayBuffer).
+   */
+  async _processBufferedFile(memoryFile) {
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
     this.bookUploadStatus.textContent = 'Обработка файла...';
 
     try {
-      const parsed = await BookParser.parse(file);
+      const parsed = await BookParser.parse(memoryFile);
       this._pendingParsedBook = parsed;
 
-      // Теперь файл прочитан — безопасно скрывать dropzone
       this.bookDropzone.hidden = true;
       this.bookUploadProgress.hidden = true;
       this.bookUploadResult.hidden = false;
@@ -83,6 +131,8 @@ export class BookUploadManager {
     } catch (err) {
       this._module._showToast(`Ошибка: ${err.message}`);
       this._resetBookUpload();
+    } finally {
+      this.bookFileInput.value = '';
     }
   }
 
