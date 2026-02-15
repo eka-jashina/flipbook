@@ -74,6 +74,7 @@ describe('ExportModule', () => {
 
   describe('_exportConfig()', () => {
     it('should export JSON from store and show toast', () => {
+      vi.useFakeTimers();
       const createObjectURL = vi.fn(() => 'blob:url');
       const revokeObjectURL = vi.fn();
       global.URL.createObjectURL = createObjectURL;
@@ -83,8 +84,12 @@ describe('ExportModule', () => {
 
       expect(app.store.exportJSON).toHaveBeenCalled();
       expect(createObjectURL).toHaveBeenCalled();
-      expect(revokeObjectURL).toHaveBeenCalledWith('blob:url');
       expect(app._showToast).toHaveBeenCalledWith('Конфигурация скачана');
+
+      // revokeObjectURL вызывается с задержкой (setTimeout) для мобильных браузеров
+      vi.advanceTimersByTime(200);
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:url');
+      vi.useRealTimers();
     });
   });
 
