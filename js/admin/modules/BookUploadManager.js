@@ -75,12 +75,13 @@ export class BookUploadManager {
   }
 
   bindEvents() {
-    // На Android accept с узкими MIME-типами ограничивает видимые хранилища
-    // в файловом пикере (часто только «Документы»). Сбрасываем на */*,
-    // чтобы пользователь мог выбирать файлы из любого места.
+    // HTML-элемент <input> намеренно без атрибута accept:
+    // на Android любое значение accept (включая */*) может ограничивать
+    // видимые хранилища в файловом пикере (только «Документы»).
+    // На десктопе подставляем конкретные расширения для удобной фильтрации.
     // Валидация формата выполняется в _readAndProcess() по расширению/MIME-типу.
-    if (isAndroidBrowser()) {
-      this.bookFileInput.accept = '*/*';
+    if (!isAndroidBrowser()) {
+      this.bookFileInput.accept = SUPPORTED_BOOK_EXTENSIONS.join(',');
     }
 
     this.bookFileInput.addEventListener('change', (e) => this._handleFileChange(e));
