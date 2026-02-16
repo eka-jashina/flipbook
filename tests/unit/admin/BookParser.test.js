@@ -446,6 +446,18 @@ describe('BookParser', () => {
       expect(result.title).toBe('BOOK');
       expect(result.chapters.length).toBe(1);
     });
+
+    it('should parse file without extension using MIME type', async () => {
+      const buffer = textToBuffer('text content');
+      const result = await BookParser.parse(buffer, 'document', 'text/plain');
+      expect(result.chapters.length).toBe(1);
+    });
+
+    it('should detect fb2 content without extension and MIME type', async () => {
+      const buffer = textToBuffer('<FictionBook><body><section><p>Text</p></section></body></FictionBook>');
+      const result = await BookParser.parse(buffer, 'unknown-file');
+      expect(result.chapters.length).toBeGreaterThan(0);
+    });
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
