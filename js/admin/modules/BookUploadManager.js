@@ -89,6 +89,7 @@ export class BookUploadManager {
     this.bookUploadChaptersCount = document.getElementById('bookUploadChaptersCount');
     this.bookUploadConfirm = document.getElementById('bookUploadConfirm');
     this.bookUploadCancel = document.getElementById('bookUploadCancel');
+    this.bookUploadAndroidHint = document.getElementById('bookUploadAndroidHint');
   }
 
   bindEvents() {
@@ -97,7 +98,9 @@ export class BookUploadManager {
     // видимые хранилища в файловом пикере (только «Документы»).
     // На десктопе подставляем конкретные расширения для удобной фильтрации.
     // Валидация формата выполняется в _readAndProcess() по расширению/MIME-типу.
-    if (!isAndroidBrowser()) {
+    if (isAndroidBrowser()) {
+      if (this.bookUploadAndroidHint) this.bookUploadAndroidHint.hidden = false;
+    } else {
       this.bookFileInput.accept = SUPPORTED_BOOK_EXTENSIONS.join(',');
     }
 
@@ -253,7 +256,7 @@ export class BookUploadManager {
       const message = err?.message || 'неизвестная ошибка';
       const isAndroidDownloadsError = /a file or directory could not be found/i.test(message);
       if (isAndroidDownloadsError) {
-        this._module._showToast('Не удалось получить доступ к файлу из «Загрузок». Попробуйте выбрать через «Файлы»/Google Files, переместить файл в другую папку или переименовать его.');
+        this._module._showToast('Android не даёт доступ к этому файлу. Скопируйте файл в папку «Документы» и выберите его оттуда.');
       } else {
         this._module._showToast(`Ошибка чтения файла: ${message}`);
       }

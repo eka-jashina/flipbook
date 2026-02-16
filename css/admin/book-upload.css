@@ -54,6 +54,11 @@
   margin: 0;
 }
 
+.book-upload-hint--android {
+  color: #b08840;
+  font-style: italic;
+}
+
 .book-upload-progress {
   display: flex;
   flex-direction: column;
