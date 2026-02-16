@@ -8,6 +8,17 @@
 
 import { BookParser } from '../BookParser.js';
 
+const SUPPORTED_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
+const SUPPORTED_MIME_TYPES = new Set([
+  'application/epub+zip',
+  'application/x-fictionbook+xml',
+  'application/xml',
+  'text/xml',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword',
+  'text/plain',
+]);
+
 export class BookUploadManager {
   constructor(chaptersModule) {
     this._module = chaptersModule;
