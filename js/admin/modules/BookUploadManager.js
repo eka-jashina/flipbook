@@ -39,6 +39,13 @@ export class BookUploadManager {
     // Важно: НЕ async-обработчик. FileReader стартует синхронно.
     this.bookFileInput.addEventListener('change', (e) => this._handleFileChange(e));
 
+    // Клик по дропзоне открывает файловый пикер.
+    // На мобильных браузерах opacity:0 overlay может не получать тап-события,
+    // поэтому используем явный click-handler вместо прозрачного оверлея.
+    this.bookDropzone.addEventListener('click', () => {
+      this.bookFileInput.click();
+    });
+
     this.bookDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
       this.bookDropzone.classList.add('dragover');
