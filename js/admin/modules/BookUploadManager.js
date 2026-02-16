@@ -8,16 +8,21 @@
 
 import { BookParser } from '../BookParser.js';
 
-const SUPPORTED_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
-const SUPPORTED_MIME_TYPES = new Set([
-  'application/epub+zip',
-  'application/x-fictionbook+xml',
-  'application/xml',
-  'text/xml',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/msword',
-  'text/plain',
-]);
+const SUPPORTED_BOOK_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
+
+function getExtension(fileName = '') {
+  const dotIndex = fileName.lastIndexOf('.');
+  return dotIndex < 0 ? '' : fileName.slice(dotIndex).toLowerCase();
+}
+
+function hasSupportedHint(fileName = '', mimeType = '') {
+  const ext = getExtension(fileName);
+  if (ext) {
+    return SUPPORTED_BOOK_EXTENSIONS.includes(ext);
+  }
+
+  return Boolean(mimeType);
+}
 
 export class BookUploadManager {
   constructor(chaptersModule) {
@@ -78,6 +83,15 @@ export class BookUploadManager {
    * с конверсией в ArrayBuffer для парсеров.
    */
   async _readAndProcess(file) {
+    const fileName = file?.name || '';
+    const mimeType = file?.type || '';
+
+    if (!hasSupportedHint(fileName, mimeType)) {
+      this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
+      this.bookFileInput.value = '';
+      return;
+    }
+
     let buffer;
     try {
       buffer = await this._readFileAsArrayBuffer(file);
@@ -87,8 +101,8 @@ export class BookUploadManager {
       return;
     }
 
-    const safeFileName = file.name || 'book';
-    this._processBuffer(buffer, safeFileName, file.type || '');
+    const safeFileName = fileName || 'book';
+    this._processBuffer(buffer, safeFileName, mimeType);
   }
 
   /**
