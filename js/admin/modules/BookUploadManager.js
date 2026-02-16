@@ -108,7 +108,10 @@ export class BookUploadManager {
       this.bookNativeImport.addEventListener('click', () => this._pickNativeBook());
     }
 
-    this.bookDropzone.addEventListener('click', () => {
+    this.bookDropzone.addEventListener('click', (e) => {
+      // bookFileInput — дочерний элемент дропзоны; при программном .click()
+      // событие всплывает обратно к дропзоне. Игнорируем, чтобы избежать цикла.
+      if (e.target === this.bookFileInput) return;
       this._openFilePicker();
     });
 
@@ -148,13 +151,20 @@ export class BookUploadManager {
         }
 
         const [handle] = await window.showOpenFilePicker(options);
-        const file = await handle.getFile();
-        this._readAndProcess(file);
+
+        // Пикер сработал — далее не откатываемся на <input>,
+        // чтобы не вызвать повторный цикл открытия пикера.
+        try {
+          const file = await handle.getFile();
+          this._readAndProcess(file);
+        } catch (readErr) {
+          this._module._showToast(`Ошибка чтения файла: ${readErr.message}`);
+        }
         return;
       } catch (err) {
         // Пользователь отменил выбор — ничего не делаем
         if (err.name === 'AbortError') return;
-        // Любая другая ошибка — фоллбэк на <input type="file">
+        // showOpenFilePicker() не сработал — фоллбэк на <input type="file">
       }
     }
 
