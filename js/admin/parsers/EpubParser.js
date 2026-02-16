@@ -10,11 +10,12 @@ import { escapeHtml, parseXml, parseHtml, getTextContent } from './parserUtils.j
 
 /**
  * Парсинг EPUB файла
- * @param {File} file
+ * @param {ArrayBuffer} buffer - Содержимое файла
+ * @param {string} fileName - Имя файла
  * @returns {Promise<import('../BookParser.js').ParsedBook>}
  */
-export async function parseEpub(file) {
-  const zip = await JSZip.loadAsync(file);
+export async function parseEpub(buffer, fileName) {
+  const zip = await JSZip.loadAsync(buffer);
 
   // 1. Найти путь к content.opf через META-INF/container.xml
   const containerXml = await readZipFile(zip, 'META-INF/container.xml');
@@ -31,7 +32,7 @@ export async function parseEpub(file) {
   const opfDoc = parseXml(opfXml);
 
   // Метаданные
-  const title = getTextContent(opfDoc, 'dc\\:title, title') || file.name.replace(/\.epub$/i, '');
+  const title = getTextContent(opfDoc, 'dc\\:title, title') || fileName.replace(/\.epub$/i, '');
   const author = getTextContent(opfDoc, 'dc\\:creator, creator') || '';
 
   // Manifest — карта id → href

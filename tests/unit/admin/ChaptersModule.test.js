@@ -538,9 +538,9 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('book upload', () => {
-    describe('_bufferAndProcess()', () => {
+    describe('_readAndProcess()', () => {
       it('should reject unsupported formats', () => {
-        mod._bookUpload._bufferAndProcess({ name: 'book.pdf' });
+        mod._bookUpload._readAndProcess({ name: 'book.pdf' });
 
         expect(app._showToast).toHaveBeenCalledWith('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
       });

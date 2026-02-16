@@ -1,14 +1,10 @@
 /**
  * Менеджер загрузки книг
  *
- * Чтение файла через FileReader (не async file.arrayBuffer()) —
- * на мобильных Android/iOS File handle из SAF content:// URI
- * может стать невалидным после микротаска/await.
- * FileReader.readAsArrayBuffer() инициирует чтение синхронно
- * в том же вызове event handler, что сохраняет доступ к файлу.
- *
- * После буферизации создаётся новый File([buffer], name) —
- * полностью в памяти, без зависимости от файловой системы.
+ * Механизм чтения файла аналогичен загрузке обложки:
+ * FileReader.readAsArrayBuffer() в синхронном стеке event handler,
+ * результат (ArrayBuffer) передаётся напрямую в парсер.
+ * Никаких промежуточных объектов File не создаётся.
  */
 
 import { BookParser } from '../BookParser.js';
@@ -36,12 +32,8 @@ export class BookUploadManager {
   }
 
   bindEvents() {
-    // Важно: НЕ async-обработчик. FileReader стартует синхронно.
     this.bookFileInput.addEventListener('change', (e) => this._handleFileChange(e));
 
-    // Клик по дропзоне открывает файловый пикер.
-    // На мобильных браузерах opacity:0 overlay может не получать тап-события,
-    // поэтому используем явный click-handler вместо прозрачного оверлея.
     this.bookDropzone.addEventListener('click', () => {
       this.bookFileInput.click();
     });
@@ -57,32 +49,26 @@ export class BookUploadManager {
       e.preventDefault();
       this.bookDropzone.classList.remove('dragover');
       const file = e.dataTransfer.files[0];
-      if (file) this._bufferAndProcess(file);
+      if (file) this._readAndProcess(file);
     });
 
     this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook());
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
   }
 
-  /**
-   * Обработчик change на input[type=file].
-   * НЕ async — FileReader.readAsArrayBuffer() вызывается синхронно,
-   * в том же стеке что и event handler. Это критично для мобильных
-   * браузеров, где File handle может стать невалидным после await.
-   */
   _handleFileChange(e) {
     const file = e.target.files[0];
     if (!file) return;
-    this._bufferAndProcess(file);
+    this._readAndProcess(file);
   }
 
   /**
-   * Прочитать файл в память через FileReader (синхронный старт),
-   * затем обработать из буфера.
+   * Прочитать файл и обработать — аналогично загрузке обложки.
+   * FileReader.readAsArrayBuffer() стартует синхронно в стеке handler,
+   * результат передаётся в парсер напрямую как ArrayBuffer.
    */
-  _bufferAndProcess(file) {
+  _readAndProcess(file) {
     const fileName = file.name;
-    const fileType = file.type;
 
     const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
     const supportedFormats = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
@@ -91,20 +77,10 @@ export class BookUploadManager {
       return;
     }
 
-    // FileReader — старейший и самый совместимый API для чтения файлов.
-    // readAsArrayBuffer() инициируется синхронно в текущем стеке вызовов.
-    // На мобильных браузерах это сохраняет доступ к content:// URI,
-    // который может стать невалидным после await/microtask boundary.
     const reader = new FileReader();
 
     reader.onload = () => {
-      const buffer = reader.result;
-      // Создаём новый File из буфера — полностью в памяти,
-      // без ссылки на файловую систему / SAF content:// URI.
-      const memoryFile = new File([buffer], fileName, {
-        type: fileType || 'application/octet-stream',
-      });
-      this._processBufferedFile(memoryFile);
+      this._processBuffer(reader.result, fileName);
     };
 
     reader.onerror = () => {
@@ -113,20 +89,19 @@ export class BookUploadManager {
       this.bookFileInput.value = '';
     };
 
-    // Старт чтения — синхронный вызов, запускает I/O до выхода из handler
     reader.readAsArrayBuffer(file);
   }
 
   /**
-   * Обработка файла, уже прочитанного в память (File из ArrayBuffer).
+   * Обработка буфера — парсинг и показ результата.
    */
-  async _processBufferedFile(memoryFile) {
+  async _processBuffer(buffer, fileName) {
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
     this.bookUploadStatus.textContent = 'Обработка файла...';
 
     try {
-      const parsed = await BookParser.parse(memoryFile);
+      const parsed = await BookParser.parse(buffer, fileName);
       this._pendingParsedBook = parsed;
 
       this.bookDropzone.hidden = true;

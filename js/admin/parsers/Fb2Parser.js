@@ -9,16 +9,17 @@ import { escapeHtml, parseXml } from './parserUtils.js';
 
 /**
  * Парсинг FB2 файла
- * @param {File} file
+ * @param {ArrayBuffer} buffer - Содержимое файла
+ * @param {string} fileName - Имя файла
  * @returns {Promise<import('../BookParser.js').ParsedBook>}
  */
-export async function parseFb2(file) {
-  const text = await readFileWithEncoding(file);
+export async function parseFb2(buffer, fileName) {
+  const text = decodeWithEncoding(buffer);
   const doc = parseXml(text);
 
   // Метаданные
   const titleInfo = doc.querySelector('title-info');
-  const title = getFb2Text(titleInfo, 'book-title') || file.name.replace(/\.fb2$/i, '');
+  const title = getFb2Text(titleInfo, 'book-title') || fileName.replace(/\.fb2$/i, '');
   const authorFirst = getFb2Text(titleInfo, 'author first-name') || '';
   const authorMiddle = getFb2Text(titleInfo, 'author middle-name') || '';
   const authorLast = getFb2Text(titleInfo, 'author last-name') || '';
@@ -56,12 +57,10 @@ export async function parseFb2(file) {
 // --- Кодировка ---
 
 /**
- * Прочитать файл с автоопределением кодировки из XML-декларации.
- * Многие FB2-файлы используют windows-1251, а file.text() по умолчанию UTF-8.
+ * Декодировать ArrayBuffer с автоопределением кодировки из XML-декларации.
+ * Многие FB2-файлы используют windows-1251, а UTF-8 по умолчанию.
  */
-async function readFileWithEncoding(file) {
-  const buffer = await file.arrayBuffer();
-
+function decodeWithEncoding(buffer) {
   // Считываем первые байты как ASCII для поиска encoding в XML-декларации
   const peekBytes = new Uint8Array(buffer.slice(0, 512));
   const ascii = Array.from(peekBytes, b => String.fromCharCode(b)).join('');
