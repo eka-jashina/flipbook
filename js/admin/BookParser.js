@@ -33,18 +33,19 @@ import { parseDoc } from './parsers/DocParser.js';
 export class BookParser {
   /**
    * Определить формат файла и распарсить
-   * @param {File} file - Загруженный файл
+   * @param {ArrayBuffer} buffer - Содержимое файла
+   * @param {string} fileName - Имя файла (для определения формата)
    * @returns {Promise<ParsedBook>}
    */
-  static async parse(file) {
-    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+  static async parse(buffer, fileName) {
+    const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
 
     switch (ext) {
-      case '.epub': return parseEpub(file);
-      case '.fb2':  return parseFb2(file);
-      case '.txt':  return parseTxt(file);
-      case '.docx': return parseDocx(file);
-      case '.doc':  return parseDoc(file);
+      case '.epub': return parseEpub(buffer, fileName);
+      case '.fb2':  return parseFb2(buffer, fileName);
+      case '.txt':  return parseTxt(buffer, fileName);
+      case '.docx': return parseDocx(buffer, fileName);
+      case '.doc':  return parseDoc(buffer, fileName);
       default:
         throw new Error(`Неподдерживаемый формат: ${ext}. Допустимы .epub, .fb2, .docx, .doc, .txt`);
     }

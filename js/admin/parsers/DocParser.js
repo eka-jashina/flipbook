@@ -9,12 +9,12 @@ import { escapeHtml } from './parserUtils.js';
 
 /**
  * Парсинг DOC файла
- * @param {File} file
+ * @param {ArrayBuffer} buffer - Содержимое файла
+ * @param {string} fileName - Имя файла
  * @returns {Promise<import('../BookParser.js').ParsedBook>}
  */
-export async function parseDoc(file) {
-  const title = file.name.replace(/\.doc$/i, '');
-  const buffer = await file.arrayBuffer();
+export async function parseDoc(buffer, fileName) {
+  const title = fileName.replace(/\.doc$/i, '');
   const text = extractDocText(buffer);
 
   if (!text.trim()) {
