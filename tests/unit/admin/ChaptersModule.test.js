@@ -551,6 +551,61 @@ describe('ChaptersModule', () => {
         globalThis.window.Capacitor = originalCapacitor;
       }
     });
+    describe('_openFilePicker()', () => {
+      afterEach(() => {
+        delete window.showOpenFilePicker;
+      });
+
+      it('should use showOpenFilePicker when available', async () => {
+        const mockFile = new File(['content'], 'book.epub', { type: 'application/epub+zip' });
+        const mockHandle = { getFile: vi.fn().mockResolvedValue(mockFile) };
+        window.showOpenFilePicker = vi.fn().mockResolvedValue([mockHandle]);
+        const processSpy = vi.spyOn(mod._bookUpload, '_readAndProcess').mockResolvedValue(undefined);
+
+        await mod._bookUpload._openFilePicker();
+
+        expect(window.showOpenFilePicker).toHaveBeenCalledWith(
+          expect.objectContaining({ multiple: false }),
+        );
+        expect(processSpy).toHaveBeenCalledWith(mockFile);
+        processSpy.mockRestore();
+      });
+
+      it('should do nothing on AbortError (user cancellation)', async () => {
+        window.showOpenFilePicker = vi.fn().mockRejectedValue(
+          new DOMException('User cancelled', 'AbortError'),
+        );
+        const clickSpy = vi.spyOn(mod._bookUpload.bookFileInput, 'click');
+
+        await mod._bookUpload._openFilePicker();
+
+        expect(clickSpy).not.toHaveBeenCalled();
+        clickSpy.mockRestore();
+      });
+
+      it('should fall back to input.click() on non-AbortError', async () => {
+        window.showOpenFilePicker = vi.fn().mockRejectedValue(
+          new DOMException('Blocked', 'SecurityError'),
+        );
+        const clickSpy = vi.spyOn(mod._bookUpload.bookFileInput, 'click');
+
+        await mod._bookUpload._openFilePicker();
+
+        expect(clickSpy).toHaveBeenCalled();
+        clickSpy.mockRestore();
+      });
+
+      it('should fall back to input.click() when API not available', async () => {
+        delete window.showOpenFilePicker;
+        const clickSpy = vi.spyOn(mod._bookUpload.bookFileInput, 'click');
+
+        await mod._bookUpload._openFilePicker();
+
+        expect(clickSpy).toHaveBeenCalled();
+        clickSpy.mockRestore();
+      });
+    });
+
     describe('_readAndProcess()', () => {
       it('should reject unsupported formats', async () => {
         await mod._bookUpload._readAndProcess({ name: 'book.pdf' });

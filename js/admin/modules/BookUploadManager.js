@@ -37,6 +37,23 @@ function isAndroidBrowser() {
   return /android/i.test(navigator.userAgent);
 }
 
+/**
+ * Типы файлов для showOpenFilePicker() (только десктоп).
+ * На Android types не передаются, чтобы не ограничивать выбор хранилищ.
+ */
+const FILE_PICKER_TYPES = [
+  {
+    description: 'Книги (EPUB, FB2, DOCX, DOC, TXT)',
+    accept: {
+      'application/epub+zip': ['.epub'],
+      'application/x-fictionbook+xml': ['.fb2'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/msword': ['.doc'],
+      'text/plain': ['.txt'],
+    },
+  },
+];
+
 function hasSupportedHint(fileName = '', mimeType = '') {
   const ext = getExtension(fileName);
   if (ext) {
@@ -92,7 +109,7 @@ export class BookUploadManager {
     }
 
     this.bookDropzone.addEventListener('click', () => {
-      this.bookFileInput.click();
+      this._openFilePicker();
     });
 
     this.bookDropzone.addEventListener('dragover', (e) => {
@@ -111,6 +128,37 @@ export class BookUploadManager {
 
     this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook());
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
+  }
+
+  /**
+   * Открыть файловый пикер.
+   * Приоритет: showOpenFilePicker() — полный нативный пикер, решает
+   * проблему Android, где <input type="file"> показывает только «Документы».
+   * Фоллбэк: <input type="file">.click().
+   */
+  async _openFilePicker() {
+    if ('showOpenFilePicker' in window) {
+      try {
+        const options = { multiple: false };
+
+        // На десктопе передаём types для удобной фильтрации,
+        // на Android — нет, чтобы не ограничивать видимые хранилища
+        if (!isAndroidBrowser()) {
+          options.types = FILE_PICKER_TYPES;
+        }
+
+        const [handle] = await window.showOpenFilePicker(options);
+        const file = await handle.getFile();
+        this._readAndProcess(file);
+        return;
+      } catch (err) {
+        // Пользователь отменил выбор — ничего не делаем
+        if (err.name === 'AbortError') return;
+        // Любая другая ошибка — фоллбэк на <input type="file">
+      }
+    }
+
+    this.bookFileInput.click();
   }
 
   _handleFileChange(e) {
