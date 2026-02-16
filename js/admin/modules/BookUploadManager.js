@@ -8,6 +8,22 @@
 
 import { BookParser } from '../BookParser.js';
 
+const SUPPORTED_BOOK_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
+
+function getExtension(fileName = '') {
+  const dotIndex = fileName.lastIndexOf('.');
+  return dotIndex < 0 ? '' : fileName.slice(dotIndex).toLowerCase();
+}
+
+function hasSupportedHint(fileName = '', mimeType = '') {
+  const ext = getExtension(fileName);
+  if (ext) {
+    return SUPPORTED_BOOK_EXTENSIONS.includes(ext);
+  }
+
+  return Boolean(mimeType);
+}
+
 export class BookUploadManager {
   constructor(chaptersModule) {
     this._module = chaptersModule;
@@ -67,12 +83,12 @@ export class BookUploadManager {
    * с конверсией в ArrayBuffer для парсеров.
    */
   async _readAndProcess(file) {
-    const fileName = file.name;
+    const fileName = file?.name || '';
+    const mimeType = file?.type || '';
 
-    const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-    const supportedFormats = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
-    if (!supportedFormats.includes(ext)) {
+    if (!hasSupportedHint(fileName, mimeType)) {
       this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
+      this.bookFileInput.value = '';
       return;
     }
 
@@ -85,7 +101,8 @@ export class BookUploadManager {
       return;
     }
 
-    this._processBuffer(buffer, fileName);
+    const safeFileName = fileName || 'book';
+    this._processBuffer(buffer, safeFileName, mimeType);
   }
 
   /**
@@ -142,13 +159,13 @@ export class BookUploadManager {
   /**
    * Обработка буфера — парсинг и показ результата.
    */
-  async _processBuffer(buffer, fileName) {
+  async _processBuffer(buffer, fileName, mimeType = '') {
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
     this.bookUploadStatus.textContent = 'Обработка файла...';
 
     try {
-      const parsed = await BookParser.parse(buffer, fileName);
+      const parsed = await BookParser.parse(buffer, fileName, mimeType);
       this._pendingParsedBook = parsed;
 
       this.bookDropzone.hidden = true;
