@@ -78,12 +78,6 @@ export class BookUploadManager {
    * с конверсией в ArrayBuffer для парсеров.
    */
   async _readAndProcess(file) {
-    const ext = this._getFileExtension(file.name);
-    if (!this._isSupportedBookFile(file, ext)) {
-      this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
-      return;
-    }
-
     let buffer;
     try {
       buffer = await this._readFileAsArrayBuffer(file);
@@ -93,48 +87,8 @@ export class BookUploadManager {
       return;
     }
 
-    const normalizedFileName = ext ? file.name : this._buildSyntheticFileName(file, ext);
-    this._processBuffer(buffer, normalizedFileName);
-  }
-
-  _getFileExtension(fileName = '') {
-    const dotIndex = fileName.lastIndexOf('.');
-    if (dotIndex < 0) return '';
-    return fileName.substring(dotIndex).toLowerCase();
-  }
-
-  _buildSyntheticFileName(file, ext) {
-    if (ext) return file.name;
-    const fallbackExt = this._mimeToExtension(file.type);
-    const safeBaseName = file.name || 'book';
-    return `${safeBaseName}${fallbackExt}`;
-  }
-
-  _isSupportedBookFile(file, ext) {
-    if (SUPPORTED_EXTENSIONS.includes(ext)) {
-      return true;
-    }
-
-    if (!file.type) {
-      return false;
-    }
-
-    return SUPPORTED_MIME_TYPES.has(file.type.toLowerCase());
-  }
-
-  _mimeToExtension(mimeType = '') {
-    const normalized = mimeType.toLowerCase();
-    const mimeMap = {
-      'application/epub+zip': '.epub',
-      'application/x-fictionbook+xml': '.fb2',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
-      'application/msword': '.doc',
-      'text/plain': '.txt',
-      'application/xml': '.fb2',
-      'text/xml': '.fb2',
-    };
-
-    return mimeMap[normalized] || '.txt';
+    const safeFileName = file.name || 'book';
+    this._processBuffer(buffer, safeFileName, file.type || '');
   }
 
   /**
@@ -191,13 +145,13 @@ export class BookUploadManager {
   /**
    * Обработка буфера — парсинг и показ результата.
    */
-  async _processBuffer(buffer, fileName) {
+  async _processBuffer(buffer, fileName, mimeType = '') {
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
     this.bookUploadStatus.textContent = 'Обработка файла...';
 
     try {
-      const parsed = await BookParser.parse(buffer, fileName);
+      const parsed = await BookParser.parse(buffer, fileName, mimeType);
       this._pendingParsedBook = parsed;
 
       this.bookDropzone.hidden = true;
