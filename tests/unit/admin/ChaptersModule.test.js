@@ -604,6 +604,18 @@ describe('ChaptersModule', () => {
         expect(clickSpy).toHaveBeenCalled();
         clickSpy.mockRestore();
       });
+
+      it('should show toast and not fall back when getFile() fails', async () => {
+        const mockHandle = { getFile: vi.fn().mockRejectedValue(new Error('read error')) };
+        window.showOpenFilePicker = vi.fn().mockResolvedValue([mockHandle]);
+        const clickSpy = vi.spyOn(mod._bookUpload.bookFileInput, 'click');
+
+        await mod._bookUpload._openFilePicker();
+
+        expect(app._showToast).toHaveBeenCalledWith('Ошибка чтения файла: read error');
+        expect(clickSpy).not.toHaveBeenCalled();
+        clickSpy.mockRestore();
+      });
     });
 
     describe('_readAndProcess()', () => {
