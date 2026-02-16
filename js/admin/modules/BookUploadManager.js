@@ -67,15 +67,6 @@ export class BookUploadManager {
    * с конверсией в ArrayBuffer для парсеров.
    */
   async _readAndProcess(file) {
-    const fileName = file.name;
-
-    const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-    const supportedFormats = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
-    if (!supportedFormats.includes(ext)) {
-      this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
-      return;
-    }
-
     let buffer;
     try {
       buffer = await this._readFileAsArrayBuffer(file);
@@ -85,7 +76,8 @@ export class BookUploadManager {
       return;
     }
 
-    this._processBuffer(buffer, fileName);
+    const safeFileName = file.name || 'book';
+    this._processBuffer(buffer, safeFileName, file.type || '');
   }
 
   /**
@@ -142,13 +134,13 @@ export class BookUploadManager {
   /**
    * Обработка буфера — парсинг и показ результата.
    */
-  async _processBuffer(buffer, fileName) {
+  async _processBuffer(buffer, fileName, mimeType = '') {
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
     this.bookUploadStatus.textContent = 'Обработка файла...';
 
     try {
-      const parsed = await BookParser.parse(buffer, fileName);
+      const parsed = await BookParser.parse(buffer, fileName, mimeType);
       this._pendingParsedBook = parsed;
 
       this.bookDropzone.hidden = true;
