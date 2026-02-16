@@ -12,9 +12,29 @@ const NATIVE_BOOK_PLUGIN_NAME = 'BookImport';
 
 const SUPPORTED_BOOK_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
 
+/**
+ * MIME-типы, которые могут соответствовать поддерживаемым форматам книг.
+ * application/octet-stream включён, потому что Android часто присваивает его
+ * файлам .epub, .fb2 и другим нестандартным форматам.
+ */
+const SUPPORTED_BOOK_MIME_TYPES = [
+  'application/epub+zip',
+  'application/x-fictionbook+xml',
+  'application/xml',
+  'text/xml',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword',
+  'text/plain',
+  'application/octet-stream',
+];
+
 function getExtension(fileName = '') {
   const dotIndex = fileName.lastIndexOf('.');
   return dotIndex < 0 ? '' : fileName.slice(dotIndex).toLowerCase();
+}
+
+function isAndroidBrowser() {
+  return /android/i.test(navigator.userAgent);
 }
 
 function hasSupportedHint(fileName = '', mimeType = '') {
@@ -23,7 +43,12 @@ function hasSupportedHint(fileName = '', mimeType = '') {
     return SUPPORTED_BOOK_EXTENSIONS.includes(ext);
   }
 
-  return Boolean(mimeType);
+  // Без расширения — проверяем MIME-тип по списку допустимых
+  if (mimeType) {
+    return SUPPORTED_BOOK_MIME_TYPES.includes(mimeType.toLowerCase());
+  }
+
+  return false;
 }
 
 export class BookUploadManager {
@@ -50,6 +75,14 @@ export class BookUploadManager {
   }
 
   bindEvents() {
+    // На Android accept с узкими MIME-типами ограничивает видимые хранилища
+    // в файловом пикере (часто только «Документы»). Сбрасываем на */*,
+    // чтобы пользователь мог выбирать файлы из любого места.
+    // Валидация формата выполняется в _readAndProcess() по расширению/MIME-типу.
+    if (isAndroidBrowser()) {
+      this.bookFileInput.accept = '*/*';
+    }
+
     this.bookFileInput.addEventListener('change', (e) => this._handleFileChange(e));
 
     if (this.bookNativeImport) {
