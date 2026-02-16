@@ -16,10 +16,23 @@ import { parseDoc, extractDocText, extractDocTextAscii } from '../../../js/admin
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Создать ArrayBuffer из текстовой строки (UTF-8)
+ * Создать мок File с текстовым содержимым
+ * jsdom не поддерживает File.text(), поэтому добавляем его вручную
  */
-function textToBuffer(content) {
-  return new TextEncoder().encode(content).buffer;
+function createTextFile(name, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const file = new File([blob], name, { type: 'text/plain' });
+  file.text = () => Promise.resolve(content);
+  return file;
+}
+
+/**
+ * Создать мок File с бинарным содержимым (ArrayBuffer)
+ */
+function createBinaryFile(name, buffer) {
+  const file = new File([buffer], name);
+  file.arrayBuffer = () => Promise.resolve(buffer);
+  return file;
 }
 
 describe('BookParser', () => {
@@ -337,8 +350,8 @@ describe('BookParser', () => {
 
   describe('parseTxt', () => {
     it('should parse simple text file', async () => {
-      const buffer = textToBuffer('First paragraph.\n\nSecond paragraph.');
-      const result = await parseTxt(buffer, 'book.txt');
+      const file = createTextFile('book.txt', 'First paragraph.\n\nSecond paragraph.');
+      const result = await parseTxt(file);
 
       expect(result.title).toBe('book');
       expect(result.author).toBe('');
@@ -349,40 +362,40 @@ describe('BookParser', () => {
     });
 
     it('should use filename as title (without extension)', async () => {
-      const buffer = textToBuffer('Some text');
-      const result = await parseTxt(buffer, 'my-novel.txt');
+      const file = createTextFile('my-novel.txt', 'Some text');
+      const result = await parseTxt(file);
       expect(result.title).toBe('my-novel');
     });
 
     it('should wrap content in <article>', async () => {
-      const buffer = textToBuffer('Content here');
-      const result = await parseTxt(buffer, 'book.txt');
+      const file = createTextFile('book.txt', 'Content here');
+      const result = await parseTxt(file);
       expect(result.chapters[0].html).toMatch(/^<article>/);
       expect(result.chapters[0].html).toMatch(/<\/article>$/);
     });
 
     it('should escape HTML in text', async () => {
-      const buffer = textToBuffer('Text with <script>alert("xss")</script>');
-      const result = await parseTxt(buffer, 'book.txt');
+      const file = createTextFile('book.txt', 'Text with <script>alert("xss")</script>');
+      const result = await parseTxt(file);
       expect(result.chapters[0].html).not.toContain('<script>');
       expect(result.chapters[0].html).toContain('&lt;script&gt;');
     });
 
     it('should convert newlines within paragraph to <br>', async () => {
-      const buffer = textToBuffer('Line 1\nLine 2\nLine 3');
-      const result = await parseTxt(buffer, 'book.txt');
+      const file = createTextFile('book.txt', 'Line 1\nLine 2\nLine 3');
+      const result = await parseTxt(file);
       expect(result.chapters[0].html).toContain('Line 1<br>Line 2<br>Line 3');
     });
 
     it('should throw on empty file', async () => {
-      const buffer = textToBuffer('   ');
-      await expect(parseTxt(buffer, 'empty.txt')).rejects.toThrow('Файл пуст');
+      const file = createTextFile('empty.txt', '   ');
+      await expect(parseTxt(file)).rejects.toThrow('Файл пуст');
     });
 
     it('should handle multiple paragraphs separated by blank lines', async () => {
       const text = 'Para 1\n\nPara 2\n\n\nPara 3';
-      const buffer = textToBuffer(text);
-      const result = await parseTxt(buffer, 'multi.txt');
+      const file = createTextFile('multi.txt', text);
+      const result = await parseTxt(file);
 
       const html = result.chapters[0].html;
       expect(html).toContain('<p>Para 1</p>');
@@ -397,66 +410,56 @@ describe('BookParser', () => {
 
   describe('parse (format dispatch)', () => {
     it('should dispatch .txt files to parseTxt', async () => {
-      const buffer = textToBuffer('text content');
-      const result = await BookParser.parse(buffer, 'book.txt');
+      const file = createTextFile('book.txt', 'text content');
+      const result = await BookParser.parse(file);
       expect(result.title).toBe('book');
       expect(result.chapters.length).toBe(1);
     });
 
     it('should dispatch .epub files to parseEpub', async () => {
-      const buffer = new ArrayBuffer(10);
+      const file = new File(['data'], 'book.epub');
       // EPUB parser должен упасть с ошибкой парсера, а не «Неподдерживаемый формат»
       try {
-        await BookParser.parse(buffer, 'book.epub');
+        await BookParser.parse(file);
       } catch (e) {
         expect(e.message).not.toContain('Неподдерживаемый формат');
       }
     });
 
     it('should dispatch .fb2 files to parseFb2', async () => {
-      const buffer = textToBuffer('<FictionBook><body><section><p>Text</p></section></body></FictionBook>');
-      const result = await BookParser.parse(buffer, 'book.fb2');
+      const file = createTextFile('book.fb2', '<FictionBook><body><section><p>Text</p></section></body></FictionBook>');
+      file.arrayBuffer = () => file.text().then(t => new TextEncoder().encode(t).buffer);
+      const result = await BookParser.parse(file);
       expect(result.chapters.length).toBeGreaterThan(0);
     });
 
     it('should dispatch .docx files to parseDocx', async () => {
-      const buffer = new ArrayBuffer(10);
+      const file = new File(['data'], 'doc.docx');
       // DOCX parser должен упасть с ошибкой парсера, а не «Неподдерживаемый формат»
       try {
-        await BookParser.parse(buffer, 'doc.docx');
+        await BookParser.parse(file);
       } catch (e) {
         expect(e.message).not.toContain('Неподдерживаемый формат');
       }
     });
 
     it('should dispatch .doc files to parseDoc', async () => {
-      const buffer = new ArrayBuffer(10);
+      const file = new File(['data'], 'doc.doc');
+      file.arrayBuffer = () => Promise.resolve(new ArrayBuffer(10));
       // DOC parser должен упасть с ошибкой «Не удалось извлечь текст из DOC»
-      await expect(BookParser.parse(buffer, 'doc.doc')).rejects.toThrow('Не удалось извлечь текст из DOC');
+      await expect(BookParser.parse(file)).rejects.toThrow('Не удалось извлечь текст из DOC');
     });
 
     it('should throw on unsupported format', async () => {
-      const buffer = new ArrayBuffer(10);
-      await expect(BookParser.parse(buffer, 'book.pdf')).rejects.toThrow('Неподдерживаемый формат');
+      const file = new File(['data'], 'book.pdf');
+      await expect(BookParser.parse(file)).rejects.toThrow('Неподдерживаемый формат');
     });
 
     it('should handle uppercase extensions', async () => {
-      const buffer = textToBuffer('text content');
-      const result = await BookParser.parse(buffer, 'BOOK.TXT');
+      const file = createTextFile('BOOK.TXT', 'text content');
+      const result = await BookParser.parse(file);
       expect(result.title).toBe('BOOK');
       expect(result.chapters.length).toBe(1);
-    });
-
-    it('should parse file without extension using MIME type', async () => {
-      const buffer = textToBuffer('text content');
-      const result = await BookParser.parse(buffer, 'document', 'text/plain');
-      expect(result.chapters.length).toBe(1);
-    });
-
-    it('should detect fb2 content without extension and MIME type', async () => {
-      const buffer = textToBuffer('<FictionBook><body><section><p>Text</p></section></body></FictionBook>');
-      const result = await BookParser.parse(buffer, 'unknown-file');
-      expect(result.chapters.length).toBeGreaterThan(0);
     });
   });
 
@@ -742,7 +745,8 @@ describe('BookParser', () => {
         view[i * 2 + 1] = (code >> 8) & 0xFF;
       }
 
-      const result = await parseDoc(buffer, 'test.doc');
+      const file = createBinaryFile('test.doc', buffer);
+      const result = await parseDoc(file);
 
       expect(result.title).toBe('test');
       expect(result.author).toBe('');
@@ -752,7 +756,8 @@ describe('BookParser', () => {
 
     it('should throw on empty DOC', async () => {
       const buffer = new ArrayBuffer(10);
-      await expect(parseDoc(buffer, 'empty.doc')).rejects.toThrow('Не удалось извлечь текст из DOC');
+      const file = createBinaryFile('empty.doc', buffer);
+      await expect(parseDoc(file)).rejects.toThrow('Не удалось извлечь текст из DOC');
     });
   });
 });

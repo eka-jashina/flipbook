@@ -9,13 +9,12 @@ import { escapeHtml } from './parserUtils.js';
 
 /**
  * Парсинг TXT файла
- * @param {ArrayBuffer} buffer - Содержимое файла
- * @param {string} fileName - Имя файла
+ * @param {File} file
  * @returns {Promise<import('../BookParser.js').ParsedBook>}
  */
-export async function parseTxt(buffer, fileName) {
-  const text = new TextDecoder('utf-8').decode(buffer);
-  const title = fileName.replace(/\.txt$/i, '');
+export async function parseTxt(file) {
+  const text = await file.text();
+  const title = file.name.replace(/\.txt$/i, '');
 
   if (!text.trim()) {
     throw new Error('Файл пуст');

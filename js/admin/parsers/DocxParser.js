@@ -10,13 +10,12 @@ import { escapeHtml, parseXml, getTextContent } from './parserUtils.js';
 
 /**
  * Парсинг DOCX файла
- * @param {ArrayBuffer} buffer - Содержимое файла
- * @param {string} fileName - Имя файла
+ * @param {File} file
  * @returns {Promise<import('../BookParser.js').ParsedBook>}
  */
-export async function parseDocx(buffer, fileName) {
-  const zip = await JSZip.loadAsync(buffer);
-  const title = fileName.replace(/\.docx$/i, '');
+export async function parseDocx(file) {
+  const zip = await JSZip.loadAsync(file);
+  const title = file.name.replace(/\.docx$/i, '');
 
   // Метаданные из docProps/core.xml
   let author = '';
