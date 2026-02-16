@@ -50,6 +50,7 @@ function setupDOM() {
     <div id="bookUploadArea">
       <div id="bookDropzone"></div>
       <input id="bookFileInput" type="file">
+      <button id="bookNativeImport" hidden></button>
       <div id="bookUploadProgress" hidden></div>
       <span id="bookUploadStatus"></span>
       <div id="bookUploadResult" hidden></div>
@@ -538,11 +539,59 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('book upload', () => {
+    const originalCapacitor = globalThis.window?.Capacitor;
+
+    beforeEach(() => {
+      if (!globalThis.window) {
+        globalThis.window = {};
+      }
+      if (originalCapacitor === undefined) {
+        delete globalThis.window.Capacitor;
+      } else {
+        globalThis.window.Capacitor = originalCapacitor;
+      }
+    });
     describe('_readAndProcess()', () => {
       it('should reject unsupported formats', async () => {
         await mod._bookUpload._readAndProcess({ name: 'book.pdf' });
 
         expect(app._showToast).toHaveBeenCalledWith('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
+      });
+    });
+
+
+    describe('_pickNativeBook()', () => {
+      it('should import file via native plugin', async () => {
+        const parseSpy = vi.spyOn(mod._bookUpload, '_processBuffer').mockResolvedValue(undefined);
+        globalThis.window.Capacitor = {
+          isNativePlatform: () => true,
+          Plugins: {
+            BookImport: {
+              pickBook: vi.fn().mockResolvedValue({
+                base64: 'SGVsbG8=',
+                fileName: 'android-book',
+                mimeType: 'text/plain',
+                cancelled: false,
+              }),
+            },
+          },
+        };
+
+        await mod._bookUpload._pickNativeBook();
+
+        expect(parseSpy).toHaveBeenCalledWith(expect.any(ArrayBuffer), 'android-book', 'text/plain');
+        parseSpy.mockRestore();
+      });
+
+      it('should show toast when plugin is missing', async () => {
+        globalThis.window.Capacitor = {
+          isNativePlatform: () => true,
+          Plugins: {},
+        };
+
+        await mod._bookUpload._pickNativeBook();
+
+        expect(app._showToast).toHaveBeenCalledWith('Нативный импорт недоступен: плагин BookImport не найден');
       });
     });
 
