@@ -539,8 +539,8 @@ describe('ChaptersModule', () => {
 
   describe('book upload', () => {
     describe('_readAndProcess()', () => {
-      it('should reject unsupported formats', () => {
-        mod._bookUpload._readAndProcess({ name: 'book.pdf' });
+      it('should reject unsupported formats', async () => {
+        await mod._bookUpload._readAndProcess({ name: 'book.pdf' });
 
         expect(app._showToast).toHaveBeenCalledWith('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
       });
