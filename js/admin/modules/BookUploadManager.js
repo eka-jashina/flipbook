@@ -8,6 +8,17 @@
 
 import { BookParser } from '../BookParser.js';
 
+const SUPPORTED_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
+const SUPPORTED_MIME_TYPES = new Set([
+  'application/epub+zip',
+  'application/x-fictionbook+xml',
+  'application/xml',
+  'text/xml',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword',
+  'text/plain',
+]);
+
 export class BookUploadManager {
   constructor(chaptersModule) {
     this._module = chaptersModule;
@@ -67,11 +78,8 @@ export class BookUploadManager {
    * с конверсией в ArrayBuffer для парсеров.
    */
   async _readAndProcess(file) {
-    const fileName = file.name;
-
-    const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-    const supportedFormats = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
-    if (!supportedFormats.includes(ext)) {
+    const ext = this._getFileExtension(file.name);
+    if (!this._isSupportedBookFile(file, ext)) {
       this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
       return;
     }
@@ -85,7 +93,48 @@ export class BookUploadManager {
       return;
     }
 
-    this._processBuffer(buffer, fileName);
+    const normalizedFileName = ext ? file.name : this._buildSyntheticFileName(file, ext);
+    this._processBuffer(buffer, normalizedFileName);
+  }
+
+  _getFileExtension(fileName = '') {
+    const dotIndex = fileName.lastIndexOf('.');
+    if (dotIndex < 0) return '';
+    return fileName.substring(dotIndex).toLowerCase();
+  }
+
+  _buildSyntheticFileName(file, ext) {
+    if (ext) return file.name;
+    const fallbackExt = this._mimeToExtension(file.type);
+    const safeBaseName = file.name || 'book';
+    return `${safeBaseName}${fallbackExt}`;
+  }
+
+  _isSupportedBookFile(file, ext) {
+    if (SUPPORTED_EXTENSIONS.includes(ext)) {
+      return true;
+    }
+
+    if (!file.type) {
+      return false;
+    }
+
+    return SUPPORTED_MIME_TYPES.has(file.type.toLowerCase());
+  }
+
+  _mimeToExtension(mimeType = '') {
+    const normalized = mimeType.toLowerCase();
+    const mimeMap = {
+      'application/epub+zip': '.epub',
+      'application/x-fictionbook+xml': '.fb2',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+      'application/msword': '.doc',
+      'text/plain': '.txt',
+      'application/xml': '.fb2',
+      'text/xml': '.fb2',
+    };
+
+    return mimeMap[normalized] || '.txt';
   }
 
   /**
