@@ -2,16 +2,9 @@
 
 .book-upload-area {
   margin-top: 12px;
-  position: relative;
 }
 
-/* File input скрыт через .file-input-hidden (base.css).
-   Клик по dropzone программно вызывает input.click() —
-   это надёжнее, чем opacity:0 overlay, который на мобильных
-   браузерах может не получать тап-события. */
-
 .book-upload-dropzone {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -52,11 +45,6 @@
   font-size: 13px;
   color: #a09888;
   margin: 0;
-}
-
-.book-upload-hint--android {
-  color: #b08840;
-  font-style: italic;
 }
 
 .book-upload-progress {

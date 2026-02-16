@@ -144,21 +144,10 @@
                 <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
                   <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
                 </svg>
-                <p class="book-upload-text">Выберите файл</p>
+                <p class="book-upload-text">Перетащите файл сюда или нажмите для выбора</p>
                 <p class="book-upload-hint">Форматы: .epub, .fb2, .docx, .doc, .txt</p>
-                <p class="book-upload-hint book-upload-hint--android" id="bookUploadAndroidHint" hidden>
-                  На Android выбирайте файл из «Документов» или через приложение «Файлы»
-                </p>
-                <input
-                  type="file"
-                  id="bookFileInput"
-                  class="file-input-hidden"
-                >
+                <input type="file" id="bookFileInput" accept=".epub,.fb2,.docx,.doc,.txt" hidden>
               </div>
-
-              <button class="btn btn-secondary" id="bookNativeImport" type="button" hidden>
-                Выбрать через Android
-              </button>
 
               <div class="book-upload-progress" id="bookUploadProgress" hidden>
                 <div class="book-upload-spinner"></div>
@@ -290,7 +279,7 @@
                             <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
                           </svg>
                           Загрузить
-                          <input type="file" id="coverBgFileInput" accept="image/*" class="file-input-hidden">
+                          <input type="file" id="coverBgFileInput" accept="image/*" hidden>
                         </label>
                         <button class="btn btn-small" type="button" id="coverBgRemove" hidden>Удалить</button>
                       </div>
@@ -314,7 +303,7 @@
                       <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
                     </svg>
                     Загрузить шрифт
-                    <input type="file" id="decorativeFontUpload" accept=".woff2,.woff,.ttf,.otf" class="file-input-hidden">
+                    <input type="file" id="decorativeFontUpload" accept=".woff2,.woff,.ttf,.otf" hidden>
                   </label>
                   <div class="decorative-font-info" id="decorativeFontInfo" hidden>
                     <span class="decorative-font-name" id="decorativeFontName"></span>
@@ -389,7 +378,7 @@
                             </svg>
                           </span>
                           <span class="texture-option-label">Своя</span>
-                          <input type="file" id="textureFileInput" accept="image/*" class="file-input-hidden">
+                          <input type="file" id="textureFileInput" accept="image/*" hidden>
                         </label>
                       </div>
                       <div class="texture-custom-info" id="textureCustomInfo" hidden>
@@ -440,7 +429,7 @@
                       <input class="form-input" type="text" id="soundPageFlip" placeholder="sounds/page-flip.mp3">
                       <label class="btn btn-small upload-btn" title="Загрузить файл">
                         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
-                        <input type="file" id="soundPageFlipUpload" accept="audio/*" class="file-input-hidden">
+                        <input type="file" id="soundPageFlipUpload" accept="audio/*" hidden>
                       </label>
                     </div>
                     <span class="form-hint" id="soundPageFlipHint">Дефолт: sounds/page-flip.mp3</span>
@@ -451,7 +440,7 @@
                       <input class="form-input" type="text" id="soundBookOpen" placeholder="sounds/cover-flip.mp3">
                       <label class="btn btn-small upload-btn" title="Загрузить файл">
                         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
-                        <input type="file" id="soundBookOpenUpload" accept="audio/*" class="file-input-hidden">
+                        <input type="file" id="soundBookOpenUpload" accept="audio/*" hidden>
                       </label>
                     </div>
                     <span class="form-hint" id="soundBookOpenHint">Дефолт: sounds/cover-flip.mp3</span>
@@ -462,7 +451,7 @@
                       <input class="form-input" type="text" id="soundBookClose" placeholder="sounds/cover-flip.mp3">
                       <label class="btn btn-small upload-btn" title="Загрузить файл">
                         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
-                        <input type="file" id="soundBookCloseUpload" accept="audio/*" class="file-input-hidden">
+                        <input type="file" id="soundBookCloseUpload" accept="audio/*" hidden>
                       </label>
                     </div>
                     <span class="form-hint" id="soundBookCloseHint">Дефолт: sounds/cover-flip.mp3</span>
@@ -703,7 +692,7 @@
                   <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
                 </svg>
                 Загрузить JSON
-                <input type="file" id="importConfig" accept=".json" class="file-input-hidden">
+                <input type="file" id="importConfig" accept=".json" hidden>
               </label>
             </div>
             <div class="export-card">
@@ -784,7 +773,7 @@
               <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
             </svg>
             <span id="ambientUploadLabel">Выбрать файл</span>
-            <input type="file" id="ambientFileUpload" accept="audio/*" class="file-input-hidden">
+            <input type="file" id="ambientFileUpload" accept="audio/*" hidden>
           </label>
           <span class="form-hint">Макс. 5 МБ. Будет сохранён в конфигурации</span>
         </div>
@@ -811,7 +800,7 @@
               <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
             </svg>
             <span id="readingFontUploadLabel">Выбрать файл</span>
-            <input type="file" id="readingFontFileUpload" accept=".woff2,.woff,.ttf,.otf" class="file-input-hidden">
+            <input type="file" id="readingFontFileUpload" accept=".woff2,.woff,.ttf,.otf" hidden>
           </label>
           <span class="form-hint">Форматы: .woff2, .woff, .ttf, .otf. Макс. 2 МБ</span>
         </div>

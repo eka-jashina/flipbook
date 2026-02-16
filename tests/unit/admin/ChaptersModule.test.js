@@ -50,7 +50,6 @@ function setupDOM() {
     <div id="bookUploadArea">
       <div id="bookDropzone"></div>
       <input id="bookFileInput" type="file">
-      <button id="bookNativeImport" hidden></button>
       <div id="bookUploadProgress" hidden></div>
       <span id="bookUploadStatus"></span>
       <div id="bookUploadResult" hidden></div>
@@ -539,126 +538,11 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('book upload', () => {
-    const originalCapacitor = globalThis.window?.Capacitor;
-
-    beforeEach(() => {
-      if (!globalThis.window) {
-        globalThis.window = {};
-      }
-      if (originalCapacitor === undefined) {
-        delete globalThis.window.Capacitor;
-      } else {
-        globalThis.window.Capacitor = originalCapacitor;
-      }
-    });
-    describe('_openFilePicker()', () => {
-      afterEach(() => {
-        delete window.showOpenFilePicker;
-      });
-
-      it('should use showOpenFilePicker when available', async () => {
-        const mockFile = new File(['content'], 'book.epub', { type: 'application/epub+zip' });
-        const mockHandle = { getFile: vi.fn().mockResolvedValue(mockFile) };
-        window.showOpenFilePicker = vi.fn().mockResolvedValue([mockHandle]);
-        const processSpy = vi.spyOn(mod._bookUpload, '_readAndProcess').mockResolvedValue(undefined);
-
-        await mod._bookUpload._openFilePicker();
-
-        expect(window.showOpenFilePicker).toHaveBeenCalledWith(
-          expect.objectContaining({ multiple: false }),
-        );
-        expect(processSpy).toHaveBeenCalledWith(mockFile);
-        processSpy.mockRestore();
-      });
-
-      it('should do nothing on AbortError (user cancellation)', async () => {
-        window.showOpenFilePicker = vi.fn().mockRejectedValue(
-          new DOMException('User cancelled', 'AbortError'),
-        );
-        const clickSpy = vi.spyOn(mod._bookUpload.bookFileInput, 'click');
-
-        await mod._bookUpload._openFilePicker();
-
-        expect(clickSpy).not.toHaveBeenCalled();
-        clickSpy.mockRestore();
-      });
-
-      it('should fall back to input.click() on non-AbortError', async () => {
-        window.showOpenFilePicker = vi.fn().mockRejectedValue(
-          new DOMException('Blocked', 'SecurityError'),
-        );
-        const clickSpy = vi.spyOn(mod._bookUpload.bookFileInput, 'click');
-
-        await mod._bookUpload._openFilePicker();
-
-        expect(clickSpy).toHaveBeenCalled();
-        clickSpy.mockRestore();
-      });
-
-      it('should fall back to input.click() when API not available', async () => {
-        delete window.showOpenFilePicker;
-        const clickSpy = vi.spyOn(mod._bookUpload.bookFileInput, 'click');
-
-        await mod._bookUpload._openFilePicker();
-
-        expect(clickSpy).toHaveBeenCalled();
-        clickSpy.mockRestore();
-      });
-
-      it('should show toast and not fall back when getFile() fails', async () => {
-        const mockHandle = { getFile: vi.fn().mockRejectedValue(new Error('read error')) };
-        window.showOpenFilePicker = vi.fn().mockResolvedValue([mockHandle]);
-        const clickSpy = vi.spyOn(mod._bookUpload.bookFileInput, 'click');
-
-        await mod._bookUpload._openFilePicker();
-
-        expect(app._showToast).toHaveBeenCalledWith('Ошибка чтения файла: read error');
-        expect(clickSpy).not.toHaveBeenCalled();
-        clickSpy.mockRestore();
-      });
-    });
-
-    describe('_readAndProcess()', () => {
+    describe('_processBookFile()', () => {
       it('should reject unsupported formats', async () => {
-        await mod._bookUpload._readAndProcess({ name: 'book.pdf' });
+        await mod._bookUpload._processBookFile({ name: 'book.pdf' });
 
         expect(app._showToast).toHaveBeenCalledWith('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
-      });
-    });
-
-
-    describe('_pickNativeBook()', () => {
-      it('should import file via native plugin', async () => {
-        const parseSpy = vi.spyOn(mod._bookUpload, '_processBuffer').mockResolvedValue(undefined);
-        globalThis.window.Capacitor = {
-          isNativePlatform: () => true,
-          Plugins: {
-            BookImport: {
-              pickBook: vi.fn().mockResolvedValue({
-                base64: 'SGVsbG8=',
-                fileName: 'android-book',
-                mimeType: 'text/plain',
-                cancelled: false,
-              }),
-            },
-          },
-        };
-
-        await mod._bookUpload._pickNativeBook();
-
-        expect(parseSpy).toHaveBeenCalledWith(expect.any(ArrayBuffer), 'android-book', 'text/plain');
-        parseSpy.mockRestore();
-      });
-
-      it('should show toast when plugin is missing', async () => {
-        globalThis.window.Capacitor = {
-          isNativePlatform: () => true,
-          Plugins: {},
-        };
-
-        await mod._bookUpload._pickNativeBook();
-
-        expect(app._showToast).toHaveBeenCalledWith('Нативный импорт недоступен: плагин BookImport не найден');
       });
     });
 

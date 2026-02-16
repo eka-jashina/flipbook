@@ -32,20 +32,12 @@ export class ExportModule extends BaseModule {
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
-    // Элемент ДОЛЖЕН быть в DOM — на мобильных браузерах (iOS Safari, Android Chrome)
-    // .click() на элементе вне DOM не инициирует скачивание.
-    // URL.revokeObjectURL вызывается с задержкой, чтобы скачивание успело начаться.
     const a = document.createElement('a');
     a.href = url;
     a.download = 'flipbook-config.json';
-    a.style.display = 'none';
-    document.body.appendChild(a);
     a.click();
 
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 150);
+    URL.revokeObjectURL(url);
     this._showToast('Конфигурация скачана');
   }
 
