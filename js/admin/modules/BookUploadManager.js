@@ -8,6 +8,8 @@
 
 import { BookParser } from '../BookParser.js';
 
+const NATIVE_BOOK_PLUGIN_NAME = 'BookImport';
+
 const SUPPORTED_BOOK_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
 
 function getExtension(fileName = '') {
@@ -36,6 +38,7 @@ export class BookUploadManager {
     this.bookUploadArea = document.getElementById('bookUploadArea');
     this.bookDropzone = document.getElementById('bookDropzone');
     this.bookFileInput = document.getElementById('bookFileInput');
+    this.bookNativeImport = document.getElementById('bookNativeImport');
     this.bookUploadProgress = document.getElementById('bookUploadProgress');
     this.bookUploadStatus = document.getElementById('bookUploadStatus');
     this.bookUploadResult = document.getElementById('bookUploadResult');
@@ -48,6 +51,11 @@ export class BookUploadManager {
 
   bindEvents() {
     this.bookFileInput.addEventListener('change', (e) => this._handleFileChange(e));
+
+    if (this.bookNativeImport) {
+      this.bookNativeImport.hidden = !this._isNativeCapacitorPlatform();
+      this.bookNativeImport.addEventListener('click', () => this._pickNativeBook());
+    }
 
     this.bookDropzone.addEventListener('click', () => {
       this.bookFileInput.click();
@@ -75,6 +83,60 @@ export class BookUploadManager {
     const file = e.target.files[0];
     if (!file) return;
     this._readAndProcess(file);
+  }
+
+  _isNativeCapacitorPlatform() {
+    const capacitor = window?.Capacitor;
+    return Boolean(capacitor?.isNativePlatform?.());
+  }
+
+  _getNativeBookImportPlugin() {
+    const capacitor = window?.Capacitor;
+    return capacitor?.Plugins?.[NATIVE_BOOK_PLUGIN_NAME] || null;
+  }
+
+  async _pickNativeBook() {
+    const plugin = this._getNativeBookImportPlugin();
+    if (!plugin?.pickBook) {
+      this._module._showToast('Нативный импорт недоступен: плагин BookImport не найден');
+      return;
+    }
+
+    this.bookUploadProgress.hidden = false;
+    this.bookUploadResult.hidden = true;
+    this.bookUploadStatus.textContent = 'Выбор файла...';
+
+    try {
+      const result = await plugin.pickBook();
+      if (!result || result.cancelled) {
+        this.bookUploadProgress.hidden = true;
+        return;
+      }
+
+      const base64 = String(result.base64 || '');
+      if (!base64) {
+        throw new Error('Пустой ответ плагина: отсутствует base64');
+      }
+
+      const fileName = result.fileName || 'book';
+      const mimeType = result.mimeType || '';
+      const buffer = this._base64ToArrayBuffer(base64);
+      await this._processBuffer(buffer, fileName, mimeType);
+    } catch (err) {
+      const message = err?.message || 'неизвестная ошибка';
+      this._module._showToast(`Ошибка нативного импорта: ${message}`);
+      this._resetBookUpload();
+    }
+  }
+
+  _base64ToArrayBuffer(base64Value) {
+    const normalized = String(base64Value || '').replace(/\s/g, '');
+    const binaryString = atob(normalized);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
   }
 
   /**
