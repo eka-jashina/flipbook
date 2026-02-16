@@ -1,11 +1,9 @@
 /**
  * Менеджер загрузки книг
  *
- * Чтение файла выполняется через цепочку fallback'ов для надёжной работы
- * на мобильных устройствах (Android content:// URI из «Загрузок»):
- * 1) file.arrayBuffer() — современный Blob API
- * 2) URL.createObjectURL + fetch — обходной путь через Blob URL
- * 3) FileReader.readAsArrayBuffer — классический вариант
+ * Чтение файла выполняется через FileReader.readAsDataURL() —
+ * этот метод наиболее совместим с Android content:// URI (файлы из «Загрузок»).
+ * Data URL затем конвертируется в ArrayBuffer для передачи в парсер.
  */
 
 import { BookParser } from '../BookParser.js';
@@ -65,7 +63,8 @@ export class BookUploadManager {
 
   /**
    * Прочитать файл и обработать.
-   * Использует цепочку fallback'ов для надёжного чтения на мобильных устройствах.
+   * Использует readAsDataURL (совместим с Android content:// URI)
+   * с конверсией в ArrayBuffer для парсеров.
    */
   async _readAndProcess(file) {
     const fileName = file.name;
@@ -90,32 +89,48 @@ export class BookUploadManager {
   }
 
   /**
-   * Прочитать файл как ArrayBuffer с fallback для мобильных устройств.
-   * На Android FileReader может не справиться с content:// URI для файлов
-   * из «Загрузок», поэтому используем цепочку fallback'ов.
+   * Прочитать файл как ArrayBuffer.
+   *
+   * На Android FileReader.readAsArrayBuffer() может не справиться с content:// URI
+   * для файлов из «Загрузок» (NotFoundError). При этом readAsDataURL() работает —
+   * его используют все остальные модули админки (шрифты, звуки, изображения).
+   *
+   * Стратегия:
+   * 1) readAsDataURL → base64 → ArrayBuffer (наиболее совместимый на Android)
+   * 2) file.arrayBuffer() — современный Blob API (fallback)
+   * 3) readAsArrayBuffer — классический вариант (fallback)
+   *
    * @param {File} file
    * @returns {Promise<ArrayBuffer>}
    */
   async _readFileAsArrayBuffer(file) {
-    // 1) Современный API: Blob.arrayBuffer()
+    // 1) readAsDataURL → конвертация в ArrayBuffer
+    //    Наиболее совместимый способ на Android для файлов из «Загрузок»
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error('Не удалось прочитать файл'));
+        reader.readAsDataURL(file);
+      });
+      // data:[<mediatype>][;base64],<data>
+      const base64 = dataUrl.split(',')[1];
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes.buffer;
+    } catch { /* fallback */ }
+
+    // 2) Современный API: Blob.arrayBuffer()
     if (typeof file.arrayBuffer === 'function') {
       try {
         return await file.arrayBuffer();
       } catch { /* fallback */ }
     }
 
-    // 2) Обходной путь: blob URL + fetch (другой путь чтения в браузере)
-    if (typeof URL.createObjectURL === 'function') {
-      const url = URL.createObjectURL(file);
-      try {
-        const response = await fetch(url);
-        return await response.arrayBuffer();
-      } catch { /* fallback */ } finally {
-        URL.revokeObjectURL(url);
-      }
-    }
-
-    // 3) FileReader как последний вариант
+    // 3) FileReader.readAsArrayBuffer как последний вариант
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
