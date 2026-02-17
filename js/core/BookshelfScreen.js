@@ -383,9 +383,8 @@ export class BookshelfScreen {
         break;
 
       case 'edit':
-        // Устанавливаем активную книгу и переходим в редактор
-        this._setAdminActiveBook(bookId);
         sessionStorage.setItem('flipbook-admin-mode', 'edit');
+        sessionStorage.setItem('flipbook-admin-edit-book', bookId);
         window.location.href = `${import.meta.env.BASE_URL || '/'}admin.html`;
         break;
 
@@ -393,20 +392,6 @@ export class BookshelfScreen {
         this._deleteBook(bookId);
         break;
     }
-  }
-
-  /**
-   * Установить activeBookId в админ-конфиге (без перезагрузки ридера)
-   * @private
-   */
-  _setAdminActiveBook(bookId) {
-    try {
-      const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-      if (!raw) return;
-      const config = JSON.parse(raw);
-      config.activeBookId = bookId;
-      localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
-    } catch { /* игнорируем */ }
   }
 
   /**

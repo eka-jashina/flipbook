@@ -157,11 +157,15 @@ class AdminApp {
       case 'upload':
         this._showView('upload');
         break;
-      case 'edit':
-        // Открыть редактор для текущей активной книги
+      case 'edit': {
+        // Открыть редактор для указанной книги
+        const editBookId = sessionStorage.getItem('flipbook-admin-edit-book');
+        sessionStorage.removeItem('flipbook-admin-edit-book');
+        if (editBookId) this.store.setActiveBook(editBookId);
         this._render();
         this.openEditor();
         break;
+      }
       case 'manual': {
         // Создать новую пустую книгу и открыть редактор
         const bookId = `book_${Date.now()}`;
