@@ -41,6 +41,8 @@ public class BookImportPlugin extends Plugin {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                 "application/epub+zip",
                 "application/x-fictionbook+xml",
@@ -77,6 +79,8 @@ public class BookImportPlugin extends Plugin {
         }
 
         try {
+            takeReadPermissionIfAvailable(uri, result.getData());
+
             String fileName = getFileName(uri);
             String mimeType = getContext().getContentResolver().getType(uri);
             if (mimeType == null) {
@@ -100,17 +104,46 @@ public class BookImportPlugin extends Plugin {
     }
 
     /**
+     * Зафиксировать доступ к Uri, если провайдер это поддерживает.
+     */
+    private void takeReadPermissionIfAvailable(Uri uri, Intent resultData) {
+        int grantedFlags = resultData.getFlags() &
+                (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+
+        if ((grantedFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION) == 0) {
+            return;
+        }
+
+        try {
+            getContext().getContentResolver().takePersistableUriPermission(
+                    uri,
+                    grantedFlags & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            );
+        } catch (SecurityException ignored) {
+            // Не все провайдеры поддерживают persistable-права — временного доступа достаточно.
+        }
+    }
+
+    /**
      * Получить имя файла из Uri через ContentResolver.
      */
     private String getFileName(Uri uri) {
         String name = "book";
-        try (Cursor cursor = getContext().getContentResolver().query(
-                uri, null, null, null, null)) {
-            if (cursor != null && cursor.moveToFirst()) {
-                int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                if (nameIndex >= 0) {
-                    name = cursor.getString(nameIndex);
+        try {
+            try (Cursor cursor = getContext().getContentResolver().query(
+                    uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex >= 0) {
+                        name = cursor.getString(nameIndex);
+                    }
                 }
+            }
+        } catch (SecurityException ignored) {
+            // Некоторые провайдеры могут запретить query(), даже если чтение через InputStream доступно.
+            String pathSegment = uri.getLastPathSegment();
+            if (pathSegment != null && !pathSegment.isBlank()) {
+                name = pathSegment;
             }
         }
         return name;
