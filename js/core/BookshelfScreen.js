@@ -202,7 +202,7 @@ export class BookshelfScreen {
           <p class="bookshelf-mode-desc">Выберите способ — вы всегда сможете отредактировать результат</p>
         </div>
         <div class="bookshelf-mode-cards">
-          <a href="admin.html?mode=upload" class="bookshelf-mode-card">
+          <button type="button" class="bookshelf-mode-card" data-mode="upload">
             <div class="bookshelf-mode-card-icon">
               <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
                 <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
@@ -210,8 +210,8 @@ export class BookshelfScreen {
             </div>
             <div class="bookshelf-mode-card-title">Загрузить файл</div>
             <div class="bookshelf-mode-card-desc">EPUB, FB2, DOCX, DOC, TXT — автоматическое извлечение глав</div>
-          </a>
-          <a href="admin.html?mode=manual" class="bookshelf-mode-card">
+          </button>
+          <button type="button" class="bookshelf-mode-card" data-mode="manual">
             <div class="bookshelf-mode-card-icon">
               <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
                 <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
@@ -219,8 +219,8 @@ export class BookshelfScreen {
             </div>
             <div class="bookshelf-mode-card-title">Создать вручную</div>
             <div class="bookshelf-mode-card-desc">Обложка, главы, фоны — полный контроль</div>
-          </a>
-          <a href="admin.html?mode=album" class="bookshelf-mode-card">
+          </button>
+          <button type="button" class="bookshelf-mode-card" data-mode="album">
             <div class="bookshelf-mode-card-icon">
               <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
                 <path fill="currentColor" d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/>
@@ -228,7 +228,7 @@ export class BookshelfScreen {
             </div>
             <div class="bookshelf-mode-card-title">Фотоальбом</div>
             <div class="bookshelf-mode-card-desc">Раскладки, фото, подписи — визуальный редактор</div>
-          </a>
+          </button>
         </div>
       </div>
     `;
@@ -266,6 +266,15 @@ export class BookshelfScreen {
     const backBtn = e.target.closest('[data-action="back-to-shelf"]');
     if (backBtn) {
       this._toggleModeSelector(false);
+      return;
+    }
+
+    // Карточка режима создания книги
+    const modeCard = e.target.closest('[data-mode]');
+    if (modeCard) {
+      const mode = modeCard.dataset.mode;
+      sessionStorage.setItem('flipbook-admin-mode', mode);
+      window.location.href = `${import.meta.env.BASE_URL || '/'}admin.html`;
       return;
     }
 
