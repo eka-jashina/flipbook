@@ -15,9 +15,11 @@ import mobileBackgrounds from './vite-plugin-mobile-backgrounds.js';
  */
 
 export default defineConfig(({ command, mode }) => {
-  // Определяем base path для GitHub Pages
-  // Измените 'flipbook' на название вашего репозитория
-  const base = mode === 'production' ? '/flipbook/' : '/';
+  // Определяем base path:
+  // - production: '/flipbook/' (GitHub Pages)
+  // - capacitor: './' (локальные файлы в WebView)
+  // - development: '/'
+  const base = mode === 'capacitor' ? './' : mode === 'production' ? '/flipbook/' : '/';
 
   return {
     base,

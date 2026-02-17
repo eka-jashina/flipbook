@@ -109,6 +109,21 @@
   flex-shrink: 0;
 }
 
+/* Кнопка нативного выбора файла (Capacitor / Android) */
+
+.book-upload-native-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 18px 24px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 12px;
+}
+
 @media (max-width: 768px) {
   .book-upload-result {
     flex-direction: column;
