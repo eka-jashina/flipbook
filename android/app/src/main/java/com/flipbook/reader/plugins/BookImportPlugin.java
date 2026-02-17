@@ -51,7 +51,9 @@ public class BookImportPlugin extends Plugin {
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 "application/msword",
                 "text/plain",
-                "application/octet-stream"
+                "application/octet-stream",
+                "application/zip",
+                "application/x-zip-compressed"
         });
 
         startActivityForResult(call, intent, "pickFileResult");
@@ -82,10 +84,7 @@ public class BookImportPlugin extends Plugin {
             takeReadPermissionIfAvailable(uri, result.getData());
 
             String fileName = getFileName(uri);
-            String mimeType = getContext().getContentResolver().getType(uri);
-            if (mimeType == null) {
-                mimeType = "";
-            }
+            String mimeType = getMimeType(uri);
 
             byte[] bytes = readFileBytes(uri);
 
@@ -128,25 +127,53 @@ public class BookImportPlugin extends Plugin {
      * Получить имя файла из Uri через ContentResolver.
      */
     private String getFileName(Uri uri) {
-        String name = "book";
-        try {
-            try (Cursor cursor = getContext().getContentResolver().query(
-                    uri, null, null, null, null)) {
-                if (cursor != null && cursor.moveToFirst()) {
-                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                    if (nameIndex >= 0) {
-                        name = cursor.getString(nameIndex);
+        String fallbackName = getFallbackName(uri);
+
+        try (Cursor cursor = getContext().getContentResolver().query(
+                uri,
+                new String[]{OpenableColumns.DISPLAY_NAME},
+                null,
+                null,
+                null
+        )) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (nameIndex >= 0) {
+                    String name = cursor.getString(nameIndex);
+                    if (name != null && !name.isBlank()) {
+                        return name;
                     }
                 }
             }
-        } catch (SecurityException ignored) {
-            // Некоторые провайдеры могут запретить query(), даже если чтение через InputStream доступно.
-            String pathSegment = uri.getLastPathSegment();
-            if (pathSegment != null && !pathSegment.isBlank()) {
-                name = pathSegment;
-            }
+        } catch (Exception ignored) {
+            // Некоторые провайдеры могут запретить query() или не отдавать метаданные.
         }
-        return name;
+
+        return fallbackName;
+    }
+
+    /**
+     * Получить MIME-тип безопасно: не ронять импорт, если провайдер не отдает тип.
+     */
+    private String getMimeType(Uri uri) {
+        try {
+            String mimeType = getContext().getContentResolver().getType(uri);
+            return mimeType == null ? "" : mimeType;
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    /**
+     * Резервное имя на случай недоступных метаданных.
+     */
+    private String getFallbackName(Uri uri) {
+        String pathSegment = uri.getLastPathSegment();
+        if (pathSegment != null && !pathSegment.isBlank()) {
+            return pathSegment;
+        }
+
+        return "book";
     }
 
     /**
