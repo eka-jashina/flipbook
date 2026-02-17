@@ -40,7 +40,8 @@ public class BookImportPlugin extends Plugin {
 
     @PluginMethod()
     public void pickFile(PluginCall call) {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        // ACTION_GET_CONTENT на ряде устройств Samsung стабильнее отдает временный доступ к файлам из "Загрузки".
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
