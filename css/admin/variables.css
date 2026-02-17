@@ -1,16 +1,16 @@
-/* Админ-панель — переменные */
+/* Личный кабинет — переменные */
 
 :root {
-  --admin-bg: #f5f5f7;
-  --admin-surface: #fff;
-  --admin-border: #e0e0e0;
-  --admin-text: #1d1d1f;
-  --admin-text-secondary: #6e6e73;
-  --admin-primary: #007aff;
-  --admin-primary-hover: #0062cc;
-  --admin-danger: #ff3b30;
-  --admin-danger-hover: #d63029;
-  --admin-success: #34c759;
+  --admin-bg: #f0ebe4;
+  --admin-surface: #faf7f2;
+  --admin-border: #d4cbbf;
+  --admin-text: #2c2418;
+  --admin-text-secondary: #7a6e5f;
+  --admin-primary: #6b5340;
+  --admin-primary-hover: #55412f;
+  --admin-danger: #b44a3e;
+  --admin-danger-hover: #943a30;
+  --admin-success: #5a8a5e;
   --admin-radius: 12px;
   --admin-radius-sm: 8px;
   --admin-shadow: 0 1px 3px rgb(0, 0, 0, 0.08);

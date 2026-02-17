@@ -1,4 +1,4 @@
-/* Админ-панель — сброс и базовые стили */
+/* Личный кабинет — сброс и базовые стили */
 
 *,
 *::before,
@@ -18,8 +18,9 @@ body {
 
 /* === Хедер === */
 .admin-header {
-  background: var(--admin-surface);
-  border-bottom: 1px solid var(--admin-border);
+  background: #3a2d1f;
+  color: #e8dcc8;
+  border-bottom: none;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -37,6 +38,7 @@ body {
 .admin-logo {
   font-size: 20px;
   font-weight: 700;
+  color: #e8dcc8;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -47,8 +49,8 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: var(--admin-primary);
-  color: white;
+  background: rgb(255, 255, 255, 0.15);
+  color: #e8dcc8;
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -57,7 +59,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--admin-primary);
+  color: #e8dcc8;
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;

@@ -42,7 +42,7 @@
 
 .album-layout-btn.active {
   border-color: var(--admin-primary);
-  box-shadow: 0 0 0 2px rgb(0, 122, 255, 0.2);
+  box-shadow: 0 0 0 2px rgb(107, 83, 64, 0.25);
 }
 
 .album-layout-label {
@@ -123,7 +123,7 @@
 
 .album-image-slot:hover {
   border-color: var(--admin-primary);
-  background: rgb(0, 122, 255, 0.04);
+  background: rgb(107, 83, 64, 0.06);
 }
 
 .album-image-slot.has-image {
