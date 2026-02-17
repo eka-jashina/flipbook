@@ -24,6 +24,11 @@ export default defineConfig(({ command, mode }) => {
   return {
     base,
 
+    define: {
+      // Флаг для условного импорта PWA в рантайме
+      'import.meta.env.VITE_CAPACITOR': JSON.stringify(mode === 'capacitor'),
+    },
+
     server: {
       port: 3000,
       open: true,
@@ -65,6 +70,8 @@ export default defineConfig(({ command, mode }) => {
       },
 
       rollupOptions: {
+        // В capacitor-режиме virtual:pwa-register недоступен (плагин отключён)
+        ...(mode === 'capacitor' ? { external: ['virtual:pwa-register'] } : {}),
         input: {
           main: resolve(__dirname, 'index.html'),
           admin: resolve(__dirname, 'admin.html'),
