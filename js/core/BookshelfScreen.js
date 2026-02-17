@@ -10,6 +10,22 @@
 const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
 const BOOKS_PER_SHELF = 5;
 
+// Дефолтная книга для полки (когда нет конфига в localStorage)
+const DEFAULT_BOOKSHELF_BOOK = {
+  id: 'default',
+  cover: {
+    title: 'О хоббитах',
+    author: 'Дж.Р.Р.Толкин',
+  },
+  appearance: {
+    light: {
+      coverBgStart: '#3a2d1f',
+      coverBgEnd: '#2a2016',
+      coverText: '#f2e9d8',
+    },
+  },
+};
+
 export class BookshelfScreen {
   /**
    * @param {Object} options
@@ -191,9 +207,7 @@ export class BookshelfScreen {
   _saveActiveBook(bookId) {
     try {
       const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-      if (!raw) return;
-
-      const config = JSON.parse(raw);
+      const config = raw ? JSON.parse(raw) : { books: [] };
       config.activeBookId = bookId;
       localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
     } catch {
@@ -231,7 +245,7 @@ export class BookshelfScreen {
 export function getBookshelfData() {
   try {
     const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-    if (!raw) return { shouldShow: true, books: [] };
+    if (!raw) return { shouldShow: true, books: [DEFAULT_BOOKSHELF_BOOK] };
 
     const config = JSON.parse(raw);
     const books = Array.isArray(config.books) ? config.books : [];
@@ -244,7 +258,7 @@ export function getBookshelfData() {
       books,
     };
   } catch {
-    return { shouldShow: true, books: [] };
+    return { shouldShow: true, books: [DEFAULT_BOOKSHELF_BOOK] };
   }
 }
 
