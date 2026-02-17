@@ -335,6 +335,10 @@
   flex-shrink: 0;
 }
 
+.bookshelf-book-menu[hidden] {
+  display: none;
+}
+
 .bookshelf-book-menu {
   position: absolute;
   top: 50%;
