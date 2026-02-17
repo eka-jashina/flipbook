@@ -1,0 +1,8 @@
+{
+  "appId": "com.flipbook.reader",
+  "appName": "Flipbook",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

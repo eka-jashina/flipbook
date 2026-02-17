@@ -1,7 +1,10 @@
 /**
  * Менеджер загрузки книг
  * Обрабатывает загрузку файлов (EPUB, FB2, DOCX, DOC, TXT),
- * парсинг через BookParser и добавление книги в store
+ * парсинг через BookParser и добавление книги в store.
+ *
+ * В Capacitor (Android) использует нативный плагин BookImport
+ * для выбора файла через SAF, обходя ограничения Scoped Storage.
  */
 
 import { BookParser } from '../BookParser.js';
@@ -13,6 +16,15 @@ export class BookUploadManager {
   }
 
   get store() { return this._module.store; }
+
+  /**
+   * Проверка: работаем ли внутри Capacitor на нативной платформе
+   */
+  static get isNative() {
+    return typeof window !== 'undefined'
+      && window.Capacitor
+      && window.Capacitor.isNativePlatform();
+  }
 
   cacheDOM() {
     this.bookUploadArea = document.getElementById('bookUploadArea');
@@ -26,6 +38,8 @@ export class BookUploadManager {
     this.bookUploadChaptersCount = document.getElementById('bookUploadChaptersCount');
     this.bookUploadConfirm = document.getElementById('bookUploadConfirm');
     this.bookUploadCancel = document.getElementById('bookUploadCancel');
+
+    this._injectNativeButton();
   }
 
   bindEvents() {
@@ -46,6 +60,62 @@ export class BookUploadManager {
     });
     this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook());
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
+
+    if (this._nativePickBtn) {
+      this._nativePickBtn.addEventListener('click', () => this._pickFileNative());
+    }
+  }
+
+  /**
+   * Вставляет кнопку нативного выбора файла, если запущено в Capacitor
+   */
+  _injectNativeButton() {
+    if (!BookUploadManager.isNative || !this.bookUploadArea) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-primary book-upload-native-btn';
+    btn.innerHTML =
+      '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">' +
+      '<path fill="currentColor" d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/>' +
+      '</svg> Выбрать файл из памяти';
+
+    // Вставляем перед dropzone
+    this.bookUploadArea.insertBefore(btn, this.bookDropzone);
+    this._nativePickBtn = btn;
+
+    // Прячем стандартный dropzone (drag&drop не работает в WebView)
+    this.bookDropzone.hidden = true;
+  }
+
+  /**
+   * Выбор файла через нативный плагин BookImport (SAF)
+   */
+  async _pickFileNative() {
+    try {
+      const BookImport = window.Capacitor.Plugins.BookImport;
+      const result = await BookImport.pickFile();
+
+      if (result.cancelled) return;
+
+      const { base64, fileName, mimeType } = result;
+      const file = this._base64ToFile(base64, fileName, mimeType);
+      await this._processBookFile(file);
+    } catch (err) {
+      this._module._showToast(`Ошибка выбора файла: ${err.message}`);
+    }
+  }
+
+  /**
+   * Конвертация base64-строки в объект File
+   */
+  _base64ToFile(base64, fileName, mimeType) {
+    const binaryStr = atob(base64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    return new File([bytes], fileName, { type: mimeType || 'application/octet-stream' });
   }
 
   _handleBookUpload(e) {
@@ -63,6 +133,7 @@ export class BookUploadManager {
       return;
     }
 
+    if (this._nativePickBtn) this._nativePickBtn.hidden = true;
     this.bookDropzone.hidden = true;
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
@@ -129,7 +200,8 @@ export class BookUploadManager {
 
   _resetBookUpload() {
     this._pendingParsedBook = null;
-    this.bookDropzone.hidden = false;
+    if (this._nativePickBtn) this._nativePickBtn.hidden = false;
+    this.bookDropzone.hidden = BookUploadManager.isNative;
     this.bookUploadProgress.hidden = true;
     this.bookUploadResult.hidden = true;
   }
