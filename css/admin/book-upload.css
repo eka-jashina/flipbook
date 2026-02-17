@@ -18,6 +18,10 @@
   transition: border-color 0.2s, background 0.2s;
 }
 
+.book-upload-dropzone[hidden] {
+  display: none;
+}
+
 .book-upload-dropzone:hover,
 .book-upload-dropzone.dragover {
   border-color: #7c6f5b;
@@ -58,6 +62,10 @@
   background: #f8f7f5;
 }
 
+.book-upload-progress[hidden] {
+  display: none;
+}
+
 .book-upload-spinner {
   width: 36px;
   height: 36px;
@@ -85,6 +93,10 @@
   border: 2px solid #7c6f5b;
   border-radius: 12px;
   background: #f5f3ee;
+}
+
+.book-upload-result[hidden] {
+  display: none;
 }
 
 .book-upload-result-info {
