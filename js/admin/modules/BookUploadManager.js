@@ -3,17 +3,11 @@
  * Обрабатывает загрузку файлов (EPUB, FB2, DOCX, DOC, TXT),
  * парсинг через BookParser и добавление книги в store.
  *
- * На Android-браузере обходит ограничения Scoped Storage:
- * - Создаёт свежий <input> без accept-фильтра (избегает сломанных провайдеров)
- * - Буферизует файл сразу после выбора (до истечения content:// URI)
- * - В Capacitor APK использует нативный плагин BookImport через SAF
+ * В Capacitor (Android) использует нативный плагин BookImport
+ * для выбора файла через SAF, обходя ограничения Scoped Storage.
  */
 
 import { BookParser } from '../BookParser.js';
-
-/** Расширения, которые мы умеем парсить */
-const SUPPORTED_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
-const ACCEPT_STRING = SUPPORTED_EXTENSIONS.join(', ');
 
 export class BookUploadManager {
   constructor(chaptersModule) {
@@ -32,13 +26,6 @@ export class BookUploadManager {
       && window.Capacitor.isNativePlatform();
   }
 
-  /**
-   * Проверка: Android-браузер (НЕ Capacitor APK)
-   */
-  static get _isAndroidBrowser() {
-    return /android/i.test(navigator.userAgent) && !BookUploadManager.isNative;
-  }
-
   cacheDOM() {
     this.bookUploadArea = document.getElementById('bookUploadArea');
     this.bookDropzone = document.getElementById('bookDropzone');
@@ -52,17 +39,11 @@ export class BookUploadManager {
     this.bookUploadConfirm = document.getElementById('bookUploadConfirm');
     this.bookUploadCancel = document.getElementById('bookUploadCancel');
 
-    // На Android убираем accept — он заставляет систему использовать
-    // фильтрованный провайдер, который ломается на Scoped Storage
-    if (BookUploadManager._isAndroidBrowser && this.bookFileInput) {
-      this.bookFileInput.removeAttribute('accept');
-    }
-
     this._injectNativeButton();
   }
 
   bindEvents() {
-    this.bookDropzone.addEventListener('click', () => this._openFilePicker());
+    this.bookDropzone.addEventListener('click', () => this.bookFileInput.click());
     this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
     this.bookDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -75,36 +56,13 @@ export class BookUploadManager {
       e.preventDefault();
       this.bookDropzone.classList.remove('dragover');
       const file = e.dataTransfer.files[0];
-      if (file) this._bufferAndProcess(file);
+      if (file) this._processBookFile(file);
     });
     this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook());
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
 
     if (this._nativePickBtn) {
       this._nativePickBtn.addEventListener('click', () => this._pickFileNative());
-    }
-  }
-
-  /**
-   * Открыть системный пикер файлов.
-   * На Android — свежий <input> без accept (обход Scoped Storage).
-   * На десктопе — обычный <input> с accept-фильтром.
-   */
-  _openFilePicker() {
-    if (BookUploadManager._isAndroidBrowser) {
-      // Свежий элемент без accept — Android покажет нефильтрованный пикер,
-      // который корректно читает файлы из Downloads / SD-карт
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.style.display = 'none';
-      input.addEventListener('change', (e) => {
-        this._handleBookUpload(e);
-        input.remove();
-      });
-      document.body.appendChild(input);
-      input.click();
-    } else {
-      this.bookFileInput.click();
     }
   }
 
@@ -160,46 +118,18 @@ export class BookUploadManager {
     return new File([bytes], fileName, { type: mimeType || 'application/octet-stream' });
   }
 
-  /**
-   * Обработка выбора файла через <input type="file">
-   */
   _handleBookUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-    this._bufferAndProcess(file);
-    if (e.target === this.bookFileInput) {
-      e.target.value = '';
-    }
-  }
-
-  /**
-   * Немедленная буферизация файла и передача на обработку.
-   * На Android content:// URI от системного пикера может стать невалидным —
-   * читаем содержимое в ArrayBuffer сразу, создаём новый File в памяти.
-   */
-  async _bufferAndProcess(file) {
-    try {
-      const buffer = await file.arrayBuffer();
-      const bufferedFile = new File([buffer], file.name, { type: file.type });
-      await this._processBookFile(bufferedFile);
-    } catch {
-      if (BookUploadManager._isAndroidBrowser) {
-        this._module._showToast(
-          'Не удалось прочитать файл. Скопируйте его во внутреннюю память ' +
-          '(папка «Документы») и попробуйте снова.'
-        );
-      } else {
-        this._module._showToast(
-          'Не удалось прочитать файл. Проверьте, что файл доступен.'
-        );
-      }
-    }
+    this._processBookFile(file);
+    e.target.value = '';
   }
 
   async _processBookFile(file) {
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    if (!SUPPORTED_EXTENSIONS.includes(ext)) {
-      this._module._showToast(`Допустимые форматы: ${ACCEPT_STRING}`);
+    const supportedFormats = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
+    if (!supportedFormats.includes(ext)) {
+      this._module._showToast('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
       return;
     }
 
