@@ -15,19 +15,12 @@ import mobileBackgrounds from './vite-plugin-mobile-backgrounds.js';
  */
 
 export default defineConfig(({ command, mode }) => {
-  // Определяем base path:
-  // - production: '/flipbook/' (GitHub Pages)
-  // - capacitor: './' (локальные файлы в WebView)
-  // - development: '/'
-  const base = mode === 'capacitor' ? './' : mode === 'production' ? '/flipbook/' : '/';
+  // Определяем base path для GitHub Pages
+  // Измените 'flipbook' на название вашего репозитория
+  const base = mode === 'production' ? '/flipbook/' : '/';
 
   return {
     base,
-
-    define: {
-      // Флаг для условного импорта PWA в рантайме
-      'import.meta.env.VITE_CAPACITOR': JSON.stringify(mode === 'capacitor'),
-    },
 
     server: {
       port: 3000,
@@ -70,8 +63,6 @@ export default defineConfig(({ command, mode }) => {
       },
 
       rollupOptions: {
-        // В capacitor-режиме virtual:pwa-register недоступен (плагин отключён)
-        ...(mode === 'capacitor' ? { external: ['virtual:pwa-register'] } : {}),
         input: {
           main: resolve(__dirname, 'index.html'),
           admin: resolve(__dirname, 'admin.html'),
@@ -143,8 +134,8 @@ export default defineConfig(({ command, mode }) => {
       // Генерация мобильных фоновых изображений (960px)
       mobileBackgrounds(),
 
-      // PWA поддержка (Service Worker + Manifest) — отключаем для Capacitor
-      ...(mode !== 'capacitor' ? [VitePWA({
+      // PWA поддержка (Service Worker + Manifest)
+      VitePWA({
         registerType: 'autoUpdate',
         includeAssets: [
           'favicon.ico',
@@ -211,22 +202,22 @@ export default defineConfig(({ command, mode }) => {
             },
           ],
         },
-      })] : []),
+      }),
 
-      // Gzip сжатие (не нужно для Capacitor — WebView не использует pre-compressed файлы)
+      // Gzip сжатие
       viteCompression({
         verbose: true,
-        disable: mode === 'capacitor',
+        disable: false,
         threshold: 10240,
         algorithm: 'gzip',
         ext: '.gz',
         deleteOriginFile: false,
       }),
 
-      // Brotli сжатие (не нужно для Capacitor)
+      // Brotli сжатие
       viteCompression({
         verbose: true,
-        disable: mode === 'capacitor',
+        disable: false,
         threshold: 10240,
         algorithm: 'brotliCompress',
         ext: '.br',
