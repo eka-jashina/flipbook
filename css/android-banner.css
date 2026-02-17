@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANDROID APP BANNER
+   Баннер-предложение скачать Android APK (показывается только на Android)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.android-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 44px 10px 16px;
+  background: linear-gradient(135deg, #3ddc84 0%, #2ca85e 100%);
+  color: #fff;
+  z-index: 10002;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  font-size: 14px;
+}
+
+.android-banner[hidden] {
+  display: none;
+}
+
+.android-banner-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.android-banner-link:hover {
+  text-decoration: underline;
+}
+
+.android-banner-link svg {
+  flex-shrink: 0;
+}
+
+.android-banner-close {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: rgb(255 255 255 / 0.2);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.android-banner-close:hover {
+  background: rgb(255 255 255 / 0.35);
+}

@@ -139,10 +139,37 @@ async function initReader() {
 }
 
 /**
+ * Показать баннер «Установить для Android», если:
+ * - устройство Android
+ * - не внутри Capacitor APK
+ * - пользователь не закрывал баннер ранее
+ */
+function setupAndroidBanner() {
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform();
+  const dismissed = localStorage.getItem('android-banner-dismissed');
+
+  if (!isAndroid || isCapacitor || dismissed) return;
+
+  const banner = document.getElementById('androidBanner');
+  const closeBtn = document.getElementById('androidBannerClose');
+  if (!banner || !closeBtn) return;
+
+  banner.hidden = false;
+
+  closeBtn.addEventListener('click', () => {
+    banner.hidden = true;
+    localStorage.setItem('android-banner-dismissed', '1');
+  });
+}
+
+/**
  * Инициализация приложения
  */
 async function init() {
   try {
+    setupAndroidBanner();
+
     // Проверяем, нужно ли показать книжный шкаф
     const { shouldShow, books } = getBookshelfData();
 
