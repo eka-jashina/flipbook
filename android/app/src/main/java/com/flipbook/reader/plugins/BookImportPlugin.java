@@ -132,7 +132,7 @@ public class BookImportPlugin extends Plugin {
         try {
             int flags = resultData.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
             if (flags != 0) {
-                getContext().getContentResolver().takePersistableUriPermission(uri, flags);
+                getActivity().getContentResolver().takePersistableUriPermission(uri, flags);
             }
         } catch (SecurityException ignored) {
             // Не все провайдеры поддерживают persistable-права — временного доступа достаточно.
@@ -145,7 +145,7 @@ public class BookImportPlugin extends Plugin {
     private String getFileName(Uri uri) {
         String fallbackName = getFallbackName(uri);
 
-        try (Cursor cursor = getContext().getContentResolver().query(
+        try (Cursor cursor = getActivity().getContentResolver().query(
                 uri,
                 new String[]{OpenableColumns.DISPLAY_NAME},
                 null,
@@ -173,7 +173,7 @@ public class BookImportPlugin extends Plugin {
      */
     private String getMimeType(Uri uri) {
         try {
-            String mimeType = getContext().getContentResolver().getType(uri);
+            String mimeType = getActivity().getContentResolver().getType(uri);
             return mimeType == null ? "" : mimeType;
         } catch (Exception ignored) {
             return "";
@@ -198,7 +198,7 @@ public class BookImportPlugin extends Plugin {
     private byte[] readFileBytes(Uri uri) throws Exception {
         InputStream inputStream;
         try {
-            inputStream = getContext().getContentResolver().openInputStream(uri);
+            inputStream = getActivity().getContentResolver().openInputStream(uri);
         } catch (SecurityException e) {
             throw new Exception(
                     "Нет доступа к файлу. Попробуйте выбрать файл из папки «Загрузки» или внутренней памяти"
