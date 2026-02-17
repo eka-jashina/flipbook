@@ -471,6 +471,119 @@ body[data-screen="reader"] .bookshelf-screen {
 }
 
 /* ═══════════════════════════════════════════
+   ЭКРАН ВЫБОРА РЕЖИМА (СОЗДАНИЕ КНИГИ)
+   ═══════════════════════════════════════════ */
+
+.bookshelf-mode-selector {
+  width: 100%;
+  max-width: 800px;
+  padding: 40px 24px 60px;
+  animation: bookshelf-book-appear 0.3s ease;
+}
+
+.bookshelf-mode-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.bookshelf-mode-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px 8px 12px;
+  margin-bottom: 24px;
+  border: 1px solid rgb(232, 220, 200, 0.2);
+  border-radius: 8px;
+  background: rgb(255, 255, 255, 0.06);
+  color: rgb(232, 220, 200, 0.7);
+  font-family: Georgia, serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bookshelf-mode-back:hover {
+  background: rgb(255, 255, 255, 0.12);
+  color: #e8dcc8;
+  border-color: rgb(232, 220, 200, 0.35);
+}
+
+.bookshelf-mode-title {
+  margin: 0 0 8px;
+  font-family: var(--decorative-font, Georgia, serif);
+  font-size: 26px;
+  font-weight: 400;
+  color: #e8dcc8;
+  letter-spacing: 0.03em;
+  text-shadow: 0 2px 4px rgb(0, 0, 0, 0.4);
+}
+
+.bookshelf-mode-desc {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  color: rgb(232, 220, 200, 0.5);
+}
+
+.bookshelf-mode-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.bookshelf-mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 20px;
+  border: 1px solid rgb(232, 220, 200, 0.15);
+  border-radius: 12px;
+  background: rgb(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.bookshelf-mode-card:hover {
+  background: rgb(255, 255, 255, 0.12);
+  border-color: rgb(232, 220, 200, 0.35);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgb(0, 0, 0, 0.3);
+}
+
+.bookshelf-mode-card:active {
+  transform: translateY(-1px);
+}
+
+.bookshelf-mode-card-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: rgb(232, 220, 200, 0.1);
+  color: #e8dcc8;
+}
+
+.bookshelf-mode-card-title {
+  font-family: Georgia, serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #e8dcc8;
+}
+
+.bookshelf-mode-card-desc {
+  font-family: Georgia, serif;
+  font-size: 13px;
+  color: rgb(232, 220, 200, 0.5);
+  line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════
    АДАПТИВНОСТЬ
    ═══════════════════════════════════════════ */
 
@@ -508,6 +621,22 @@ body[data-screen="reader"] .bookshelf-screen {
 
   .bookshelf-plank::after {
     height: 8px;
+  }
+
+  .bookshelf-mode-selector {
+    padding: 24px 16px 40px;
+  }
+
+  .bookshelf-mode-title {
+    font-size: 22px;
+  }
+
+  .bookshelf-mode-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .bookshelf-mode-card {
+    padding: 24px 16px;
   }
 }
 

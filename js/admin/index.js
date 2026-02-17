@@ -33,6 +33,7 @@ class AdminApp {
     this._cacheDOM();
     this._bindEvents();
     this._render();
+    this._handleUrlMode();
   }
 
   // --- DOM ---
@@ -105,6 +106,21 @@ class AdminApp {
 
   _renderJsonPreview() {
     this.export.renderJsonPreview();
+  }
+
+  // --- Обработка URL-параметра ?mode= ---
+
+  _handleUrlMode() {
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    if (!mode) return;
+
+    // Убираем параметр из URL (чтобы при обновлении не повторялось)
+    history.replaceState(null, '', window.location.pathname);
+
+    // Переключаемся на вкладку «Мои книги» и запускаем выбранный режим
+    this._switchTab('books');
+    this._handleModeSelect(mode);
   }
 
   // --- Табы верхнего уровня ---

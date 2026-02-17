@@ -38,6 +38,7 @@ export class BookshelfScreen {
     this.books = books;
     this.onBookSelect = onBookSelect;
     this._boundHandleClick = this._handleClick.bind(this);
+    this._currentView = 'shelf';
   }
 
   /**
@@ -65,13 +66,14 @@ export class BookshelfScreen {
         ${shelves.map(shelf => this._renderShelf(shelf)).join('')}
       </div>
       <div class="bookshelf-actions">
-        <a href="admin.html" class="bookshelf-add-btn" aria-label="Добавить книгу">
+        <button type="button" class="bookshelf-add-btn" data-action="add-book" aria-label="Создать книгу">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
-          Добавить книгу
-        </a>
+          Создать книгу
+        </button>
       </div>
+      ${this._renderModeSelector()}
     `;
 
     this.container.addEventListener('click', this._boundHandleClick);
@@ -171,21 +173,103 @@ export class BookshelfScreen {
         <div class="bookshelf-empty-text">
           Книги пока не добавлены
         </div>
-        <a href="admin.html" class="bookshelf-add-btn" aria-label="Добавить книгу">
+        <button type="button" class="bookshelf-add-btn" data-action="add-book" aria-label="Создать книгу">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
-          Добавить книгу
-        </a>
+          Создать книгу
+        </button>
+      </div>
+      ${this._renderModeSelector()}
+    `;
+  }
+
+  /**
+   * Рендер экрана выбора режима создания книги
+   * @private
+   */
+  _renderModeSelector() {
+    return `
+      <div class="bookshelf-mode-selector" hidden>
+        <div class="bookshelf-mode-header">
+          <button type="button" class="bookshelf-mode-back" data-action="back-to-shelf" aria-label="Назад к полке">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+            Назад
+          </button>
+          <h2 class="bookshelf-mode-title">Как вы хотите создать книгу?</h2>
+          <p class="bookshelf-mode-desc">Выберите способ — вы всегда сможете отредактировать результат</p>
+        </div>
+        <div class="bookshelf-mode-cards">
+          <a href="admin.html?mode=upload" class="bookshelf-mode-card">
+            <div class="bookshelf-mode-card-icon">
+              <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
+                <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+              </svg>
+            </div>
+            <div class="bookshelf-mode-card-title">Загрузить файл</div>
+            <div class="bookshelf-mode-card-desc">EPUB, FB2, DOCX, DOC, TXT — автоматическое извлечение глав</div>
+          </a>
+          <a href="admin.html?mode=manual" class="bookshelf-mode-card">
+            <div class="bookshelf-mode-card-icon">
+              <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
+                <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+              </svg>
+            </div>
+            <div class="bookshelf-mode-card-title">Создать вручную</div>
+            <div class="bookshelf-mode-card-desc">Обложка, главы, фоны — полный контроль</div>
+          </a>
+          <a href="admin.html?mode=album" class="bookshelf-mode-card">
+            <div class="bookshelf-mode-card-icon">
+              <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
+                <path fill="currentColor" d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/>
+              </svg>
+            </div>
+            <div class="bookshelf-mode-card-title">Фотоальбом</div>
+            <div class="bookshelf-mode-card-desc">Раскладки, фото, подписи — визуальный редактор</div>
+          </a>
+        </div>
       </div>
     `;
   }
 
   /**
-   * Обработка клика по книге
+   * Показать/скрыть экран выбора режима
+   * @private
+   */
+  _toggleModeSelector(show) {
+    this._currentView = show ? 'mode-selector' : 'shelf';
+    const selector = this.container.querySelector('.bookshelf-mode-selector');
+    const shelfContent = this.container.querySelectorAll(
+      '.bookshelf-header, .bookshelf-shelves, .bookshelf-actions, .bookshelf-empty'
+    );
+
+    if (selector) selector.hidden = !show;
+    shelfContent.forEach(el => el.hidden = show);
+  }
+
+  /**
+   * Обработка кликов
    * @private
    */
   _handleClick(e) {
+    // Кнопка «Создать книгу»
+    const addBtn = e.target.closest('[data-action="add-book"]');
+    if (addBtn) {
+      e.preventDefault();
+      this._toggleModeSelector(true);
+      return;
+    }
+
+    // Кнопка «Назад» из mode selector
+    const backBtn = e.target.closest('[data-action="back-to-shelf"]');
+    if (backBtn) {
+      this._toggleModeSelector(false);
+      return;
+    }
+
+    // Клик по книге
     const bookBtn = e.target.closest('.bookshelf-book');
     if (!bookBtn) return;
 
