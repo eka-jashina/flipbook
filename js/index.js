@@ -2,8 +2,8 @@
  * MAIN ENTRY POINT
  *
  * Инициализация приложения после загрузки DOM.
- * Если в админке несколько книг и ни одна не выбрана —
- * показывается книжный шкаф вместо ридера.
+ * Стартовый экран — книжная полка.
+ * После выбора книги загружается ридер.
  */
 
 import { BookController } from './core/BookController.js';
@@ -151,11 +151,9 @@ async function init() {
       return;
     }
 
-    // Если есть несколько книг — показываем кнопку «К полке»
-    if (books.length > 1) {
-      document.body.dataset.hasBookshelf = 'true';
-      setupBackToShelfButton();
-    }
+    // Всегда показываем кнопку «К полке» — книжная полка является главным экраном
+    document.body.dataset.hasBookshelf = 'true';
+    setupBackToShelfButton();
 
     await initReader();
   } catch (error) {
