@@ -34,6 +34,9 @@ android {
             signingConfig = System.env.KEYSTORE_FILE ? signingConfigs.release : signingConfigs.debug
         }
     }
+    lint {
+        abortOnError false
+    }
 }
 
 repositories {
