@@ -40,12 +40,13 @@ public class BookImportPlugin extends Plugin {
 
     @PluginMethod()
     public void pickFile(PluginCall call) {
-        // ACTION_GET_CONTENT на ряде устройств Samsung стабильнее отдает временный доступ к файлам из "Загрузки".
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        // ACTION_OPEN_DOCUMENT гарантирует получение URI с правами на чтение через DocumentsProvider.
+        // ACTION_GET_CONTENT на Samsung может вернуть MediaStore URI (content://media/...),
+        // к которому com.samsung.android.providers.media не выдаёт доступ приложению.
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                 "application/epub+zip",
                 "application/x-fictionbook+xml",
@@ -59,7 +60,6 @@ public class BookImportPlugin extends Plugin {
                 "application/x-zip-compressed"
         });
 
-        intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
         addDownloadsInitialUri(intent);
 
         startActivityForResult(call, intent, "pickFileResult");
@@ -129,18 +129,11 @@ public class BookImportPlugin extends Plugin {
      * Зафиксировать доступ к Uri, если провайдер это поддерживает.
      */
     private void takeReadPermissionIfAvailable(Uri uri, Intent resultData) {
-        int grantedFlags = resultData.getFlags() &
-                (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-
-        if ((grantedFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION) == 0) {
-            return;
-        }
-
         try {
-            getContext().getContentResolver().takePersistableUriPermission(
-                    uri,
-                    grantedFlags & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            );
+            int flags = resultData.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
+            if (flags != 0) {
+                getContext().getContentResolver().takePersistableUriPermission(uri, flags);
+            }
         } catch (SecurityException ignored) {
             // Не все провайдеры поддерживают persistable-права — временного доступа достаточно.
         }
@@ -203,15 +196,25 @@ public class BookImportPlugin extends Plugin {
      * Прочитать содержимое файла в байтовый массив.
      */
     private byte[] readFileBytes(Uri uri) throws Exception {
-        try (InputStream inputStream = getContext().getContentResolver().openInputStream(uri)) {
-            if (inputStream == null) {
-                throw new Exception("Не удалось открыть файл");
-            }
+        InputStream inputStream;
+        try {
+            inputStream = getContext().getContentResolver().openInputStream(uri);
+        } catch (SecurityException e) {
+            throw new Exception(
+                    "Нет доступа к файлу. Попробуйте выбрать файл из папки «Загрузки» или внутренней памяти"
+            );
+        }
+
+        if (inputStream == null) {
+            throw new Exception("Не удалось открыть файл");
+        }
+
+        try (InputStream is = inputStream) {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             byte[] chunk = new byte[8192];
             int bytesRead;
             int totalRead = 0;
-            while ((bytesRead = inputStream.read(chunk)) != -1) {
+            while ((bytesRead = is.read(chunk)) != -1) {
                 totalRead += bytesRead;
                 if (totalRead > MAX_FILE_SIZE) {
                     throw new Exception("Файл слишком большой (макс. 100 МБ)");
