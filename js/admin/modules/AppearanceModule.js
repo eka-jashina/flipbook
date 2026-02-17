@@ -11,8 +11,10 @@ export class AppearanceModule extends BaseModule {
   }
 
   cacheDOM() {
-    // Переключатель темы (в editor → cover tab)
-    this.appearanceThemeBtns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn');
+    // Переключатель темы (в editor → cover tab и appearance tab)
+    this.coverThemeBtns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn');
+    this.pageThemeBtns = document.querySelectorAll('#pageThemeSwitch .appearance-theme-btn');
+    this.appearanceThemeBtns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn, #pageThemeSwitch .appearance-theme-btn');
 
     // Cover per-theme fields (editor → cover tab)
     this.coverBgStart = document.getElementById('coverBgStart');
@@ -98,7 +100,11 @@ export class AppearanceModule extends BaseModule {
   _switchEditTheme(theme) {
     this._saveCurrentThemeFromForm();
     this._editTheme = theme;
-    this.appearanceThemeBtns.forEach(btn => {
+    // Синхронизируем оба переключателя (cover + pages)
+    this.coverThemeBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.editTheme === theme);
+    });
+    this.pageThemeBtns.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.editTheme === theme);
     });
     this._renderAppearanceThemeFields();
