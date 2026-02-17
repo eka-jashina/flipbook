@@ -8,6 +8,7 @@
 
 import { BookController } from './core/BookController.js';
 import { BookshelfScreen, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
+import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
 import { photoLightbox } from './utils/PhotoLightbox.js';
@@ -16,28 +17,25 @@ import { photoLightbox } from './utils/PhotoLightbox.js';
 let app = null;
 let bookshelf = null;
 
-// Регистрация Service Worker для PWA (не используется в Capacitor)
-if (!import.meta.env.VITE_CAPACITOR) {
-  import('virtual:pwa-register').then(({ registerSW }) => {
-    const updateSW = registerSW({
-      onNeedRefresh() {
-        const shouldUpdate = confirm('Доступна новая версия приложения. Обновить?');
-        if (shouldUpdate) {
-          updateSW(true);
-        }
-      },
-      onOfflineReady() {
-        console.log('Flipbook готов к работе offline');
-      },
-      onRegisteredSW(swUrl) {
-        console.log('Service Worker зарегистрирован:', swUrl);
-      },
-      onRegisterError(error) {
-        console.error('Ошибка регистрации Service Worker:', error);
-      },
-    });
-  });
-}
+// Регистрация Service Worker для PWA
+const updateSW = registerSW({
+  onNeedRefresh() {
+    // Показываем уведомление о доступном обновлении
+    const shouldUpdate = confirm('Доступна новая версия приложения. Обновить?');
+    if (shouldUpdate) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('Flipbook готов к работе offline');
+  },
+  onRegisteredSW(swUrl, _registration) {
+    console.log('Service Worker зарегистрирован:', swUrl);
+  },
+  onRegisterError(error) {
+    console.error('Ошибка регистрации Service Worker:', error);
+  },
+});
 
 /**
  * Настройка кнопки установки PWA в настройках
@@ -141,37 +139,10 @@ async function initReader() {
 }
 
 /**
- * Показать баннер «Установить для Android», если:
- * - устройство Android
- * - не внутри Capacitor APK
- * - пользователь не закрывал баннер ранее
- */
-function setupAndroidBanner() {
-  const isAndroid = /android/i.test(navigator.userAgent);
-  const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform();
-  const dismissed = localStorage.getItem('android-banner-dismissed');
-
-  if (!isAndroid || isCapacitor || dismissed) return;
-
-  const banner = document.getElementById('androidBanner');
-  const closeBtn = document.getElementById('androidBannerClose');
-  if (!banner || !closeBtn) return;
-
-  banner.hidden = false;
-
-  closeBtn.addEventListener('click', () => {
-    banner.hidden = true;
-    localStorage.setItem('android-banner-dismissed', '1');
-  });
-}
-
-/**
  * Инициализация приложения
  */
 async function init() {
   try {
-    setupAndroidBanner();
-
     // Проверяем, нужно ли показать книжный шкаф
     const { shouldShow, books } = getBookshelfData();
 
