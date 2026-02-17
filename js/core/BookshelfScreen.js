@@ -207,7 +207,7 @@ export class BookshelfScreen {
   _saveActiveBook(bookId) {
     try {
       const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-      const config = raw ? JSON.parse(raw) : { books: [] };
+      const config = raw ? JSON.parse(raw) : { books: [DEFAULT_BOOKSHELF_BOOK] };
       config.activeBookId = bookId;
       localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
     } catch {
@@ -248,7 +248,9 @@ export function getBookshelfData() {
     if (!raw) return { shouldShow: true, books: [DEFAULT_BOOKSHELF_BOOK] };
 
     const config = JSON.parse(raw);
-    const books = Array.isArray(config.books) ? config.books : [];
+    const books = Array.isArray(config.books) && config.books.length
+      ? config.books
+      : [DEFAULT_BOOKSHELF_BOOK];
 
     // Показываем шкаф если нет activeBookId (пользователь ещё не выбрал книгу)
     const hasActiveBook = !!config.activeBookId;
