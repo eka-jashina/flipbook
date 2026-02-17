@@ -38,11 +38,11 @@ public class BookImportPlugin extends Plugin {
 
     @PluginMethod()
     public void pickFile(PluginCall call) {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        // ACTION_GET_CONTENT на ряде устройств Samsung стабильнее отдает временный доступ к файлам из "Загрузки".
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                 "application/epub+zip",
                 "application/x-fictionbook+xml",
@@ -56,7 +56,8 @@ public class BookImportPlugin extends Plugin {
                 "application/x-zip-compressed"
         });
 
-        startActivityForResult(call, intent, "pickFileResult");
+        Intent chooser = Intent.createChooser(intent, "Выберите файл");
+        startActivityForResult(call, chooser, "pickFileResult");
     }
 
     @ActivityCallback
