@@ -41,6 +41,8 @@ public class BookImportPlugin extends Plugin {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                 "application/epub+zip",
                 "application/x-fictionbook+xml",
@@ -49,7 +51,9 @@ public class BookImportPlugin extends Plugin {
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 "application/msword",
                 "text/plain",
-                "application/octet-stream"
+                "application/octet-stream",
+                "application/zip",
+                "application/x-zip-compressed"
         });
 
         startActivityForResult(call, intent, "pickFileResult");
@@ -77,11 +81,10 @@ public class BookImportPlugin extends Plugin {
         }
 
         try {
+            takeReadPermissionIfAvailable(uri, result.getData());
+
             String fileName = getFileName(uri);
-            String mimeType = getContext().getContentResolver().getType(uri);
-            if (mimeType == null) {
-                mimeType = "";
-            }
+            String mimeType = getMimeType(uri);
 
             byte[] bytes = readFileBytes(uri);
 
@@ -100,20 +103,77 @@ public class BookImportPlugin extends Plugin {
     }
 
     /**
+     * Зафиксировать доступ к Uri, если провайдер это поддерживает.
+     */
+    private void takeReadPermissionIfAvailable(Uri uri, Intent resultData) {
+        int grantedFlags = resultData.getFlags() &
+                (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+
+        if ((grantedFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION) == 0) {
+            return;
+        }
+
+        try {
+            getContext().getContentResolver().takePersistableUriPermission(
+                    uri,
+                    grantedFlags & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            );
+        } catch (SecurityException ignored) {
+            // Не все провайдеры поддерживают persistable-права — временного доступа достаточно.
+        }
+    }
+
+    /**
      * Получить имя файла из Uri через ContentResolver.
      */
     private String getFileName(Uri uri) {
-        String name = "book";
+        String fallbackName = getFallbackName(uri);
+
         try (Cursor cursor = getContext().getContentResolver().query(
-                uri, null, null, null, null)) {
+                uri,
+                new String[]{OpenableColumns.DISPLAY_NAME},
+                null,
+                null,
+                null
+        )) {
             if (cursor != null && cursor.moveToFirst()) {
                 int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
                 if (nameIndex >= 0) {
-                    name = cursor.getString(nameIndex);
+                    String name = cursor.getString(nameIndex);
+                    if (name != null && !name.isBlank()) {
+                        return name;
+                    }
                 }
             }
+        } catch (Exception ignored) {
+            // Некоторые провайдеры могут запретить query() или не отдавать метаданные.
         }
-        return name;
+
+        return fallbackName;
+    }
+
+    /**
+     * Получить MIME-тип безопасно: не ронять импорт, если провайдер не отдает тип.
+     */
+    private String getMimeType(Uri uri) {
+        try {
+            String mimeType = getContext().getContentResolver().getType(uri);
+            return mimeType == null ? "" : mimeType;
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    /**
+     * Резервное имя на случай недоступных метаданных.
+     */
+    private String getFallbackName(Uri uri) {
+        String pathSegment = uri.getLastPathSegment();
+        if (pathSegment != null && !pathSegment.isBlank()) {
+            return pathSegment;
+        }
+
+        return "book";
     }
 
     /**
