@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
+import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
 import android.util.Base64;
 
@@ -43,6 +45,7 @@ public class BookImportPlugin extends Plugin {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                 "application/epub+zip",
                 "application/x-fictionbook+xml",
@@ -56,8 +59,27 @@ public class BookImportPlugin extends Plugin {
                 "application/x-zip-compressed"
         });
 
-        Intent chooser = Intent.createChooser(intent, "Выберите файл");
-        startActivityForResult(call, chooser, "pickFileResult");
+        intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+        addDownloadsInitialUri(intent);
+
+        startActivityForResult(call, intent, "pickFileResult");
+    }
+
+
+    /**
+     * Попросить системный picker открыть папку Download по умолчанию (если поддерживается).
+     */
+    private void addDownloadsInitialUri(Intent intent) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return;
+        }
+
+        try {
+            Uri downloadsUri = Uri.parse("content://com.android.externalstorage.documents/document/primary%3ADownload");
+            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, downloadsUri);
+        } catch (Exception ignored) {
+            // На некоторых прошивках EXTRA_INITIAL_URI может не поддерживаться.
+        }
     }
 
     @ActivityCallback
