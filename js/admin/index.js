@@ -157,6 +157,11 @@ class AdminApp {
       case 'upload':
         this._showView('upload');
         break;
+      case 'edit':
+        // Открыть редактор для текущей активной книги
+        this._render();
+        this.openEditor();
+        break;
       case 'manual': {
         // Создать новую пустую книгу и открыть редактор
         const bookId = `book_${Date.now()}`;
