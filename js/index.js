@@ -8,7 +8,6 @@
 
 import { BookController } from './core/BookController.js';
 import { BookshelfScreen, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
-import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
 import { photoLightbox } from './utils/PhotoLightbox.js';
@@ -17,25 +16,28 @@ import { photoLightbox } from './utils/PhotoLightbox.js';
 let app = null;
 let bookshelf = null;
 
-// Регистрация Service Worker для PWA
-const updateSW = registerSW({
-  onNeedRefresh() {
-    // Показываем уведомление о доступном обновлении
-    const shouldUpdate = confirm('Доступна новая версия приложения. Обновить?');
-    if (shouldUpdate) {
-      updateSW(true);
-    }
-  },
-  onOfflineReady() {
-    console.log('Flipbook готов к работе offline');
-  },
-  onRegisteredSW(swUrl, _registration) {
-    console.log('Service Worker зарегистрирован:', swUrl);
-  },
-  onRegisterError(error) {
-    console.error('Ошибка регистрации Service Worker:', error);
-  },
-});
+// Регистрация Service Worker для PWA (не используется в Capacitor)
+if (!import.meta.env.VITE_CAPACITOR) {
+  import('virtual:pwa-register').then(({ registerSW }) => {
+    const updateSW = registerSW({
+      onNeedRefresh() {
+        const shouldUpdate = confirm('Доступна новая версия приложения. Обновить?');
+        if (shouldUpdate) {
+          updateSW(true);
+        }
+      },
+      onOfflineReady() {
+        console.log('Flipbook готов к работе offline');
+      },
+      onRegisteredSW(swUrl) {
+        console.log('Service Worker зарегистрирован:', swUrl);
+      },
+      onRegisterError(error) {
+        console.error('Ошибка регистрации Service Worker:', error);
+      },
+    });
+  });
+}
 
 /**
  * Настройка кнопки установки PWA в настройках
