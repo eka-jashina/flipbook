@@ -1,11 +1,10 @@
 /**
  * BOOKSHELF SCREEN
  *
- * Экран книжного шкафа — показывает все книги из админки на деревянных полках.
+ * Экран книжного шкафа — стартовая страница приложения.
+ * Показывает все книги из конфигурации на деревянных полках.
  * Пользователь выбирает книгу → она становится активной → ридер загружается.
- *
- * Работает только при наличии нескольких книг в админ-конфиге.
- * Если книга одна или админ-конфига нет — экран не показывается.
+ * Содержит кнопку «Добавить книгу» для перехода в личный кабинет.
  */
 
 const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
@@ -31,6 +30,7 @@ export class BookshelfScreen {
   render() {
     if (!this.books.length) {
       this.container.innerHTML = this._renderEmpty();
+      this.container.addEventListener('click', this._boundHandleClick);
       return;
     }
 
@@ -47,6 +47,14 @@ export class BookshelfScreen {
       </div>
       <div class="bookshelf-shelves">
         ${shelves.map(shelf => this._renderShelf(shelf)).join('')}
+      </div>
+      <div class="bookshelf-actions">
+        <a href="admin.html" class="bookshelf-add-btn" aria-label="Добавить книгу">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          Добавить книгу
+        </a>
       </div>
     `;
 
@@ -145,9 +153,14 @@ export class BookshelfScreen {
       <div class="bookshelf-empty">
         <div class="bookshelf-empty-icon">📚</div>
         <div class="bookshelf-empty-text">
-          Книги пока не добавлены.<br>
-          Перейдите в <a href="admin.html" style="color: #e8dcc8;">админку</a> для добавления.
+          Книги пока не добавлены
         </div>
+        <a href="admin.html" class="bookshelf-add-btn" aria-label="Добавить книгу">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          Добавить книгу
+        </a>
       </div>
     `;
   }
@@ -218,14 +231,10 @@ export class BookshelfScreen {
 export function getBookshelfData() {
   try {
     const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-    if (!raw) return { shouldShow: false, books: [] };
+    if (!raw) return { shouldShow: true, books: [] };
 
     const config = JSON.parse(raw);
-    const books = config.books;
-
-    if (!Array.isArray(books) || books.length < 2) {
-      return { shouldShow: false, books: [] };
-    }
+    const books = Array.isArray(config.books) ? config.books : [];
 
     // Показываем шкаф если нет activeBookId (пользователь ещё не выбрал книгу)
     const hasActiveBook = !!config.activeBookId;
@@ -235,7 +244,7 @@ export function getBookshelfData() {
       books,
     };
   } catch {
-    return { shouldShow: false, books: [] };
+    return { shouldShow: true, books: [] };
   }
 }
 

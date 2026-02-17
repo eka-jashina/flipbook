@@ -48,7 +48,7 @@
 .form-input:focus {
   outline: none;
   border-color: var(--admin-primary);
-  box-shadow: 0 0 0 3px rgb(0, 122, 255, 0.15);
+  box-shadow: 0 0 0 3px rgb(107, 83, 64, 0.2);
 }
 
 .form-hint {

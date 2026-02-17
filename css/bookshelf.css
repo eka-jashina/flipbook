@@ -422,6 +422,52 @@ body[data-screen="reader"] .bookshelf-screen {
   font-family: Georgia, serif;
   font-size: 16px;
   line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+/* ═══════════════════════════════════════════
+   КНОПКА «ДОБАВИТЬ КНИГУ»
+   ═══════════════════════════════════════════ */
+
+.bookshelf-actions {
+  width: 100%;
+  max-width: 960px;
+  padding: 20px 24px 40px;
+  text-align: center;
+}
+
+.bookshelf-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: 1px solid rgb(232, 220, 200, 0.25);
+  border-radius: 8px;
+  background: rgb(255, 255, 255, 0.08);
+  color: #e8dcc8;
+  font-family: Georgia, serif;
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.bookshelf-add-btn:hover {
+  background: rgb(255, 255, 255, 0.14);
+  border-color: rgb(232, 220, 200, 0.4);
+  transform: translateY(-2px);
+}
+
+.bookshelf-add-btn:active {
+  transform: translateY(0);
+}
+
+.bookshelf-add-btn svg {
+  flex-shrink: 0;
+  opacity: 0.8;
 }
 
 /* ═══════════════════════════════════════════

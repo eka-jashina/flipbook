@@ -61,7 +61,7 @@ export class ExportModule extends BaseModule {
   }
 
   _resetAll() {
-    if (confirm('Сбросить все настройки админки? Ридер вернётся к конфигурации по умолчанию.')) {
+    if (confirm('Сбросить все настройки? Ридер вернётся к конфигурации по умолчанию.')) {
       this.store.clear();
       this.app._render();
       this._showToast('Всё сброшено');
