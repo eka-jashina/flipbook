@@ -111,12 +111,11 @@ class AdminApp {
   // --- Обработка URL-параметра ?mode= ---
 
   _handleUrlMode() {
-    const params = new URLSearchParams(window.location.search);
-    const mode = params.get('mode');
+    const mode = sessionStorage.getItem('flipbook-admin-mode');
     if (!mode) return;
 
-    // Убираем параметр из URL (чтобы при обновлении не повторялось)
-    history.replaceState(null, '', window.location.pathname);
+    // Удаляем сразу, чтобы при обновлении не повторялось
+    sessionStorage.removeItem('flipbook-admin-mode');
 
     // Переключаемся на вкладку «Мои книги» и запускаем выбранный режим
     this._switchTab('books');
