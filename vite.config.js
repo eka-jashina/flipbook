@@ -136,8 +136,8 @@ export default defineConfig(({ command, mode }) => {
       // Генерация мобильных фоновых изображений (960px)
       mobileBackgrounds(),
 
-      // PWA поддержка (Service Worker + Manifest)
-      VitePWA({
+      // PWA поддержка (Service Worker + Manifest) — отключаем для Capacitor
+      ...(mode !== 'capacitor' ? [VitePWA({
         registerType: 'autoUpdate',
         includeAssets: [
           'favicon.ico',
@@ -204,22 +204,22 @@ export default defineConfig(({ command, mode }) => {
             },
           ],
         },
-      }),
+      })] : []),
 
-      // Gzip сжатие
+      // Gzip сжатие (не нужно для Capacitor — WebView не использует pre-compressed файлы)
       viteCompression({
         verbose: true,
-        disable: false,
+        disable: mode === 'capacitor',
         threshold: 10240,
         algorithm: 'gzip',
         ext: '.gz',
         deleteOriginFile: false,
       }),
 
-      // Brotli сжатие
+      // Brotli сжатие (не нужно для Capacitor)
       viteCompression({
         verbose: true,
-        disable: false,
+        disable: mode === 'capacitor',
         threshold: 10240,
         algorithm: 'brotliCompress',
         ext: '.br',
