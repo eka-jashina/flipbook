@@ -191,8 +191,8 @@
   box-shadow: 0 3px 8px rgb(0, 0, 0, 0.3);
 }
 
-/* Неактивное состояние */
-.volume-control.disabled {
+/* Неактивное состояние (через CSS :has()) */
+.audio-row:has(.toggle-switch input:not(:checked)) .volume-control {
   opacity: 0.4;
   pointer-events: none;
 }

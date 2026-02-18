@@ -831,19 +831,8 @@ describe('EventController', () => {
       expect(mockCallbacks.onSettings).toHaveBeenCalledWith('soundEnabled', false);
     });
 
-    it('should toggle volume control disabled state based on sound toggle', () => {
-      controller._bindSettingsControls(elements);
-
-      const handler = registeredListeners.find(
-        (l) => l.element === elements.soundToggle
-      ).handler;
-
-      handler({ target: { checked: false } });
-      expect(elements.pageVolumeControl.classList.contains('disabled')).toBe(true);
-
-      handler({ target: { checked: true } });
-      expect(elements.pageVolumeControl.classList.contains('disabled')).toBe(false);
-    });
+    // Volume control disabled state теперь управляется через CSS :has()
+    // JS больше не переключает .disabled класс на pageVolumeControl
 
     it('should bind input handler to volumeSlider', () => {
       controller._bindSettingsControls(elements);
@@ -968,42 +957,8 @@ describe('EventController', () => {
       expect(mockCallbacks.onSettings).toHaveBeenCalledWith('fullscreen', 'toggle');
     });
 
-    it('should bind change handler to settingsCheckbox', () => {
-      controller._bindSettingsControls(elements);
-
-      const call = registeredListeners.find(
-        (l) => l.element === elements.settingsCheckbox && l.event === 'change'
-      );
-      expect(call).toBeDefined();
-    });
-
-    it('should set data-settings-open attribute when settings opened', () => {
-      controller._bindSettingsControls(elements);
-
-      elements.settingsCheckbox.checked = true;
-      const handler = registeredListeners.find(
-        (l) => l.element === elements.settingsCheckbox
-      ).handler;
-      handler();
-
-      const controls = elements.settingsCheckbox.closest('.controls');
-      expect(controls.hasAttribute('data-settings-open')).toBe(true);
-    });
-
-    it('should remove data-settings-open attribute when settings closed', () => {
-      controller._bindSettingsControls(elements);
-
-      const controls = elements.settingsCheckbox.closest('.controls');
-      controls.setAttribute('data-settings-open', '');
-
-      elements.settingsCheckbox.checked = false;
-      const handler = registeredListeners.find(
-        (l) => l.element === elements.settingsCheckbox
-      ).handler;
-      handler();
-
-      expect(controls.hasAttribute('data-settings-open')).toBe(false);
-    });
+    // Settings toggle теперь управляется чисто через CSS :has(.settings-checkbox:checked)
+    // JS больше не устанавливает data-settings-open атрибут
 
     it('should handle missing elements gracefully', () => {
       expect(() => controller._bindSettingsControls({})).not.toThrow();
@@ -1437,40 +1392,8 @@ describe('EventController edge cases', () => {
     document.body.innerHTML = '';
   });
 
-  it('should handle fullscreen change event', () => {
-    const elements = {
-      fullscreenBtn: document.createElement('button'),
-    };
-
-    const registeredListeners = [];
-    mockEventManager.add = vi.fn((el, event, handler) => {
-      registeredListeners.push({ el, event, handler });
-    });
-
-    controller._bindSettingsControls(elements);
-
-    const fullscreenChangeHandler = registeredListeners.find(
-      (l) => l.el === document && l.event === 'fullscreenchange'
-    );
-
-    expect(fullscreenChangeHandler).toBeDefined();
-
-    // Simulate entering fullscreen
-    Object.defineProperty(document, 'fullscreenElement', {
-      value: document.body,
-      configurable: true,
-    });
-    fullscreenChangeHandler.handler();
-    expect(elements.fullscreenBtn.classList.contains('is-fullscreen')).toBe(true);
-
-    // Simulate exiting fullscreen
-    Object.defineProperty(document, 'fullscreenElement', {
-      value: null,
-      configurable: true,
-    });
-    fullscreenChangeHandler.handler();
-    expect(elements.fullscreenBtn.classList.contains('is-fullscreen')).toBe(false);
-  });
+  // Fullscreen button state теперь управляется через CSS :fullscreen псевдокласс
+  // JS больше не переключает .is-fullscreen класс
 
   it('should handle click on non-TOC element inside book', () => {
     const registeredListeners = [];

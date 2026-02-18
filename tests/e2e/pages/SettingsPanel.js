@@ -74,7 +74,7 @@ export class SettingsPanel {
    * Check if settings panel is open
    */
   async isOpen() {
-    return await this.controls.evaluate(el => el.hasAttribute('data-settings-open'));
+    return await this.controls.locator('.settings-checkbox').isChecked();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

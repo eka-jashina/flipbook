@@ -9,6 +9,37 @@ import { InstallPrompt } from '../../../js/utils/InstallPrompt.js';
 describe('InstallPrompt', () => {
   let prompt;
 
+  /**
+   * Добавить статическую разметку баннера в DOM
+   * (в production она определена в index.html)
+   */
+  function insertStaticMarkup() {
+    if (!document.getElementById('install-prompt')) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div class="install-prompt" id="install-prompt" role="dialog" aria-labelledby="install-prompt-title" hidden>
+          <div class="install-prompt__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="32" height="32">
+              <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-7-2l4-4h-3V7h-2v6H8l4 4z"/>
+            </svg>
+          </div>
+          <div class="install-prompt__content">
+            <div class="install-prompt__title" id="install-prompt-title">Установите приложение</div>
+            <div class="install-prompt__text">Читайте книгу офлайн с удобным доступом</div>
+          </div>
+          <div class="install-prompt__actions">
+            <button class="install-prompt__btn install-prompt__btn--dismiss" type="button" aria-label="Не сейчас">Позже</button>
+            <button class="install-prompt__btn install-prompt__btn--install" type="button">Установить</button>
+          </div>
+          <button class="install-prompt__close" type="button" aria-label="Закрыть">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          </button>
+        </div>
+      `);
+    }
+  }
+
   beforeEach(() => {
     // По умолчанию — не standalone
     global.matchMedia = vi.fn((query) => ({
@@ -28,12 +59,16 @@ describe('InstallPrompt', () => {
       configurable: true,
     });
 
+    insertStaticMarkup();
     prompt = new InstallPrompt();
   });
 
   afterEach(() => {
     prompt.destroy();
     localStorage.clear();
+    // Вернуть hidden-состояние
+    const el = document.getElementById('install-prompt');
+    if (el) el.hidden = true;
   });
 
   describe('constructor', () => {
@@ -186,14 +221,15 @@ describe('InstallPrompt', () => {
       expect(prompt._banner.classList.contains('install-prompt--visible')).toBe(false);
     });
 
-    it('should remove banner from DOM after timeout', async () => {
+    it('should hide banner after timeout', async () => {
       prompt._deferredPrompt = { prompt: vi.fn() };
       prompt.show();
 
       prompt.hide();
 
       await new Promise(resolve => setTimeout(resolve, 350));
-      expect(document.body.querySelector('.install-prompt')).toBeNull();
+      const el = document.getElementById('install-prompt');
+      expect(el.hidden).toBe(true);
       expect(prompt._banner).toBeNull();
     });
   });

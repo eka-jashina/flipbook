@@ -125,12 +125,7 @@ export class AppInitializer {
       ambientVolume.value = savedVolume * 100;
     }
 
-    // Синхронизировать состояние volume control для перелистывания
-    const pageVolumeControl = this.dom.get('pageVolumeControl');
-    if (pageVolumeControl) {
-      const soundEnabled = this.settings.get("soundEnabled");
-      pageVolumeControl.classList.toggle('disabled', !soundEnabled);
-    }
+    // Состояние volume control для перелистывания управляется через CSS :has()
   }
 
   /**
@@ -141,20 +136,15 @@ export class AppInitializer {
   _populateAmbientPills(container) {
     container.innerHTML = '';
 
+    const tmpl = document.getElementById('tmpl-ambient-pill');
     for (const [type, config] of Object.entries(CONFIG.AMBIENT)) {
-      const pill = document.createElement('button');
-      pill.type = 'button';
-      pill.className = 'ambient-pill';
+      const frag = tmpl.content.cloneNode(true);
+      const pill = frag.querySelector('.ambient-pill');
       pill.dataset.type = type;
-      pill.setAttribute('role', 'radio');
       pill.setAttribute('aria-label', config.label);
-
-      pill.innerHTML = `
-        <span class="ambient-pill-icon">${config.icon || '🎵'}</span>
-        <span class="ambient-pill-label">${config.shortLabel || config.label}</span>
-      `;
-
-      container.appendChild(pill);
+      pill.querySelector('.ambient-pill-icon').textContent = config.icon || '🎵';
+      pill.querySelector('.ambient-pill-label').textContent = config.shortLabel || config.label;
+      container.appendChild(frag);
     }
   }
 
@@ -181,18 +171,18 @@ export class AppInitializer {
     const {
       nextBtn, prevBtn, tocBtn, continueBtn, cover,
       increaseBtn, decreaseBtn, fontSizeValue, fontSelect, themeSegmented, debugToggle,
-      soundToggle, volumeSlider, pageVolumeControl,
+      soundToggle, volumeSlider,
       ambientPills, ambientVolume, ambientVolumeWrapper,
-      fullscreenBtn, settingsCheckbox
+      fullscreenBtn
     } = this.dom.elements;
 
     this.eventController.bind({
       nextBtn, prevBtn, tocBtn, continueBtn,
       coverEl: cover,
       increaseBtn, decreaseBtn, fontSizeValue, fontSelect, themeSegmented, debugToggle,
-      soundToggle, volumeSlider, pageVolumeControl,
+      soundToggle, volumeSlider,
       ambientPills, ambientVolume, ambientVolumeWrapper,
-      fullscreenBtn, settingsCheckbox
+      fullscreenBtn
     });
 
     this.dragDelegate.bind();

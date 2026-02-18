@@ -30,6 +30,19 @@ describe('AppInitializer', () => {
     // Мок document.fonts.ready
     document.fonts = { ready: Promise.resolve() };
 
+    // Добавляем <template> для ambient-pill (используется в _populateAmbientPills)
+    if (!document.getElementById('tmpl-ambient-pill')) {
+      const tmpl = document.createElement('template');
+      tmpl.id = 'tmpl-ambient-pill';
+      tmpl.innerHTML = `
+        <button type="button" class="ambient-pill" role="radio">
+          <span class="ambient-pill-icon"></span>
+          <span class="ambient-pill-label"></span>
+        </button>
+      `;
+      document.body.appendChild(tmpl);
+    }
+
     // Создаём реальные DOM-элементы
     mockElements = {
       body: document.createElement('div'),

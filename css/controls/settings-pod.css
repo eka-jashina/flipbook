@@ -235,18 +235,18 @@
   display: inline;
 }
 
-/* Иконки и текст в fullscreen состоянии */
-.fullscreen-btn.is-fullscreen .fullscreen-enter,
-.fullscreen-btn.is-fullscreen .fullscreen-text-enter {
+/* Иконки и текст в fullscreen состоянии (через CSS :fullscreen) */
+:fullscreen .fullscreen-btn .fullscreen-enter,
+:fullscreen .fullscreen-btn .fullscreen-text-enter {
   display: none;
 }
 
-.fullscreen-btn.is-fullscreen .fullscreen-exit,
-.fullscreen-btn.is-fullscreen .fullscreen-text-exit {
+:fullscreen .fullscreen-btn .fullscreen-exit,
+:fullscreen .fullscreen-btn .fullscreen-text-exit {
   display: inline;
 }
 
-.fullscreen-btn.is-fullscreen {
+:fullscreen .fullscreen-btn {
   background: var(--pod-btn-bg-active);
   border-color: var(--pod-btn-border-active);
 }

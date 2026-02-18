@@ -142,51 +142,20 @@ export class InstallPrompt {
   }
 
   /**
-   * Создать DOM баннера
+   * Привязать обработчики к статическому баннеру
    * @private
-   * @returns {HTMLElement}
    */
-  _createBanner() {
-    const banner = document.createElement('div');
-    banner.className = 'install-prompt';
-    banner.setAttribute('role', 'dialog');
-    banner.setAttribute('aria-labelledby', 'install-prompt-title');
+  _bindBannerEvents() {
+    const banner = document.getElementById('install-prompt');
+    if (!banner) return;
 
-    banner.innerHTML = `
-      <div class="install-prompt__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="32" height="32">
-          <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-7-2l4-4h-3V7h-2v6H8l4 4z"/>
-        </svg>
-      </div>
-      <div class="install-prompt__content">
-        <div class="install-prompt__title" id="install-prompt-title">Установите приложение</div>
-        <div class="install-prompt__text">Читайте книгу офлайн с удобным доступом</div>
-      </div>
-      <div class="install-prompt__actions">
-        <button class="install-prompt__btn install-prompt__btn--dismiss" type="button" aria-label="Не сейчас">
-          Позже
-        </button>
-        <button class="install-prompt__btn install-prompt__btn--install" type="button">
-          Установить
-        </button>
-      </div>
-      <button class="install-prompt__close" type="button" aria-label="Закрыть">
-        <svg viewBox="0 0 24 24" width="20" height="20">
-          <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-        </svg>
-      </button>
-    `;
-
-    // Обработчики кнопок
     const installBtn = banner.querySelector('.install-prompt__btn--install');
     const dismissBtn = banner.querySelector('.install-prompt__btn--dismiss');
     const closeBtn = banner.querySelector('.install-prompt__close');
 
-    installBtn.addEventListener('click', () => this.install());
-    dismissBtn.addEventListener('click', () => this.dismiss());
-    closeBtn.addEventListener('click', () => this.dismiss());
-
-    return banner;
+    if (installBtn) installBtn.addEventListener('click', () => this.install());
+    if (dismissBtn) dismissBtn.addEventListener('click', () => this.dismiss());
+    if (closeBtn) closeBtn.addEventListener('click', () => this.dismiss());
   }
 
   /**
@@ -198,8 +167,11 @@ export class InstallPrompt {
       return;
     }
 
-    this._banner = this._createBanner();
-    document.body.appendChild(this._banner);
+    this._banner = document.getElementById('install-prompt');
+    if (!this._banner) return;
+
+    this._bindBannerEvents();
+    this._banner.hidden = false;
 
     // Анимация появления
     requestAnimationFrame(() => {
@@ -215,9 +187,11 @@ export class InstallPrompt {
 
     this._banner.classList.remove('install-prompt--visible');
 
-    // Удаляем после анимации
+    // Скрываем после анимации
     setTimeout(() => {
-      this._banner?.remove();
+      if (this._banner) {
+        this._banner.hidden = true;
+      }
       this._banner = null;
     }, 300);
   }
