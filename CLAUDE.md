@@ -4,20 +4,21 @@ This document provides essential context for AI assistants working on this codeb
 
 ## Project Overview
 
-**Flipbook** is an interactive e-book reader web application with realistic 3D page-flip animations. Built with vanilla JavaScript (ES Modules) and CSS, using Vite as the build tool. Includes an admin panel for managing multiple books, chapters, fonts, sounds, and appearance customization.
+**Flipbook** is an interactive e-book reader web application with realistic 3D page-flip animations. Built with vanilla JavaScript (ES Modules) and CSS, using Vite as the build tool. Includes a personal account (admin panel) for managing multiple books, chapters, fonts, sounds, and appearance customization.
 
 **Key Features:**
 - 3D page flip animations with realistic physics
 - Multi-chapter support (default: 3 chapters of Tolkien's "The Hobbit" in Russian)
-- Admin panel for book management (upload, chapters, fonts, sounds, appearance, export)
-- Multi-book support with bookshelf screen
+- Bookshelf as the main screen — book cards with context menu (read / edit / delete)
+- Personal account (admin.html) for book management (upload, chapters, fonts, sounds, appearance, export)
+- Multi-book support with per-book reading progress (Continue Reading button)
 - Customizable reading experience (fonts, sizes, themes, sounds)
 - Per-book appearance customization (cover colors, page textures, decorative fonts)
 - Responsive design (desktop & mobile)
-- Background ambient sounds (rain, fireplace, cafe) — configurable via admin
-- Page-turn sound effects — configurable via admin
+- Background ambient sounds (rain, fireplace, cafe) — configurable via personal account
+- Page-turn sound effects — configurable via personal account
 - Photo album / lightbox support
-- Persistent user settings via localStorage
+- Persistent user settings via localStorage (per-book reading progress)
 - Admin config persistence via localStorage (large content via IndexedDB)
 - PWA — installable as native app, offline access via Service Worker
 - Book import from txt, doc, docx, epub, fb2 formats
@@ -77,8 +78,8 @@ npm run deploy:vercel  # Deploy to Vercel
 
 ```
 flipbook/
-├── index.html                 # Reader entry HTML file
-├── admin.html                 # Admin panel HTML file
+├── index.html                 # Main entry — bookshelf + reader
+├── admin.html                 # Personal account (book management)
 ├── css/                       # Modular CSS (import order matters)
 │   ├── index.css             # Main entry (imports all modules)
 │   ├── variables.css         # Design tokens (CSS custom properties)
@@ -120,8 +121,7 @@ flipbook/
 │       ├── book-upload.css   # Book upload UI
 │       ├── chapters.css      # Chapters management
 │       ├── fonts.css         # Fonts management
-│       ├── sounds.css        # Sounds management
-│       ├── ambients.css      # Ambient sounds UI
+│       ├── sounds.css        # Sounds & ambient sounds management
 │       ├── appearance.css    # Appearance customization
 │       ├── settings.css      # Settings panel
 │       ├── album.css         # Album/gallery management
@@ -311,7 +311,7 @@ DOM + CSS Animations
 | AsyncPaginator | `managers/AsyncPaginator.js` | Content pagination |
 | EventController | `core/EventController.js` | Input handling |
 | DelegateMediator | `core/DelegateMediator.js` | Delegate communication |
-| BookshelfScreen | `core/BookshelfScreen.js` | Multi-book bookshelf display |
+| BookshelfScreen | `core/BookshelfScreen.js` | Main start screen: bookshelf with context menu (read/edit/delete), mode selector for book creation, per-book reading progress |
 | NavigationDelegate | `core/delegates/NavigationDelegate.js` | Page flip logic |
 | DragDelegate | `core/delegates/DragDelegate.js` | Touch drag coordination |
 | DragAnimator | `core/delegates/DragAnimator.js` | Drag rotation animation |
@@ -586,8 +586,8 @@ npm run lint:css:fix      # Stylelint autofix
 
 ### Adding a New Chapter
 
-**Via admin panel (recommended):**
-1. Open `admin.html`
+**Via personal account (recommended):**
+1. Open `admin.html` (or click "Редактировать" from the bookshelf context menu)
 2. Upload a book file (txt, doc, docx, epub, fb2) or add chapters manually
 3. Configure backgrounds and settings
 4. Save — config is persisted to localStorage
@@ -612,7 +612,7 @@ npm run lint:css:fix      # Stylelint autofix
 
 ### Adding a New Font
 
-**Via admin panel:** Configure in Fonts section — supports custom font upload (woff2/ttf/otf as data URL).
+**Via personal account:** Configure in Fonts section — supports custom font upload (woff2/ttf/otf as data URL).
 
 **Via code:**
 1. Add font to `css/typography.css` or import from Google Fonts
