@@ -85,8 +85,8 @@
   justify-content: space-between;
 }
 
-/* Показываем через data-атрибут */
-.controls[data-settings-open] .settings {
+/* Показываем при чекнутом чекбоксе через :has() */
+.controls:has(.settings-checkbox:checked) .settings {
   opacity: 1;
   min-height: auto;
   max-height: 1000px;
@@ -178,7 +178,7 @@
       width var(--timing-transition) ease-in-out;
   }
 
-  .controls[data-settings-open] .settings {
+  .controls:has(.settings-checkbox:checked) .settings {
     width: auto;
     max-height: 1000px;
   }

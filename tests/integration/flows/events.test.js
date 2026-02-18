@@ -403,12 +403,8 @@ describe('Event System Integration', () => {
       expect(onSettings).toHaveBeenCalledWith('soundEnabled', false);
     });
 
-    it('should disable volume control when sound is off', () => {
-      soundToggle.checked = false;
-      soundToggle.dispatchEvent(new Event('change'));
-
-      expect(pageVolumeControl.classList.contains('disabled')).toBe(true);
-    });
+    // Volume control disabled state теперь управляется через CSS :has()
+    // JS больше не переключает .disabled класс на pageVolumeControl
 
     it('should set volume on slider input', () => {
       volumeSlider.value = '70';

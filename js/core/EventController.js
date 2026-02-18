@@ -174,25 +174,11 @@ export class EventController {
       debugToggle,
       soundToggle,
       volumeSlider,
-      pageVolumeControl,
       ambientPills,
       ambientVolume,
       ambientVolumeWrapper,
-      fullscreenBtn,
-      settingsCheckbox
+      fullscreenBtn
     } = elements;
-
-    // Settings toggle — синхронизируем data-атрибут для Safari (замена :has())
-    if (settingsCheckbox) {
-      const controls = settingsCheckbox.closest(".controls");
-      this.eventManager.add(settingsCheckbox, "change", () => {
-        if (settingsCheckbox.checked) {
-          controls?.setAttribute("data-settings-open", "");
-        } else {
-          controls?.removeAttribute("data-settings-open");
-        }
-      });
-    }
 
     // Font size stepper - с обновлением отображаемого значения
     if (increaseBtn) {
@@ -246,10 +232,6 @@ export class EventController {
         const enabled = e.target.checked;
         this.onSettings("soundEnabled", enabled);
 
-        // Обновить визуальное состояние volume control
-        if (pageVolumeControl) {
-          pageVolumeControl.classList.toggle('disabled', !enabled);
-        }
       });
     }
 
@@ -295,12 +277,6 @@ export class EventController {
     if (fullscreenBtn) {
       this.eventManager.add(fullscreenBtn, "click", () => {
         this.onSettings("fullscreen", "toggle");
-      });
-
-      // Слушаем изменение состояния fullscreen для обновления UI
-      this.eventManager.add(document, "fullscreenchange", () => {
-        const isFullscreen = !!document.fullscreenElement;
-        fullscreenBtn.classList.toggle("is-fullscreen", isFullscreen);
       });
     }
   }

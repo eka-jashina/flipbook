@@ -43,23 +43,10 @@ export class OfflineIndicator {
   _show() {
     if (this._indicator) return;
 
-    this._indicator = document.createElement('div');
-    this._indicator.className = this._className;
-    this._indicator.setAttribute('role', 'status');
-    this._indicator.setAttribute('aria-live', 'polite');
+    this._indicator = document.getElementById('offline-indicator');
+    if (!this._indicator) return;
 
-    const icon = document.createElement('span');
-    icon.className = 'offline-indicator__icon';
-    icon.textContent = '📖';
-    icon.setAttribute('aria-hidden', 'true');
-
-    const text = document.createElement('span');
-    text.className = 'offline-indicator__text';
-    text.textContent = this._message;
-
-    this._indicator.appendChild(icon);
-    this._indicator.appendChild(text);
-    document.body.appendChild(this._indicator);
+    this._indicator.hidden = false;
   }
 
   /**
@@ -69,7 +56,7 @@ export class OfflineIndicator {
   _hide() {
     if (!this._indicator) return;
 
-    this._indicator.remove();
+    this._indicator.hidden = true;
     this._indicator = null;
   }
 

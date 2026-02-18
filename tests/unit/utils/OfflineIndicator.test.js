@@ -9,6 +9,21 @@ import { OfflineIndicator } from '../../../js/utils/OfflineIndicator.js';
 describe('OfflineIndicator', () => {
   let indicator;
 
+  /**
+   * Добавить статическую разметку индикатора в DOM
+   * (в production она определена в index.html)
+   */
+  function insertStaticMarkup() {
+    if (!document.getElementById('offline-indicator')) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div class="offline-indicator" id="offline-indicator" role="status" aria-live="polite" hidden>
+          <span class="offline-indicator__icon" aria-hidden="true">📖</span>
+          <span class="offline-indicator__text">Режим офлайн</span>
+        </div>
+      `);
+    }
+  }
+
   beforeEach(() => {
     // По умолчанию — онлайн
     Object.defineProperty(navigator, 'onLine', {
@@ -16,10 +31,14 @@ describe('OfflineIndicator', () => {
       writable: true,
       configurable: true,
     });
+    insertStaticMarkup();
   });
 
   afterEach(() => {
     indicator?.destroy();
+    // Вернуть hidden-состояние статической разметки
+    const el = document.getElementById('offline-indicator');
+    if (el) el.hidden = true;
   });
 
   describe('constructor', () => {
@@ -35,19 +54,12 @@ describe('OfflineIndicator', () => {
       expect(indicator.isVisible).toBe(true);
     });
 
-    it('should accept custom message', () => {
-      indicator = new OfflineIndicator({ message: 'Custom offline' });
+    it('should use static HTML from DOM', () => {
+      indicator = new OfflineIndicator();
 
       indicator.show();
       const text = document.querySelector('.offline-indicator__text');
-      expect(text.textContent).toBe('Custom offline');
-    });
-
-    it('should accept custom className', () => {
-      indicator = new OfflineIndicator({ className: 'my-indicator' });
-
-      indicator.show();
-      expect(document.querySelector('.my-indicator')).not.toBeNull();
+      expect(text.textContent).toBe('Режим офлайн');
     });
   });
 
@@ -98,7 +110,7 @@ describe('OfflineIndicator', () => {
       expect(icon.getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('should not create duplicate indicators', () => {
+    it('should not create duplicate indicators (second show is no-op)', () => {
       indicator.show();
       indicator.show();
 
@@ -111,11 +123,12 @@ describe('OfflineIndicator', () => {
       indicator = new OfflineIndicator();
     });
 
-    it('should remove indicator from DOM', () => {
+    it('should hide indicator in DOM', () => {
       indicator.show();
       indicator.hide();
 
-      expect(document.querySelector('.offline-indicator')).toBeNull();
+      const el = document.getElementById('offline-indicator');
+      expect(el.hidden).toBe(true);
     });
 
     it('should set isVisible to false', () => {
@@ -186,12 +199,13 @@ describe('OfflineIndicator', () => {
   });
 
   describe('destroy', () => {
-    it('should remove indicator from DOM', () => {
+    it('should hide indicator in DOM', () => {
       indicator = new OfflineIndicator();
       indicator.show();
 
       indicator.destroy();
-      expect(document.querySelector('.offline-indicator')).toBeNull();
+      const el = document.getElementById('offline-indicator');
+      expect(el.hidden).toBe(true);
     });
 
     it('should stop listening to online/offline events', () => {
