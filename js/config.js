@@ -166,7 +166,7 @@ function buildFontsConfig(adminReadingFonts) {
 const fontsResult = buildFontsConfig(adminConfig?.readingFonts);
 
 export const CONFIG = Object.freeze({
-  STORAGE_KEY: "reader-settings",
+  STORAGE_KEY: activeBook?.id ? `reader-settings:${activeBook.id}` : "reader-settings",
   COVER_BG: resolveCoverBg(adminCover.bg, 'images/backgrounds/bg-cover.webp'),
   COVER_BG_MOBILE: resolveCoverBg(adminCover.bgMobile, 'images/backgrounds/bg-cover-mobile.webp'),
 

@@ -491,6 +491,10 @@ body[data-screen="reader"] .bookshelf-screen {
    ПУСТОЕ СОСТОЯНИЕ
    ═══════════════════════════════════════════ */
 
+.bookshelf-empty[hidden] {
+  display: none;
+}
+
 .bookshelf-empty {
   display: flex;
   flex-direction: column;
