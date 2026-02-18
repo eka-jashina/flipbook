@@ -15,15 +15,16 @@
 
 - **3D-анимация** — реалистичное перелистывание страниц с CSS 3D-трансформациями
 - **Мультиглавная навигация** — поддержка книг с несколькими главами
-- **Админ-панель** — управление книгами, главами, шрифтами, звуками, оформлением
-- **Мультикнижность** — поддержка нескольких книг с экраном книжной полки
+- **Книжная полка** — стартовый экран с карточками книг, контекстное меню (читать / редактировать / удалить)
+- **Личный кабинет** — управление книгами, главами, шрифтами, звуками, оформлением
+- **Мультикнижность** — поддержка нескольких книг, per-book прогресс чтения (кнопка «Продолжить чтение»)
 - **Импорт книг** — загрузка из форматов txt, doc, docx, epub, fb2
 - **Персонализация** — выбор шрифта, размера текста, темы оформления
 - **Кастомизация оформления** — per-book настройка цветов обложки, текстур страниц, декоративных шрифтов
-- **Ambient-звуки** — фоновая атмосфера (дождь, камин, кафе) — настраиваемые через админку
+- **Ambient-звуки** — фоновая атмосфера (дождь, камин, кафе) — настраиваемые через личный кабинет
 - **Фотоальбом** — поддержка фотоальбома с лайтбоксом
 - **Адаптивный дизайн** — корректная работа на десктопе и мобильных устройствах
-- **Сохранение прогресса** — автоматическое запоминание позиции чтения
+- **Сохранение прогресса** — автоматическое запоминание позиции чтения по каждой книге
 - **PWA** — установка как приложение, офлайн-доступ через Service Worker
 
 ---
@@ -225,8 +226,7 @@ flipbook/
 │       ├── book-upload.css         # Загрузка книги
 │       ├── chapters.css            # Управление главами
 │       ├── fonts.css               # Управление шрифтами
-│       ├── sounds.css              # Управление звуками
-│       ├── ambients.css            # Ambient-звуки
+│       ├── sounds.css              # Звуки и ambient-звуки
 │       ├── appearance.css          # Кастомизация оформления
 │       ├── settings.css            # Настройки
 │       ├── album.css               # Фотоальбом
@@ -369,22 +369,31 @@ npm run dev
 
 ---
 
-## Админ-панель
+## Личный кабинет
 
-Админ-панель (`admin.html`) позволяет управлять содержимым и оформлением без изменения кода:
+Личный кабинет (`admin.html`) позволяет управлять содержимым и оформлением без изменения кода. Открывается кнопкой «Редактировать» из контекстного меню на книжной полке.
 
-- **Управление книгами** — создание, выбор, удаление книг
+### Вкладка «Мои книги»
+
+- **Управление книгами** — создание, выбор, удаление книг; экран выбора режима создания (загрузка файла или создание вручную)
 - **Загрузка книг** — импорт из txt, doc, docx, epub, fb2
-- **Управление главами** — добавление, редактирование, переупорядочивание глав
+- **Управление главами** — добавление, редактирование, переупорядочивание глав; переключатель тем оформления (светлая/тёмная) прямо на вкладке «Страницы»
 - **Шрифты** — выбор из встроенных или загрузка кастомных (woff2/ttf/otf)
 - **Звуки** — настройка звуков перелистывания и обложки
 - **Ambient-звуки** — добавление и настройка фоновых звуков
 - **Оформление** — цвета обложки, текстуры страниц, фон приложения (отдельно для light/dark тем)
 - **Фотоальбом** — управление галереей изображений
-- **Настройки видимости** — какие настройки показывать читателю
-- **Экспорт** — экспорт конфигурации
 
-Конфигурация админки сохраняется в localStorage (`flipbook-admin-config`), крупный контент (HTML глав) — в IndexedDB.
+### Вкладка «Настройки»
+
+- **Настройки видимости** — какие настройки показывать читателю (шрифт, размер, тема, звук, ambient)
+- **Шрифты платформы** — управление доступными шрифтами для чтения
+
+### Вкладка «Экспорт»
+
+- **Экспорт конфигурации** — сохранение всего конфига в файл
+
+Конфигурация сохраняется в localStorage (`flipbook-admin-config`), крупный контент (HTML глав) — в IndexedDB.
 
 ---
 
@@ -461,23 +470,24 @@ E2E-тесты используют Page Object модели для абстра
 Content-Security-Policy:
   default-src 'self';
   script-src 'self';
-  style-src 'self' 'unsafe-inline';
-  img-src 'self' data:;
-  font-src 'self';
-  media-src 'self';
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  img-src 'self' data: blob:;
+  font-src 'self' https://fonts.gstatic.com data:;
+  media-src 'self' data:;
   connect-src 'self';
   object-src 'none';
   frame-ancestors 'none';
   base-uri 'self';
-  form-action 'self'
+  form-action 'none'
 ```
 
 | Директива | Значение | Причина |
 |-----------|----------|---------|
 | `script-src 'self'` | Только свои скрипты | ES Modules, нет inline-скриптов |
-| `style-src 'self' 'unsafe-inline'` | Свои + inline | CSS custom properties в JS |
-| `img-src 'self' data:` | Свои + data URI | WebP фоны + возможные base64 |
-| `media-src 'self'` | Только свои | MP3 звуки страниц и ambient |
+| `style-src 'self' 'unsafe-inline' fonts.googleapis.com` | Свои + inline + Google Fonts CSS | CSS custom properties в JS + системные шрифты |
+| `img-src 'self' data: blob:` | Свои + data URI + blob | WebP фоны + base64 + blob-объекты |
+| `font-src 'self' fonts.gstatic.com data:` | Свои + Google Fonts файлы + data URI | Системные и кастомные шрифты |
+| `media-src 'self' data:` | Свои + data URI | MP3 звуки страниц и ambient |
 | `object-src 'none'` | Запрет плагинов | Защита от Flash/Java |
 | `frame-ancestors 'none'` | Запрет iframe | Защита от clickjacking |
 
@@ -488,7 +498,7 @@ Content-Security-Policy:
 
 ```
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com data:; media-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
@@ -507,7 +517,7 @@ Content-Security-Policy:
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com data:; media-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'"
         },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },
@@ -524,7 +534,7 @@ Content-Security-Policy:
 <summary><b>Nginx</b></summary>
 
 ```nginx
-add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com data:; media-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header X-Frame-Options "DENY" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
