@@ -11,131 +11,25 @@
  * Global:  readingFonts, settingsVisibility, fontMin, fontMax
  */
 
+import { IdbStorage } from '../utils/IdbStorage.js';
+import {
+  LIGHT_DEFAULTS,
+  DARK_DEFAULTS,
+  DEFAULT_READING_FONTS,
+  DEFAULT_BOOK_SETTINGS,
+  DEFAULT_BOOK,
+  DEFAULT_CONFIG,
+} from './AdminConfigDefaults.js';
+
 const STORAGE_KEY = 'flipbook-admin-config';
 const IDB_NAME = 'flipbook-admin';
 const IDB_STORE = 'config';
-const IDB_VERSION = 1;
-
-// Per-theme дефолты
-const LIGHT_DEFAULTS = {
-  coverBgStart: '#3a2d1f',
-  coverBgEnd: '#2a2016',
-  coverText: '#f2e9d8',
-  coverBgImage: null,
-  pageTexture: 'default',
-  customTextureData: null,
-  bgPage: '#fdfcf8',
-  bgApp: '#e6e3dc',
-};
-
-const DARK_DEFAULTS = {
-  coverBgStart: '#111111',
-  coverBgEnd: '#000000',
-  coverText: '#eaeaea',
-  coverBgImage: null,
-  pageTexture: 'none',
-  customTextureData: null,
-  bgPage: '#1e1e1e',
-  bgApp: '#121212',
-};
-
-// Дефолтные шрифты для чтения
-const DEFAULT_READING_FONTS = [
-  { id: 'georgia', label: 'Georgia', family: 'Georgia, serif', builtin: true, enabled: true },
-  { id: 'merriweather', label: 'Merriweather', family: '"Merriweather", serif', builtin: true, enabled: true },
-  { id: 'libre-baskerville', label: 'Libre Baskerville', family: '"Libre Baskerville", serif', builtin: true, enabled: true },
-  { id: 'inter', label: 'Inter', family: 'Inter, sans-serif', builtin: true, enabled: true },
-  { id: 'roboto', label: 'Roboto', family: 'Roboto, sans-serif', builtin: true, enabled: true },
-  { id: 'open-sans', label: 'Open Sans', family: '"Open Sans", sans-serif', builtin: true, enabled: true },
-];
-
-// Дефолтные per-book настройки
-const DEFAULT_BOOK_SETTINGS = {
-  defaultSettings: {
-    font: 'georgia',
-    fontSize: 18,
-    theme: 'light',
-    soundEnabled: true,
-    soundVolume: 0.3,
-    ambientType: 'none',
-    ambientVolume: 0.5,
-  },
-  appearance: {
-    light: { ...LIGHT_DEFAULTS },
-    dark: { ...DARK_DEFAULTS },
-  },
-  sounds: {
-    pageFlip: 'sounds/page-flip.mp3',
-    bookOpen: 'sounds/cover-flip.mp3',
-    bookClose: 'sounds/cover-flip.mp3',
-  },
-  ambients: [
-    { id: 'none', label: 'Без звука', shortLabel: 'Нет', icon: '✕', file: null, visible: true, builtin: true },
-    { id: 'rain', label: 'Дождь', shortLabel: 'Дождь', icon: '🌧️', file: 'sounds/ambient/rain.mp3', visible: true, builtin: true },
-    { id: 'fireplace', label: 'Камин', shortLabel: 'Камин', icon: '🔥', file: 'sounds/ambient/fireplace.mp3', visible: true, builtin: true },
-    { id: 'cafe', label: 'Кафе', shortLabel: 'Кафе', icon: '☕', file: 'sounds/ambient/cafe.mp3', visible: true, builtin: true },
-  ],
-  decorativeFont: null,
-};
-
-// Дефолтная книга
-const DEFAULT_BOOK = {
-  id: 'default',
-  cover: {
-    title: 'О хоббитах',
-    author: 'Дж.Р.Р.Толкин',
-    bg: 'images/backgrounds/bg-cover.webp',
-    bgMobile: 'images/backgrounds/bg-cover-mobile.webp',
-    bgMode: 'default',
-    bgCustomData: null,
-  },
-  chapters: [
-    {
-      id: 'part_1',
-      file: 'content/part_1.html',
-      bg: 'images/backgrounds/part_1.webp',
-      bgMobile: 'images/backgrounds/part_1-mobile.webp',
-    },
-    {
-      id: 'part_2',
-      file: 'content/part_2.html',
-      bg: 'images/backgrounds/part_2.webp',
-      bgMobile: 'images/backgrounds/part_2-mobile.webp',
-    },
-    {
-      id: 'part_3',
-      file: 'content/part_3.html',
-      bg: 'images/backgrounds/part_3.webp',
-      bgMobile: 'images/backgrounds/part_3-mobile.webp',
-    },
-  ],
-  ...structuredClone(DEFAULT_BOOK_SETTINGS),
-};
-
-// Дефолтная конфигурация
-const DEFAULT_CONFIG = {
-  books: [structuredClone(DEFAULT_BOOK)],
-  activeBookId: 'default',
-  // Global: диапазон шрифтов
-  fontMin: 14,
-  fontMax: 22,
-  // Global: шрифты для чтения
-  readingFonts: structuredClone(DEFAULT_READING_FONTS),
-  // Global: видимость настроек
-  settingsVisibility: {
-    fontSize: true,
-    theme: true,
-    font: true,
-    fullscreen: true,
-    sound: true,
-    ambient: true,
-  },
-};
 
 export class AdminConfigStore {
   constructor() {
     this._config = structuredClone(DEFAULT_CONFIG);
     this._savePromise = null;
+    this._idb = new IdbStorage(IDB_NAME, IDB_STORE);
   }
 
   /**
@@ -157,7 +51,7 @@ export class AdminConfigStore {
   async _load() {
     // 1. Попробовать IndexedDB
     try {
-      const data = await this._idbGet(STORAGE_KEY);
+      const data = await this._idb.get(STORAGE_KEY);
       if (data) {
         return this._mergeWithDefaults(data);
       }
@@ -174,7 +68,7 @@ export class AdminConfigStore {
 
         // Мигрировать в IndexedDB (localStorage не удаляем — ридер читает оттуда)
         try {
-          await this._idbPut(STORAGE_KEY, config);
+          await this._idb.put(STORAGE_KEY, config);
         } catch {
           // Не удалось мигрировать — не критично, данные уже в памяти
         }
@@ -329,7 +223,7 @@ export class AdminConfigStore {
       // localStorage переполнен даже без htmlContent — не критично, IndexedDB основной
     }
 
-    this._savePromise = this._idbPut(STORAGE_KEY, snapshot)
+    this._savePromise = this._idb.put(STORAGE_KEY, snapshot)
       .catch(err => {
         console.error('AdminConfigStore: ошибка сохранения в IndexedDB', err);
         throw err;
@@ -341,67 +235,6 @@ export class AdminConfigStore {
     if (this._savePromise) {
       await this._savePromise;
     }
-  }
-
-  // --- IndexedDB ---
-
-  /** Открыть соединение с IndexedDB */
-  _idbOpen() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(IDB_NAME, IDB_VERSION);
-
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) {
-          db.createObjectStore(IDB_STORE);
-        }
-      };
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  /** Прочитать значение из IndexedDB */
-  async _idbGet(key) {
-    const db = await this._idbOpen();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readonly');
-      const store = tx.objectStore(IDB_STORE);
-      const request = store.get(key);
-
-      request.onsuccess = () => resolve(request.result ?? null);
-      tx.oncomplete = () => db.close();
-      tx.onerror = () => { db.close(); reject(tx.error); };
-    });
-  }
-
-  /** Записать значение в IndexedDB */
-  async _idbPut(key, value) {
-    const db = await this._idbOpen();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      const store = tx.objectStore(IDB_STORE);
-      store.put(value, key);
-
-      // resolve только после фиксации транзакции, не в request.onsuccess
-      tx.oncomplete = () => { db.close(); resolve(); };
-      tx.onerror = () => { db.close(); reject(tx.error); };
-    });
-  }
-
-  /** Удалить значение из IndexedDB */
-  async _idbDelete(key) {
-    const db = await this._idbOpen();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      const store = tx.objectStore(IDB_STORE);
-      store.delete(key);
-
-      // resolve только после фиксации транзакции, не в request.onsuccess
-      tx.oncomplete = () => { db.close(); resolve(); };
-      tx.onerror = () => { db.close(); reject(tx.error); };
-    });
   }
 
   /** Получить весь конфиг */
@@ -701,7 +534,7 @@ export class AdminConfigStore {
 
   /** Удалить конфиг из IndexedDB и localStorage */
   clear() {
-    this._idbDelete(STORAGE_KEY).catch(() => {});
+    this._idb.delete(STORAGE_KEY).catch(() => {});
     localStorage.removeItem(STORAGE_KEY);
     this._config = structuredClone(DEFAULT_CONFIG);
   }
