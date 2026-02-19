@@ -2,212 +2,178 @@
  * HTML SANITIZER
  * Защита от XSS при загрузке внешнего HTML-контента.
  *
+ * Использует DOMPurify как основной движок санитизации с дополнительной
+ * пост-обработкой для фильтрации атрибутов по тегам и защиты внешних ссылок.
+ *
  * Особенности:
+ * - DOMPurify — battle-tested движок (поддерживает защиту от mXSS, namespace pollution и др.)
  * - Белый список разрешённых тегов и атрибутов
- * - Удаление опасных тегов (script, style, iframe и др.)
- * - Фильтрация event-handler атрибутов (onclick, onerror и др.)
- * - Блокировка опасных URL-схем (javascript:, data: и др.)
- * - Настраиваемые списки через options
+ * - Фильтрация data-* атрибутов по белому списку
+ * - Фильтрация атрибутов по конкретному тегу (src только для img, href только для a и т.д.)
+ * - Блокировка опасных URI-схем (javascript:, vbscript:, data:text/html, blob: и др.)
+ * - Разрешение безопасных растровых data:image/ URI (PNG, JPEG, WebP, GIF и др.)
+ * - Добавление rel="noopener noreferrer" и target="_blank" на внешние ссылки
  */
+
+import DOMPurify from 'dompurify';
+
+const DEFAULT_ALLOWED_TAGS = [
+  "article", "section", "div", "span", "main", "aside",
+  "header", "footer", "nav", "p", "h1", "h2", "h3", "h4",
+  "h5", "h6", "strong", "em", "b", "i", "u", "s", "mark",
+  "small", "sub", "sup", "ol", "ul", "li", "dl", "dt", "dd",
+  "blockquote", "pre", "code", "br", "hr", "figure",
+  "figcaption", "img", "a", "table", "thead", "tbody", "tfoot",
+  "tr", "th", "td", "caption",
+];
+
+const DEFAULT_ALLOWED_ATTRS_GLOBAL = ["class", "id", "title", "lang", "dir"];
+
+const DEFAULT_ALLOWED_ATTRS_BY_TAG = {
+  img: ["src", "alt", "width", "height", "loading"],
+  a: ["href", "rel", "target"],
+  ol: ["start", "type", "reversed"],
+  td: ["colspan", "rowspan"],
+  th: ["colspan", "rowspan", "scope"],
+};
+
+const DEFAULT_ALLOWED_DATA_ATTRS = ["data-chapter", "data-chapter-start", "data-index", "data-layout"];
+
+// Разрешённые URI-схемы: стандартные протоколы + безопасные растровые data:image/ URI.
+// SVG в data: URL намеренно не разрешён — может содержать <script>.
+// Важно: в последней альтернативе `:` включён в exclusion-set `[^a-z+\-.:]`,
+// чтобы `data:...` не попадал под паттерн для относительных URL.
+const ALLOWED_URI_REGEXP =
+  /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|data:image\/(?:png|jpe?g|gif|webp|bmp|tiff?|ico|avif);base64,|[^a-z]|[a-z+\-.]+(?:[^a-z+\-.:]|$))/i;
+
+// Безопасные растровые data: URI — разрешены для встроенных изображений из EPUB/FB2.
+// DOMPurify разрешает data: URI для тегов из DATA_URI_TAGS (включая img) безусловно,
+// поэтому проверяем MIME-тип явно в пост-обработке.
+const SAFE_IMAGE_DATA_URI_RE = /^data:image\/(?:png|jpe?g|gif|webp|bmp|tiff?|ico|avif);base64,/i;
+
+const EXTERNAL_URL_RE = /^https?:\/\//i;
 
 export class HTMLSanitizer {
   /**
    * @param {Object} options - Опции настройки
-   * @param {string[]} options.allowedTags - Разрешённые HTML-теги
-   * @param {string[]} options.allowedAttrsGlobal - Глобально разрешённые атрибуты
-   * @param {Object} options.allowedAttrsByTag - Атрибуты, разрешённые для конкретных тегов
-   * @param {string[]} options.allowedDataAttrs - Разрешённые data-* атрибуты
+   * @param {string[]} [options.allowedTags] - Разрешённые HTML-теги
+   * @param {string[]} [options.allowedAttrsGlobal] - Глобально разрешённые атрибуты
+   * @param {Object} [options.allowedAttrsByTag] - Атрибуты, разрешённые для конкретных тегов
+   * @param {string[]} [options.allowedDataAttrs] - Разрешённые data-* атрибуты
    */
   constructor(options = {}) {
-    /** @type {Set<string>} Белый список тегов */
-    this.ALLOWED_TAGS = new Set(options.allowedTags || [
-      "article", "section", "div", "span", "main", "aside",
-      "header", "footer", "nav", "p", "h1", "h2", "h3", "h4",
-      "h5", "h6", "strong", "em", "b", "i", "u", "s", "mark",
-      "small", "sub", "sup", "ol", "ul", "li", "dl", "dt", "dd",
-      "blockquote", "pre", "code", "br", "hr", "figure",
-      "figcaption", "img", "a", "table", "thead", "tbody", "tfoot",
-      "tr", "th", "td", "caption",
-    ]);
-
-    /** @type {Set<string>} Глобально разрешённые атрибуты */
-    this.ALLOWED_ATTRS_GLOBAL = new Set(
-      options.allowedAttrsGlobal || ["class", "id", "title", "lang", "dir"]
-    );
-
-    /** @type {Object<string, string[]>} Атрибуты, разрешённые для конкретных тегов */
-    this.ALLOWED_ATTRS_BY_TAG = options.allowedAttrsByTag || {
-      img: ["src", "alt", "width", "height", "loading"],
-      a: ["href", "rel", "target"],
-      ol: ["start", "type", "reversed"],
-      td: ["colspan", "rowspan"],
-      th: ["colspan", "rowspan", "scope"],
-    };
-
-    /** @type {Set<string>} Разрешённые data-* атрибуты */
-    this.ALLOWED_DATA_ATTRS = new Set(
-      options.allowedDataAttrs || ["data-chapter", "data-chapter-start", "data-index", "data-layout"]
-    );
-
-    /** @type {Set<string>} Чёрный список опасных тегов */
-    this.DANGEROUS_TAGS = new Set([
-      "script", "style", "link", "meta", "base", "object", "embed",
-      "applet", "iframe", "frame", "frameset", "form", "input",
-      "button", "select", "textarea", "template", "slot", "portal",
-    ]);
-
-    /** @type {RegExp} Паттерн опасных URL-схем */
-    this.DANGEROUS_URL_SCHEMES = /^(?:javascript|vbscript|data|blob):/i;
+    /** @type {Set<string>} */
+    this.ALLOWED_TAGS = new Set(options.allowedTags || DEFAULT_ALLOWED_TAGS);
+    /** @type {Set<string>} */
+    this.ALLOWED_ATTRS_GLOBAL = new Set(options.allowedAttrsGlobal || DEFAULT_ALLOWED_ATTRS_GLOBAL);
+    /** @type {Object<string, string[]>} */
+    this.ALLOWED_ATTRS_BY_TAG = options.allowedAttrsByTag || DEFAULT_ALLOWED_ATTRS_BY_TAG;
+    /** @type {Set<string>} */
+    this.ALLOWED_DATA_ATTRS = new Set(options.allowedDataAttrs || DEFAULT_ALLOWED_DATA_ATTRS);
   }
 
   /**
-   * Очистить HTML от потенциально опасного содержимого
+   * Очистить HTML от потенциально опасного содержимого.
+   *
+   * Двухпроходной алгоритм:
+   * 1. DOMPurify — удаляет опасные теги, обработчики событий, опасные URI-схемы,
+   *    HTML-комментарии, namespace-атаки и mXSS-паттерны.
+   * 2. Пост-обработка — ограничивает атрибуты по тегам, фильтрует data-*,
+   *    добавляет защитные атрибуты на внешние ссылки.
+   *
    * @param {string} html - Исходный HTML
    * @returns {string} Безопасный HTML
    */
   sanitize(html) {
-    if (!html || typeof html !== "string") return "";
+    if (!html || typeof html !== 'string') return '';
 
-    let doc;
-    try {
-      doc = new DOMParser().parseFromString(html, "text/html");
+    // Объединяем все разрешённые атрибуты для первого прохода DOMPurify.
+    // DOMPurify применяет ALLOWED_ATTR глобально; пост-обработка сужает до per-tag.
+    const allAllowedAttrs = [
+      ...this.ALLOWED_ATTRS_GLOBAL,
+      ...Object.values(this.ALLOWED_ATTRS_BY_TAG).flat(),
+    ];
 
-      // Проверяем на ошибку парсинга (DOMParser возвращает документ с parsererror)
-      const parserError = doc.querySelector("parsererror");
-      if (parserError) {
-        console.warn("HTMLSanitizer: parser error detected, returning empty string");
-        return "";
-      }
-    } catch (error) {
-      console.error("HTMLSanitizer: failed to parse HTML", error);
-      return "";
-    }
+    // Проход 1: DOMPurify обрабатывает тяжёлую security-логику:
+    // mXSS, namespace pollution, опасные теги, event-handler'ы, опасные URI
+    const clean = DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [...this.ALLOWED_TAGS],
+      ALLOWED_ATTR: allAllowedAttrs,
+      ALLOW_DATA_ATTR: true,      // data-* фильтруем вручную на проходе 2
+      ALLOWED_URI_REGEXP,
+    });
 
-    this._sanitizeNode(doc.body);
+    if (!clean) return '';
+
+    // Проход 2: Пост-обработка DOM для per-tag фильтрации атрибутов,
+    // выборочного разрешения data-*, и добавления защиты внешних ссылок
+    const doc = new DOMParser().parseFromString(clean, 'text/html');
+    this._postProcess(doc.body);
     return doc.body.innerHTML;
   }
 
   /**
-   * Рекурсивно обработать дочерние узлы
+   * Обойти все элементы и применить дополнительные ограничения
    * @private
-   * @param {Node} node - Родительский узел
+   * @param {Element} root
    */
-  _sanitizeNode(node) {
-    if (!node) return;
-    const children = Array.from(node.childNodes);
-
-    for (const child of children) {
-      if (child.nodeType === Node.ELEMENT_NODE) {
-        this._sanitizeElement(child);
-      } else if (child.nodeType === Node.COMMENT_NODE) {
-        // Удаляем HTML-комментарии (могут содержать условные конструкции IE)
-        child.remove();
-      }
+  _postProcess(root) {
+    for (const el of root.querySelectorAll('*')) {
+      this._filterAttributes(el);
+      this._hardenExternalLink(el);
     }
   }
 
   /**
-   * Обработать отдельный элемент
+   * Убрать атрибуты, не разрешённые для данного тега, и запрещённые data-*
    * @private
-   * @param {Element} el - DOM-элемент
+   * @param {Element} el
    */
-  _sanitizeElement(el) {
+  _filterAttributes(el) {
     const tagName = el.tagName.toLowerCase();
+    const toRemove = [];
 
-    // Удаляем запрещённые теги полностью
-    if (this.DANGEROUS_TAGS.has(tagName) || !this.ALLOWED_TAGS.has(tagName)) {
-      el.remove();
-      return;
-    }
+    for (const { name } of el.attributes) {
+      const lower = name.toLowerCase();
 
-    this._sanitizeAttributes(el, tagName);
-    this._sanitizeNode(el);
-  }
-
-  /**
-   * Очистить атрибуты элемента
-   * @private
-   * @param {Element} el - DOM-элемент
-   * @param {string} tagName - Имя тега в нижнем регистре
-   */
-  _sanitizeAttributes(el, tagName) {
-    const attrsToRemove = [];
-
-    for (const attr of el.attributes) {
-      const attrName = attr.name.toLowerCase();
-
-      // Удаляем все event handlers (onclick, onerror и т.д.)
-      if (attrName.startsWith("on")) {
-        attrsToRemove.push(attr.name);
+      if (lower.startsWith('data-')) {
+        if (!this.ALLOWED_DATA_ATTRS.has(lower)) toRemove.push(name);
         continue;
       }
 
-      // Проверяем глобально разрешённые атрибуты
-      if (this.ALLOWED_ATTRS_GLOBAL.has(attrName)) continue;
-      // Проверяем разрешённые data-* атрибуты
-      if (attrName.startsWith("data-") && this.ALLOWED_DATA_ATTRS.has(attrName)) continue;
+      if (this.ALLOWED_ATTRS_GLOBAL.has(lower)) continue;
 
-      // Проверяем атрибуты, специфичные для тега
       const tagAttrs = this.ALLOWED_ATTRS_BY_TAG[tagName];
-      if (tagAttrs && tagAttrs.includes(attrName)) continue;
+      if (!tagAttrs?.includes(lower)) {
+        toRemove.push(name);
+        continue;
+      }
 
-      attrsToRemove.push(attr.name);
-    }
-
-    for (const attrName of attrsToRemove) {
-      el.removeAttribute(attrName);
-    }
-
-    // Дополнительная проверка URL-атрибутов на опасные схемы.
-    // Разрешаем data:image/ для безопасных растровых форматов — они используются
-    // для встроенных изображений из EPUB/FB2. SVG не разрешаем (может содержать скрипты).
-    if (el.hasAttribute("src")) {
-      const srcValue = el.getAttribute("src");
-      if (this.DANGEROUS_URL_SCHEMES.test(srcValue) && !this._isSafeImageDataUrl(srcValue)) {
-        el.removeAttribute("src");
+      // Для URI-атрибутов: DOMPurify разрешает любые data: URI на img/audio/video
+      // (внутренний DATA_URI_TAGS). Явно ограничиваем только безопасными растровыми форматами.
+      if (lower === 'src' || lower === 'href') {
+        const val = el.getAttribute(name);
+        if (val && /^data:/i.test(val) && !SAFE_IMAGE_DATA_URI_RE.test(val)) {
+          toRemove.push(name);
+        }
       }
     }
 
-    if (el.hasAttribute("href")) {
-      const href = el.getAttribute("href");
-
-      // Удаляем опасные URL-схемы
-      if (this.DANGEROUS_URL_SCHEMES.test(href)) {
-        el.removeAttribute("href");
-      } else if (this._isExternalUrl(href)) {
-        // Для внешних ссылок добавляем защитные атрибуты
-        el.setAttribute("rel", "noopener noreferrer");
-        el.setAttribute("target", "_blank");
-      }
-    }
+    for (const name of toRemove) el.removeAttribute(name);
   }
 
   /**
-   * Проверить, является ли data: URL безопасным изображением (растровый формат).
-   * SVG не считается безопасным, т.к. может содержать <script>.
+   * Добавить rel="noopener noreferrer" и target="_blank" на внешние ссылки
    * @private
-   * @param {string} url - URL для проверки
-   * @returns {boolean} true если это безопасный растровый data:image/ URL
+   * @param {Element} el
    */
-  _isSafeImageDataUrl(url) {
-    if (!url) return false;
-    return /^data:image\/(?:png|jpe?g|gif|webp|bmp|tiff?|ico|avif);base64,/i.test(url);
-  }
-
-  /**
-   * Проверить, является ли URL внешним
-   * @private
-   * @param {string} url - URL для проверки
-   * @returns {boolean} true если URL внешний
-   */
-  _isExternalUrl(url) {
-    if (!url) return false;
-    // Относительные пути и якоря — не внешние
-    if (url.startsWith("/") || url.startsWith("#") || url.startsWith("./") || url.startsWith("../")) {
-      return false;
+  _hardenExternalLink(el) {
+    if (el.tagName.toLowerCase() !== 'a') return;
+    const href = el.getAttribute('href');
+    if (href && EXTERNAL_URL_RE.test(href)) {
+      el.setAttribute('rel', 'noopener noreferrer');
+      el.setAttribute('target', '_blank');
     }
-    // Абсолютные URL с протоколом — внешние
-    return /^https?:\/\//i.test(url);
   }
 }
 
