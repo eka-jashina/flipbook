@@ -82,6 +82,7 @@
     "reading"
   ],
   "dependencies": {
+    "dompurify": "^3.3.1",
     "jszip": "^3.10.1"
   }
 }
