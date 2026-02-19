@@ -18,7 +18,6 @@ const IDB_VERSION = 1;
 
 // Per-theme дефолты
 const LIGHT_DEFAULTS = {
-  coverBgMode: 'default',
   coverBgStart: '#3a2d1f',
   coverBgEnd: '#2a2016',
   coverText: '#f2e9d8',
@@ -30,7 +29,6 @@ const LIGHT_DEFAULTS = {
 };
 
 const DARK_DEFAULTS = {
-  coverBgMode: 'default',
   coverBgStart: '#111111',
   coverBgEnd: '#000000',
   coverText: '#eaeaea',
@@ -88,6 +86,8 @@ const DEFAULT_BOOK = {
     author: 'Дж.Р.Р.Толкин',
     bg: 'images/backgrounds/bg-cover.webp',
     bgMobile: 'images/backgrounds/bg-cover-mobile.webp',
+    bgMode: 'default',
+    bgCustomData: null,
   },
   chapters: [
     {

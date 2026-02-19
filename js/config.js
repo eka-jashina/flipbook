@@ -58,6 +58,15 @@ function resolveCoverBg(value, fallback) {
   return value.startsWith('http') ? value : `${BASE_URL}${value}`;
 }
 
+// Фон-подложка под книгу: поддержка режимов default/none/custom
+function resolveCoverBgFromCover(cover, fallback) {
+  if (cover.bgMode === 'none') return null;
+  if (cover.bgMode === 'custom' && cover.bgCustomData) return cover.bgCustomData;
+  // Для обратной совместимости (старый формат: текстовый путь)
+  const legacyPath = fallback.includes('mobile') ? cover.bgMobile : cover.bg;
+  return resolveCoverBg(legacyPath, fallback);
+}
+
 // Звук: из админки (data URL / http / путь) или дефолтный
 function resolveSound(value, fallback) {
   if (!value) return `${BASE_URL}${fallback}`;
@@ -177,8 +186,8 @@ export function createConfig(adminConfig = null) {
 
   return Object.freeze({
     STORAGE_KEY: activeBook?.id ? `reader-settings:${activeBook.id}` : "reader-settings",
-    COVER_BG: resolveCoverBg(adminCover.bg, 'images/backgrounds/bg-cover.webp'),
-    COVER_BG_MOBILE: resolveCoverBg(adminCover.bgMobile, 'images/backgrounds/bg-cover-mobile.webp'),
+    COVER_BG: resolveCoverBgFromCover(adminCover, 'images/backgrounds/bg-cover.webp'),
+    COVER_BG_MOBILE: resolveCoverBgFromCover(adminCover, 'images/backgrounds/bg-cover-mobile.webp'),
 
     CHAPTERS,
 
@@ -220,7 +229,6 @@ export function createConfig(adminConfig = null) {
       fontMin: adminFontMin ?? 14,
       fontMax: adminFontMax ?? 22,
       light: {
-        coverBgMode: bookAppearance.light?.coverBgMode || 'default',
         coverBgStart: bookAppearance.light?.coverBgStart || '#3a2d1f',
         coverBgEnd: bookAppearance.light?.coverBgEnd || '#2a2016',
         coverText: bookAppearance.light?.coverText || '#f2e9d8',
@@ -231,7 +239,6 @@ export function createConfig(adminConfig = null) {
         bgApp: bookAppearance.light?.bgApp || '#e6e3dc',
       },
       dark: {
-        coverBgMode: bookAppearance.dark?.coverBgMode || 'default',
         coverBgStart: bookAppearance.dark?.coverBgStart || '#111111',
         coverBgEnd: bookAppearance.dark?.coverBgEnd || '#000000',
         coverText: bookAppearance.dark?.coverText || '#eaeaea',

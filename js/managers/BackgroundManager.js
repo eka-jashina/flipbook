@@ -48,6 +48,16 @@ export class BackgroundManager {
     const incoming = this.backgrounds[nextIndex];
     const outgoing = this.backgrounds[this.activeIndex];
 
+    // Режим «нет фона» — очищаем изображение
+    if (!url) {
+      incoming.style.backgroundImage = '';
+      incoming.dataset.loading = BoolStr.FALSE;
+      incoming.dataset.active = BoolStr.TRUE;
+      outgoing.dataset.active = BoolStr.FALSE;
+      this.activeIndex = nextIndex;
+      return;
+    }
+
     // Если изображение уже предзагружено - показываем сразу без blur
     const isPreloaded = this.preloadedUrls.has(url);
 

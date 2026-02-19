@@ -21,12 +21,9 @@ export class AppearanceModule extends BaseModule {
     this.coverBgEnd = document.getElementById('coverBgEnd');
     this.coverText = document.getElementById('coverText');
     this.coverTextPreview = document.getElementById('coverTextPreview');
-    this.coverBgMode = document.getElementById('coverBgMode');
-    this.coverBgOptions = document.querySelectorAll('.texture-option[data-cover-bg]');
     this.coverBgFileInput = document.getElementById('coverBgFileInput');
-    this.coverBgThumb = document.getElementById('coverBgThumb');
-    this.coverBgCustomInfo = document.getElementById('coverBgCustomInfo');
-    this.coverBgCustomName = document.getElementById('coverBgCustomName');
+    this.coverBgPreview = document.getElementById('coverBgPreview');
+    this.coverBgPreviewEmpty = document.getElementById('coverBgPreviewEmpty');
     this.coverBgRemove = document.getElementById('coverBgRemove');
 
     // Page appearance fields (editor → appearance tab)
@@ -62,11 +59,6 @@ export class AppearanceModule extends BaseModule {
     this.coverBgStart.addEventListener('input', () => this._updateAppearancePreview());
     this.coverBgEnd.addEventListener('input', () => this._updateAppearancePreview());
     this.coverText.addEventListener('input', () => this._updateAppearancePreview());
-
-    // Фон обложки — выбор варианта
-    this.coverBgOptions.forEach(btn => {
-      btn.addEventListener('click', () => this._selectCoverBg(btn.dataset.coverBg));
-    });
     this.coverBgFileInput.addEventListener('change', (e) => this._handleCoverBgUpload(e));
     this.coverBgRemove.addEventListener('click', () => this._removeCoverBg());
 
@@ -121,7 +113,6 @@ export class AppearanceModule extends BaseModule {
 
   _saveCurrentThemeFromForm() {
     const data = {
-      coverBgMode: this.coverBgMode.value,
       coverBgStart: this.coverBgStart.value,
       coverBgEnd: this.coverBgEnd.value,
       coverText: this.coverText.value,
@@ -129,9 +120,6 @@ export class AppearanceModule extends BaseModule {
       bgPage: this.bgPage.value,
       bgApp: this.bgApp.value,
     };
-    if (data.coverBgMode !== 'custom') {
-      data.coverBgImage = null;
-    }
     if (data.pageTexture !== 'custom') {
       data.customTextureData = null;
     }
@@ -159,7 +147,7 @@ export class AppearanceModule extends BaseModule {
     this.coverBgStart.value = t.coverBgStart;
     this.coverBgEnd.value = t.coverBgEnd;
     this.coverText.value = t.coverText;
-    this._renderCoverBgSelector(t.coverBgMode || 'default', t.coverBgImage);
+    this._renderCoverBgPreview(t.coverBgImage);
     this.pageTexture.value = t.pageTexture;
     this._renderTextureSelector(t.pageTexture, t.customTextureData);
     this.bgPage.value = t.bgPage;
@@ -178,36 +166,18 @@ export class AppearanceModule extends BaseModule {
 
   // --- Фон обложки ---
 
-  _renderCoverBgSelector(modeValue, customData) {
-    const uploadOption = document.querySelector('.texture-option[data-cover-bg]')?.closest('.texture-options')
-      ?.querySelector('.texture-option--upload');
-
-    this.coverBgOptions.forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.coverBg === modeValue);
-    });
-
-    if (uploadOption) {
-      uploadOption.classList.toggle('active', modeValue === 'custom');
-    }
-
-    this.coverBgMode.value = modeValue;
-
-    if (customData) {
-      this.coverBgThumb.style.backgroundImage = `url(${customData})`;
-      this.coverBgThumb.classList.add('has-image');
-      this.coverBgCustomInfo.hidden = false;
-      this.coverBgCustomName.textContent = 'Своё изображение';
+  _renderCoverBgPreview(imageData) {
+    if (imageData) {
+      this.coverBgPreview.style.backgroundImage = `url(${imageData})`;
+      this.coverBgPreview.classList.add('has-image');
+      this.coverBgPreviewEmpty.hidden = true;
+      this.coverBgRemove.hidden = false;
     } else {
-      this.coverBgThumb.style.backgroundImage = '';
-      this.coverBgThumb.classList.remove('has-image');
-      this.coverBgCustomInfo.hidden = true;
+      this.coverBgPreview.style.backgroundImage = '';
+      this.coverBgPreview.classList.remove('has-image');
+      this.coverBgPreviewEmpty.hidden = false;
+      this.coverBgRemove.hidden = true;
     }
-  }
-
-  _selectCoverBg(value) {
-    this.coverBgMode.value = value;
-    const t = this.store.getAppearance()[this._editTheme];
-    this._renderCoverBgSelector(value, t?.coverBgImage);
   }
 
   _handleCoverBgUpload(e) {
@@ -229,11 +199,8 @@ export class AppearanceModule extends BaseModule {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result;
-      this.store.updateAppearanceTheme(this._editTheme, {
-        coverBgMode: 'custom',
-        coverBgImage: dataUrl,
-      });
-      this._renderCoverBgSelector('custom', dataUrl);
+      this.store.updateAppearanceTheme(this._editTheme, { coverBgImage: dataUrl });
+      this._renderCoverBgPreview(dataUrl);
       this._renderJsonPreview();
       this._showToast('Фон обложки загружен');
     };
@@ -242,13 +209,10 @@ export class AppearanceModule extends BaseModule {
   }
 
   _removeCoverBg() {
-    this.store.updateAppearanceTheme(this._editTheme, {
-      coverBgMode: 'default',
-      coverBgImage: null,
-    });
-    this._renderCoverBgSelector('default', null);
+    this.store.updateAppearanceTheme(this._editTheme, { coverBgImage: null });
+    this._renderCoverBgPreview(null);
     this._renderJsonPreview();
-    this._showToast('Своё изображение удалено');
+    this._showToast('Фон обложки удалён');
   }
 
   // --- Текстура ---
@@ -340,7 +304,6 @@ export class AppearanceModule extends BaseModule {
 
   _resetAppearance() {
     this.store.updateAppearanceTheme('light', {
-      coverBgMode: 'default',
       coverBgStart: '#3a2d1f',
       coverBgEnd: '#2a2016',
       coverText: '#f2e9d8',
@@ -352,7 +315,6 @@ export class AppearanceModule extends BaseModule {
     });
 
     this.store.updateAppearanceTheme('dark', {
-      coverBgMode: 'default',
       coverBgStart: '#111111',
       coverBgEnd: '#000000',
       coverText: '#eaeaea',
