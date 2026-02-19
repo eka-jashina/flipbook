@@ -31,8 +31,9 @@ describe('ErrorHandler', () => {
   afterEach(() => {
     vi.useRealTimers();
 
-    // Очищаем DOM
+    // Очищаем DOM и статический таймер
     document.body.innerHTML = '';
+    ErrorHandler._hideTimer = null;
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -376,19 +377,21 @@ describe('ErrorHandler', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('timing interactions', () => {
-    it('should accumulate hide timers on consecutive show calls', () => {
-      // Текущая реализация не сбрасывает предыдущие таймеры
+    it('should reset hide timer on consecutive show calls', () => {
+      // Каждый новый вызов show() сбрасывает предыдущий таймер
       ErrorHandler.show('First');
       vi.advanceTimersByTime(3000);
 
       ErrorHandler.show('Second');
       vi.advanceTimersByTime(2000);
 
-      // Первый таймер (ERROR_HIDE_TIMEOUT) уже сработал и скрыл элемент
-      expect(errorElement.hidden).toBe(true);
-
-      // Но текст был обновлён вторым вызовом
+      // Второй вызов сбросил таймер — прошло только 2000 из 5000мс нового таймера
+      expect(errorElement.hidden).toBe(false);
       expect(textElement.textContent).toBe('Second');
+
+      // После оставшегося времени — скрывается
+      vi.advanceTimersByTime(ERROR_HIDE_TIMEOUT - 2000);
+      expect(errorElement.hidden).toBe(true);
     });
 
     it('should handle rapid show/hide cycles', () => {
