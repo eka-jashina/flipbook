@@ -148,6 +148,10 @@ export class BookRenderer {
 
     const clone = this._sourceElement.cloneNode(true);
     clone.style.width = `${this._totalPages * this._pageWidth}px`;
+    // Фиксированная высота вместо height:100% из клона —
+    // предотвращает проблему в PWA, где contain:strict + dvh
+    // могут привести к некорректному разрешению процентной высоты
+    clone.style.height = `${this._pageHeight}px`;
     // translate3d форсирует GPU-слой, will-change подсказывает браузеру
     clone.style.transform = `translate3d(${-pageIndex * this._pageWidth}px, 0px, 0px)`;
     clone.style.willChange = "transform";

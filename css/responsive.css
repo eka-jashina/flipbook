@@ -98,3 +98,21 @@
     max-height: 1600px;
   }
 }
+
+/* ═══════════════════════════════════════════
+   PWA STANDALONE: СТАБИЛЬНАЯ ВЫСОТА
+   svh предотвращает обрезку контента при
+   появлении/скрытии системного gesture bar
+   ═══════════════════════════════════════════ */
+
+@media (display-mode: standalone) and (min-width: 769px) and (max-width: 1024px) {
+  .book {
+    height: 75svh;
+  }
+}
+
+@media (display-mode: standalone) and (min-width: 1440px) {
+  .book {
+    height: 85svh;
+  }
+}
