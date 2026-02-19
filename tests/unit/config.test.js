@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { CONFIG, BookState, FlipPhase, Direction, BoolStr } from '../../js/config.js';
+import { CONFIG, createConfig, BookState, FlipPhase, Direction, BoolStr } from '../../js/config.js';
 
 describe('CONFIG', () => {
   it('should be frozen (immutable)', () => {
@@ -174,5 +174,86 @@ describe('BoolStr', () => {
   it('should have string true and false', () => {
     expect(BoolStr.TRUE).toBe('true');
     expect(BoolStr.FALSE).toBe('false');
+  });
+});
+
+// ─── createConfig ─────────────────────────────────────────────────────────────
+
+describe('createConfig', () => {
+  it('should return a frozen object', () => {
+    const config = createConfig(null);
+    expect(Object.isFrozen(config)).toBe(true);
+  });
+
+  it('should have all required keys', () => {
+    const config = createConfig(null);
+    expect(Object.keys(config)).toEqual(Object.keys(CONFIG));
+  });
+
+  it('should use default chapters when adminConfig is null', () => {
+    const config = createConfig(null);
+    expect(config.CHAPTERS.length).toBeGreaterThan(0);
+    expect(config.STORAGE_KEY).toBe('reader-settings');
+  });
+
+  it('should use admin chapters when provided', () => {
+    const mockAdmin = {
+      books: [{
+        id: 'book-1',
+        chapters: [
+          { id: 'ch-1', file: 'content/ch1.html', bg: 'images/bg1.webp', bgMobile: '' },
+        ],
+        defaultSettings: {},
+        appearance: {},
+        sounds: {},
+        ambients: [],
+        cover: {},
+      }],
+      activeBookId: 'book-1',
+    };
+    const config = createConfig(mockAdmin);
+    expect(config.STORAGE_KEY).toBe('reader-settings:book-1');
+    expect(config.CHAPTERS).toHaveLength(1);
+    expect(config.CHAPTERS[0].id).toBe('ch-1');
+  });
+
+  it('should apply defaultSettings from admin book', () => {
+    const mockAdmin = {
+      books: [{
+        id: 'book-2',
+        chapters: [{ id: 'ch-1', file: '', bg: '', bgMobile: '' }],
+        defaultSettings: { font: 'roboto', fontSize: 20, theme: 'dark' },
+        appearance: {},
+        sounds: {},
+        ambients: [],
+        cover: {},
+      }],
+      activeBookId: 'book-2',
+    };
+    const config = createConfig(mockAdmin);
+    expect(config.DEFAULT_SETTINGS.font).toBe('roboto');
+    expect(config.DEFAULT_SETTINGS.fontSize).toBe(20);
+    expect(config.DEFAULT_SETTINGS.theme).toBe('dark');
+  });
+
+  it('should apply settingsVisibility from adminConfig', () => {
+    const mockAdmin = {
+      books: [],
+      settingsVisibility: { fontSize: false, theme: false, font: true, fullscreen: true, sound: false, ambient: true },
+    };
+    const config = createConfig(mockAdmin);
+    expect(config.SETTINGS_VISIBILITY.fontSize).toBe(false);
+    expect(config.SETTINGS_VISIBILITY.theme).toBe(false);
+    expect(config.SETTINGS_VISIBILITY.sound).toBe(false);
+  });
+
+  it('should not call localStorage', () => {
+    // createConfig принимает данные явно — localStorage не должен читаться
+    const originalGetItem = localStorage.getItem.bind(localStorage);
+    let called = false;
+    localStorage.getItem = (key) => { called = true; return originalGetItem(key); };
+    createConfig(null);
+    localStorage.getItem = originalGetItem;
+    expect(called).toBe(false);
   });
 });

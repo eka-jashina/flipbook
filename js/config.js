@@ -2,7 +2,12 @@
  * CONFIGURATION
  *
  * Централизованное хранилище настроек.
- * Если в localStorage есть конфиг от админки — используем его для глав и настроек.
+ *
+ * API:
+ * - createConfig(adminConfig) — чистая фабричная функция, не обращается к localStorage.
+ *   Используется для тестирования и создания конфигурации с явными данными.
+ * - CONFIG — синглтон для production. Вычисляется один раз при загрузке модуля.
+ *   Единственный side effect этого модуля: читает localStorage через loadAdminConfig().
  */
 
 // Vite подставляет base URL для production
@@ -10,6 +15,7 @@ const BASE_URL = import.meta.env.BASE_URL || '/';
 
 /**
  * Загрузка конфига админки из localStorage (если есть)
+ * @returns {Object|null}
  */
 function loadAdminConfig() {
   try {
@@ -19,7 +25,7 @@ function loadAdminConfig() {
   return null;
 }
 
-const adminConfig = loadAdminConfig();
+// ─── Чистые вспомогательные функции ─────────────────────────────────────────
 
 // Резолвить путь к ресурсу (data: / http / относительный)
 function resolveAssetPath(value) {
@@ -46,55 +52,7 @@ function getActiveBook(config) {
   return null;
 }
 
-const activeBook = getActiveBook(adminConfig);
-
-// Главы: из активной книги (с добавлением BASE_URL) или дефолтные
-// ch._idb — маркер: htmlContent хранится только в IndexedDB (в localStorage он убран для экономии места)
-const CHAPTERS = activeBook?.chapters?.length
-  ? activeBook.chapters.map(ch => ({
-      id: ch.id,
-      file: resolveAssetPath(ch.file),
-      htmlContent: ch.htmlContent || null,
-      _idb: ch._idb || false,
-      bg: resolveAssetPath(ch.bg),
-      bgMobile: resolveAssetPath(ch.bgMobile),
-    }))
-  : [
-      {
-        id: "part_1",
-        file: `${BASE_URL}content/part_1.html`,
-        bg: `${BASE_URL}images/backgrounds/part_1.webp`,
-        bgMobile: `${BASE_URL}images/backgrounds/part_1-mobile.webp`,
-      },
-      {
-        id: "part_2",
-        file: `${BASE_URL}content/part_2.html`,
-        bg: `${BASE_URL}images/backgrounds/part_2.webp`,
-        bgMobile: `${BASE_URL}images/backgrounds/part_2-mobile.webp`,
-      },
-      {
-        id: "part_3",
-        file: `${BASE_URL}content/part_3.html`,
-        bg: `${BASE_URL}images/backgrounds/part_3.webp`,
-        bgMobile: `${BASE_URL}images/backgrounds/part_3-mobile.webp`,
-      },
-    ];
-
-// Настройки по умолчанию: из активной книги или захардкоженные
-const adminDefaults = activeBook?.defaultSettings || {};
-
-// Оформление книги: per-book light/dark + global fontMin/fontMax
-const bookAppearance = activeBook?.appearance || {};
-const adminFontMin = adminConfig?.fontMin ?? adminConfig?.appearance?.fontMin;
-const adminFontMax = adminConfig?.fontMax ?? adminConfig?.appearance?.fontMax;
-
-// Обложка: из активной книги или дефолтные
-const adminCover = activeBook?.cover || {};
-
-// Звуки: из активной книги или дефолтные
-const adminSounds = activeBook?.sounds || {};
-
-// Фон обложки: из админки (с добавлением BASE_URL) или дефолтные
+// Фон обложки: из админки (с добавлением BASE_URL) или дефолтный
 function resolveCoverBg(value, fallback) {
   if (!value) return `${BASE_URL}${fallback}`;
   return value.startsWith('http') ? value : `${BASE_URL}${value}`;
@@ -163,126 +121,191 @@ function buildFontsConfig(adminReadingFonts) {
   return { fonts, fontsList: adminReadingFonts.filter(f => f.enabled), customFonts };
 }
 
-const fontsResult = buildFontsConfig(adminConfig?.readingFonts);
+// ─── Фабричная функция ───────────────────────────────────────────────────────
 
-export const CONFIG = Object.freeze({
-  STORAGE_KEY: activeBook?.id ? `reader-settings:${activeBook.id}` : "reader-settings",
-  COVER_BG: resolveCoverBg(adminCover.bg, 'images/backgrounds/bg-cover.webp'),
-  COVER_BG_MOBILE: resolveCoverBg(adminCover.bgMobile, 'images/backgrounds/bg-cover-mobile.webp'),
+/**
+ * Создать конфигурацию приложения на основе данных из админки.
+ *
+ * Чистая функция: принимает adminConfig явно, без обращения к localStorage.
+ * Используйте её в тестах и везде, где нужна воспроизводимость результата.
+ *
+ * @param {Object|null} adminConfig - Конфиг из AdminConfigStore или null для дефолтного
+ * @returns {Readonly<Object>} Замороженный объект конфигурации
+ */
+export function createConfig(adminConfig = null) {
+  const activeBook = getActiveBook(adminConfig);
 
-  CHAPTERS,
+  // Главы: из активной книги (с добавлением BASE_URL) или дефолтные
+  // ch._idb — маркер: htmlContent хранится только в IndexedDB
+  const CHAPTERS = activeBook?.chapters?.length
+    ? activeBook.chapters.map(ch => ({
+        id: ch.id,
+        file: resolveAssetPath(ch.file),
+        htmlContent: ch.htmlContent || null,
+        _idb: ch._idb || false,
+        bg: resolveAssetPath(ch.bg),
+        bgMobile: resolveAssetPath(ch.bgMobile),
+      }))
+    : [
+        {
+          id: "part_1",
+          file: `${BASE_URL}content/part_1.html`,
+          bg: `${BASE_URL}images/backgrounds/part_1.webp`,
+          bgMobile: `${BASE_URL}images/backgrounds/part_1-mobile.webp`,
+        },
+        {
+          id: "part_2",
+          file: `${BASE_URL}content/part_2.html`,
+          bg: `${BASE_URL}images/backgrounds/part_2.webp`,
+          bgMobile: `${BASE_URL}images/backgrounds/part_2-mobile.webp`,
+        },
+        {
+          id: "part_3",
+          file: `${BASE_URL}content/part_3.html`,
+          bg: `${BASE_URL}images/backgrounds/part_3.webp`,
+          bgMobile: `${BASE_URL}images/backgrounds/part_3-mobile.webp`,
+        },
+      ];
 
-  FONTS: fontsResult.fonts,
+  const adminDefaults = activeBook?.defaultSettings || {};
+  const bookAppearance = activeBook?.appearance || {};
+  const adminFontMin = adminConfig?.fontMin ?? adminConfig?.appearance?.fontMin;
+  const adminFontMax = adminConfig?.fontMax ?? adminConfig?.appearance?.fontMax;
+  const adminCover = activeBook?.cover || {};
+  const adminSounds = activeBook?.sounds || {};
+  const fontsResult = buildFontsConfig(adminConfig?.readingFonts);
 
-  // Список шрифтов с метаданными (для генерации <select>)
-  FONTS_LIST: fontsResult.fontsList,
+  return Object.freeze({
+    STORAGE_KEY: activeBook?.id ? `reader-settings:${activeBook.id}` : "reader-settings",
+    COVER_BG: resolveCoverBg(adminCover.bg, 'images/backgrounds/bg-cover.webp'),
+    COVER_BG_MOBILE: resolveCoverBg(adminCover.bgMobile, 'images/backgrounds/bg-cover-mobile.webp'),
 
-  // Кастомные шрифты (нужна загрузка через FontFace)
-  CUSTOM_FONTS: fontsResult.customFonts || [],
+    CHAPTERS,
 
-  // Декоративный шрифт (для заголовков, per-book)
-  DECORATIVE_FONT: activeBook?.decorativeFont || null,
+    FONTS: fontsResult.fonts,
 
-  SOUNDS: {
-    pageFlip: resolveSound(adminSounds.pageFlip, 'sounds/page-flip.mp3'),
-    bookOpen: resolveSound(adminSounds.bookOpen, 'sounds/cover-flip.mp3'),
-    bookClose: resolveSound(adminSounds.bookClose, 'sounds/cover-flip.mp3'),
-  },
+    // Список шрифтов с метаданными (для генерации <select>)
+    FONTS_LIST: fontsResult.fontsList,
 
-  // Конфигурация ambient звуков (per-book)
-  AMBIENT: buildAmbientConfig(activeBook?.ambients),
+    // Кастомные шрифты (нужна загрузка через FontFace)
+    CUSTOM_FONTS: fontsResult.customFonts || [],
 
- DEFAULT_SETTINGS: {
-    font: adminDefaults.font || "georgia",
-    fontSize: adminDefaults.fontSize || 18,
-    theme: adminDefaults.theme || "light",
-    page: 0,
-    soundEnabled: adminDefaults.soundEnabled ?? true,
-    soundVolume: adminDefaults.soundVolume ?? 0.3,
-    ambientType: adminDefaults.ambientType || 'none',
-    ambientVolume: adminDefaults.ambientVolume ?? 0.5
-  },
+    // Декоративный шрифт (для заголовков, per-book)
+    DECORATIVE_FONT: activeBook?.decorativeFont || null,
 
-  // Настройки оформления: global fontMin/fontMax + per-book light/dark
-  APPEARANCE: {
-    coverTitle: adminCover.title || 'О хоббитах',
-    coverAuthor: adminCover.author || 'Дж.Р.Р.Толкин',
-    fontMin: adminFontMin ?? 14,
-    fontMax: adminFontMax ?? 22,
-    light: {
-      coverBgStart: bookAppearance.light?.coverBgStart || '#3a2d1f',
-      coverBgEnd: bookAppearance.light?.coverBgEnd || '#2a2016',
-      coverText: bookAppearance.light?.coverText || '#f2e9d8',
-      coverBgImage: bookAppearance.light?.coverBgImage || null,
-      pageTexture: bookAppearance.light?.pageTexture || 'default',
-      customTextureData: bookAppearance.light?.customTextureData || null,
-      bgPage: bookAppearance.light?.bgPage || '#fdfcf8',
-      bgApp: bookAppearance.light?.bgApp || '#e6e3dc',
+    SOUNDS: {
+      pageFlip: resolveSound(adminSounds.pageFlip, 'sounds/page-flip.mp3'),
+      bookOpen: resolveSound(adminSounds.bookOpen, 'sounds/cover-flip.mp3'),
+      bookClose: resolveSound(adminSounds.bookClose, 'sounds/cover-flip.mp3'),
     },
-    dark: {
-      coverBgStart: bookAppearance.dark?.coverBgStart || '#111111',
-      coverBgEnd: bookAppearance.dark?.coverBgEnd || '#000000',
-      coverText: bookAppearance.dark?.coverText || '#eaeaea',
-      coverBgImage: bookAppearance.dark?.coverBgImage || null,
-      pageTexture: bookAppearance.dark?.pageTexture || 'none',
-      customTextureData: bookAppearance.dark?.customTextureData || null,
-      bgPage: bookAppearance.dark?.bgPage || '#1e1e1e',
-      bgApp: bookAppearance.dark?.bgApp || '#121212',
+
+    // Конфигурация ambient звуков (per-book)
+    AMBIENT: buildAmbientConfig(activeBook?.ambients),
+
+    DEFAULT_SETTINGS: {
+      font: adminDefaults.font || "georgia",
+      fontSize: adminDefaults.fontSize || 18,
+      theme: adminDefaults.theme || "light",
+      page: 0,
+      soundEnabled: adminDefaults.soundEnabled ?? true,
+      soundVolume: adminDefaults.soundVolume ?? 0.3,
+      ambientType: adminDefaults.ambientType || 'none',
+      ambientVolume: adminDefaults.ambientVolume ?? 0.5
     },
-  },
 
-  // Видимость настроек для читателя (из админки)
-  SETTINGS_VISIBILITY: {
-    fontSize: adminConfig?.settingsVisibility?.fontSize ?? true,
-    theme: adminConfig?.settingsVisibility?.theme ?? true,
-    font: adminConfig?.settingsVisibility?.font ?? true,
-    fullscreen: adminConfig?.settingsVisibility?.fullscreen ?? true,
-    sound: adminConfig?.settingsVisibility?.sound ?? true,
-    ambient: adminConfig?.settingsVisibility?.ambient ?? true,
-  },
+    // Настройки оформления: global fontMin/fontMax + per-book light/dark
+    APPEARANCE: {
+      coverTitle: adminCover.title || 'О хоббитах',
+      coverAuthor: adminCover.author || 'Дж.Р.Р.Толкин',
+      fontMin: adminFontMin ?? 14,
+      fontMax: adminFontMax ?? 22,
+      light: {
+        coverBgStart: bookAppearance.light?.coverBgStart || '#3a2d1f',
+        coverBgEnd: bookAppearance.light?.coverBgEnd || '#2a2016',
+        coverText: bookAppearance.light?.coverText || '#f2e9d8',
+        coverBgImage: bookAppearance.light?.coverBgImage || null,
+        pageTexture: bookAppearance.light?.pageTexture || 'default',
+        customTextureData: bookAppearance.light?.customTextureData || null,
+        bgPage: bookAppearance.light?.bgPage || '#fdfcf8',
+        bgApp: bookAppearance.light?.bgApp || '#e6e3dc',
+      },
+      dark: {
+        coverBgStart: bookAppearance.dark?.coverBgStart || '#111111',
+        coverBgEnd: bookAppearance.dark?.coverBgEnd || '#000000',
+        coverText: bookAppearance.dark?.coverText || '#eaeaea',
+        coverBgImage: bookAppearance.dark?.coverBgImage || null,
+        pageTexture: bookAppearance.dark?.pageTexture || 'none',
+        customTextureData: bookAppearance.dark?.customTextureData || null,
+        bgPage: bookAppearance.dark?.bgPage || '#1e1e1e',
+        bgApp: bookAppearance.dark?.bgApp || '#121212',
+      },
+    },
 
-  VIRTUALIZATION: {
-    cacheLimit: 50,
-  },
+    // Видимость настроек для читателя (из админки)
+    SETTINGS_VISIBILITY: {
+      fontSize: adminConfig?.settingsVisibility?.fontSize ?? true,
+      theme: adminConfig?.settingsVisibility?.theme ?? true,
+      font: adminConfig?.settingsVisibility?.font ?? true,
+      fullscreen: adminConfig?.settingsVisibility?.fullscreen ?? true,
+      sound: adminConfig?.settingsVisibility?.sound ?? true,
+      ambient: adminConfig?.settingsVisibility?.ambient ?? true,
+    },
 
-  LAYOUT: {
-    // Минимальное соотношение ширины страницы к книге
-    // при котором считаем что layout стабилизировался
-    MIN_PAGE_WIDTH_RATIO: 0.4,
-    
-    // Задержка ожидания стабилизации layout (ms)
-    SETTLE_DELAY: 100,
-  },
+    VIRTUALIZATION: {
+      cacheLimit: 50,
+    },
 
-  TIMING_SAFETY_MARGIN: 100,
+    LAYOUT: {
+      // Минимальное соотношение ширины страницы к книге
+      // при котором считаем что layout стабилизировался
+      MIN_PAGE_WIDTH_RATIO: 0.4,
 
-  // Настройки тайминга навигации
-  TIMING: {
-    // Минимальный интервал между перелистываниями для rate limiting (мс)
-    FLIP_THROTTLE: 100,
-  },
+      // Задержка ожидания стабилизации layout (ms)
+      SETTLE_DELAY: 100,
+    },
 
-  // Настройки UI
-  UI: {
-    // Время отображения сообщения об ошибке перед автоскрытием (мс)
-    ERROR_HIDE_TIMEOUT: 5000,
-  },
+    TIMING_SAFETY_MARGIN: 100,
 
-  // Настройки сетевых операций
-  NETWORK: {
-    // Максимальное количество попыток загрузки
-    MAX_RETRIES: 3,
-    // Начальная задержка перед повторной попыткой (мс)
-    // Увеличивается экспоненциально: 1000 → 2000 → 4000
-    INITIAL_RETRY_DELAY: 1000,
-  },
+    // Настройки тайминга навигации
+    TIMING: {
+      // Минимальный интервал между перелистываниями для rate limiting (мс)
+      FLIP_THROTTLE: 100,
+    },
 
-  // Настройки аудио
-  AUDIO: {
-    // Задержка перед возобновлением ambient при возврате на вкладку (мс)
-    VISIBILITY_RESUME_DELAY: 100,
-  },
-});
+    // Настройки UI
+    UI: {
+      // Время отображения сообщения об ошибке перед автоскрытием (мс)
+      ERROR_HIDE_TIMEOUT: 5000,
+    },
+
+    // Настройки сетевых операций
+    NETWORK: {
+      // Максимальное количество попыток загрузки
+      MAX_RETRIES: 3,
+      // Начальная задержка перед повторной попыткой (мс)
+      // Увеличивается экспоненциально: 1000 → 2000 → 4000
+      INITIAL_RETRY_DELAY: 1000,
+    },
+
+    // Настройки аудио
+    AUDIO: {
+      // Задержка перед возобновлением ambient при возврате на вкладку (мс)
+      VISIBILITY_RESUME_DELAY: 100,
+    },
+  });
+}
+
+// ─── Синглтон для production ─────────────────────────────────────────────────
+
+/**
+ * Конфигурация приложения, вычисленная из данных в localStorage.
+ *
+ * Единственный side effect этого модуля: при первом импорте читает localStorage.
+ * Для тестирования используйте createConfig(adminConfig) напрямую.
+ */
+export const CONFIG = createConfig(loadAdminConfig());
+
+// ─── Константы (без side effects) ────────────────────────────────────────────
 
 export const BookState = Object.freeze({
   CLOSED: "closed",
