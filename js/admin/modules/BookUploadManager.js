@@ -57,7 +57,12 @@ export class BookUploadManager {
 
   async _processBookFile(file) {
     const BOOK_EXTENSIONS = ['.epub', '.fb2', '.docx', '.doc', '.txt'];
-    if (!this._module._validateFile(file, { extensions: BOOK_EXTENSIONS })) return;
+    const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] ?? '';
+    if (!BOOK_EXTENSIONS.includes(ext)) {
+      const allowed = BOOK_EXTENSIONS.map(e => e.slice(1)).join(', ');
+      this._module._showToast(`Неподдерживаемый формат. Поддерживаются: ${allowed}`);
+      return;
+    }
 
     this.bookDropzone.hidden = true;
     this.bookUploadProgress.hidden = false;
