@@ -222,3 +222,17 @@
     linear-gradient(to left, rgb(0, 0, 0, 0.22), transparent);
   border-radius: 0 6px 6px 0;
 }
+
+/* ═══════════════════════════════════════════
+   PWA STANDALONE: СТАБИЛЬНАЯ ВЫСОТА
+   В standalone режиме dvh может уменьшаться при
+   появлении системных элементов (gesture bar),
+   вызывая обрезку нижнего паддинга страниц.
+   svh — минимальная высота viewport, стабильна.
+   ═══════════════════════════════════════════ */
+
+@media (display-mode: standalone) {
+  .book {
+    height: 80svh;
+  }
+}
