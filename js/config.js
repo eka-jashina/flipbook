@@ -220,6 +220,7 @@ export function createConfig(adminConfig = null) {
       fontMin: adminFontMin ?? 14,
       fontMax: adminFontMax ?? 22,
       light: {
+        coverBgMode: bookAppearance.light?.coverBgMode || 'default',
         coverBgStart: bookAppearance.light?.coverBgStart || '#3a2d1f',
         coverBgEnd: bookAppearance.light?.coverBgEnd || '#2a2016',
         coverText: bookAppearance.light?.coverText || '#f2e9d8',
@@ -230,6 +231,7 @@ export function createConfig(adminConfig = null) {
         bgApp: bookAppearance.light?.bgApp || '#e6e3dc',
       },
       dark: {
+        coverBgMode: bookAppearance.dark?.coverBgMode || 'default',
         coverBgStart: bookAppearance.dark?.coverBgStart || '#111111',
         coverBgEnd: bookAppearance.dark?.coverBgEnd || '#000000',
         coverText: bookAppearance.dark?.coverText || '#eaeaea',

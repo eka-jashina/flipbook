@@ -438,11 +438,14 @@ export class SettingsDelegate extends BaseDelegate {
     const themeKey = currentTheme === "dark" ? "dark" : "light";
     const t = a[themeKey] || a.light;
 
-    // Фон обложки: градиент или изображение
-    if (t.coverBgImage) {
+    // Фон обложки: режим (default / none / custom)
+    if (t.coverBgMode === 'custom' && t.coverBgImage) {
       html.style.setProperty("--cover-front-bg", `url(${t.coverBgImage})`);
-    } else {
+    } else if (t.coverBgMode === 'none') {
       html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${t.coverBgStart}, ${t.coverBgEnd})`);
+    } else {
+      // default: встроенное изображение обложки
+      html.style.setProperty("--cover-front-bg", `url(${CONFIG.COVER_BG})`);
     }
     html.style.setProperty("--cover-front-text", t.coverText);
 
