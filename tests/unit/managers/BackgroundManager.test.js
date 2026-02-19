@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BackgroundManager } from '../../../js/managers/BackgroundManager.js';
+import { CONFIG } from '../../../js/config.js';
 
 describe('BackgroundManager', () => {
   let manager;
@@ -12,6 +13,8 @@ describe('BackgroundManager', () => {
   let mockImages;
 
   beforeEach(() => {
+    vi.useFakeTimers();
+
     // Mock DOM elements
     mockBgElements = [
       { style: { backgroundImage: '' }, dataset: {} },
@@ -56,6 +59,7 @@ describe('BackgroundManager', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     global.Image = originalImage;
     vi.restoreAllMocks();
   });
@@ -182,6 +186,37 @@ describe('BackgroundManager', () => {
 
       expect(element.dataset.loading).toBe('true');
     });
+
+    it('should remove blur on timeout', () => {
+      const element = { style: { backgroundImage: 'url(test.jpg)' }, dataset: { loading: 'true' } };
+      manager._loadAndReveal('test.jpg', element);
+
+      vi.advanceTimersByTime(CONFIG.NETWORK.FETCH_TIMEOUT);
+
+      expect(element.dataset.loading).toBe('false');
+    });
+
+    it('should cancel image loading on timeout', () => {
+      const element = { style: { backgroundImage: 'url(test.jpg)' }, dataset: { loading: 'true' } };
+      manager._loadAndReveal('test.jpg', element);
+
+      vi.advanceTimersByTime(CONFIG.NETWORK.FETCH_TIMEOUT);
+
+      expect(mockImages[0].src).toBe('');
+    });
+
+    it('should not timeout if image loads before timeout', () => {
+      const element = { style: { backgroundImage: 'url(test.jpg)' }, dataset: { loading: 'true' } };
+      manager._loadAndReveal('test.jpg', element);
+
+      mockImages[0].onload();
+      expect(element.dataset.loading).toBe('false');
+      expect(manager.preloadedUrls.has('test.jpg')).toBe(true);
+
+      // Timeout fires but has no effect (already resolved)
+      vi.advanceTimersByTime(CONFIG.NETWORK.FETCH_TIMEOUT);
+      expect(manager.preloadedUrls.has('test.jpg')).toBe(true);
+    });
   });
 
   describe('preload', () => {
@@ -285,6 +320,31 @@ describe('BackgroundManager', () => {
       mockLink.onerror();
       await promise;
       expect(document.head.removeChild).toHaveBeenCalled();
+    });
+
+    it('should reject on timeout', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const promise = manager.preload('slow.jpg');
+      expect(manager.preloadQueue.length).toBe(1);
+
+      vi.advanceTimersByTime(CONFIG.NETWORK.FETCH_TIMEOUT);
+
+      // Ошибки подавляются в catch
+      await expect(promise).resolves.toBeUndefined();
+      expect(manager.preloadQueue.length).toBe(0);
+      expect(document.head.removeChild).toHaveBeenCalled();
+    });
+
+    it('should not timeout if loaded before timeout', async () => {
+      const promise = manager.preload('fast.jpg');
+      mockLink.onload();
+      await promise;
+
+      expect(manager.preloadedUrls.has('fast.jpg')).toBe(true);
+
+      // Timeout fires but settled flag prevents double action
+      vi.advanceTimersByTime(CONFIG.NETWORK.FETCH_TIMEOUT);
+      expect(manager.preloadedUrls.has('fast.jpg')).toBe(true);
     });
   });
 

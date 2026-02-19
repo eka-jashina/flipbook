@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ContentLoader } from '../../../js/managers/ContentLoader.js';
 import { CONFIG } from '../../../js/config.js';
 
-const { MAX_RETRIES, INITIAL_RETRY_DELAY } = CONFIG.NETWORK;
+const { MAX_RETRIES, INITIAL_RETRY_DELAY, FETCH_TIMEOUT } = CONFIG.NETWORK;
 
 describe('ContentLoader', () => {
   let loader;
@@ -144,17 +144,50 @@ describe('ContentLoader', () => {
       await expectPromise;
     });
 
-    it('should not retry on AbortError', async () => {
-      const abortError = new DOMException('Aborted', 'AbortError');
-      global.fetch = vi.fn().mockRejectedValue(abortError);
+    it('should not retry on external AbortError', async () => {
+      const controller = new AbortController();
+      global.fetch = vi.fn().mockImplementation(() => {
+        controller.abort();
+        return Promise.reject(new DOMException('Aborted', 'AbortError'));
+      });
 
-      await expect(loader._fetchWithRetry('test.html', null))
+      await expect(loader._fetchWithRetry('test.html', controller.signal))
         .rejects.toThrow('Aborted');
 
       expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
-    it('should pass signal to fetch', async () => {
+    it('should retry on timeout', async () => {
+      let attempts = 0;
+      global.fetch = vi.fn().mockImplementation((_url, options) => {
+        attempts++;
+        if (attempts < 2) {
+          // Симулируем зависший запрос — реагируем только на abort
+          return new Promise((_, reject) => {
+            options?.signal?.addEventListener('abort', () => {
+              reject(new DOMException('Aborted', 'AbortError'));
+            });
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve('recovered'),
+        });
+      });
+
+      const resultPromise = loader._fetchWithRetry('test.html', null);
+
+      // Таймаут первой попытки
+      await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT);
+      // Задержка перед retry
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY);
+
+      const result = await resultPromise;
+      expect(result).toBe('recovered');
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should pass AbortSignal to fetch', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('content'),
@@ -163,7 +196,9 @@ describe('ContentLoader', () => {
       const controller = new AbortController();
       await loader._fetchWithRetry('test.html', controller.signal);
 
-      expect(global.fetch).toHaveBeenCalledWith('test.html', { signal: controller.signal });
+      expect(global.fetch).toHaveBeenCalledWith('test.html', {
+        signal: expect.any(AbortSignal),
+      });
     });
 
     it('should retry on network errors', async () => {
