@@ -369,8 +369,8 @@ export class AdminConfigStore {
       const request = store.get(key);
 
       request.onsuccess = () => resolve(request.result ?? null);
-      request.onerror = () => reject(request.error);
       tx.oncomplete = () => db.close();
+      tx.onerror = () => { db.close(); reject(tx.error); };
     });
   }
 
@@ -380,11 +380,11 @@ export class AdminConfigStore {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(IDB_STORE, 'readwrite');
       const store = tx.objectStore(IDB_STORE);
-      const request = store.put(value, key);
+      store.put(value, key);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-      tx.oncomplete = () => db.close();
+      // resolve только после фиксации транзакции, не в request.onsuccess
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
     });
   }
 
@@ -394,11 +394,11 @@ export class AdminConfigStore {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(IDB_STORE, 'readwrite');
       const store = tx.objectStore(IDB_STORE);
-      const request = store.delete(key);
+      store.delete(key);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-      tx.oncomplete = () => db.close();
+      // resolve только после фиксации транзакции, не в request.onsuccess
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
     });
   }
 
