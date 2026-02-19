@@ -497,6 +497,56 @@ describe('AlbumManager', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
+  // _getPageSlots() — общий помощник для _renderPageImageSlots и _buildAlbumHtml
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_getPageSlots()', () => {
+    it('should return an array with length matching layout count', () => {
+      expect(manager._getPageSlots(makePage('1', []))).toHaveLength(1);
+      expect(manager._getPageSlots(makePage('2', []))).toHaveLength(2);
+      expect(manager._getPageSlots(makePage('4', []))).toHaveLength(4);
+    });
+
+    it('should pad missing slots with null', () => {
+      const slots = manager._getPageSlots(makePage('2', []));
+      expect(slots[0]).toBeNull();
+      expect(slots[1]).toBeNull();
+    });
+
+    it('should preserve existing images at their indices', () => {
+      const img = makeImage('data:image/png;base64,abc', 'caption');
+      const slots = manager._getPageSlots(makePage('2', [img]));
+      expect(slots[0]).toBe(img);
+      expect(slots[1]).toBeNull();
+    });
+
+    it('should truncate images beyond layout count', () => {
+      const images = [makeImage('a'), makeImage('b'), makeImage('c')];
+      const slots = manager._getPageSlots(makePage('1', images));
+      expect(slots).toHaveLength(1);
+      expect(slots[0].dataUrl).toBe('a');
+    });
+
+    it('should treat null entries as missing slots', () => {
+      const slots = manager._getPageSlots(makePage('2', [null, null]));
+      expect(slots[0]).toBeNull();
+      expect(slots[1]).toBeNull();
+    });
+
+    it('should default to count=1 for unknown layout', () => {
+      const slots = manager._getPageSlots(makePage('unknown', []));
+      expect(slots).toHaveLength(1);
+      expect(slots[0]).toBeNull();
+    });
+
+    it('should always return a new array (not page.images reference)', () => {
+      const page = makePage('1', []);
+      const slots = manager._getPageSlots(page);
+      expect(slots).not.toBe(page.images);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
   // генерация HTML: _buildAlbumHtml()
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -534,19 +584,20 @@ describe('AlbumManager', () => {
 
     describe('без изображений → placeholder figures', () => {
       it('should generate placeholder figure when image slot contains null', () => {
-        // _buildAlbumHtml maps over page.images; an explicit null entry → placeholder
+        // explicit null entry → placeholder
         const html = manager._buildAlbumHtml('T', [makePage('1', [null])]);
         expect(html).toContain('<figure class="photo-album__item"><img src="" alt=""></figure>');
       });
 
-      it('should generate placeholder figure for null image slot', () => {
-        const html = manager._buildAlbumHtml('T', [makePage('1', [null])]);
+      it('should generate placeholder figure when images array is empty', () => {
+        // empty images[] → _getPageSlots pads with null → placeholder
+        const html = manager._buildAlbumHtml('T', [makePage('1', [])]);
         expect(html).toContain('<figure class="photo-album__item"><img src="" alt=""></figure>');
       });
 
-      it('should generate one placeholder per explicit null entry', () => {
-        // Two null slots → two placeholder figures
-        const html = manager._buildAlbumHtml('T', [makePage('2', [null, null])]);
+      it('should generate one placeholder per missing image slot', () => {
+        // layout "2" needs 2 slots; empty images[] → two placeholders
+        const html = manager._buildAlbumHtml('T', [makePage('2', [])]);
         const matches = html.match(/<figure class="photo-album__item"><img src="" alt=""><\/figure>/g);
         expect(matches).toHaveLength(2);
       });

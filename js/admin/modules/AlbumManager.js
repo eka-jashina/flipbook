@@ -118,6 +118,12 @@ export class AlbumManager {
     });
   }
 
+  /** Получить слоты изображений для страницы — всегда length === LAYOUT_IMAGE_COUNT */
+  _getPageSlots(page) {
+    const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
+    return Array.from({ length: count }, (_, i) => page.images[i] || null);
+  }
+
   /** Сгенерировать HTML кнопок выбора шаблона */
   _buildLayoutButtons(activeLayout) {
     const layouts = [
@@ -139,10 +145,7 @@ export class AlbumManager {
 
   /** Отрисовать слоты изображений для одной страницы */
   _renderPageImageSlots(container, page, pageIndex) {
-    const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
-
-    for (let i = 0; i < count; i++) {
-      const img = page.images[i] || null;
+    for (const [i, img] of this._getPageSlots(page).entries()) {
       const group = document.createElement('div');
       group.className = 'album-image-group';
 
@@ -260,9 +263,7 @@ export class AlbumManager {
     const h2Class = hideTitle ? ' class="sr-only"' : '';
 
     const albumDivs = pages.map(page => {
-      const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
-      const images = page.images.slice(0, count);
-      const figures = images.map(img => {
+      const figures = this._getPageSlots(page).map(img => {
         if (!img?.dataUrl) {
           return '<figure class="photo-album__item"><img src="" alt=""></figure>';
         }
