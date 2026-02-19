@@ -118,11 +118,9 @@ export class SoundManager {
       const audio = sound.pool[sound.currentIndex];
       sound.currentIndex = (sound.currentIndex + 1) % sound.pool.length;
 
-      // Применяем опции
-      if (options.volume !== undefined) {
-        audio.volume = options.volume;
-      }
-      
+      // Применяем громкость: явную опцию или текущую громкость звука
+      audio.volume = options.volume !== undefined ? options.volume : sound.volume;
+
       if (options.playbackRate !== undefined) {
         audio.playbackRate = options.playbackRate;
       }
@@ -160,8 +158,9 @@ export class SoundManager {
   setVolume(volume) {
     this.volume = Math.max(0, Math.min(1, volume));
     
-    // Обновляем громкость всех загруженных звуков
+    // Обновляем сохранённую громкость и audio-элементы для всех звуков
     for (const sound of this.sounds.values()) {
+      sound.volume = this.volume;
       if (sound.loaded) {
         sound.pool.forEach(audio => {
           audio.volume = this.volume;

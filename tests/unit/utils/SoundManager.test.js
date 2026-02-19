@@ -360,6 +360,21 @@ describe('SoundManager', () => {
       expect(mockAudioInstances[0].volume).toBe(0.8);
     });
 
+    it('should not persist per-play volume override to next play', async () => {
+      const mgr = new SoundManager({ volume: 0.5 });
+      mgr.register('test', '/test.mp3', { poolSize: 1 });
+      await mgr._loadSound('test');
+
+      await mgr.play('test', { volume: 0.9 });
+      expect(mockAudioInstances[0].volume).toBe(0.9);
+
+      // Следующий вызов без options.volume должен сбросить к sound.volume
+      await mgr.play('test');
+      expect(mockAudioInstances[0].volume).toBe(0.5);
+
+      mgr.destroy();
+    });
+
     it('should apply playbackRate option', async () => {
       manager.register('test', '/test.mp3');
       await manager._loadSound('test');
@@ -482,6 +497,25 @@ describe('SoundManager', () => {
 
     it('should not fail if no sounds loaded', () => {
       expect(() => manager.setVolume(0.5)).not.toThrow();
+    });
+
+    it('should update sound.volume for unloaded sounds', () => {
+      manager.register('lazy', '/lazy.mp3');
+
+      manager.setVolume(0.6);
+
+      expect(manager.sounds.get('lazy').volume).toBe(0.6);
+    });
+
+    it('should use updated sound.volume when lazy sound is loaded after setVolume', async () => {
+      manager.register('lazy', '/lazy.mp3');
+      manager.setVolume(0.6);
+
+      await manager._loadSound('lazy');
+
+      mockAudioInstances.forEach(audio => {
+        expect(audio.volume).toBe(0.6);
+      });
     });
   });
 
