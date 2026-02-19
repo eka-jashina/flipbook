@@ -1,4 +1,4 @@
-import { BoolStr } from '../config.js';
+import { BoolStr, CONFIG } from '../config.js';
 
 /**
  * BACKGROUND MANAGER
@@ -83,8 +83,18 @@ export class BackgroundManager {
    */
   _loadAndReveal(url, element) {
     const img = new Image();
+    const { FETCH_TIMEOUT } = CONFIG.NETWORK;
+
+    const timeoutId = setTimeout(() => {
+      img.src = '';
+      // Таймаут — убираем blur чтобы не застрять
+      if (element.style.backgroundImage.includes(url)) {
+        element.dataset.loading = BoolStr.FALSE;
+      }
+    }, FETCH_TIMEOUT);
 
     img.onload = () => {
+      clearTimeout(timeoutId);
       this.preloadedUrls.add(url);
       // Убираем blur только если это всё ещё текущий фон
       if (element.style.backgroundImage.includes(url)) {
@@ -93,6 +103,7 @@ export class BackgroundManager {
     };
 
     img.onerror = () => {
+      clearTimeout(timeoutId);
       // При ошибке тоже убираем blur чтобы не застрять
       if (element.style.backgroundImage.includes(url)) {
         element.dataset.loading = BoolStr.FALSE;
@@ -128,12 +139,27 @@ export class BackgroundManager {
       link.rel = "preload";
       link.as = "image";
       link.href = url;
-      
+
       if (highPriority) {
         link.fetchPriority = "high";
       }
 
+      let settled = false;
+      const { FETCH_TIMEOUT } = CONFIG.NETWORK;
+
+      const timeoutId = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        console.warn(`Preload timeout for image: ${url}`);
+        this._removeFromQueue(url);
+        document.head.removeChild(link);
+        reject(new Error(`Preload timeout: ${url}`));
+      }, FETCH_TIMEOUT);
+
       link.onload = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
         this.preloadedUrls.add(url);
         this._removeFromQueue(url);
         document.head.removeChild(link);
@@ -141,6 +167,9 @@ export class BackgroundManager {
       };
 
       link.onerror = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
         console.warn(`Failed to preload image: ${url}`);
         this._removeFromQueue(url);
         document.head.removeChild(link);

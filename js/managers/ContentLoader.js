@@ -44,19 +44,27 @@ export class ContentLoader {
   }
 
   /**
-   * Загрузить один URL с retry-логикой
+   * Загрузить один URL с retry-логикой и таймаутом
    * @private
    * @param {string} url - URL для загрузки
    * @param {AbortSignal} signal - Сигнал отмены
    * @returns {Promise<string>} HTML-контент
    */
   async _fetchWithRetry(url, signal) {
-    const { MAX_RETRIES, INITIAL_RETRY_DELAY } = CONFIG.NETWORK;
+    const { MAX_RETRIES, INITIAL_RETRY_DELAY, FETCH_TIMEOUT } = CONFIG.NETWORK;
     let lastError;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // Таймаут для каждой попытки отдельно
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), FETCH_TIMEOUT);
+
+      // Пробрасываем внешний abort на timeout controller
+      const onExternalAbort = () => timeoutController.abort();
+      signal?.addEventListener('abort', onExternalAbort, { once: true });
+
       try {
-        const resp = await fetch(url, { signal });
+        const resp = await fetch(url, { signal: timeoutController.signal });
 
         if (!resp.ok) {
           // HTTP ошибки (4xx, 5xx) — не ретраим клиентские ошибки
@@ -69,18 +77,26 @@ export class ContentLoader {
 
         return await resp.text();
       } catch (error) {
-        // Не ретраим при отмене запроса
-        if (error.name === "AbortError") {
-          throw error;
+        // Не ретраим при внешней отмене запроса
+        if (signal?.aborted) {
+          throw new DOMException("Aborted", "AbortError");
         }
 
-        lastError = error;
+        // Таймаут — ретраим с понятным сообщением
+        if (error.name === "AbortError") {
+          lastError = new Error(`Request timeout for ${url} after ${FETCH_TIMEOUT}ms`);
+        } else {
+          lastError = error;
+        }
 
         // Последняя попытка — не ждём
         if (attempt < MAX_RETRIES - 1) {
           const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
           await this._delay(delay, signal);
         }
+      } finally {
+        clearTimeout(timeoutId);
+        signal?.removeEventListener('abort', onExternalAbort);
       }
     }
 
