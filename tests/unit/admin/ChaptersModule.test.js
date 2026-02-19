@@ -546,7 +546,7 @@ describe('ChaptersModule', () => {
       it('should reject unsupported formats', async () => {
         await mod._bookUpload._processBookFile({ name: 'book.pdf' });
 
-        expect(app._showToast).toHaveBeenCalledWith('Допустимые форматы: .epub, .fb2, .docx, .doc, .txt');
+        expect(app._showToast).toHaveBeenCalledWith('Неподдерживаемый формат. Поддерживаются: epub, fb2, docx, doc, txt');
       });
     });
 
