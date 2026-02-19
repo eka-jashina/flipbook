@@ -51,17 +51,7 @@ export class SoundsModule extends BaseModule {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      this._showToast('Файл слишком большой (макс. 2 МБ)');
-      e.target.value = '';
-      return;
-    }
-
-    if (!file.type.startsWith('audio/')) {
-      this._showToast('Допустимы только аудиофайлы');
-      e.target.value = '';
-      return;
-    }
+    if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'audio/', inputEl: e.target })) return;
 
     const reader = new FileReader();
     reader.onload = () => {

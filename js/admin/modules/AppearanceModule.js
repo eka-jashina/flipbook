@@ -184,17 +184,7 @@ export class AppearanceModule extends BaseModule {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      this._showToast('Файл слишком большой (макс. 2 МБ)');
-      e.target.value = '';
-      return;
-    }
-
-    if (!file.type.startsWith('image/')) {
-      this._showToast('Допустимы только изображения');
-      e.target.value = '';
-      return;
-    }
+    if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: e.target })) return;
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -252,17 +242,7 @@ export class AppearanceModule extends BaseModule {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      this._showToast('Файл слишком большой (макс. 2 МБ)');
-      e.target.value = '';
-      return;
-    }
-
-    if (!file.type.startsWith('image/')) {
-      this._showToast('Допустимы только изображения');
-      e.target.value = '';
-      return;
-    }
+    if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: e.target })) return;
 
     const reader = new FileReader();
     reader.onload = () => {
