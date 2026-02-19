@@ -9,7 +9,7 @@ import { escapeHtml, parseXml, parseHtml, getTextContent } from '../../../js/adm
 import { convertElement, convertInlineContent, convertImage, resolveImage, resolveRelativePath, splitByHeadings } from '../../../js/admin/parsers/EpubParser.js';
 import { getFb2Text, loadFb2Images, extractFb2Title, convertFb2Element, convertFb2Inline } from '../../../js/admin/parsers/Fb2Parser.js';
 import { parseTxt } from '../../../js/admin/parsers/TxtParser.js';
-import { parseDoc, extractDocText, extractDocTextAscii } from '../../../js/admin/parsers/DocParser.js';
+import { parseDoc, extractDocText, extractDocTextAscii, parseOLE2 } from '../../../js/admin/parsers/DocParser.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -33,6 +33,244 @@ function createBinaryFile(name, buffer) {
   const file = new File([buffer], name);
   file.arrayBuffer = () => Promise.resolve(buffer);
   return file;
+}
+
+/**
+ * Построить минимальный валидный OLE2 DOC-файл для тестов.
+ * Создаёт OLE2 контейнер с:
+ * - Root Entry (storage)
+ * - WordDocument stream (FIB + текст)
+ * - 1Table stream (CLX с piece table)
+ *
+ * @param {string} text — текст документа
+ * @param {{ compressed?: boolean }} options
+ * @returns {ArrayBuffer}
+ */
+function buildMinimalOLE2Doc(text, options = {}) {
+  const sectorSize = 512;
+  const { compressed = false } = options;
+
+  // ═══════════ Подготовка текстовых данных ═══════════
+
+  let textBytes;
+  if (compressed) {
+    // CP1252: 1 байт на символ
+    textBytes = new Uint8Array(text.length);
+    for (let i = 0; i < text.length; i++) {
+      textBytes[i] = text.charCodeAt(i) & 0xFF;
+    }
+  } else {
+    // UTF-16LE: 2 байта на символ
+    textBytes = new Uint8Array(text.length * 2);
+    for (let i = 0; i < text.length; i++) {
+      const code = text.charCodeAt(i);
+      textBytes[i * 2] = code & 0xFF;
+      textBytes[i * 2 + 1] = (code >> 8) & 0xFF;
+    }
+  }
+
+  // ═══════════ FIB (File Information Block) ═══════════
+
+  // FibBase (32 байта)
+  const fibBase = new Uint8Array(32);
+  const fibBaseView = new DataView(fibBase.buffer);
+  fibBaseView.setUint16(0, 0xA5EC, true);  // wIdent
+  fibBaseView.setUint16(2, 0x00C1, true);  // nFib (Word 97)
+  // flags: bit 9 = fWhichTblStm = 1 (1Table)
+  fibBaseView.setUint16(10, 0x0200, true);
+
+  // FibRgW97: csw=14 (стандарт для Word 97)
+  const csw = 14;
+  const fibRgW = new Uint8Array(2 + csw * 2);
+  new DataView(fibRgW.buffer).setUint16(0, csw, true);
+
+  // FibRgLw97: cslw=22 (стандарт для Word 97)
+  const cslw = 22;
+  const fibRgLw = new Uint8Array(2 + cslw * 4);
+  const fibRgLwView = new DataView(fibRgLw.buffer);
+  fibRgLwView.setUint16(0, cslw, true);
+  // ccpText (индекс 3): количество символов основного текста
+  fibRgLwView.setUint32(2 + 3 * 4, text.length, true);
+
+  // FibRgFcLcb97: cbRgFcLcb=93 (Word 97 стандарт)
+  const cbRgFcLcb = 93;
+  const fibRgFcLcb = new Uint8Array(2 + cbRgFcLcb * 8);
+  const fibRgFcLcbView = new DataView(fibRgFcLcb.buffer);
+  fibRgFcLcbView.setUint16(0, cbRgFcLcb, true);
+  // fcClx/lcbClx — индекс 33 в массиве пар
+  // Значения установим после создания CLX (ниже)
+
+  // Текст расположен сразу после FIB в WordDocument stream
+  const fibTotalSize = fibBase.length + fibRgW.length + fibRgLw.length + fibRgFcLcb.length;
+  const textOffset = fibTotalSize;
+
+  // WordDocument stream = FIB + текст
+  const wordDocSize = fibTotalSize + textBytes.length;
+  const wordDocData = new Uint8Array(wordDocSize);
+  let wdPos = 0;
+  wordDocData.set(fibBase, wdPos); wdPos += fibBase.length;
+  wordDocData.set(fibRgW, wdPos); wdPos += fibRgW.length;
+  wordDocData.set(fibRgLw, wdPos); wdPos += fibRgLw.length;
+  wordDocData.set(fibRgFcLcb, wdPos); wdPos += fibRgFcLcb.length;
+  wordDocData.set(textBytes, wdPos);
+
+  // ═══════════ Piece Table (CLX → 1Table stream) ═══════════
+
+  // PlcPcd: 2 CPs (uint32) + 1 PCD (8 байт) = 16 байт
+  const plcPcdSize = 2 * 4 + 1 * 8; // 16
+  // CLX = Pcdt marker(1) + lcb(4) + PlcPcd
+  const clxSize = 1 + 4 + plcPcdSize;
+  const tableData = new Uint8Array(clxSize);
+  const tableView = new DataView(tableData.buffer);
+
+  let tPos = 0;
+  tableData[tPos++] = 0x02;  // Pcdt marker
+  tableView.setUint32(tPos, plcPcdSize, true); tPos += 4;
+
+  // CP[0] = 0, CP[1] = text.length
+  tableView.setUint32(tPos, 0, true); tPos += 4;
+  tableView.setUint32(tPos, text.length, true); tPos += 4;
+
+  // PCD: 2 байта unused + 4 байта fc + 2 байта prm
+  tPos += 2; // unused
+  if (compressed) {
+    // fc с установленным битом 30, byte_offset = textOffset → fc = (textOffset * 2) | 0x40000000
+    tableView.setUint32(tPos, (textOffset * 2) | 0x40000000, true);
+  } else {
+    // Unicode: fc = byte offset в WordDocument stream
+    tableView.setUint32(tPos, textOffset, true);
+  }
+
+  // Записать fcClx/lcbClx в FIB (в wordDocData)
+  const fcLcbOffset = fibBase.length + fibRgW.length + fibRgLw.length + 2; // +2 для cbRgFcLcb
+  const clxPairByteOffset = fcLcbOffset + 33 * 8;
+  const wdView = new DataView(wordDocData.buffer);
+  wdView.setUint32(clxPairByteOffset, 0, true);          // fcClx = 0 (начало table stream)
+  wdView.setUint32(clxPairByteOffset + 4, clxSize, true); // lcbClx
+
+  // ═══════════ OLE2 контейнер ═══════════
+
+  // Раскладка секторов:
+  // Sector 0: FAT sector
+  // Sector 1: Directory sector
+  // Sector 2..N: WordDocument data
+  // Sector N+1..M: 1Table data
+
+  const wordDocSectors = Math.ceil(wordDocSize / sectorSize);
+  const tableSectors = Math.ceil(tableData.length / sectorSize);
+
+  const wordDocStart = 2;  // первый сектор данных WordDocument
+  const tableStart = wordDocStart + wordDocSectors;
+  const totalSectors = 1 + 1 + wordDocSectors + tableSectors; // FAT + Dir + WD + Table
+  const fileSize = (1 + totalSectors) * sectorSize; // +1 для заголовка (512 байт)
+
+  const buf = new ArrayBuffer(fileSize);
+  const fileBytes = new Uint8Array(buf);
+  const fileView = new DataView(buf);
+
+  // ─── OLE2 Header (512 байт) ───
+
+  // Сигнатура
+  const sig = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+  for (let i = 0; i < 8; i++) fileBytes[i] = sig[i];
+
+  fileView.setUint16(24, 0x003E, true);  // minor version
+  fileView.setUint16(26, 0x0003, true);  // major version (v3)
+  fileView.setUint16(28, 0xFFFE, true);  // byte order (little-endian)
+  fileView.setUint16(30, 9, true);       // sector size power (512)
+  fileView.setUint16(32, 6, true);       // mini sector size power (64)
+  fileView.setUint32(44, 1, true);       // total FAT sectors
+  fileView.setUint32(48, 1, true);       // first directory sector = 1
+  fileView.setUint32(56, 0x1000, true);  // mini stream cutoff (4096)
+  fileView.setInt32(60, -2, true);       // first miniFAT sector (none)
+  fileView.setUint32(64, 0, true);       // total miniFAT sectors
+  fileView.setInt32(68, -2, true);       // first DIFAT sector (none)
+  fileView.setUint32(72, 0, true);       // total DIFAT sectors
+
+  // DIFAT[0] = sector 0 (FAT)
+  fileView.setInt32(76, 0, true);
+  // DIFAT[1..108] = FREESECT (-1)
+  for (let i = 1; i < 109; i++) {
+    fileView.setInt32(76 + i * 4, -1, true);
+  }
+
+  // ─── Sector 0: FAT ───
+
+  const fatOffset = sectorSize; // sector 0
+  // Sector 0 = FAT sector itself (0xFFFFFFFD = -3)
+  fileView.setInt32(fatOffset + 0 * 4, -3, true);
+  // Sector 1 = Directory (ENDOFCHAIN)
+  fileView.setInt32(fatOffset + 1 * 4, -2, true);
+
+  // WordDocument chain: sector 2 → 3 → ... → (2+N-1) = ENDOFCHAIN
+  for (let i = 0; i < wordDocSectors; i++) {
+    const sector = wordDocStart + i;
+    const nextSector = (i < wordDocSectors - 1) ? sector + 1 : -2;
+    fileView.setInt32(fatOffset + sector * 4, nextSector, true);
+  }
+
+  // 1Table chain: sector tableStart → ... → ENDOFCHAIN
+  for (let i = 0; i < tableSectors; i++) {
+    const sector = tableStart + i;
+    const nextSector = (i < tableSectors - 1) ? sector + 1 : -2;
+    fileView.setInt32(fatOffset + sector * 4, nextSector, true);
+  }
+
+  // Остальные — FREESECT
+  for (let i = tableStart + tableSectors; i < sectorSize / 4; i++) {
+    fileView.setInt32(fatOffset + i * 4, -1, true);
+  }
+
+  // ─── Sector 1: Directory ───
+
+  const dirOffset = sectorSize * 2; // sector 1
+
+  // Entry 0: Root Entry (type=5, storage)
+  writeDirEntry(fileView, fileBytes, dirOffset + 0 * 128, 'Root Entry', 5, -2, 0);
+
+  // Entry 1: WordDocument (type=2, stream)
+  writeDirEntry(fileView, fileBytes, dirOffset + 1 * 128, 'WordDocument', 2, wordDocStart, wordDocSize);
+
+  // Entry 2: 1Table (type=2, stream)
+  writeDirEntry(fileView, fileBytes, dirOffset + 2 * 128, '1Table', 2, tableStart, tableData.length);
+
+  // ─── Data sectors: WordDocument ───
+
+  const wdDataOffset = sectorSize * (1 + wordDocStart); // +1 for header
+  fileBytes.set(wordDocData, wdDataOffset);
+
+  // ─── Data sectors: 1Table ───
+
+  const tableDataOffset = sectorSize * (1 + tableStart);
+  fileBytes.set(tableData, tableDataOffset);
+
+  return buf;
+}
+
+/**
+ * Записать directory entry в OLE2 структуру
+ */
+function writeDirEntry(view, bytes, offset, name, type, startSector, size) {
+  // Имя в UTF-16LE
+  for (let i = 0; i < name.length; i++) {
+    view.setUint16(offset + i * 2, name.charCodeAt(i), true);
+  }
+  // Null terminator
+  view.setUint16(offset + name.length * 2, 0, true);
+  // Name length in bytes (including null terminator)
+  view.setUint16(offset + 64, (name.length + 1) * 2, true);
+  // Type
+  bytes[offset + 66] = type;
+  // Color (black=1 for red-black tree)
+  bytes[offset + 67] = 1;
+  // Left/Right/Child sibling IDs = 0xFFFFFFFF (none)
+  view.setInt32(offset + 68, -1, true);  // left
+  view.setInt32(offset + 72, -1, true);  // right
+  view.setInt32(offset + 76, -1, true);  // child
+  // Start sector
+  view.setInt32(offset + 116, startSector, true);
+  // Size
+  view.setUint32(offset + 120, size, true);
 }
 
 describe('BookParser', () => {
@@ -464,12 +702,115 @@ describe('BookParser', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // extractDocText
+  // OLE2 парсер
   // ═══════════════════════════════════════════════════════════════════════════
 
-  describe('extractDocText', () => {
-    it('should extract UTF-16LE text from buffer', () => {
-      // Создаём UTF-16LE буфер с длинным текстом
+  describe('parseOLE2', () => {
+    it('should return null for non-OLE2 buffer', () => {
+      const buffer = new ArrayBuffer(1024);
+      expect(parseOLE2(buffer)).toBeNull();
+    });
+
+    it('should return null for buffer smaller than 512 bytes', () => {
+      const buffer = new ArrayBuffer(100);
+      expect(parseOLE2(buffer)).toBeNull();
+    });
+
+    it('should return null for buffer with wrong signature', () => {
+      const buffer = new ArrayBuffer(512);
+      const view = new Uint8Array(buffer);
+      view[0] = 0xFF;
+      expect(parseOLE2(buffer)).toBeNull();
+    });
+
+    it('should parse valid OLE2 header and find directory entries', () => {
+      const ole2 = buildMinimalOLE2Doc('Hello World test document text for extraction');
+      const parsed = parseOLE2(ole2);
+
+      expect(parsed).not.toBeNull();
+      expect(parsed.directories.length).toBeGreaterThan(0);
+      expect(parsed.findEntry('WordDocument')).not.toBeNull();
+    });
+
+    it('should read stream data from directory entry', () => {
+      const text = 'Test content for stream reading verification';
+      const ole2 = buildMinimalOLE2Doc(text);
+      const parsed = parseOLE2(ole2);
+
+      const wordDoc = parsed.findEntry('WordDocument');
+      expect(wordDoc).not.toBeNull();
+
+      const data = parsed.readStream(wordDoc);
+      expect(data).not.toBeNull();
+      expect(data.length).toBeGreaterThan(0);
+    });
+
+    it('should find both WordDocument and Table streams', () => {
+      const ole2 = buildMinimalOLE2Doc('Test document');
+      const parsed = parseOLE2(ole2);
+
+      expect(parsed.findEntry('WordDocument')).not.toBeNull();
+      // Наш билдер создаёт 1Table
+      expect(parsed.findEntry('1Table')).not.toBeNull();
+    });
+
+    it('should return null for entry not found', () => {
+      const ole2 = buildMinimalOLE2Doc('Test');
+      const parsed = parseOLE2(ole2);
+      expect(parsed.findEntry('NonExistent')).toBeNull();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Структурный парсинг DOC (OLE2 → FIB → Piece Table)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('extractDocText (structured parsing)', () => {
+    it('should extract text from valid OLE2 DOC via piece table', () => {
+      const text = 'Привет мир! Это тестовый документ Word.';
+      const ole2Buffer = buildMinimalOLE2Doc(text);
+
+      const result = extractDocText(ole2Buffer);
+      expect(result).toContain('Привет мир');
+      expect(result).toContain('тестовый документ');
+    });
+
+    it('should extract ASCII text from OLE2 DOC', () => {
+      const text = 'Hello World! This is a test Word document with enough content.';
+      const ole2Buffer = buildMinimalOLE2Doc(text);
+
+      const result = extractDocText(ole2Buffer);
+      expect(result).toContain('Hello World');
+      expect(result).toContain('test Word document');
+    });
+
+    it('should handle paragraph marks in DOC text', () => {
+      // 0x0D = paragraph mark in Word
+      const text = 'First paragraph\rSecond paragraph\rThird paragraph';
+      const ole2Buffer = buildMinimalOLE2Doc(text);
+
+      const result = extractDocText(ole2Buffer);
+      expect(result).toContain('First paragraph');
+      expect(result).toContain('Second paragraph');
+      expect(result).toContain('Third paragraph');
+    });
+
+    it('should handle compressed (CP1252) pieces', () => {
+      const text = 'Simple ASCII text for compressed piece test';
+      const ole2Buffer = buildMinimalOLE2Doc(text, { compressed: true });
+
+      const result = extractDocText(ole2Buffer);
+      expect(result).toContain('Simple ASCII text');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // extractDocText (fallback)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('extractDocText (fallback)', () => {
+    it('should extract UTF-16LE text from non-OLE2 buffer via fallback', () => {
+      // Создаём UTF-16LE буфер с длинным текстом (без OLE2 структуры)
       const text = 'This is a test document with enough characters to be extracted from DOC';
       const buffer = new ArrayBuffer(text.length * 2);
       const view = new Uint8Array(buffer);
