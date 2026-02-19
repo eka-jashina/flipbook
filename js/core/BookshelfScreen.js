@@ -10,6 +10,7 @@
  */
 
 const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
+const READING_SESSION_KEY = 'flipbook-reading-session';
 const BOOKS_PER_SHELF = 5;
 
 // Дефолтная книга для полки (когда нет конфига в localStorage)
@@ -314,6 +315,7 @@ export class BookshelfScreen {
     switch (action) {
       case 'read':
         this._saveActiveBook(bookId);
+        sessionStorage.setItem(READING_SESSION_KEY, '1');
         if (this.onBookSelect) this.onBookSelect(bookId);
         break;
 
@@ -397,11 +399,13 @@ export function getBookshelfData() {
       ? config.books
       : [DEFAULT_BOOKSHELF_BOOK];
 
-    // Показываем шкаф если нет activeBookId (пользователь ещё не выбрал книгу)
+    // Показываем шкаф если нет activeBookId или если пользователь пришёл из новой сессии
+    // (sessionStorage сбрасывается при закрытии вкладки/браузера)
     const hasActiveBook = !!config.activeBookId;
+    const isReadingSession = !!sessionStorage.getItem(READING_SESSION_KEY);
 
     return {
-      shouldShow: !hasActiveBook,
+      shouldShow: !hasActiveBook || !isReadingSession,
       books,
     };
   } catch {
@@ -415,12 +419,13 @@ export function getBookshelfData() {
 export function clearActiveBook() {
   try {
     const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-    if (!raw) return;
-
-    const config = JSON.parse(raw);
-    delete config.activeBookId;
-    localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
+    if (raw) {
+      const config = JSON.parse(raw);
+      delete config.activeBookId;
+      localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
+    }
   } catch {
     /* повреждённые данные — игнорируем */
   }
+  sessionStorage.removeItem(READING_SESSION_KEY);
 }

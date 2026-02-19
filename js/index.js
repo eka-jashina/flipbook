@@ -152,6 +152,7 @@ async function init() {
     }
 
     // Всегда показываем кнопку «К полке» — книжная полка является главным экраном
+    document.body.dataset.screen = 'reader';
     document.body.dataset.hasBookshelf = 'true';
     setupBackToShelfButton();
 
