@@ -17,7 +17,7 @@ function createMockApp() {
       updateChapter: vi.fn(),
       removeChapter: vi.fn(),
       moveChapter: vi.fn(),
-      getCover: vi.fn(() => ({ title: 'О хоббитах', author: 'Толкин', bg: 'cover.webp', bgMobile: 'cover-m.webp' })),
+      getCover: vi.fn(() => ({ title: 'О хоббитах', author: 'Толкин', bgMode: 'default', bgCustomData: null })),
       updateCover: vi.fn(),
       getBooks: vi.fn(() => [
         { id: 'default', title: 'О хоббитах', author: 'Толкин', chaptersCount: 3 },
@@ -61,8 +61,16 @@ function setupDOM() {
     </div>
     <input id="coverTitle" type="text">
     <input id="coverAuthor" type="text">
-    <input id="coverBg" type="text">
-    <input id="coverBgMobile" type="text">
+    <input type="hidden" id="bgCoverMode" value="default">
+    <button class="texture-option active" type="button" data-bg-mode="default"></button>
+    <button class="texture-option" type="button" data-bg-mode="none"></button>
+    <label class="texture-option texture-option--upload">
+      <span id="bgCoverThumb" class="texture-thumb texture-thumb--upload"></span>
+      <input id="bgCoverFileInput" type="file" hidden>
+    </label>
+    <div id="bgCoverCustomInfo" hidden></div>
+    <span id="bgCoverCustomName"></span>
+    <button id="bgCoverRemove"></button>
     <button id="saveCover"></button>
     <dialog id="chapterModal">
       <h2 id="modalTitle"></h2>
@@ -121,8 +129,7 @@ describe('ChaptersModule', () => {
 
       expect(mod.coverTitle.value).toBe('О хоббитах');
       expect(mod.coverAuthor.value).toBe('Толкин');
-      expect(mod.coverBgInput.value).toBe('cover.webp');
-      expect(mod.coverBgMobileInput.value).toBe('cover-m.webp');
+      expect(mod.bgCoverMode.value).toBe('default');
     });
   });
 
@@ -332,16 +339,13 @@ describe('ChaptersModule', () => {
     it('should save cover data to store', () => {
       mod.coverTitle.value = 'New Title';
       mod.coverAuthor.value = 'New Author';
-      mod.coverBgInput.value = 'new-bg.webp';
-      mod.coverBgMobileInput.value = 'new-bg-m.webp';
 
       mod._saveCover();
 
       expect(app.store.updateCover).toHaveBeenCalledWith({
         title: 'New Title',
         author: 'New Author',
-        bg: 'new-bg.webp',
-        bgMobile: 'new-bg-m.webp',
+        bgMode: 'default',
       });
       expect(app._showToast).toHaveBeenCalledWith('Обложка сохранена');
     });

@@ -28,8 +28,13 @@ export class ChaptersModule extends BaseModule {
     // Обложка (в editor → cover tab)
     this.coverTitle = document.getElementById('coverTitle');
     this.coverAuthor = document.getElementById('coverAuthor');
-    this.coverBgInput = document.getElementById('coverBg');
-    this.coverBgMobileInput = document.getElementById('coverBgMobile');
+    this.bgCoverMode = document.getElementById('bgCoverMode');
+    this.bgCoverOptions = document.querySelectorAll('.texture-option[data-bg-mode]');
+    this.bgCoverFileInput = document.getElementById('bgCoverFileInput');
+    this.bgCoverThumb = document.getElementById('bgCoverThumb');
+    this.bgCoverCustomInfo = document.getElementById('bgCoverCustomInfo');
+    this.bgCoverCustomName = document.getElementById('bgCoverCustomName');
+    this.bgCoverRemove = document.getElementById('bgCoverRemove');
     this.saveCoverBtn = document.getElementById('saveCover');
 
     // Модальное окно главы
@@ -74,7 +79,13 @@ export class ChaptersModule extends BaseModule {
       this._handleDeleteBook(this.store.getActiveBookId());
     });
 
-    // Обложка
+    // Обложка — фон-подложка (mode selector)
+    this.bgCoverOptions.forEach(btn => {
+      btn.addEventListener('click', () => this._selectBgMode(btn.dataset.bgMode));
+    });
+    this.bgCoverFileInput.addEventListener('change', (e) => this._handleBgUpload(e));
+    this.bgCoverRemove.addEventListener('click', () => this._removeBgCustom());
+
     this.saveCoverBtn.addEventListener('click', () => this._saveCover());
 
     // Альбом — кнопка в табе «Главы» (переход в album view)
@@ -99,8 +110,7 @@ export class ChaptersModule extends BaseModule {
     const cover = this.store.getCover();
     this.coverTitle.value = cover.title;
     this.coverAuthor.value = cover.author;
-    this.coverBgInput.value = cover.bg || '';
-    this.coverBgMobileInput.value = cover.bgMobile || '';
+    this._renderBgModeSelector(cover.bgMode || 'default', cover.bgCustomData);
   }
 
   _renderChapters() {
@@ -277,14 +287,78 @@ export class ChaptersModule extends BaseModule {
     this._renderJsonPreview();
   }
 
-  // --- Обложка ---
+  // --- Обложка / фон-подложка ---
+
+  _renderBgModeSelector(modeValue, customData) {
+    const uploadOption = this.bgCoverOptions[this.bgCoverOptions.length - 1]?.closest('label');
+
+    this.bgCoverOptions.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.bgMode === modeValue);
+    });
+
+    if (uploadOption) {
+      uploadOption.classList.toggle('active', modeValue === 'custom');
+    }
+
+    this.bgCoverMode.value = modeValue;
+
+    if (customData) {
+      this.bgCoverThumb.style.backgroundImage = `url(${customData})`;
+      this.bgCoverThumb.classList.add('has-image');
+      this.bgCoverCustomInfo.hidden = false;
+      this.bgCoverCustomName.textContent = 'Своё изображение';
+    } else {
+      this.bgCoverThumb.style.backgroundImage = '';
+      this.bgCoverThumb.classList.remove('has-image');
+      this.bgCoverCustomInfo.hidden = true;
+    }
+  }
+
+  _selectBgMode(value) {
+    const cover = this.store.getCover();
+    this._renderBgModeSelector(value, cover.bgCustomData);
+  }
+
+  _handleBgUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      this._showToast('Файл слишком большой (макс. 2 МБ)');
+      e.target.value = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this._showToast('Допустимы только изображения');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      this.store.updateCover({ bgMode: 'custom', bgCustomData: dataUrl });
+      this._renderBgModeSelector('custom', dataUrl);
+      this._renderJsonPreview();
+      this._showToast('Фон загружен');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  _removeBgCustom() {
+    this.store.updateCover({ bgMode: 'default', bgCustomData: null });
+    this._renderBgModeSelector('default', null);
+    this._renderJsonPreview();
+    this._showToast('Своё изображение удалено');
+  }
 
   _saveCover() {
     this.store.updateCover({
       title: this.coverTitle.value.trim(),
       author: this.coverAuthor.value.trim(),
-      bg: this.coverBgInput.value.trim(),
-      bgMobile: this.coverBgMobileInput.value.trim(),
+      bgMode: this.bgCoverMode.value,
     });
 
     // Обновить заголовок редактора

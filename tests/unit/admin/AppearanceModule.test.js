@@ -13,7 +13,6 @@ function createMockApp() {
         fontMin: 14,
         fontMax: 22,
         light: {
-          coverBgMode: 'default',
           coverBgStart: '#3a2d1f',
           coverBgEnd: '#2a2016',
           coverText: '#f2e9d8',
@@ -24,7 +23,6 @@ function createMockApp() {
           bgApp: '#e6e3dc',
         },
         dark: {
-          coverBgMode: 'default',
           coverBgStart: '#111111',
           coverBgEnd: '#000000',
           coverText: '#eaeaea',
@@ -59,15 +57,9 @@ function setupDOM() {
     <input id="coverBgEnd" type="color" value="#2a2016">
     <input id="coverText" type="color" value="#f2e9d8">
     <div id="coverTextPreview"></div>
-    <input type="hidden" id="coverBgMode" value="default">
-    <button class="texture-option active" type="button" data-cover-bg="default"></button>
-    <button class="texture-option" type="button" data-cover-bg="none"></button>
-    <label class="texture-option texture-option--upload">
-      <span id="coverBgThumb" class="texture-thumb texture-thumb--upload"></span>
-      <input id="coverBgFileInput" type="file" hidden>
-    </label>
-    <div id="coverBgCustomInfo" hidden></div>
-    <span id="coverBgCustomName"></span>
+    <input id="coverBgFileInput" type="file">
+    <div id="coverBgPreview"></div>
+    <div id="coverBgPreviewEmpty"></div>
     <button id="coverBgRemove"></button>
     <input id="pageTexture" type="hidden" value="default">
     <button class="texture-option" data-texture="default"></button>
@@ -211,44 +203,24 @@ describe('AppearanceModule', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // _renderCoverBgSelector
+  // _renderCoverBgPreview
   // ═══════════════════════════════════════════════════════════════════════════
 
-  describe('_renderCoverBgSelector()', () => {
-    it('should mark default option as active', () => {
-      mod._renderCoverBgSelector('default', null);
+  describe('_renderCoverBgPreview()', () => {
+    it('should show image when data provided', () => {
+      mod._renderCoverBgPreview('data:image/png;base64,abc');
 
-      const defaultBtn = document.querySelector('[data-cover-bg="default"]');
-      const noneBtn = document.querySelector('[data-cover-bg="none"]');
-      expect(defaultBtn.classList.contains('active')).toBe(true);
-      expect(noneBtn.classList.contains('active')).toBe(false);
-      expect(mod.coverBgMode.value).toBe('default');
-      expect(mod.coverBgCustomInfo.hidden).toBe(true);
+      expect(mod.coverBgPreview.classList.contains('has-image')).toBe(true);
+      expect(mod.coverBgPreviewEmpty.hidden).toBe(true);
+      expect(mod.coverBgRemove.hidden).toBe(false);
     });
 
-    it('should mark none option as active', () => {
-      mod._renderCoverBgSelector('none', null);
+    it('should clear preview when no data', () => {
+      mod._renderCoverBgPreview(null);
 
-      const defaultBtn = document.querySelector('[data-cover-bg="default"]');
-      const noneBtn = document.querySelector('[data-cover-bg="none"]');
-      expect(defaultBtn.classList.contains('active')).toBe(false);
-      expect(noneBtn.classList.contains('active')).toBe(true);
-      expect(mod.coverBgMode.value).toBe('none');
-    });
-
-    it('should show custom info when custom data provided', () => {
-      mod._renderCoverBgSelector('custom', 'data:image/png;base64,abc');
-
-      expect(mod.coverBgThumb.classList.contains('has-image')).toBe(true);
-      expect(mod.coverBgCustomInfo.hidden).toBe(false);
-      expect(mod.coverBgMode.value).toBe('custom');
-    });
-
-    it('should hide custom info when no custom data', () => {
-      mod._renderCoverBgSelector('default', null);
-
-      expect(mod.coverBgThumb.classList.contains('has-image')).toBe(false);
-      expect(mod.coverBgCustomInfo.hidden).toBe(true);
+      expect(mod.coverBgPreview.classList.contains('has-image')).toBe(false);
+      expect(mod.coverBgPreviewEmpty.hidden).toBe(false);
+      expect(mod.coverBgRemove.hidden).toBe(true);
     });
   });
 
@@ -295,10 +267,7 @@ describe('AppearanceModule', () => {
 
       mod._handleCoverBgUpload(event);
 
-      expect(app.store.updateAppearanceTheme).toHaveBeenCalledWith('light', {
-        coverBgMode: 'custom',
-        coverBgImage: 'data:image/png;base64,abc',
-      });
+      expect(app.store.updateAppearanceTheme).toHaveBeenCalledWith('light', { coverBgImage: 'data:image/png;base64,abc' });
       expect(app._showToast).toHaveBeenCalledWith('Фон обложки загружен');
 
       global.FileReader = OriginalFileReader;
@@ -310,14 +279,11 @@ describe('AppearanceModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_removeCoverBg()', () => {
-    it('should reset cover background to default in store', () => {
+    it('should clear cover background in store', () => {
       mod._removeCoverBg();
 
-      expect(app.store.updateAppearanceTheme).toHaveBeenCalledWith('light', {
-        coverBgMode: 'default',
-        coverBgImage: null,
-      });
-      expect(app._showToast).toHaveBeenCalledWith('Своё изображение удалено');
+      expect(app.store.updateAppearanceTheme).toHaveBeenCalledWith('light', { coverBgImage: null });
+      expect(app._showToast).toHaveBeenCalledWith('Фон обложки удалён');
     });
   });
 
@@ -408,11 +374,9 @@ describe('AppearanceModule', () => {
       mod._saveAppearance();
 
       expect(app.store.updateAppearanceTheme).toHaveBeenCalledWith('light', {
-        coverBgMode: 'default',
         coverBgStart: '#ff0000',
         coverBgEnd: '#00ff00',
         coverText: '#0000ff',
-        coverBgImage: null,
         pageTexture: 'default',
         customTextureData: null,
         bgPage: '#ffffff',
