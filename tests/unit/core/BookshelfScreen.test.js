@@ -680,6 +680,11 @@ describe('BookshelfScreen', () => {
         const stored = JSON.parse(localStorage.getItem('flipbook-admin-config'));
         expect(stored.activeBookId).toBe('b1');
       });
+
+      it('should set reading session flag in sessionStorage', () => {
+        screen._handleBookAction('read', 'b1');
+        expect(sessionStorage.getItem('flipbook-reading-session')).toBe('1');
+      });
     });
 
     describe('action: edit', () => {
@@ -827,13 +832,24 @@ describe('getBookshelfData()', () => {
     expect(result.books[0].id).toBe('my-book');
   });
 
-  it('should return shouldShow:false when activeBookId is set', () => {
+  it('should return shouldShow:false when activeBookId is set and reading session is active', () => {
     localStorage.setItem(
       'flipbook-admin-config',
       JSON.stringify({ books: [{ id: 'b1' }], activeBookId: 'b1' }),
     );
+    sessionStorage.setItem('flipbook-reading-session', '1');
     const result = getBookshelfData();
     expect(result.shouldShow).toBe(false);
+  });
+
+  it('should return shouldShow:true when activeBookId is set but no reading session (returning user)', () => {
+    localStorage.setItem(
+      'flipbook-admin-config',
+      JSON.stringify({ books: [{ id: 'b1' }], activeBookId: 'b1' }),
+    );
+    // sessionStorage is empty — simulates returning after closing the browser
+    const result = getBookshelfData();
+    expect(result.shouldShow).toBe(true);
   });
 
   it('should return shouldShow:true when activeBookId is not set', () => {
@@ -888,6 +904,12 @@ describe('clearActiveBook()', () => {
     clearActiveBook();
     const updated = JSON.parse(localStorage.getItem('flipbook-admin-config'));
     expect(updated.books).toHaveLength(2);
+  });
+
+  it('should clear the reading session flag from sessionStorage', () => {
+    sessionStorage.setItem('flipbook-reading-session', '1');
+    clearActiveBook();
+    expect(sessionStorage.getItem('flipbook-reading-session')).toBeNull();
   });
 
   it('should not throw when localStorage is empty', () => {
