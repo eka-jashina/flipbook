@@ -12,6 +12,8 @@
 import { CONFIG } from '../config.js';
 
 export class ErrorHandler {
+  static _hideTimer = null;
+
   /**
    * Показать сообщение об ошибке пользователю
    * @param {string} message - Текст ошибки для отображения
@@ -27,12 +29,16 @@ export class ErrorHandler {
       return;
     }
 
+    // Отменяем предыдущий таймаут чтобы не накапливались
+    clearTimeout(this._hideTimer);
+
     text.textContent = message;
     error.hidden = false;
 
     // Автоматически скрываем через заданный таймаут
-    setTimeout(() => {
+    this._hideTimer = setTimeout(() => {
       error.hidden = true;
+      this._hideTimer = null;
     }, CONFIG.UI.ERROR_HIDE_TIMEOUT);
   }
 

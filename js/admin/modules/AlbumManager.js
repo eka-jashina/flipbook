@@ -181,6 +181,7 @@ export class AlbumManager {
       fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
         if (!file) return;
+        if (!this._module._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: fileInput })) return;
         this._readPageImageFile(file, pageIndex, i);
         fileInput.value = '';
       });

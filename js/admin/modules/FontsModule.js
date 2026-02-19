@@ -3,6 +3,8 @@
  */
 import { BaseModule } from './BaseModule.js';
 
+const FONT_EXTENSIONS = ['.woff2', '.woff', '.ttf', '.otf'];
+
 export class FontsModule extends BaseModule {
   constructor(app) {
     super(app);
@@ -68,19 +70,7 @@ export class FontsModule extends BaseModule {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      this._showToast('Файл слишком большой (макс. 2 МБ)');
-      e.target.value = '';
-      return;
-    }
-
-    const validExts = ['.woff2', '.woff', '.ttf', '.otf'];
-    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    if (!validExts.includes(ext)) {
-      this._showToast('Допустимые форматы: .woff2, .woff, .ttf, .otf');
-      e.target.value = '';
-      return;
-    }
+    if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, extensions: FONT_EXTENSIONS, inputEl: e.target })) return;
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -188,19 +178,7 @@ export class FontsModule extends BaseModule {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      this._showToast('Файл слишком большой (макс. 2 МБ)');
-      e.target.value = '';
-      return;
-    }
-
-    const validExts = ['.woff2', '.woff', '.ttf', '.otf'];
-    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    if (!validExts.includes(ext)) {
-      this._showToast('Допустимые форматы: .woff2, .woff, .ttf, .otf');
-      e.target.value = '';
-      return;
-    }
+    if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, extensions: FONT_EXTENSIONS, inputEl: e.target })) return;
 
     const reader = new FileReader();
     reader.onload = () => {

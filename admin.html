@@ -5,6 +5,20 @@
     <title>Личный кабинет — Flipbook</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self';
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com data:;
+      img-src 'self' data: blob:;
+      media-src 'self' data: blob:;
+      connect-src 'self';
+      frame-ancestors 'none';
+      base-uri 'self';
+      form-action 'none';
+    ">
+
     <!-- Google Fonts (те же, что в ридере) -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter&family=Roboto&family=Open+Sans&family=Merriweather&family=Libre+Baskerville&display=swap"
