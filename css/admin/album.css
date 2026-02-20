@@ -243,6 +243,36 @@
   box-shadow: 0 0 0 2px rgb(107, 83, 64, 0.15);
 }
 
+/* === Интенсивность фильтра === */
+.album-filter-intensity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 120px;
+}
+
+.album-filter-intensity[hidden] {
+  display: none;
+}
+
+.album-filter-intensity-range {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  accent-color: var(--admin-primary);
+  cursor: pointer;
+}
+
+.album-filter-intensity-label {
+  flex-shrink: 0;
+  width: 32px;
+  font-family: var(--admin-font);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--admin-text-secondary);
+  text-align: right;
+}
+
 /* === Мульти-страничный альбом === */
 .album-page-card {
   margin-bottom: 16px;
