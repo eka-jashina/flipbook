@@ -13,6 +13,10 @@ describe('SettingsManager', () => {
     fontSize: 18,
     theme: 'light',
     soundEnabled: true,
+    soundVolume: 0.3,
+    ambientVolume: 0.5,
+    page: 0,
+    ambientType: 'none',
   };
 
   beforeEach(() => {
@@ -43,6 +47,35 @@ describe('SettingsManager', () => {
 
     it('should store reference to storage', () => {
       expect(manager.storage).toBe(mockStorage);
+    });
+
+    it('should sanitize corrupted values from storage', () => {
+      mockStorage.load.mockReturnValue({
+        fontSize: NaN,
+        theme: 'hacked',
+        soundVolume: 999,
+        page: -5,
+      });
+      const mgr = new SettingsManager(mockStorage, defaults);
+
+      expect(mgr.settings.fontSize).toBe(18); // fallback to default
+      expect(mgr.settings.theme).toBe('light');
+      expect(mgr.settings.soundVolume).toBe(1); // clamped to max
+      expect(mgr.settings.page).toBe(0);
+    });
+
+    it('should sanitize string fontSize from storage', () => {
+      mockStorage.load.mockReturnValue({ fontSize: '20' });
+      const mgr = new SettingsManager(mockStorage, defaults);
+
+      expect(mgr.settings.fontSize).toBe(20);
+    });
+
+    it('should sanitize extreme font sizes from storage', () => {
+      mockStorage.load.mockReturnValue({ fontSize: 1000 });
+      const mgr = new SettingsManager(mockStorage, defaults);
+
+      expect(mgr.settings.fontSize).toBe(72); // clamped to absolute max
     });
   });
 
@@ -95,16 +128,42 @@ describe('SettingsManager', () => {
       expect(mockStorage.save).toHaveBeenCalledWith({ soundEnabled: false });
     });
 
-    it('should handle zero value', () => {
-      manager.set('fontSize', 0);
-      expect(manager.settings.fontSize).toBe(0);
-      expect(mockStorage.save).toHaveBeenCalledWith({ fontSize: 0 });
+    it('should sanitize invalid fontSize on set', () => {
+      manager.set('fontSize', NaN);
+      // NaN sanitized to default (18) — same as current, so no save
+      expect(manager.settings.fontSize).toBe(18);
+      expect(mockStorage.save).not.toHaveBeenCalled();
     });
 
-    it('should handle null value', () => {
+    it('should clamp extreme fontSize on set', () => {
+      manager.set('fontSize', 1000);
+      expect(manager.settings.fontSize).toBe(72);
+      expect(mockStorage.save).toHaveBeenCalledWith({ fontSize: 72 });
+    });
+
+    it('should sanitize invalid theme on set', () => {
+      manager.set('theme', 'hacked');
+      // Falls back to default 'light' — same as current
+      expect(manager.settings.theme).toBe('light');
+      expect(mockStorage.save).not.toHaveBeenCalled();
+    });
+
+    it('should clamp volume on set', () => {
+      manager.set('soundVolume', 1.5);
+      expect(manager.settings.soundVolume).toBe(1);
+      expect(mockStorage.save).toHaveBeenCalledWith({ soundVolume: 1 });
+    });
+
+    it('should handle zero value for fontSize (clamps to min)', () => {
+      manager.set('fontSize', 0);
+      expect(manager.settings.fontSize).toBe(8); // absolute min
+    });
+
+    it('should handle null font value (falls back to default)', () => {
       manager.set('font', null);
-      expect(manager.settings.font).toBeNull();
-      expect(mockStorage.save).toHaveBeenCalledWith({ font: null });
+      // null is sanitized to default 'georgia' — same as current
+      expect(manager.settings.font).toBe('georgia');
+      expect(mockStorage.save).not.toHaveBeenCalled();
     });
   });
 
@@ -117,6 +176,11 @@ describe('SettingsManager', () => {
     it('should null out settings', () => {
       manager.destroy();
       expect(manager.settings).toBeNull();
+    });
+
+    it('should null out defaults', () => {
+      manager.destroy();
+      expect(manager._defaults).toBeNull();
     });
   });
 

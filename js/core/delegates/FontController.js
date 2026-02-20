@@ -5,7 +5,7 @@
  */
 
 import { CONFIG } from "../../config.js";
-import { cssVars, announce } from "../../utils/index.js";
+import { cssVars, announce, isValidFontSize, sanitizeFontSize } from "../../utils/index.js";
 
 /** Названия шрифтов для объявления screen reader */
 const FONT_NAMES = {
@@ -36,16 +36,15 @@ export class FontController {
     if (!html) return;
 
     const font = this._settings.get("font");
-    html.style.setProperty(
-      "--reader-font-family",
-      CONFIG.FONTS[font] || CONFIG.FONTS.georgia
-    );
+    const fontFamily = CONFIG.FONTS[font] || CONFIG.FONTS.georgia;
+    html.style.setProperty("--reader-font-family", fontFamily);
 
     const fontSize = this._settings.get("fontSize");
-    html.style.setProperty(
-      "--reader-font-size",
-      `${fontSize}px`
-    );
+    // Валидация: предотвратить невалидные значения в CSS
+    const safeFontSize = isValidFontSize(fontSize)
+      ? fontSize
+      : sanitizeFontSize(fontSize, 18);
+    html.style.setProperty("--reader-font-size", `${safeFontSize}px`);
 
     this._loadCustomFonts();
   }

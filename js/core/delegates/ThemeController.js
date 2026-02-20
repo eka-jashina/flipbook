@@ -5,7 +5,7 @@
  */
 
 import { CONFIG } from "../../config.js";
-import { announce } from "../../utils/index.js";
+import { announce, isValidTheme, isValidCSSColor, isValidFontSize } from "../../utils/index.js";
 
 /** Названия тем для объявления screen reader */
 const THEME_NAMES = {
@@ -33,7 +33,8 @@ export class ThemeController {
     if (!html) return;
 
     const theme = this._settings.get("theme");
-    html.dataset.theme = theme === "light" ? "" : theme;
+    const safeTheme = isValidTheme(theme) ? theme : "light";
+    html.dataset.theme = safeTheme === "light" ? "" : safeTheme;
 
     this._applyAppearance();
     this._applySettingsVisibility();
@@ -44,13 +45,16 @@ export class ThemeController {
    * @param {string} theme
    */
   handleTheme(theme) {
+    // Валидация: допускать только известные темы
+    const safeTheme = isValidTheme(theme) ? theme : "light";
+
     const html = this._dom.get("html");
     if (html) {
-      html.dataset.theme = theme === "light" ? "" : theme;
+      html.dataset.theme = safeTheme === "light" ? "" : safeTheme;
     }
 
     this._applyAppearance();
-    announce(THEME_NAMES[theme] || theme);
+    announce(THEME_NAMES[safeTheme] || safeTheme);
   }
 
   // ═══════════════════════════════════════════
@@ -84,9 +88,15 @@ export class ThemeController {
     if (t.coverBgImage) {
       html.style.setProperty("--cover-front-bg", `url(${t.coverBgImage})`);
     } else {
-      html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${t.coverBgStart}, ${t.coverBgEnd})`);
+      // Валидация цветов обложки перед формированием gradient
+      const start = isValidCSSColor(t.coverBgStart) ? t.coverBgStart : '#3a2d1f';
+      const end = isValidCSSColor(t.coverBgEnd) ? t.coverBgEnd : '#2a2016';
+      html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${start}, ${end})`);
     }
-    html.style.setProperty("--cover-front-text", t.coverText);
+
+    // Валидация цвета текста обложки
+    const coverText = isValidCSSColor(t.coverText) ? t.coverText : '#f2e9d8';
+    html.style.setProperty("--cover-front-text", coverText);
 
     if (t.pageTexture === "custom" && t.customTextureData) {
       html.style.setProperty("--bg-page-image", `url(${t.customTextureData})`);
@@ -96,11 +106,17 @@ export class ThemeController {
       html.style.removeProperty("--bg-page-image");
     }
 
-    html.style.setProperty("--bg-page", t.bgPage);
-    html.style.setProperty("--bg-app", t.bgApp);
+    // Валидация цветов фона страницы и приложения
+    const bgPage = isValidCSSColor(t.bgPage) ? t.bgPage : '#fdfcf8';
+    const bgApp = isValidCSSColor(t.bgApp) ? t.bgApp : '#e6e3dc';
+    html.style.setProperty("--bg-page", bgPage);
+    html.style.setProperty("--bg-app", bgApp);
 
-    html.style.setProperty("--font-min", `${a.fontMin}px`);
-    html.style.setProperty("--font-max", `${a.fontMax}px`);
+    // Валидация границ размера шрифта
+    const fontMin = isValidFontSize(a.fontMin) ? a.fontMin : 14;
+    const fontMax = isValidFontSize(a.fontMax) ? a.fontMax : 22;
+    html.style.setProperty("--font-min", `${fontMin}px`);
+    html.style.setProperty("--font-max", `${fontMax}px`);
   }
 
   // ═══════════════════════════════════════════
