@@ -60,7 +60,11 @@ export class BookshelfScreen {
    * Отрендерить книжный шкаф
    */
   render() {
-    const { shelves, actions, empty, subtitle, header } = this._els;
+    const { shelves, actions, empty, subtitle, header, modeSelector } = this._els;
+
+    // Сброс mode selector при рендере (важно при восстановлении из bfcache)
+    if (modeSelector) modeSelector.hidden = true;
+    this._currentView = 'shelf';
 
     if (!this.books.length) {
       // Пустое состояние

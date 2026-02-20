@@ -188,3 +188,10 @@ if (document.readyState === 'loading') {
 
 // Очистка при закрытии/переходе
 window.addEventListener('beforeunload', cleanup);
+
+// Реинициализация при восстановлении из bfcache (возврат через кнопку «Назад» браузера)
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    init();
+  }
+});
