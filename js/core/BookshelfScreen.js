@@ -95,15 +95,32 @@ export class BookshelfScreen {
    * Показать экран
    */
   show() {
-    this.container.hidden = false;
-    document.body.dataset.screen = 'bookshelf';
+    if ('startViewTransition' in document) {
+      document.documentElement.dataset.vt = 'to-shelf';
+      const t = document.startViewTransition(() => {
+        this.container.hidden = false;
+        document.body.dataset.screen = 'bookshelf';
+      });
+      t.finished.finally(() => delete document.documentElement.dataset.vt);
+    } else {
+      this.container.hidden = false;
+      document.body.dataset.screen = 'bookshelf';
+    }
   }
 
   /**
    * Скрыть экран
    */
   hide() {
-    document.body.dataset.screen = 'reader';
+    if ('startViewTransition' in document) {
+      document.documentElement.dataset.vt = 'to-reader';
+      const t = document.startViewTransition(() => {
+        document.body.dataset.screen = 'reader';
+      });
+      t.finished.finally(() => delete document.documentElement.dataset.vt);
+    } else {
+      document.body.dataset.screen = 'reader';
+    }
   }
 
   /**
