@@ -5,11 +5,19 @@
 import { BaseModule } from './BaseModule.js';
 import { AlbumManager } from './AlbumManager.js';
 import { BookUploadManager } from './BookUploadManager.js';
+import { BookParser } from '../BookParser.js';
 
 export class ChaptersModule extends BaseModule {
+  /** Максимальный размер загружаемого файла главы (10 МБ) */
+  static CHAPTER_FILE_MAX_SIZE = 10 * 1024 * 1024;
+  /** Допустимые расширения */
+  static CHAPTER_FILE_EXTENSIONS = ['.doc', '.docx', '.html', '.htm', '.txt'];
+
   constructor(app) {
     super(app);
     this._editingIndex = null;
+    /** HTML-контент, загруженный через файл (pending до сохранения) */
+    this._pendingHtmlContent = null;
     this._album = new AlbumManager(this);
     this._bookUpload = new BookUploadManager(this);
   }
@@ -43,9 +51,15 @@ export class ChaptersModule extends BaseModule {
     this.chapterForm = document.getElementById('chapterForm');
     this.cancelModal = document.getElementById('cancelModal');
     this.inputId = document.getElementById('chapterId');
-    this.inputFile = document.getElementById('chapterFile');
     this.inputBg = document.getElementById('chapterBg');
     this.inputBgMobile = document.getElementById('chapterBgMobile');
+
+    // Загрузка файла главы
+    this.chapterFileInput = document.getElementById('chapterFileInput');
+    this.chapterFileDropzone = document.getElementById('chapterFileDropzone');
+    this.chapterFileInfo = document.getElementById('chapterFileInfo');
+    this.chapterFileName = document.getElementById('chapterFileName');
+    this.chapterFileRemove = document.getElementById('chapterFileRemove');
 
     // Делегаты
     this._album.cacheDOM();
@@ -57,6 +71,26 @@ export class ChaptersModule extends BaseModule {
     this.addChapterBtn.addEventListener('click', () => this._openModal());
     this.cancelModal.addEventListener('click', () => this.modal.close());
     this.chapterForm.addEventListener('submit', (e) => this._handleChapterSubmit(e));
+
+    // Загрузка файла главы
+    this.chapterFileDropzone.addEventListener('click', () => this.chapterFileInput.click());
+    this.chapterFileInput.addEventListener('change', (e) => this._handleChapterFileSelect(e));
+    this.chapterFileRemove.addEventListener('click', () => this._removeChapterFile());
+
+    // Drag-and-drop на dropzone
+    this.chapterFileDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      this.chapterFileDropzone.classList.add('dragover');
+    });
+    this.chapterFileDropzone.addEventListener('dragleave', () => {
+      this.chapterFileDropzone.classList.remove('dragover');
+    });
+    this.chapterFileDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      this.chapterFileDropzone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) this._processChapterFile(file);
+    });
 
     // Переключатель книг (делегирование) — клик на карточку книги
     this.bookSelector.addEventListener('click', (e) => {
@@ -265,17 +299,30 @@ export class ChaptersModule extends BaseModule {
 
   _openModal(editIndex = null) {
     this._editingIndex = editIndex;
+    this._pendingHtmlContent = null;
+    this.chapterFileInput.value = '';
 
     if (editIndex !== null) {
       const ch = this.store.getChapters()[editIndex];
       this.modalTitle.textContent = 'Редактировать главу';
       this.inputId.value = ch.id;
-      this.inputFile.value = ch.file;
       this.inputBg.value = ch.bg || '';
       this.inputBgMobile.value = ch.bgMobile || '';
+
+      if (ch.htmlContent) {
+        // Встроенный контент — показать как загруженный файл
+        this._pendingHtmlContent = ch.htmlContent;
+        this._showChapterFileInfo('Встроенный контент');
+      } else if (ch.file) {
+        // URL-путь — показать имя файла
+        this._showChapterFileInfo(ch.file);
+      } else {
+        this._resetChapterFileUI();
+      }
     } else {
       this.modalTitle.textContent = 'Добавить главу';
       this.chapterForm.reset();
+      this._resetChapterFileUI();
     }
 
     this.modal.showModal();
@@ -286,16 +333,21 @@ export class ChaptersModule extends BaseModule {
 
     const chapter = {
       id: this.inputId.value.trim(),
-      file: this.inputFile.value.trim(),
+      file: '',
       bg: this.inputBg.value.trim(),
       bgMobile: this.inputBgMobile.value.trim(),
     };
 
-    // При редактировании сохранить inline-контент, если file не указан
-    if (this._editingIndex !== null) {
+    // Загруженный / существующий HTML-контент
+    if (this._pendingHtmlContent) {
+      chapter.htmlContent = this._pendingHtmlContent;
+    }
+
+    // При редактировании: сохранить file path если нет нового контента
+    if (this._editingIndex !== null && !chapter.htmlContent) {
       const existing = this.store.getChapters()[this._editingIndex];
-      if (existing.htmlContent && !chapter.file) {
-        chapter.htmlContent = existing.htmlContent;
+      if (existing.file) {
+        chapter.file = existing.file;
       }
     }
 
@@ -309,9 +361,90 @@ export class ChaptersModule extends BaseModule {
       this._showToast('Глава добавлена');
     }
 
+    this._pendingHtmlContent = null;
     this.modal.close();
     this._renderChapters();
     this._renderJsonPreview();
+  }
+
+  // --- Загрузка файла главы ---
+
+  _handleChapterFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    this._processChapterFile(file);
+  }
+
+  async _processChapterFile(file) {
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+    if (!ChaptersModule.CHAPTER_FILE_EXTENSIONS.includes(ext)) {
+      this._showToast(`Допустимые форматы: ${ChaptersModule.CHAPTER_FILE_EXTENSIONS.join(', ')}`);
+      this.chapterFileInput.value = '';
+      return;
+    }
+
+    if (file.size > ChaptersModule.CHAPTER_FILE_MAX_SIZE) {
+      this._showToast(`Файл слишком большой (макс. ${ChaptersModule.CHAPTER_FILE_MAX_SIZE / (1024 * 1024)} МБ)`);
+      this.chapterFileInput.value = '';
+      return;
+    }
+
+    try {
+      this.chapterFileDropzone.classList.add('loading');
+
+      let html;
+      if (ext === '.html' || ext === '.htm') {
+        html = await file.text();
+      } else {
+        // doc, docx, txt — через BookParser
+        const parsed = await BookParser.parse(file);
+        html = parsed.chapters.map(ch => ch.html).join('\n');
+      }
+
+      if (!html || !html.trim()) {
+        this._showToast('Файл пуст или не удалось извлечь контент');
+        return;
+      }
+
+      this._pendingHtmlContent = html;
+      this._showChapterFileInfo(file.name);
+      this._showToast('Файл загружен');
+    } catch (err) {
+      this._showToast(`Ошибка чтения файла: ${err.message}`);
+    } finally {
+      this.chapterFileDropzone.classList.remove('loading');
+      this.chapterFileInput.value = '';
+    }
+  }
+
+  _removeChapterFile() {
+    this._pendingHtmlContent = null;
+    this.chapterFileInput.value = '';
+
+    // При редактировании — сбросить существующий контент
+    if (this._editingIndex !== null) {
+      const existing = this.store.getChapters()[this._editingIndex];
+      if (existing.file) {
+        // Есть URL-путь — вернуть его отображение
+        this._showChapterFileInfo(existing.file);
+        return;
+      }
+    }
+
+    this._resetChapterFileUI();
+  }
+
+  _showChapterFileInfo(name) {
+    this.chapterFileDropzone.hidden = true;
+    this.chapterFileInfo.hidden = false;
+    this.chapterFileName.textContent = name;
+  }
+
+  _resetChapterFileUI() {
+    this.chapterFileDropzone.hidden = false;
+    this.chapterFileInfo.hidden = true;
+    this.chapterFileName.textContent = '';
   }
 
   // --- Обложка / фон-подложка ---

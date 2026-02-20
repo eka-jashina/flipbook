@@ -782,9 +782,19 @@
           <span class="form-hint">Уникальный идентификатор (латиница, цифры, _)</span>
         </div>
         <div class="form-group">
-          <label class="form-label" for="chapterFile">Файл контента</label>
-          <input class="form-input" type="text" id="chapterFile" placeholder="content/part_4.html" required>
-          <span class="form-hint">Путь к HTML-файлу главы</span>
+          <label class="form-label">Файл контента</label>
+          <input type="file" id="chapterFileInput" accept=".doc,.docx,.html,.htm,.txt" hidden>
+          <div class="chapter-file-dropzone" id="chapterFileDropzone">
+            <svg viewBox="0 0 24 24" width="28" height="28">
+              <path fill="currentColor" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
+            </svg>
+            <p class="chapter-file-text">Перетащите файл или нажмите для выбора</p>
+            <p class="chapter-file-hint">doc, docx, html, txt</p>
+          </div>
+          <div class="chapter-file-info" id="chapterFileInfo" hidden>
+            <span class="chapter-file-name" id="chapterFileName"></span>
+            <button type="button" class="chapter-file-remove" id="chapterFileRemove" title="Удалить файл">&times;</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label" for="chapterBg">Фон (десктоп)</label>

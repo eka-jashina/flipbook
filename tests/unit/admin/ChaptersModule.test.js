@@ -76,7 +76,12 @@ function setupDOM() {
       <h2 id="modalTitle"></h2>
       <form id="chapterForm">
         <input id="chapterId" type="text">
-        <input id="chapterFile" type="text">
+        <input id="chapterFileInput" type="file" hidden>
+        <div id="chapterFileDropzone"></div>
+        <div id="chapterFileInfo" hidden>
+          <span id="chapterFileName"></span>
+          <button id="chapterFileRemove" type="button"></button>
+        </div>
         <input id="chapterBg" type="text">
         <input id="chapterBgMobile" type="text">
         <button id="cancelModal" type="button"></button>
@@ -250,7 +255,7 @@ describe('ChaptersModule', () => {
       expect(mod._editingIndex).toBe(0);
       expect(mod.modalTitle.textContent).toBe('Редактировать главу');
       expect(mod.inputId.value).toBe('part_1');
-      expect(mod.inputFile.value).toBe('content/part_1.html');
+      expect(mod.chapterFileName.textContent).toBe('content/part_1.html');
     });
   });
 
@@ -261,7 +266,7 @@ describe('ChaptersModule', () => {
   describe('_handleChapterSubmit()', () => {
     it('should add new chapter', () => {
       mod.inputId.value = 'part_3';
-      mod.inputFile.value = 'content/part_3.html';
+      mod._pendingHtmlContent = '<article><p>Content</p></article>';
       mod.inputBg.value = 'bg3.webp';
       mod.inputBgMobile.value = '';
       vi.spyOn(mod.modal, 'close');
@@ -270,9 +275,10 @@ describe('ChaptersModule', () => {
 
       expect(app.store.addChapter).toHaveBeenCalledWith({
         id: 'part_3',
-        file: 'content/part_3.html',
+        file: '',
         bg: 'bg3.webp',
         bgMobile: '',
+        htmlContent: '<article><p>Content</p></article>',
       });
       expect(app._showToast).toHaveBeenCalledWith('Глава добавлена');
       expect(mod.modal.close).toHaveBeenCalled();
@@ -281,7 +287,6 @@ describe('ChaptersModule', () => {
     it('should update existing chapter in edit mode', () => {
       mod._editingIndex = 0;
       mod.inputId.value = 'part_1_updated';
-      mod.inputFile.value = 'content/part_1_v2.html';
       mod.inputBg.value = '';
       mod.inputBgMobile.value = '';
       vi.spyOn(mod.modal, 'close');
@@ -290,14 +295,14 @@ describe('ChaptersModule', () => {
 
       expect(app.store.updateChapter).toHaveBeenCalledWith(0, expect.objectContaining({
         id: 'part_1_updated',
-        file: 'content/part_1_v2.html',
+        file: 'content/part_1.html',
       }));
       expect(app._showToast).toHaveBeenCalledWith('Глава обновлена');
     });
 
     it('should reject if id is empty', () => {
       mod.inputId.value = '';
-      mod.inputFile.value = 'file.html';
+      mod._pendingHtmlContent = '<article>content</article>';
 
       mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
@@ -306,7 +311,7 @@ describe('ChaptersModule', () => {
 
     it('should reject if both file and htmlContent are empty', () => {
       mod.inputId.value = 'test';
-      mod.inputFile.value = '';
+      mod._pendingHtmlContent = null;
 
       mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
@@ -318,8 +323,8 @@ describe('ChaptersModule', () => {
         { id: 'album', file: '', htmlContent: '<article>...</article>', bg: '', bgMobile: '' },
       ]);
       mod._editingIndex = 0;
+      mod._pendingHtmlContent = '<article>...</article>';
       mod.inputId.value = 'album_updated';
-      mod.inputFile.value = '';
       mod.inputBg.value = '';
       mod.inputBgMobile.value = '';
       vi.spyOn(mod.modal, 'close');
