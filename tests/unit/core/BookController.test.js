@@ -458,6 +458,97 @@ describe('BookController', () => {
     });
   });
 
+  describe('_assertDependencies', () => {
+    it('should not throw when all dependencies are present', () => {
+      expect(() => {
+        controller._assertDependencies(
+          { core: controller.core, audio: controller.audio },
+          'testPhase'
+        );
+      }).not.toThrow();
+    });
+
+    it('should throw when a dependency is null', () => {
+      expect(() => {
+        controller._assertDependencies(
+          { core: controller.core, missing: null },
+          'testPhase'
+        );
+      }).toThrow('BookController.testPhase');
+    });
+
+    it('should throw when a dependency is undefined', () => {
+      expect(() => {
+        controller._assertDependencies(
+          { core: controller.core, missing: undefined },
+          'testPhase'
+        );
+      }).toThrow('BookController.testPhase');
+    });
+
+    it('should list all missing dependency names in error', () => {
+      expect(() => {
+        controller._assertDependencies(
+          { a: null, b: undefined, c: controller.core },
+          'testPhase'
+        );
+      }).toThrow('a, b');
+    });
+
+    it('should accept falsy but non-nullish values (0, false, empty string)', () => {
+      expect(() => {
+        controller._assertDependencies(
+          { num: 0, bool: false, str: '' },
+          'testPhase'
+        );
+      }).not.toThrow();
+    });
+  });
+
+  describe('initialization phase validation', () => {
+    it('_createComponents should throw if factory is missing', () => {
+      const ctrl = Object.create(BookController.prototype);
+      ctrl.factory = null;
+      expect(() => ctrl._createComponents()).toThrow('_createComponents');
+    });
+
+    it('_createDelegates should throw if services are missing', () => {
+      const ctrl = Object.create(BookController.prototype);
+      ctrl.core = null;
+      ctrl.audio = null;
+      ctrl.render = null;
+      ctrl.content = null;
+      ctrl.stateMachine = null;
+      ctrl.settings = null;
+      ctrl.debugPanel = null;
+      expect(() => ctrl._createDelegates()).toThrow('_createDelegates');
+    });
+
+    it('_createMediator should throw if delegates are missing', () => {
+      const ctrl = Object.create(BookController.prototype);
+      ctrl.navigationDelegate = null;
+      ctrl.lifecycleDelegate = null;
+      ctrl.settingsDelegate = null;
+      ctrl.chapterDelegate = null;
+      ctrl.dragDelegate = null;
+      ctrl.stateMachine = null;
+      ctrl.settings = null;
+      ctrl.render = null;
+      ctrl.core = null;
+      ctrl.debugPanel = null;
+      ctrl.factory = null;
+      expect(() => ctrl._createMediator()).toThrow('_createMediator');
+    });
+
+    it('_setupManagers should throw if core/mediator are missing', () => {
+      const ctrl = Object.create(BookController.prototype);
+      ctrl.core = null;
+      ctrl.mediator = null;
+      ctrl.stateMachine = null;
+      expect(() => ctrl._setupManagers()).toThrow('_setupManagers');
+    });
+  });
+
   describe('computed properties', () => {
     describe('isMobile', () => {
       it('should return mediaQueries.isMobile value (false)', () => {
