@@ -8,12 +8,19 @@
  *
  * Координация событий между делегатами вынесена в DelegateMediator.
  *
- * Порядок инициализации (критичен!):
- * 1. Services  → CoreServices, затем остальные сервисы
- * 2. Components → StateMachine, Settings, DebugPanel
- * 3. Delegates  → Navigation, Lifecycle, Settings, Chapter, Drag
- * 4. Mediator   → Подписки на события делегатов
- * 5. Managers   → Subscriptions, ResizeHandler
+ * Граф зависимостей инициализации:
+ *
+ *   _createServices()     — корневая фаза, без зависимостей
+ *        ↓
+ *   _createComponents()   — зависит от factory
+ *        ↓
+ *   _createDelegates()    — зависит от services + components
+ *        ↓
+ *   _createMediator()     — зависит от delegates + services + components
+ *        ↓
+ *   _setupManagers()      — зависит от core + mediator + stateMachine
+ *
+ * Каждая фаза валидирует свои зависимости через _assertDependencies().
  */
 
 import { mediaQueries, ErrorHandler, getAnnouncer } from '../utils/index.js';
@@ -43,12 +50,11 @@ export class BookController {
     // Screen reader announcer (singleton)
     this.announcer = getAnnouncer();
 
-    // ВАЖНО: Порядок инициализации критичен!
-    this._createServices();       // 1. Сервисные группы
-    this._createComponents();     // 2. StateMachine, Settings, DebugPanel
-    this._createDelegates();      // 3. Delegates с зависимостями
-    this._createMediator();       // 4. Медиатор (подписки на события)
-    this._setupManagers();        // 5. Subscriptions, handlers
+    this._createServices();
+    this._createComponents();
+    this._createDelegates();
+    this._createMediator();
+    this._setupManagers();
   }
 
   // ═══════════════════════════════════════════
@@ -71,7 +77,27 @@ export class BookController {
   // ═══════════════════════════════════════════
 
   /**
-   * Создать сервисные группы
+   * Проверить наличие обязательных зависимостей для фазы инициализации.
+   * @private
+   * @param {Object<string, *>} deps - Объект { имя: значение } зависимостей
+   * @param {string} phase - Имя фазы для сообщения об ошибке
+   * @throws {Error} Если хотя бы одна зависимость null/undefined
+   */
+  _assertDependencies(deps, phase) {
+    const missing = Object.entries(deps)
+      .filter(([, value]) => value == null)
+      .map(([name]) => name);
+
+    if (missing.length > 0) {
+      throw new Error(
+        `BookController.${phase}: отсутствуют зависимости: ${missing.join(', ')}. ` +
+        `Проверьте порядок инициализации.`
+      );
+    }
+  }
+
+  /**
+   * Создать сервисные группы (корневая фаза, без зависимостей)
    * @private
    */
   _createServices() {
@@ -91,6 +117,8 @@ export class BookController {
    * @private
    */
   _createComponents() {
+    this._assertDependencies({ factory: this.factory }, '_createComponents');
+
     this.stateMachine = this.factory.createStateMachine();
     this.debugPanel = this.factory.createDebugPanel();
   }
@@ -100,6 +128,16 @@ export class BookController {
    * @private
    */
   _createDelegates() {
+    this._assertDependencies({
+      core: this.core,
+      audio: this.audio,
+      render: this.render,
+      content: this.content,
+      stateMachine: this.stateMachine,
+      settings: this.settings,
+      debugPanel: this.debugPanel,
+    }, '_createDelegates');
+
     const { dom, eventManager } = this.core;
     const { soundManager, ambientManager } = this.audio;
     const { renderer, animator, paginator, loadingIndicator } = this.render;
@@ -165,6 +203,20 @@ export class BookController {
    * @private
    */
   _createMediator() {
+    this._assertDependencies({
+      navigationDelegate: this.navigationDelegate,
+      lifecycleDelegate: this.lifecycleDelegate,
+      settingsDelegate: this.settingsDelegate,
+      chapterDelegate: this.chapterDelegate,
+      dragDelegate: this.dragDelegate,
+      stateMachine: this.stateMachine,
+      settings: this.settings,
+      render: this.render,
+      core: this.core,
+      debugPanel: this.debugPanel,
+      factory: this.factory,
+    }, '_createMediator');
+
     this.mediator = new DelegateMediator({
       state: this.state,
       delegates: {
@@ -214,6 +266,12 @@ export class BookController {
    * @private
    */
   _setupManagers() {
+    this._assertDependencies({
+      core: this.core,
+      mediator: this.mediator,
+      stateMachine: this.stateMachine,
+    }, '_setupManagers');
+
     this.subscriptions = new SubscriptionManager();
     this.resizeHandler = new ResizeHandler({
       eventManager: this.core.eventManager,
