@@ -452,6 +452,17 @@ export class AdminConfigStore {
     this._save();
   }
 
+  /** Переместить книгу с позиции fromIndex на позицию toIndex */
+  moveBook(fromIndex, toIndex) {
+    const books = this._config.books;
+    if (fromIndex < 0 || fromIndex >= books.length) return;
+    if (toIndex < 0 || toIndex >= books.length) return;
+
+    const [moved] = books.splice(fromIndex, 1);
+    books.splice(toIndex, 0, moved);
+    this._save();
+  }
+
   /** Удалить книгу по id */
   removeBook(bookId) {
     const idx = this._config.books.findIndex(b => b.id === bookId);

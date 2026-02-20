@@ -60,6 +60,32 @@
   flex-shrink: 0;
 }
 
+.book-card-drag {
+  cursor: grab;
+  color: var(--admin-text-secondary);
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: opacity var(--admin-transition);
+}
+
+.book-card-drag:active {
+  cursor: grabbing;
+}
+
+.book-card:hover .book-card-drag {
+  opacity: 1;
+}
+
+.book-card-sort {
+  display: flex;
+  gap: 2px;
+}
+
+.book-card-sort .chapter-action-btn {
+  width: 28px;
+  height: 28px;
+}
+
 .book-card-active-badge {
   font-size: 11px;
   font-weight: 600;

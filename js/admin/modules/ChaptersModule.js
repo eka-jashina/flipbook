@@ -60,6 +60,20 @@ export class ChaptersModule extends BaseModule {
 
     // Переключатель книг (делегирование) — клик на карточку книги
     this.bookSelector.addEventListener('click', (e) => {
+      // Сортировка книг (вверх/вниз)
+      const moveBtn = e.target.closest('[data-book-move]');
+      if (moveBtn) {
+        e.stopPropagation();
+        const index = parseInt(moveBtn.dataset.bookIndex, 10);
+        const direction = moveBtn.dataset.bookMove;
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        this.store.moveBook(index, newIndex);
+        this._renderBookSelector();
+        this._renderJsonPreview();
+        this._showToast('Порядок изменён');
+        return;
+      }
+
       const card = e.target.closest('[data-book-id]');
       if (!card) return;
 
@@ -193,13 +207,26 @@ export class ChaptersModule extends BaseModule {
     const books = this.store.getBooks();
     const activeId = this.store.getActiveBookId();
 
-    this.bookSelector.innerHTML = books.map(b => `
+    this.bookSelector.innerHTML = books.map((b, i) => `
       <div class="book-card${b.id === activeId ? ' active' : ''}" data-book-id="${this._escapeHtml(b.id)}">
+        ${books.length > 1 ? `<div class="book-card-drag" title="Перетащите для изменения порядка">
+          <svg viewBox="0 0 24 24" width="16" height="16">
+            <path fill="currentColor" d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+          </svg>
+        </div>` : ''}
         <div class="book-card-info">
           <div class="book-card-title">${this._escapeHtml(b.title || 'Без названия')}</div>
           <div class="book-card-meta">${this._escapeHtml(b.author || '')}${b.author ? ' · ' : ''}${b.chaptersCount} гл.</div>
         </div>
         <div class="book-card-actions">
+          ${books.length > 1 ? `<div class="book-card-sort">
+            ${i > 0 ? `<button class="chapter-action-btn" data-book-move="up" data-book-index="${i}" title="Влево">
+              <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>` : ''}
+            ${i < books.length - 1 ? `<button class="chapter-action-btn" data-book-move="down" data-book-index="${i}" title="Вправо">
+              <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+            </button>` : ''}
+          </div>` : ''}
           ${b.id === activeId ? '<span class="book-card-active-badge">Активна</span>' : ''}
           ${books.length > 1 ? `<button class="chapter-action-btn delete" data-book-delete="${this._escapeHtml(b.id)}" title="Удалить книгу">
             <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
