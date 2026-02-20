@@ -91,6 +91,9 @@ export default defineConfig(({ command, mode }) => {
             'delegates': [
               './js/core/delegates/NavigationDelegate.js',
               './js/core/delegates/SettingsDelegate.js',
+              './js/core/delegates/FontController.js',
+              './js/core/delegates/AudioController.js',
+              './js/core/delegates/ThemeController.js',
               './js/core/delegates/LifecycleDelegate.js',
               './js/core/delegates/ChapterDelegate.js',
               './js/core/delegates/DragDelegate.js',

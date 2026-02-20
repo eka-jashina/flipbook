@@ -1,11 +1,18 @@
 /**
  * SETTINGS DELEGATE - REFACTORED
  * Управление применением и изменением настроек.
+ *
+ * Делегирует ответственность контроллерам:
+ * - FontController: шрифты, размер шрифта, загрузка кастомных шрифтов
+ * - AudioController: звуки, громкость, ambient
+ * - ThemeController: темы, оформление, видимость настроек
  */
 
-import { CONFIG } from "../../config.js";
-import { cssVars, announce } from "../../utils/index.js";
+import { cssVars } from "../../utils/index.js";
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
+import { FontController } from './FontController.js';
+import { AudioController } from './AudioController.js';
+import { ThemeController } from './ThemeController.js';
 
 export class SettingsDelegate extends BaseDelegate {
   /**
@@ -19,6 +26,22 @@ export class SettingsDelegate extends BaseDelegate {
   constructor(deps) {
     super(deps);
     this.debugPanel = deps.debugPanel;
+
+    this._fontController = new FontController({
+      dom: this.dom,
+      settings: this.settings,
+    });
+
+    this._audioController = new AudioController({
+      settings: this.settings,
+      soundManager: this.soundManager,
+      ambientManager: this.ambientManager,
+    });
+
+    this._themeController = new ThemeController({
+      dom: this.dom,
+      settings: this.settings,
+    });
   }
 
   /**
@@ -43,46 +66,9 @@ export class SettingsDelegate extends BaseDelegate {
       return;
     }
 
-    // Применить шрифт
-    const font = this.settings.get("font");
-    html.style.setProperty(
-      "--reader-font-family",
-      CONFIG.FONTS[font] || CONFIG.FONTS.georgia
-    );
-
-    // Применить размер шрифта
-    const fontSize = this.settings.get("fontSize");
-    html.style.setProperty(
-      "--reader-font-size",
-      `${fontSize}px`
-    );
-
-    // Применить тему
-    const theme = this.settings.get("theme");
-    html.dataset.theme = theme === "light" ? "" : theme;
-
-    // Применить настройки звука
-    if (this.soundManager) {
-      this.soundManager.setEnabled(this.settings.get("soundEnabled"));
-      this.soundManager.setVolume(this.settings.get("soundVolume"));
-    }
-
-    // Применить настройки ambient
-    // НЕ запускаем воспроизведение здесь — на мобильных браузерах
-    // audio требует user gesture. Воспроизведение запустится
-    // после первого взаимодействия (открытия книги).
-    if (this.ambientManager) {
-      this.ambientManager.setVolume(this.settings.get("ambientVolume"));
-    }
-
-    // Загрузить кастомные шрифты
-    this._loadCustomFonts();
-
-    // Применить настройки оформления из админки
-    this._applyAppearance();
-
-    // Скрыть/показать секции настроек по конфигу админки
-    this._applySettingsVisibility();
+    this._fontController.apply();
+    this._themeController.apply();
+    this._audioController.apply();
 
     cssVars.invalidateCache();
   }
@@ -100,31 +86,34 @@ export class SettingsDelegate extends BaseDelegate {
       this.settings.set(key, value);
     }
 
-    // Обрабатываем специфичные для настройки действия
     switch (key) {
       case "fontSize":
-        this._handleFontSize(value);
+        if (this._fontController.handleFontSize(value) && this.isOpened) {
+          this.emit(DelegateEvents.REPAGINATE, true);
+        }
         break;
       case "font":
-        this._handleFont(value);
+        if (this._fontController.handleFont(value) && this.isOpened) {
+          this.emit(DelegateEvents.REPAGINATE, true);
+        }
         break;
       case "theme":
-        this._handleTheme(value);
+        this._themeController.handleTheme(value);
         break;
       case "soundEnabled":
-        this._handleSoundToggle(value);
+        this._audioController.handleSoundToggle(value);
         break;
       case "soundVolume":
-        this._handleSoundVolume(value);
+        this._audioController.handleSoundVolume(value);
         break;
       case "debug":
         this._handleDebug();
         break;
       case "ambientType":
-        this._handleAmbientType(value);
+        this._audioController.handleAmbientType(value);
         break;
       case "ambientVolume":
-        this._handleAmbientVolume(value);
+        this._audioController.handleAmbientVolume(value);
         break;
       case "fullscreen":
         this._handleFullscreen();
@@ -135,144 +124,6 @@ export class SettingsDelegate extends BaseDelegate {
     this.emit(DelegateEvents.SETTINGS_UPDATE);
   }
 
-  // ═══════════════════════════════════════════
-  // ОБРАБОТЧИКИ КОНКРЕТНЫХ НАСТРОЕК
-  // ═══════════════════════════════════════════
-
-  /**
-   * Обработать изменение размера шрифта
-   * @private
-   * @param {'increase'|'decrease'} action
-   */
-  _handleFontSize(action) {
-    const current = this.settings.get("fontSize");
-    const minSize = cssVars.getNumber("--font-min", 14);
-    const maxSize = cssVars.getNumber("--font-max", 22);
-
-    let newSize = current;
-    if (action === "increase") {
-      newSize = Math.min(current + 1, maxSize);
-    } else if (action === "decrease") {
-      newSize = Math.max(current - 1, minSize);
-    }
-
-    if (newSize !== current) {
-      this.settings.set("fontSize", newSize);
-
-      const html = this.dom.get("html");
-      if (html) {
-        html.style.setProperty("--reader-font-size", `${newSize}px`);
-      }
-
-      cssVars.invalidateCache();
-      announce(`Размер шрифта: ${newSize}`);
-
-      // Требуется репагинация
-      if (this.isOpened) {
-        this.emit(DelegateEvents.REPAGINATE, true);
-      }
-    }
-  }
-
-  /**
-   * Обработать изменение шрифта
-   * @private
-   * @param {string} fontKey
-   */
-  _handleFont(fontKey) {
-    const html = this.dom.get("html");
-    if (html) {
-      html.style.setProperty(
-        "--reader-font-family",
-        CONFIG.FONTS[fontKey] || CONFIG.FONTS.georgia
-      );
-    }
-
-    cssVars.invalidateCache();
-
-    // Названия шрифтов для объявления
-    const fontNames = {
-      georgia: 'Georgia',
-      merriweather: 'Merriweather',
-      'libre-baskerville': 'Libre Baskerville',
-      inter: 'Inter',
-      roboto: 'Roboto',
-      'open-sans': 'Open Sans',
-    };
-    announce(`Шрифт: ${fontNames[fontKey] || fontKey}`);
-
-    // Требуется репагинация
-    if (this.isOpened) {
-      this.emit(DelegateEvents.REPAGINATE, true);
-    }
-  }
-
-  /**
-   * Обработать изменение темы
-   * @private
-   * @param {string} theme
-   */
-  _handleTheme(theme) {
-    const html = this.dom.get("html");
-    if (html) {
-      html.dataset.theme = theme === "light" ? "" : theme;
-    }
-
-    // Переприменить оформление для новой темы
-    this._applyAppearance();
-
-    // Названия тем для объявления
-    const themeNames = {
-      light: 'Светлая тема',
-      dark: 'Тёмная тема',
-      bw: 'Чёрно-белая тема',
-    };
-    announce(themeNames[theme] || theme);
-  }
-
-  /**
-   * Обработать переключение звука
-   * @private
-   * @param {boolean} enabled
-   */
-  _handleSoundToggle(enabled) {
-    if (this.soundManager) {
-      this.soundManager.setEnabled(enabled);
-    }
-  }
-
-  /**
-   * Обработать изменение громкости звука
-   * @private
-   * @param {'increase'|'decrease'|number} action
-   */
-  _handleSoundVolume(action) {
-    if (!this.soundManager) return;
-
-    // Для числовых значений - сразу применяем (уже сохранено в handleChange)
-    if (typeof action === "number") {
-      const volume = Math.max(0, Math.min(action, 1));
-      this.soundManager.setVolume(volume);
-      return;
-    }
-
-    // Для increase/decrease - вычисляем и сохраняем
-    const current = this.settings.get("soundVolume");
-    const step = 0.1;
-    let newVolume = current;
-
-    if (action === "increase") {
-      newVolume = Math.min(current + step, 1);
-    } else if (action === "decrease") {
-      newVolume = Math.max(current - step, 0);
-    }
-
-    if (newVolume !== current) {
-      this.settings.set("soundVolume", newVolume);
-      this.soundManager.setVolume(newVolume);
-    }
-  }
-
   /**
    * Обработать переключение отладки
    * @private
@@ -280,28 +131,6 @@ export class SettingsDelegate extends BaseDelegate {
   _handleDebug() {
     if (this.debugPanel) {
       this.debugPanel.toggle();
-    }
-  }
-
-  /**
-   * Обработать изменение типа ambient звука
-   * @private
-   * @param {string} type
-   */
-  _handleAmbientType(type) {
-    if (this.ambientManager) {
-      this.ambientManager.setType(type, true);
-    }
-  }
-
-  /**
-   * Обработать изменение громкости ambient
-   * @private
-   * @param {number} volume
-   */
-  _handleAmbientVolume(volume) {
-    if (this.ambientManager) {
-      this.ambientManager.setVolume(volume);
     }
   }
 
@@ -330,180 +159,14 @@ export class SettingsDelegate extends BaseDelegate {
     }
   }
 
-  // ═══════════════════════════════════════════
-  // ЗАГРУЗКА КАСТОМНЫХ ШРИФТОВ
-  // ═══════════════════════════════════════════
-
-  /**
-   * Загрузить кастомные шрифты (декоративный + шрифты для чтения) через FontFace API.
-   * Вызывается один раз при apply().
-   * @private
-   */
-  _loadCustomFonts() {
-    // Декоративный шрифт
-    const decorative = CONFIG.DECORATIVE_FONT;
-    if (decorative?.dataUrl) {
-      this._registerFont('CustomDecorativeFont', decorative.dataUrl).then(() => {
-        const html = this.dom.get("html");
-        if (html) {
-          html.style.setProperty("--decorative-font", "CustomDecorativeFont, sans-serif");
-        }
-      });
-    }
-
-    // Кастомные шрифты для чтения
-    const customFonts = CONFIG.CUSTOM_FONTS;
-    if (customFonts?.length) {
-      for (const f of customFonts) {
-        const fontName = `CustomReading_${f.id}`;
-        this._registerFont(fontName, f.dataUrl).then(() => {
-          // Обновить CONFIG.FONTS чтобы использовать загруженное имя
-          // Семейство уже содержит fallback, просто добавляем загруженное имя
-          CONFIG.FONTS[f.id] = `${fontName}, ${f.family.split(',').pop().trim()}`;
-        });
-      }
-    }
-
-    // Динамически заполнить <select> шрифтов из конфига
-    this._populateFontSelect();
-  }
-
-  /**
-   * Зарегистрировать шрифт через FontFace API
-   * @private
-   */
-  _registerFont(familyName, dataUrl) {
-    const fontFace = new FontFace(familyName, `url(${dataUrl})`);
-    return fontFace.load().then((loaded) => {
-      document.fonts.add(loaded);
-    }).catch((err) => {
-      console.warn(`Не удалось загрузить шрифт ${familyName}:`, err.message);
-    });
-  }
-
-  /**
-   * Заполнить <select> шрифтов из CONFIG.FONTS_LIST
-   * @private
-   */
-  _populateFontSelect() {
-    const fontsList = CONFIG.FONTS_LIST;
-    if (!fontsList) return; // Нет данных из админки — используем статический HTML
-
-    const select = this.dom.get("fontSelect");
-    if (!select) return;
-
-    select.innerHTML = fontsList.map(f =>
-      `<option value="${f.id}">${f.label}</option>`
-    ).join('');
-
-    // Восстановить текущее значение
-    const currentFont = this.settings.get("font");
-    if (fontsList.some(f => f.id === currentFont)) {
-      select.value = currentFont;
-    } else if (fontsList.length > 0) {
-      select.value = fontsList[0].id;
-      this.settings.set("font", fontsList[0].id);
-    }
-  }
-
-  // ═══════════════════════════════════════════
-  // ОФОРМЛЕНИЕ ИЗ АДМИНКИ
-  // ═══════════════════════════════════════════
-
-  /**
-   * Применить настройки оформления из CONFIG.APPEARANCE к CSS-переменным.
-   * Значения задаются в админке (admin.html) и читаются через config.js.
-   * @private
-   */
-  _applyAppearance() {
-    const html = this.dom.get("html");
-    if (!html) return;
-
-    const a = CONFIG.APPEARANCE;
-    if (!a) return;
-
-    // Заголовок и автор на обложке (глобальные)
-    const cover = this.dom.get("cover");
-    if (cover) {
-      const spans = cover.querySelectorAll(".cover-front h1 span");
-      if (spans.length >= 2) {
-        spans[0].textContent = a.coverTitle;
-        spans[1].textContent = a.coverAuthor;
-      }
-    }
-
-    // Определить текущую тему для per-theme значений
-    const currentTheme = this.settings.get("theme");
-    // bw наследует от light
-    const themeKey = currentTheme === "dark" ? "dark" : "light";
-    const t = a[themeKey] || a.light;
-
-    // Фон обложки: градиент или изображение
-    if (t.coverBgImage) {
-      html.style.setProperty("--cover-front-bg", `url(${t.coverBgImage})`);
-    } else {
-      html.style.setProperty("--cover-front-bg", `linear-gradient(135deg, ${t.coverBgStart}, ${t.coverBgEnd})`);
-    }
-    html.style.setProperty("--cover-front-text", t.coverText);
-
-    // Текстура страницы
-    if (t.pageTexture === "custom" && t.customTextureData) {
-      html.style.setProperty("--bg-page-image", `url(${t.customTextureData})`);
-    } else if (t.pageTexture === "none") {
-      html.style.setProperty("--bg-page-image", "none");
-    } else {
-      html.style.removeProperty("--bg-page-image");
-    }
-
-    html.style.setProperty("--bg-page", t.bgPage);
-    html.style.setProperty("--bg-app", t.bgApp);
-
-    // Ограничения шрифтов (глобальные)
-    html.style.setProperty("--font-min", `${a.fontMin}px`);
-    html.style.setProperty("--font-max", `${a.fontMax}px`);
-  }
-
-  // ═══════════════════════════════════════════
-  // ВИДИМОСТЬ НАСТРОЕК
-  // ═══════════════════════════════════════════
-
-  /**
-   * Скрыть/показать секции пользовательских настроек по конфигу из админки.
-   * Если все секции внутри pod-а скрыты — скрываем сам pod.
-   * @private
-   */
-  _applySettingsVisibility() {
-    const v = CONFIG.SETTINGS_VISIBILITY;
-    if (!v) return;
-
-    // Найти все секции с data-setting
-    const sections = document.querySelectorAll('[data-setting]');
-    sections.forEach(section => {
-      const key = section.dataset.setting;
-      if (key in v) {
-        section.hidden = !v[key];
-      }
-    });
-
-    // Скрыть pod-ы, если все их видимые секции скрыты
-    const settingsPod = document.querySelector('.settings-pod');
-    if (settingsPod) {
-      const visibleSections = settingsPod.querySelectorAll('.settings-section:not([hidden])');
-      settingsPod.hidden = visibleSections.length === 0;
-    }
-
-    const audioPod = document.querySelector('.audio-pod');
-    if (audioPod) {
-      const visibleSections = audioPod.querySelectorAll('.audio-section:not([hidden])');
-      audioPod.hidden = visibleSections.length === 0;
-    }
-  }
-
   /**
    * Очистка
    */
   destroy() {
     this.debugPanel = null;
+    this._fontController = null;
+    this._audioController = null;
+    this._themeController = null;
     super.destroy();
   }
 }
