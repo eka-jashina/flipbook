@@ -6,6 +6,7 @@ import { BaseModule } from './BaseModule.js';
 import { AlbumManager } from './AlbumManager.js';
 import { BookUploadManager } from './BookUploadManager.js';
 import { BookParser } from '../BookParser.js';
+import { QuillEditorWrapper } from './QuillEditorWrapper.js';
 
 export class ChaptersModule extends BaseModule {
   /** Максимальный размер загружаемого файла главы (10 МБ) */
@@ -18,6 +19,10 @@ export class ChaptersModule extends BaseModule {
     this._editingIndex = null;
     /** HTML-контент, загруженный через файл (pending до сохранения) */
     this._pendingHtmlContent = null;
+    /** @type {QuillEditorWrapper} */
+    this._editor = new QuillEditorWrapper();
+    /** @type {'upload'|'editor'} Текущий режим ввода контента */
+    this._inputMode = 'upload';
     this._album = new AlbumManager(this);
     this._bookUpload = new BookUploadManager(this);
   }
@@ -62,6 +67,12 @@ export class ChaptersModule extends BaseModule {
     this.chapterFileName = document.getElementById('chapterFileName');
     this.chapterFileRemove = document.getElementById('chapterFileRemove');
 
+    // Переключатель режима ввода (файл / редактор)
+    this.chapterInputToggle = document.getElementById('chapterInputToggle');
+    this.chapterUploadPanel = document.getElementById('chapterUploadPanel');
+    this.chapterEditorPanel = document.getElementById('chapterEditorPanel');
+    this.chapterEditorContainer = document.getElementById('chapterEditorContainer');
+
     // Делегаты
     this._album.cacheDOM();
     this._bookUpload.cacheDOM();
@@ -77,6 +88,13 @@ export class ChaptersModule extends BaseModule {
     this.chapterFileDropzone.addEventListener('click', () => this.chapterFileInput.click());
     this.chapterFileInput.addEventListener('change', (e) => this._handleChapterFileSelect(e));
     this.chapterFileRemove.addEventListener('click', () => this._removeChapterFile());
+
+    // Переключатель режима ввода (файл / редактор)
+    this.chapterInputToggle.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-input-mode]');
+      if (!btn) return;
+      this._switchInputMode(btn.dataset.inputMode);
+    });
 
     // Drag-and-drop на dropzone
     this.chapterFileDropzone.addEventListener('dragover', (e) => {
@@ -303,6 +321,11 @@ export class ChaptersModule extends BaseModule {
     this._pendingHtmlContent = null;
     this.chapterFileInput.value = '';
 
+    // Уничтожить предыдущий экземпляр редактора
+    if (this._editor.isInitialized) {
+      this._editor.destroy();
+    }
+
     if (editIndex !== null) {
       const ch = this.store.getChapters()[editIndex];
       this.modalTitle.textContent = 'Редактировать главу';
@@ -312,22 +335,63 @@ export class ChaptersModule extends BaseModule {
       this.inputBgMobile.value = ch.bgMobile || '';
 
       if (ch.htmlContent) {
-        // Встроенный контент — показать как загруженный файл
+        // Встроенный контент — открыть в редакторе
         this._pendingHtmlContent = ch.htmlContent;
-        this._showChapterFileInfo('Встроенный контент');
+        this._resetChapterFileUI();
+        this._switchInputMode('editor');
+        this._editor.setHTML(ch.htmlContent);
       } else if (ch.file) {
-        // URL-путь — показать имя файла
+        // URL-путь — показать имя файла в режиме загрузки
+        this._switchInputMode('upload');
         this._showChapterFileInfo(ch.file);
       } else {
+        this._switchInputMode('upload');
         this._resetChapterFileUI();
       }
     } else {
       this.modalTitle.textContent = 'Добавить главу';
       this.chapterForm.reset();
+      this._switchInputMode('upload');
       this._resetChapterFileUI();
     }
 
     this.modal.showModal();
+  }
+
+  /**
+   * Переключить режим ввода контента: 'upload' или 'editor'
+   * @param {'upload'|'editor'} mode
+   */
+  _switchInputMode(mode) {
+    if (mode === this._inputMode && mode === 'upload') {
+      // Уже в режиме загрузки — ничего не делать
+      return;
+    }
+
+    this._inputMode = mode;
+
+    // Переключить active на кнопках
+    const buttons = this.chapterInputToggle.querySelectorAll('[data-input-mode]');
+    buttons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.inputMode === mode);
+    });
+
+    // Переключить панели
+    this.chapterUploadPanel.hidden = (mode !== 'upload');
+    this.chapterEditorPanel.hidden = (mode !== 'editor');
+
+    // Ширина модального окна
+    this.modal.classList.toggle('editor-active', mode === 'editor');
+
+    // Ленивая инициализация Quill при первом переключении в режим редактора
+    if (mode === 'editor' && !this._editor.isInitialized) {
+      this._editor.init(this.chapterEditorContainer);
+    }
+
+    // Загрузить pending-контент в редактор при переключении
+    if (mode === 'editor' && this._pendingHtmlContent) {
+      this._editor.setHTML(this._pendingHtmlContent);
+    }
   }
 
   _handleChapterSubmit(e) {
@@ -341,6 +405,11 @@ export class ChaptersModule extends BaseModule {
       bg: this.inputBg.value.trim(),
       bgMobile: this.inputBgMobile.value.trim(),
     };
+
+    // Собрать HTML из WYSIWYG-редактора, если он активен и содержит контент
+    if (this._inputMode === 'editor' && this._editor.isInitialized && !this._editor.isEmpty()) {
+      this._pendingHtmlContent = this._editor.getHTML();
+    }
 
     // Загруженный / существующий HTML-контент
     if (this._pendingHtmlContent) {
@@ -365,7 +434,11 @@ export class ChaptersModule extends BaseModule {
       this._showToast('Глава добавлена');
     }
 
+    // Очистить состояние
     this._pendingHtmlContent = null;
+    if (this._editor.isInitialized) {
+      this._editor.destroy();
+    }
     this.modal.close();
     this._renderChapters();
     this._renderJsonPreview();
@@ -425,6 +498,11 @@ export class ChaptersModule extends BaseModule {
   _removeChapterFile() {
     this._pendingHtmlContent = null;
     this.chapterFileInput.value = '';
+
+    // Очистить редактор, если инициализирован
+    if (this._editor.isInitialized) {
+      this._editor.clear();
+    }
 
     // При редактировании — сбросить существующий контент
     if (this._editingIndex !== null) {

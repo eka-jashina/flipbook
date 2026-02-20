@@ -4,7 +4,23 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ChaptersModule } from '../../../js/admin/modules/ChaptersModule.js';
+
+// Мок QuillEditorWrapper до импорта ChaptersModule
+vi.mock('../../../js/admin/modules/QuillEditorWrapper.js', () => ({
+  QuillEditorWrapper: class {
+    constructor() {
+      this.init = vi.fn();
+      this.setHTML = vi.fn();
+      this.getHTML = vi.fn(() => '');
+      this.isEmpty = vi.fn(() => true);
+      this.clear = vi.fn();
+      this.destroy = vi.fn();
+      this.isInitialized = false;
+    }
+  },
+}));
+
+const { ChaptersModule } = await import('../../../js/admin/modules/ChaptersModule.js');
 
 function createMockApp() {
   return {
@@ -72,16 +88,25 @@ function setupDOM() {
     <span id="bgCoverCustomName"></span>
     <button id="bgCoverRemove"></button>
     <button id="saveCover"></button>
-    <dialog id="chapterModal">
+    <dialog class="admin-modal admin-modal--chapter" id="chapterModal">
       <h2 id="modalTitle"></h2>
       <form id="chapterForm">
         <input id="chapterId" type="text">
         <input id="chapterTitle" type="text">
-        <input id="chapterFileInput" type="file" hidden>
-        <div id="chapterFileDropzone"></div>
-        <div id="chapterFileInfo" hidden>
-          <span id="chapterFileName"></span>
-          <button id="chapterFileRemove" type="button"></button>
+        <div id="chapterInputToggle">
+          <button type="button" class="chapter-input-toggle-btn active" data-input-mode="upload">Загрузить файл</button>
+          <button type="button" class="chapter-input-toggle-btn" data-input-mode="editor">Редактор</button>
+        </div>
+        <div id="chapterUploadPanel">
+          <input id="chapterFileInput" type="file" hidden>
+          <div id="chapterFileDropzone"></div>
+          <div id="chapterFileInfo" hidden>
+            <span id="chapterFileName"></span>
+            <button id="chapterFileRemove" type="button"></button>
+          </div>
+        </div>
+        <div id="chapterEditorPanel" hidden>
+          <div id="chapterEditorContainer"></div>
         </div>
         <input id="chapterBg" type="text">
         <input id="chapterBgMobile" type="text">
@@ -335,6 +360,150 @@ describe('ChaptersModule', () => {
 
       const chapter = app.store.updateChapter.mock.calls[0][1];
       expect(chapter.htmlContent).toBe('<article>...</article>');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // _switchInputMode
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_switchInputMode()', () => {
+    it('should switch to editor mode', () => {
+      mod._switchInputMode('editor');
+
+      expect(mod._inputMode).toBe('editor');
+      expect(mod.chapterUploadPanel.hidden).toBe(true);
+      expect(mod.chapterEditorPanel.hidden).toBe(false);
+      expect(mod.modal.classList.contains('editor-active')).toBe(true);
+    });
+
+    it('should switch to upload mode', () => {
+      mod._switchInputMode('editor');
+      mod._switchInputMode('upload');
+
+      expect(mod._inputMode).toBe('upload');
+      expect(mod.chapterUploadPanel.hidden).toBe(false);
+      expect(mod.chapterEditorPanel.hidden).toBe(true);
+      expect(mod.modal.classList.contains('editor-active')).toBe(false);
+    });
+
+    it('should toggle active class on buttons', () => {
+      mod._switchInputMode('editor');
+
+      const buttons = mod.chapterInputToggle.querySelectorAll('[data-input-mode]');
+      expect(buttons[0].classList.contains('active')).toBe(false);
+      expect(buttons[1].classList.contains('active')).toBe(true);
+    });
+
+    it('should init editor lazily on first switch', () => {
+      mod._switchInputMode('editor');
+
+      expect(mod._editor.init).toHaveBeenCalledWith(mod.chapterEditorContainer);
+    });
+
+    it('should load pending HTML into editor when switching', () => {
+      mod._pendingHtmlContent = '<article>Test</article>';
+
+      mod._switchInputMode('editor');
+
+      expect(mod._editor.setHTML).toHaveBeenCalledWith('<article>Test</article>');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // _handleChapterSubmit with editor
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_handleChapterSubmit() with editor', () => {
+    it('should collect HTML from editor when in editor mode', () => {
+      mod._inputMode = 'editor';
+      mod._editor.isInitialized = true;
+      mod._editor.isEmpty = vi.fn(() => false);
+      mod._editor.getHTML = vi.fn(() => '<p>Editor content</p>');
+      mod.inputId.value = 'part_new';
+      mod.inputBg.value = '';
+      mod.inputBgMobile.value = '';
+      vi.spyOn(mod.modal, 'close');
+
+      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+
+      expect(app.store.addChapter).toHaveBeenCalledWith(expect.objectContaining({
+        htmlContent: '<p>Editor content</p>',
+      }));
+    });
+
+    it('should destroy editor after submit', () => {
+      mod._inputMode = 'editor';
+      mod._editor.isInitialized = true;
+      mod._editor.isEmpty = vi.fn(() => false);
+      mod._editor.getHTML = vi.fn(() => '<p>Content</p>');
+      mod.inputId.value = 'test';
+      vi.spyOn(mod.modal, 'close');
+
+      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+
+      expect(mod._editor.destroy).toHaveBeenCalled();
+    });
+
+    it('should not collect from editor when in upload mode', () => {
+      mod._inputMode = 'upload';
+      mod._editor.isInitialized = true;
+      mod._editor.isEmpty = vi.fn(() => false);
+      mod._editor.getHTML = vi.fn(() => '<p>Should not use this</p>');
+      mod.inputId.value = 'test';
+      mod._pendingHtmlContent = '<article>File content</article>';
+      vi.spyOn(mod.modal, 'close');
+
+      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+
+      expect(mod._editor.getHTML).not.toHaveBeenCalled();
+      expect(app.store.addChapter).toHaveBeenCalledWith(expect.objectContaining({
+        htmlContent: '<article>File content</article>',
+      }));
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // _openModal with editor
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_openModal() with editor', () => {
+    it('should open editor mode for chapter with htmlContent', () => {
+      app.store.getChapters.mockReturnValue([
+        { id: 'inline', title: 'Inline', file: '', htmlContent: '<p>Inline HTML</p>', bg: '', bgMobile: '' },
+      ]);
+
+      mod._openModal(0);
+
+      expect(mod._inputMode).toBe('editor');
+      expect(mod._editor.setHTML).toHaveBeenCalledWith('<p>Inline HTML</p>');
+    });
+
+    it('should open upload mode for chapter with file path', () => {
+      mod._openModal(0);
+
+      expect(mod._inputMode).toBe('upload');
+      expect(mod.chapterFileName.textContent).toBe('content/part_1.html');
+    });
+
+    it('should default to upload mode for new chapter', () => {
+      mod._openModal();
+
+      expect(mod._inputMode).toBe('upload');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // _removeChapterFile with editor
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_removeChapterFile() with editor', () => {
+    it('should clear editor if initialized', () => {
+      mod._editor.isInitialized = true;
+
+      mod._removeChapterFile();
+
+      expect(mod._editor.clear).toHaveBeenCalled();
     });
   });
 

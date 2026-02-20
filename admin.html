@@ -773,7 +773,7 @@
     </div>
 
     <!-- Модальное окно редактирования главы -->
-    <dialog class="admin-modal" id="chapterModal">
+    <dialog class="admin-modal admin-modal--chapter" id="chapterModal">
       <form class="modal-form" id="chapterForm" method="dialog">
         <h3 class="modal-title" id="modalTitle">Добавить главу</h3>
         <div class="form-group">
@@ -786,8 +786,24 @@
           <input class="form-input" type="text" id="chapterTitle" placeholder="Глава 1. Нежданное угощение">
           <span class="form-hint">Отображается в содержании. Если HTML-файл уже содержит &lt;h2&gt;, заполнять не нужно</span>
         </div>
+
+        <!-- Переключатель режима ввода -->
         <div class="form-group">
-          <label class="form-label">Файл контента</label>
+          <label class="form-label">Контент главы</label>
+          <div class="chapter-input-toggle" id="chapterInputToggle">
+            <button type="button" class="chapter-input-toggle-btn active" data-input-mode="upload">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+              Загрузить файл
+            </button>
+            <button type="button" class="chapter-input-toggle-btn" data-input-mode="editor">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              Редактор
+            </button>
+          </div>
+        </div>
+
+        <!-- Режим: загрузка файла -->
+        <div class="form-group chapter-input-panel" id="chapterUploadPanel">
           <input type="file" id="chapterFileInput" accept=".doc,.docx,.html,.htm,.txt" hidden>
           <div class="chapter-file-dropzone" id="chapterFileDropzone">
             <svg viewBox="0 0 24 24" width="28" height="28">
@@ -801,6 +817,12 @@
             <button type="button" class="chapter-file-remove" id="chapterFileRemove" title="Удалить файл">&times;</button>
           </div>
         </div>
+
+        <!-- Режим: WYSIWYG-редактор -->
+        <div class="form-group chapter-input-panel" id="chapterEditorPanel" hidden>
+          <div class="chapter-editor-container" id="chapterEditorContainer"></div>
+        </div>
+
         <div class="form-group">
           <label class="form-label" for="chapterBg">Фон (десктоп)</label>
           <input class="form-input" type="text" id="chapterBg" placeholder="images/backgrounds/part_4.webp">
