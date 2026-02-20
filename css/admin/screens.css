@@ -201,6 +201,10 @@
   color: var(--admin-text-secondary);
 }
 
+.empty-state[hidden] {
+  display: none;
+}
+
 .empty-state svg {
   opacity: 0.3;
 }
