@@ -63,8 +63,8 @@ function makePage(layout = '1', images = []) {
 /**
  * Создать объект изображения
  */
-function makeImage(dataUrl = 'data:image/png;base64,abc', caption = '', frame = 'none', filter = 'none') {
-  return { dataUrl, caption, frame, filter };
+function makeImage(dataUrl = 'data:image/png;base64,abc', caption = '', frame = 'none', filter = 'none', filterIntensity = 100) {
+  return { dataUrl, caption, frame, filter, filterIntensity };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1011,21 +1011,23 @@ describe('AlbumManager', () => {
       expect(renderSpy).not.toHaveBeenCalled();
     });
 
-    it('should preserve existing frame and filter when replacing image', async () => {
-      manager._albumPages = [makePage('1', [makeImage('old', 'cap', 'shadow', 'sepia')])];
+    it('should preserve existing frame, filter, and filterIntensity when replacing image', async () => {
+      manager._albumPages = [makePage('1', [makeImage('old', 'cap', 'shadow', 'sepia', 60)])];
       vi.spyOn(manager, '_compressImage').mockResolvedValue('data:image/jpeg;base64,new');
       vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
       await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
       expect(manager._albumPages[0].images[0].frame).toBe('shadow');
       expect(manager._albumPages[0].images[0].filter).toBe('sepia');
+      expect(manager._albumPages[0].images[0].filterIntensity).toBe(60);
     });
 
-    it('should default frame and filter to "none" for new image', async () => {
+    it('should default frame, filter, and filterIntensity for new image', async () => {
       vi.spyOn(manager, '_compressImage').mockResolvedValue('data:image/jpeg;base64,ok');
       vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
       await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
       expect(manager._albumPages[0].images[0].frame).toBe('none');
       expect(manager._albumPages[0].images[0].filter).toBe('none');
+      expect(manager._albumPages[0].images[0].filterIntensity).toBe(100);
     });
   });
 
@@ -1034,11 +1036,11 @@ describe('AlbumManager', () => {
   // ─────────────────────────────────────────────────────────────────────────
 
   describe('_buildItemModifiers()', () => {
-    it('should return empty string when frame and filter are "none"', () => {
+    it('should return empty string when frame is "none"', () => {
       expect(manager._buildItemModifiers({ frame: 'none', filter: 'none' })).toBe('');
     });
 
-    it('should return empty string when frame and filter are absent', () => {
+    it('should return empty string when frame is absent', () => {
       expect(manager._buildItemModifiers({})).toBe('');
     });
 
@@ -1047,27 +1049,20 @@ describe('AlbumManager', () => {
       expect(result).toBe(' photo-album__item--frame-shadow');
     });
 
-    it('should add filter modifier class', () => {
+    it('should NOT add filter modifier class (filters use inline style)', () => {
       const result = manager._buildItemModifiers({ frame: 'none', filter: 'sepia' });
-      expect(result).toBe(' photo-album__item--filter-sepia');
+      expect(result).toBe('');
     });
 
-    it('should add both frame and filter modifier classes', () => {
+    it('should only add frame class when both frame and filter are set', () => {
       const result = manager._buildItemModifiers({ frame: 'polaroid', filter: 'grayscale' });
-      expect(result).toBe(' photo-album__item--frame-polaroid photo-album__item--filter-grayscale');
+      expect(result).toBe(' photo-album__item--frame-polaroid');
     });
 
     it('should handle all frame types', () => {
       for (const frame of ['thin', 'shadow', 'polaroid', 'rounded', 'double']) {
         const result = manager._buildItemModifiers({ frame, filter: 'none' });
         expect(result).toContain(`photo-album__item--frame-${frame}`);
-      }
-    });
-
-    it('should handle all filter types', () => {
-      for (const filter of ['grayscale', 'sepia', 'contrast', 'warm', 'cool']) {
-        const result = manager._buildItemModifiers({ frame: 'none', filter });
-        expect(result).toContain(`photo-album__item--filter-${filter}`);
       }
     });
   });
@@ -1120,11 +1115,11 @@ describe('AlbumManager', () => {
     it('should create image data when slot is empty', () => {
       const page = makePage('1', []);
       manager._ensureImageData(page, 0);
-      expect(page.images[0]).toEqual({ dataUrl: '', caption: '', frame: 'none', filter: 'none' });
+      expect(page.images[0]).toEqual({ dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: 100 });
     });
 
     it('should not overwrite existing image data', () => {
-      const img = makeImage('data:img', 'cap', 'shadow', 'sepia');
+      const img = makeImage('data:img', 'cap', 'shadow', 'sepia', 50);
       const page = makePage('1', [img]);
       manager._ensureImageData(page, 0);
       expect(page.images[0]).toBe(img);
@@ -1133,7 +1128,7 @@ describe('AlbumManager', () => {
     it('should create data when slot is null', () => {
       const page = makePage('1', [null]);
       manager._ensureImageData(page, 0);
-      expect(page.images[0]).toEqual({ dataUrl: '', caption: '', frame: 'none', filter: 'none' });
+      expect(page.images[0]).toEqual({ dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: 100 });
     });
   });
 
@@ -1193,12 +1188,12 @@ describe('AlbumManager', () => {
         manager.albumHideTitle.checked = false;
       });
 
-      it('should NOT add modifier classes when frame and filter are "none"', () => {
+      it('should NOT add modifier classes or style when frame and filter are "none"', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'none')])];
         const html = manager._buildAlbumHtml('T', pages);
         expect(html).toContain('class="photo-album__item"');
         expect(html).not.toContain('--frame-');
-        expect(html).not.toContain('--filter-');
+        expect(html).not.toContain('style=');
       });
 
       it('should add frame modifier class to figure', () => {
@@ -1207,16 +1202,17 @@ describe('AlbumManager', () => {
         expect(html).toContain('photo-album__item photo-album__item--frame-shadow');
       });
 
-      it('should add filter modifier class to figure', () => {
-        const pages = [makePage('1', [makeImage('data:img', '', 'none', 'sepia')])];
+      it('should add inline filter style to img', () => {
+        const pages = [makePage('1', [makeImage('data:img', '', 'none', 'sepia', 100)])];
         const html = manager._buildAlbumHtml('T', pages);
-        expect(html).toContain('photo-album__item photo-album__item--filter-sepia');
+        expect(html).toContain('style="filter:sepia(0.75)"');
       });
 
-      it('should add both frame and filter modifier classes', () => {
-        const pages = [makePage('1', [makeImage('data:img', '', 'polaroid', 'grayscale')])];
+      it('should add frame class and inline filter style together', () => {
+        const pages = [makePage('1', [makeImage('data:img', '', 'polaroid', 'grayscale', 100)])];
         const html = manager._buildAlbumHtml('T', pages);
-        expect(html).toContain('photo-album__item photo-album__item--frame-polaroid photo-album__item--filter-grayscale');
+        expect(html).toContain('photo-album__item--frame-polaroid');
+        expect(html).toContain('style="filter:grayscale(1)"');
       });
 
       it('should NOT add modifiers to placeholder figures', () => {
@@ -1231,7 +1227,235 @@ describe('AlbumManager', () => {
         const html = manager._buildAlbumHtml('T', pages);
         expect(html).toContain('class="photo-album__item"');
         expect(html).not.toContain('--frame-');
-        expect(html).not.toContain('--filter-');
+        expect(html).not.toContain('style=');
+      });
+
+      it('should apply reduced filter intensity in inline style', () => {
+        const pages = [makePage('1', [makeImage('data:img', '', 'none', 'grayscale', 50)])];
+        const html = manager._buildAlbumHtml('T', pages);
+        expect(html).toContain('style="filter:grayscale(0.5)"');
+      });
+
+      it('should NOT add style when filter intensity is 0', () => {
+        // grayscale(0) is visually no effect, but technically still a filter value
+        const pages = [makePage('1', [makeImage('data:img', '', 'none', 'grayscale', 0)])];
+        const html = manager._buildAlbumHtml('T', pages);
+        expect(html).toContain('style="filter:grayscale(0)"');
+      });
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _computeFilterStyle()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_computeFilterStyle()', () => {
+    it('should return empty string for "none" filter', () => {
+      expect(manager._computeFilterStyle('none', 100)).toBe('');
+    });
+
+    it('should return empty string for falsy filter', () => {
+      expect(manager._computeFilterStyle(null, 100)).toBe('');
+      expect(manager._computeFilterStyle(undefined, 100)).toBe('');
+      expect(manager._computeFilterStyle('', 100)).toBe('');
+    });
+
+    it('should return empty string for unknown filter', () => {
+      expect(manager._computeFilterStyle('unknown', 100)).toBe('');
+    });
+
+    // --- grayscale ---
+    it('should compute grayscale at 100%', () => {
+      expect(manager._computeFilterStyle('grayscale', 100)).toBe('grayscale(1)');
+    });
+
+    it('should compute grayscale at 50%', () => {
+      expect(manager._computeFilterStyle('grayscale', 50)).toBe('grayscale(0.5)');
+    });
+
+    it('should compute grayscale at 0%', () => {
+      expect(manager._computeFilterStyle('grayscale', 0)).toBe('grayscale(0)');
+    });
+
+    // --- sepia ---
+    it('should compute sepia at 100% (max 0.75)', () => {
+      expect(manager._computeFilterStyle('sepia', 100)).toBe('sepia(0.75)');
+    });
+
+    it('should compute sepia at 50%', () => {
+      expect(manager._computeFilterStyle('sepia', 50)).toBe('sepia(0.375)');
+    });
+
+    it('should compute sepia at 0%', () => {
+      expect(manager._computeFilterStyle('sepia', 0)).toBe('sepia(0)');
+    });
+
+    // --- contrast ---
+    it('should compute contrast at 100% (1.35)', () => {
+      expect(manager._computeFilterStyle('contrast', 100)).toBe('contrast(1.35)');
+    });
+
+    it('should compute contrast at 0% (1.0)', () => {
+      expect(manager._computeFilterStyle('contrast', 0)).toBe('contrast(1)');
+    });
+
+    it('should compute contrast at 50%', () => {
+      expect(manager._computeFilterStyle('contrast', 50)).toBe('contrast(1.175)');
+    });
+
+    // --- warm ---
+    it('should compute warm at 100%', () => {
+      const result = manager._computeFilterStyle('warm', 100);
+      expect(result).toContain('saturate(1.3)');
+      expect(result).toContain('hue-rotate(-10deg)');
+    });
+
+    it('should compute warm at 0%', () => {
+      const result = manager._computeFilterStyle('warm', 0);
+      expect(result).toContain('saturate(1)');
+      expect(result).toContain('hue-rotate(0deg)');
+    });
+
+    // --- cool ---
+    it('should compute cool at 100%', () => {
+      const result = manager._computeFilterStyle('cool', 100);
+      expect(result).toContain('saturate(1.1)');
+      expect(result).toContain('hue-rotate(15deg)');
+      expect(result).toContain('brightness(1.05)');
+    });
+
+    it('should compute cool at 0%', () => {
+      const result = manager._computeFilterStyle('cool', 0);
+      expect(result).toContain('saturate(1)');
+      expect(result).toContain('hue-rotate(0deg)');
+      expect(result).toContain('brightness(1)');
+    });
+
+    // --- clamp ---
+    it('should clamp intensity above 100 to 100', () => {
+      expect(manager._computeFilterStyle('grayscale', 200)).toBe('grayscale(1)');
+    });
+
+    it('should clamp intensity below 0 to 0', () => {
+      expect(manager._computeFilterStyle('grayscale', -50)).toBe('grayscale(0)');
+    });
+
+    // --- default intensity ---
+    it('should default to 100 when intensity is undefined', () => {
+      expect(manager._computeFilterStyle('grayscale', undefined)).toBe('grayscale(1)');
+    });
+
+    it('should default to 100 when intensity is null', () => {
+      expect(manager._computeFilterStyle('grayscale', null)).toBe('grayscale(1)');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _applyFilterPreview()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_applyFilterPreview()', () => {
+    it('should set filter style on the img element', () => {
+      const slot = document.createElement('div');
+      const imgEl = document.createElement('img');
+      imgEl.className = 'album-image-slot-img';
+      slot.appendChild(imgEl);
+
+      manager._applyFilterPreview(slot, { filter: 'grayscale', filterIntensity: 100 });
+      expect(imgEl.style.filter).toBe('grayscale(1)');
+    });
+
+    it('should clear filter style when filter is "none"', () => {
+      const slot = document.createElement('div');
+      const imgEl = document.createElement('img');
+      imgEl.className = 'album-image-slot-img';
+      imgEl.style.filter = 'grayscale(1)';
+      slot.appendChild(imgEl);
+
+      manager._applyFilterPreview(slot, { filter: 'none', filterIntensity: 100 });
+      expect(imgEl.style.filter).toBe('');
+    });
+
+    it('should do nothing when no img element exists', () => {
+      const slot = document.createElement('div');
+      // No throw
+      expect(() => manager._applyFilterPreview(slot, { filter: 'sepia', filterIntensity: 50 })).not.toThrow();
+    });
+
+    it('should handle null img data', () => {
+      const slot = document.createElement('div');
+      const imgEl = document.createElement('img');
+      imgEl.className = 'album-image-slot-img';
+      slot.appendChild(imgEl);
+
+      manager._applyFilterPreview(slot, null);
+      expect(imgEl.style.filter).toBe('');
+    });
+
+    it('should apply reduced intensity', () => {
+      const slot = document.createElement('div');
+      const imgEl = document.createElement('img');
+      imgEl.className = 'album-image-slot-img';
+      slot.appendChild(imgEl);
+
+      manager._applyFilterPreview(slot, { filter: 'sepia', filterIntensity: 40 });
+      expect(imgEl.style.filter).toBe('sepia(0.3)');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Слайдер интенсивности фильтра
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('интенсивность фильтра', () => {
+    describe('рендеринг слайдера', () => {
+      it('should render intensity slider per slot', () => {
+        manager._albumPages = [makePage('1', [makeImage()])];
+        manager._renderAlbumPages();
+        const sliders = manager.albumPagesEl.querySelectorAll('.album-filter-intensity');
+        expect(sliders).toHaveLength(1);
+      });
+
+      it('should hide intensity slider when filter is "none"', () => {
+        manager._albumPages = [makePage('1', [makeImage('d', 'c', 'none', 'none')])];
+        manager._renderAlbumPages();
+        const slider = manager.albumPagesEl.querySelector('.album-filter-intensity');
+        expect(slider.hidden).toBe(true);
+      });
+
+      it('should show intensity slider when filter is set', () => {
+        manager._albumPages = [makePage('1', [makeImage('d', 'c', 'none', 'sepia', 75)])];
+        manager._renderAlbumPages();
+        const slider = manager.albumPagesEl.querySelector('.album-filter-intensity');
+        expect(slider.hidden).toBe(false);
+      });
+
+      it('should set range input to current intensity value', () => {
+        manager._albumPages = [makePage('1', [makeImage('d', 'c', 'none', 'sepia', 60)])];
+        manager._renderAlbumPages();
+        const range = manager.albumPagesEl.querySelector('.album-filter-intensity-range');
+        expect(range.value).toBe('60');
+      });
+
+      it('should show intensity label with percentage', () => {
+        manager._albumPages = [makePage('1', [makeImage('d', 'c', 'none', 'sepia', 60)])];
+        manager._renderAlbumPages();
+        const label = manager.albumPagesEl.querySelector('.album-filter-intensity-label');
+        expect(label.textContent).toBe('60%');
+      });
+
+      it('should default to 100% when filterIntensity is not set', () => {
+        manager._albumPages = [makePage('1', [{ dataUrl: 'd', caption: '', frame: 'none', filter: 'sepia' }])];
+        manager._renderAlbumPages();
+        const range = manager.albumPagesEl.querySelector('.album-filter-intensity-range');
+        expect(range.value).toBe('100');
+      });
+
+      it('should render 2 intensity sliders for layout "2"', () => {
+        manager._albumPages = [makePage('2', [makeImage(), makeImage()])];
+        manager._renderAlbumPages();
+        const sliders = manager.albumPagesEl.querySelectorAll('.album-filter-intensity');
+        expect(sliders).toHaveLength(2);
       });
     });
   });

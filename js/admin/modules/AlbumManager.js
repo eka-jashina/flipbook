@@ -40,10 +40,13 @@ const FILTER_OPTIONS = [
   { id: 'cool', label: 'Холодный' },
 ];
 
+/** Интенсивность фильтра по умолчанию (100 = максимальный эффект) */
+const DEFAULT_FILTER_INTENSITY = 100;
+
 export class AlbumManager {
   constructor(chaptersModule) {
     this._module = chaptersModule;
-    this._albumPages = []; // [{ layout: '1', images: [{dataUrl, caption, frame, filter}] }]
+    this._albumPages = []; // [{ layout: '1', images: [{dataUrl, caption, frame, filter, filterIntensity}] }]
   }
 
   get store() { return this._module.store; }
@@ -246,15 +249,51 @@ export class AlbumManager {
       );
       optionsRow.appendChild(frameSelect);
 
+      const currentFilter = img?.filter || 'none';
       const filterSelect = this._buildOptionSelect(
-        FILTER_OPTIONS, img?.filter || 'none', (val) => {
+        FILTER_OPTIONS, currentFilter, (val) => {
           this._ensureImageData(page, i);
           page.images[i].filter = val;
+          // Показать/скрыть слайдер интенсивности
+          intensityRow.hidden = val === 'none';
+          // Обновить превью фильтра на миниатюре
+          this._applyFilterPreview(slot, page.images[i]);
         },
       );
       optionsRow.appendChild(filterSelect);
 
       group.appendChild(optionsRow);
+
+      // Слайдер интенсивности фильтра
+      const intensityRow = document.createElement('div');
+      intensityRow.className = 'album-filter-intensity';
+      intensityRow.hidden = currentFilter === 'none';
+
+      const intensityLabel = document.createElement('span');
+      intensityLabel.className = 'album-filter-intensity-label';
+      intensityLabel.textContent = `${img?.filterIntensity ?? DEFAULT_FILTER_INTENSITY}%`;
+
+      const intensityRange = document.createElement('input');
+      intensityRange.type = 'range';
+      intensityRange.className = 'album-filter-intensity-range';
+      intensityRange.min = '0';
+      intensityRange.max = '100';
+      intensityRange.value = String(img?.filterIntensity ?? DEFAULT_FILTER_INTENSITY);
+
+      intensityRange.addEventListener('input', () => {
+        this._ensureImageData(page, i);
+        const val = Number(intensityRange.value);
+        page.images[i].filterIntensity = val;
+        intensityLabel.textContent = `${val}%`;
+        this._applyFilterPreview(slot, page.images[i]);
+      });
+
+      intensityRow.appendChild(intensityRange);
+      intensityRow.appendChild(intensityLabel);
+      group.appendChild(intensityRow);
+
+      // Превью фильтра на миниатюре
+      this._applyFilterPreview(slot, img);
 
       container.appendChild(group);
     }
@@ -275,10 +314,18 @@ export class AlbumManager {
     return select;
   }
 
+  /** Применить превью фильтра к миниатюре в слоте */
+  _applyFilterPreview(slot, img) {
+    const imgEl = slot.querySelector('.album-image-slot-img');
+    if (!imgEl) return;
+    const filterStyle = this._computeFilterStyle(img?.filter, img?.filterIntensity);
+    imgEl.style.filter = filterStyle || '';
+  }
+
   /** Гарантировать наличие объекта изображения в слоте */
   _ensureImageData(page, index) {
     if (!page.images[index]) {
-      page.images[index] = { dataUrl: '', caption: '', frame: 'none', filter: 'none' };
+      page.images[index] = { dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: DEFAULT_FILTER_INTENSITY };
     }
   }
 
@@ -293,6 +340,7 @@ export class AlbumManager {
         caption: prev?.caption || '',
         frame: prev?.frame || 'none',
         filter: prev?.filter || 'none',
+        filterIntensity: prev?.filterIntensity ?? DEFAULT_FILTER_INTENSITY,
       };
       this._renderAlbumPages();
     } catch {
@@ -395,7 +443,9 @@ export class AlbumManager {
           ? `<figcaption>${this._module._escapeHtml(img.caption)}</figcaption>`
           : '';
         const modifiers = this._buildItemModifiers(img);
-        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}">${caption}</figure>`;
+        const filterStyle = this._computeFilterStyle(img.filter, img.filterIntensity);
+        const styleAttr = filterStyle ? ` style="filter:${filterStyle}"` : '';
+        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}"${styleAttr}>${caption}</figure>`;
       });
       return `<div class="photo-album" data-layout="${page.layout}">${figures.join('')}</div>`;
     });
@@ -403,11 +453,29 @@ export class AlbumManager {
     return `<article><h2${h2Class}>${this._module._escapeHtml(title)}</h2>${albumDivs.join('')}</article>`;
   }
 
-  /** Собрать CSS-модификаторы рамки и фильтра для figure */
+  /** Собрать CSS-модификаторы рамки для figure */
   _buildItemModifiers(img) {
     let cls = '';
     if (img.frame && img.frame !== 'none') cls += ` photo-album__item--frame-${img.frame}`;
-    if (img.filter && img.filter !== 'none') cls += ` photo-album__item--filter-${img.filter}`;
     return cls;
+  }
+
+  /**
+   * Вычислить inline CSS filter для изображения
+   * @param {string} filter - id фильтра (none, grayscale, sepia, contrast, warm, cool)
+   * @param {number} intensity - интенсивность 0–100
+   * @returns {string} значение CSS filter или пустая строка
+   */
+  _computeFilterStyle(filter, intensity) {
+    if (!filter || filter === 'none') return '';
+    const t = Math.max(0, Math.min(100, intensity ?? DEFAULT_FILTER_INTENSITY)) / 100;
+    switch (filter) {
+      case 'grayscale': return `grayscale(${t})`;
+      case 'sepia': return `sepia(${+(t * 0.75).toFixed(3)})`;
+      case 'contrast': return `contrast(${+(1 + t * 0.35).toFixed(3)})`;
+      case 'warm': return `saturate(${+(1 + t * 0.3).toFixed(3)}) hue-rotate(${+(-t * 10).toFixed(2)}deg)`;
+      case 'cool': return `saturate(${+(1 + t * 0.1).toFixed(3)}) hue-rotate(${+(t * 15).toFixed(2)}deg) brightness(${+(1 + t * 0.05).toFixed(3)})`;
+      default: return '';
+    }
   }
 }
