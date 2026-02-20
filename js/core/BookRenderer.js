@@ -193,15 +193,20 @@ export class BookRenderer {
    * рендер тяжёлыми cloneNode операциями. Для книги 400+ страниц
    * один cloneNode занимает десятки миллисекунд — 4 за раз = длинный фрейм.
    *
-   * Вызывается после renderSpread через requestAnimationFrame.
+   * Порядок приоритета: sheetFront/Back первыми — они нужны при первом флипе
+   * и драге. Буферы вторыми — нужны после завершения анимации (swap buffers).
+   *
+   * Вызывается через requestIdleCallback (или RAF как fallback).
    * @private
    */
   _preWarmViewports() {
     if (!this._sourceElement || !this.elements) return;
 
+    // sheetFront/Back — в первую очередь: нужны сразу при флипе/драге.
+    // leftBuffer/rightBuffer — после: нужны только по завершении анимации.
     const containers = [
-      this.elements.leftBuffer, this.elements.rightBuffer,
       this.elements.sheetFront, this.elements.sheetBack,
+      this.elements.leftBuffer, this.elements.rightBuffer,
       this.elements.leftActive, this.elements.rightActive,
     ];
 
@@ -307,20 +312,35 @@ export class BookRenderer {
   }
 
   /**
-   * Запланировать pre-warm viewport'ов на следующий idle/RAF.
-   * Не блокирует текущий рендер.
+   * Запланировать pre-warm viewport'ов в idle-время браузера.
+   *
+   * Использует requestIdleCallback когда он доступен — cloneNode выполняется
+   * между кадрами, не воруя время у анимаций и пользовательских событий.
+   * Для книг 300+ страниц это критично: один cloneNode занимает 30-100мс,
+   * и если он попадёт в кадр флипа — анимация подвиснет.
+   *
+   * Timeout 500мс гарантирует выполнение даже под нагрузкой (например,
+   * если пользователь скроллит или взаимодействует сразу после открытия книги).
+   *
+   * Fallback на RAF для браузеров без requestIdleCallback (Safari < 16).
    * @private
    */
   _schedulePreWarm() {
     if (this._preWarmScheduled) return;
     this._preWarmScheduled = true;
 
-    // requestAnimationFrame даёт браузеру отрисовать текущий кадр,
-    // затем создаём оставшиеся viewport'ы
-    requestAnimationFrame(() => {
+    const doWarm = () => {
       this._preWarmScheduled = false;
       this._preWarmViewports();
-    });
+    };
+
+    if (typeof requestIdleCallback === 'function') {
+      // Idle-время: cloneNode не конкурирует с анимациями и событиями
+      requestIdleCallback(doWarm, { timeout: 500 });
+    } else {
+      // Fallback: RAF (Safari < 16, некоторые WebView)
+      requestAnimationFrame(doWarm);
+    }
   }
 
   /**
