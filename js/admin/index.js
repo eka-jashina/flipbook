@@ -15,6 +15,8 @@ class AdminApp {
   constructor(store) {
     this.store = store;
     this._toastTimer = null;
+    /** ID книги, созданной через «Создать вручную» (ещё не подтверждённой) */
+    this._pendingBookId = null;
 
     // Инициализация модулей
     this.chapters = new ChaptersModule(this);
@@ -81,7 +83,10 @@ class AdminApp {
     this.addBookBtn.addEventListener('click', () => this._showView('mode-selector'));
     this.modeSelectorBack.addEventListener('click', () => this._showView('bookshelf'));
     this.uploadBack.addEventListener('click', () => this._showView('mode-selector'));
-    this.editorBack.addEventListener('click', () => this._showView('bookshelf'));
+    this.editorBack.addEventListener('click', () => {
+      this._cleanupPendingBook();
+      this._showView('bookshelf');
+    });
     this.albumBack.addEventListener('click', () => this._showView('editor'));
 
     // Карточки выбора режима
@@ -175,6 +180,7 @@ class AdminApp {
           chapters: [],
         });
         this.store.setActiveBook(bookId);
+        this._pendingBookId = bookId;
         this._render();
         this.openEditor();
         break;
@@ -208,6 +214,29 @@ class AdminApp {
   }
 
   // --- Утилиты ---
+
+  /**
+   * Удалить книгу, созданную через «Создать вручную», если пользователь
+   * не внёс никаких изменений и вышел из редактора кнопкой «Назад».
+   */
+  _cleanupPendingBook() {
+    if (!this._pendingBookId) return;
+
+    const bookId = this._pendingBookId;
+    this._pendingBookId = null;
+
+    // Проверить, осталась ли книга в исходном состоянии
+    const chapters = this.store.getChapters();
+    const cover = this.store.getCover();
+    const isUnchanged = chapters.length === 0
+      && cover.title === 'Новая книга'
+      && !cover.author;
+
+    if (isUnchanged) {
+      this.store.removeBook(bookId);
+      this._render();
+    }
+  }
 
   _showToast(message) {
     this.toastMessage.textContent = message;

@@ -162,6 +162,7 @@ export class ChaptersModule extends BaseModule {
     });
 
     // Делегаты
+    this._album.bindEvents();
     this._bookUpload.bindEvents();
   }
 
