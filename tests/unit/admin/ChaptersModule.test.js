@@ -76,6 +76,7 @@ function setupDOM() {
       <h2 id="modalTitle"></h2>
       <form id="chapterForm">
         <input id="chapterId" type="text">
+        <input id="chapterTitle" type="text">
         <input id="chapterFileInput" type="file" hidden>
         <div id="chapterFileDropzone"></div>
         <div id="chapterFileInfo" hidden>
@@ -275,6 +276,7 @@ describe('ChaptersModule', () => {
 
       expect(app.store.addChapter).toHaveBeenCalledWith({
         id: 'part_3',
+        title: '',
         file: '',
         bg: 'bg3.webp',
         bgMobile: '',

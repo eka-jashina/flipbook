@@ -127,7 +127,8 @@ export class LifecycleDelegate extends BaseDelegate {
       }
 
       // ─── Этап 5: Пагинация контента ───
-      const { pageData, chapterStarts } = await this.paginator.paginate(html, rightA);
+      const chapterTitles = CONFIG.CHAPTERS.map(c => c.title || '');
+      const { pageData, chapterStarts } = await this.paginator.paginate(html, rightA, { chapterTitles });
 
       if (this.isDestroyed) return;
 
@@ -266,7 +267,8 @@ export class LifecycleDelegate extends BaseDelegate {
       }
 
       // ─── Этап 3: Пагинация ───
-      const { pageData, chapterStarts } = await this.paginator.paginate(html, rightA);
+      const chapterTitles = CONFIG.CHAPTERS.map(c => c.title || '');
+      const { pageData, chapterStarts } = await this.paginator.paginate(html, rightA, { chapterTitles });
 
       if (this.isDestroyed) return;
 

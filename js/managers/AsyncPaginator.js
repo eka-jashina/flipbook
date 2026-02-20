@@ -70,6 +70,8 @@ export class AsyncPaginator extends EventEmitter {
    *
    * @param {string} html - HTML-контент для пагинации (должен содержать article элементы)
    * @param {HTMLElement} measureElement - Элемент для измерения размеров страницы
+   * @param {Object} [options={}] - Дополнительные опции
+   * @param {string[]} [options.chapterTitles] - Заголовки глав (используются в TOC, приоритетнее h2 из HTML)
    * @returns {Promise<PaginationResult>} Результат пагинации
    * @throws {Error} При ошибке обработки (кроме AbortError)
    *
@@ -78,7 +80,7 @@ export class AsyncPaginator extends EventEmitter {
    * paginator.on('progress', ({phase, progress}) => updateUI(progress));
    * const {pages, chapterStarts} = await paginator.paginate(html, pageElement);
    */
-  async paginate(html, measureElement) {
+  async paginate(html, measureElement, options = {}) {
     this.abort();
     this.abortController = new AbortController();
     const { signal } = this.abortController;
@@ -115,7 +117,7 @@ export class AsyncPaginator extends EventEmitter {
       try {
         // Оглавление (только если больше одной главы)
         if (articles.length > 1) {
-          this._addTOC(pageContent, articles);
+          this._addTOC(pageContent, articles, options.chapterTitles);
         }
         await this._yieldToUI(signal);
 
@@ -266,11 +268,14 @@ export class AsyncPaginator extends EventEmitter {
    * Создаёт секцию с заголовками всех глав в виде нумерованного списка.
    * Оглавление занимает отдельную колонку (страницу).
    *
+   * Приоритет заголовка: chapterTitles[i] > article h2.textContent
+   *
    * @param {HTMLElement} pageContent - Контейнер для контента
    * @param {HTMLElement[]} articles - Массив статей (глав)
+   * @param {string[]} [chapterTitles] - Заголовки глав из конфигурации
    * @private
    */
-  _addTOC(pageContent, articles) {
+  _addTOC(pageContent, articles, chapterTitles) {
     const toc = document.createElement("section");
     toc.className = "toc";
 
@@ -280,11 +285,14 @@ export class AsyncPaginator extends EventEmitter {
     const tocList = document.createElement("ol");
 
     articles.forEach((article, i) => {
+      // Приоритет: заголовок из конфига, затем h2 из HTML
+      const configTitle = chapterTitles?.[i];
       const h = article.querySelector("h2");
-      if (!h) return;
+      const title = configTitle || h?.textContent;
+      if (!title) return;
 
       const li = document.createElement("li");
-      li.textContent = h.textContent;
+      li.textContent = title;
       li.dataset.chapter = i;
       li.setAttribute("tabindex", "0");
       li.setAttribute("role", "button");
