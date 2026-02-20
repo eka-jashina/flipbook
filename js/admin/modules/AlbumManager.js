@@ -11,6 +11,15 @@ const LAYOUT_IMAGE_COUNT = {
   '4': 4,
 };
 
+/** Максимальный размер длинной стороны изображения (px) */
+const IMAGE_MAX_DIMENSION = 1920;
+
+/** Качество JPEG-сжатия (0–1) */
+const IMAGE_QUALITY = 0.85;
+
+/** Максимальный размер загружаемого файла до сжатия (10 МБ) */
+const IMAGE_MAX_FILE_SIZE = 10 * 1024 * 1024;
+
 export class AlbumManager {
   constructor(chaptersModule) {
     this._module = chaptersModule;
@@ -181,7 +190,7 @@ export class AlbumManager {
       fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
         if (!file) return;
-        if (!this._module._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: fileInput })) return;
+        if (!this._module._validateFile(file, { maxSize: IMAGE_MAX_FILE_SIZE, mimePrefix: 'image/', inputEl: fileInput })) return;
         this._readPageImageFile(file, pageIndex, i);
         fileInput.value = '';
       });
@@ -209,17 +218,64 @@ export class AlbumManager {
     }
   }
 
-  _readPageImageFile(file, pageIndex, imageIndex) {
-    const reader = new FileReader();
-    reader.onload = () => {
+  async _readPageImageFile(file, pageIndex, imageIndex) {
+    try {
+      const dataUrl = await this._compressImage(file);
       const page = this._albumPages[pageIndex];
+      if (!page) return; // Страница могла быть удалена во время сжатия
       page.images[imageIndex] = {
-        dataUrl: reader.result,
+        dataUrl,
         caption: page.images[imageIndex]?.caption || '',
       };
       this._renderAlbumPages();
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      this._module._showToast('Ошибка при обработке изображения');
+    }
+  }
+
+  /**
+   * Сжатие изображения через canvas: ресайз + перекодирование
+   * @param {File} file - Файл изображения
+   * @returns {Promise<string>} data URL сжатого изображения
+   */
+  _compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+
+        // Масштабирование по длинной стороне
+        if (w > IMAGE_MAX_DIMENSION || h > IMAGE_MAX_DIMENSION) {
+          const ratio = Math.min(IMAGE_MAX_DIMENSION / w, IMAGE_MAX_DIMENSION / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
+        // PNG → сохраняем формат (прозрачность), остальные → JPEG
+        const dataUrl = file.type === 'image/png'
+          ? canvas.toDataURL('image/png')
+          : canvas.toDataURL('image/jpeg', IMAGE_QUALITY);
+
+        resolve(dataUrl);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Не удалось загрузить изображение'));
+      };
+
+      img.src = url;
+    });
   }
 
   _handleAlbumSubmit() {
