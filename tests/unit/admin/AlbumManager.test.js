@@ -63,8 +63,8 @@ function makePage(layout = '1', images = []) {
 /**
  * Создать объект изображения
  */
-function makeImage(dataUrl = 'data:image/png;base64,abc', caption = '') {
-  return { dataUrl, caption };
+function makeImage(dataUrl = 'data:image/png;base64,abc', caption = '', frame = 'none', filter = 'none') {
+  return { dataUrl, caption, frame, filter };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1009,6 +1009,230 @@ describe('AlbumManager', () => {
       const renderSpy = vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
       await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
       expect(renderSpy).not.toHaveBeenCalled();
+    });
+
+    it('should preserve existing frame and filter when replacing image', async () => {
+      manager._albumPages = [makePage('1', [makeImage('old', 'cap', 'shadow', 'sepia')])];
+      vi.spyOn(manager, '_compressImage').mockResolvedValue('data:image/jpeg;base64,new');
+      vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
+      await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
+      expect(manager._albumPages[0].images[0].frame).toBe('shadow');
+      expect(manager._albumPages[0].images[0].filter).toBe('sepia');
+    });
+
+    it('should default frame and filter to "none" for new image', async () => {
+      vi.spyOn(manager, '_compressImage').mockResolvedValue('data:image/jpeg;base64,ok');
+      vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
+      await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
+      expect(manager._albumPages[0].images[0].frame).toBe('none');
+      expect(manager._albumPages[0].images[0].filter).toBe('none');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _buildItemModifiers()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_buildItemModifiers()', () => {
+    it('should return empty string when frame and filter are "none"', () => {
+      expect(manager._buildItemModifiers({ frame: 'none', filter: 'none' })).toBe('');
+    });
+
+    it('should return empty string when frame and filter are absent', () => {
+      expect(manager._buildItemModifiers({})).toBe('');
+    });
+
+    it('should add frame modifier class', () => {
+      const result = manager._buildItemModifiers({ frame: 'shadow', filter: 'none' });
+      expect(result).toBe(' photo-album__item--frame-shadow');
+    });
+
+    it('should add filter modifier class', () => {
+      const result = manager._buildItemModifiers({ frame: 'none', filter: 'sepia' });
+      expect(result).toBe(' photo-album__item--filter-sepia');
+    });
+
+    it('should add both frame and filter modifier classes', () => {
+      const result = manager._buildItemModifiers({ frame: 'polaroid', filter: 'grayscale' });
+      expect(result).toBe(' photo-album__item--frame-polaroid photo-album__item--filter-grayscale');
+    });
+
+    it('should handle all frame types', () => {
+      for (const frame of ['thin', 'shadow', 'polaroid', 'rounded', 'double']) {
+        const result = manager._buildItemModifiers({ frame, filter: 'none' });
+        expect(result).toContain(`photo-album__item--frame-${frame}`);
+      }
+    });
+
+    it('should handle all filter types', () => {
+      for (const filter of ['grayscale', 'sepia', 'contrast', 'warm', 'cool']) {
+        const result = manager._buildItemModifiers({ frame: 'none', filter });
+        expect(result).toContain(`photo-album__item--filter-${filter}`);
+      }
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _buildOptionSelect()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_buildOptionSelect()', () => {
+    const options = [
+      { id: 'none', label: 'Нет' },
+      { id: 'a', label: 'Опция A' },
+      { id: 'b', label: 'Опция B' },
+    ];
+
+    it('should create a <select> element', () => {
+      const select = manager._buildOptionSelect(options, 'none', () => {});
+      expect(select.tagName).toBe('SELECT');
+    });
+
+    it('should have the correct CSS class', () => {
+      const select = manager._buildOptionSelect(options, 'none', () => {});
+      expect(select.classList.contains('album-image-option-select')).toBe(true);
+    });
+
+    it('should generate one <option> per item', () => {
+      const select = manager._buildOptionSelect(options, 'none', () => {});
+      expect(select.querySelectorAll('option')).toHaveLength(3);
+    });
+
+    it('should mark the active option as selected', () => {
+      const select = manager._buildOptionSelect(options, 'b', () => {});
+      expect(select.value).toBe('b');
+    });
+
+    it('should call onChange when value changes', () => {
+      const cb = vi.fn();
+      const select = manager._buildOptionSelect(options, 'none', cb);
+      select.value = 'a';
+      select.dispatchEvent(new Event('change'));
+      expect(cb).toHaveBeenCalledWith('a');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _ensureImageData()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_ensureImageData()', () => {
+    it('should create image data when slot is empty', () => {
+      const page = makePage('1', []);
+      manager._ensureImageData(page, 0);
+      expect(page.images[0]).toEqual({ dataUrl: '', caption: '', frame: 'none', filter: 'none' });
+    });
+
+    it('should not overwrite existing image data', () => {
+      const img = makeImage('data:img', 'cap', 'shadow', 'sepia');
+      const page = makePage('1', [img]);
+      manager._ensureImageData(page, 0);
+      expect(page.images[0]).toBe(img);
+    });
+
+    it('should create data when slot is null', () => {
+      const page = makePage('1', [null]);
+      manager._ensureImageData(page, 0);
+      expect(page.images[0]).toEqual({ dataUrl: '', caption: '', frame: 'none', filter: 'none' });
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Рамки и фильтры в рендеринге и HTML-генерации
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('рамки и фильтры', () => {
+    describe('рендеринг слотов', () => {
+      it('should render frame and filter select elements per slot', () => {
+        manager._albumPages = [makePage('1', [makeImage()])];
+        manager._renderAlbumPages();
+        const selects = manager.albumPagesEl.querySelectorAll('.album-image-option-select');
+        expect(selects).toHaveLength(2); // frame + filter
+      });
+
+      it('should render 4 selects for layout "2" (2 slots × 2 selects)', () => {
+        manager._albumPages = [makePage('2', [makeImage(), makeImage()])];
+        manager._renderAlbumPages();
+        const selects = manager.albumPagesEl.querySelectorAll('.album-image-option-select');
+        expect(selects).toHaveLength(4);
+      });
+
+      it('should set frame select to current value', () => {
+        manager._albumPages = [makePage('1', [makeImage('d', 'c', 'shadow', 'none')])];
+        manager._renderAlbumPages();
+        const selects = manager.albumPagesEl.querySelectorAll('.album-image-option-select');
+        expect(selects[0].value).toBe('shadow');
+      });
+
+      it('should set filter select to current value', () => {
+        manager._albumPages = [makePage('1', [makeImage('d', 'c', 'none', 'sepia')])];
+        manager._renderAlbumPages();
+        const selects = manager.albumPagesEl.querySelectorAll('.album-image-option-select');
+        expect(selects[1].value).toBe('sepia');
+      });
+
+      it('should default both selects to "none" for empty image', () => {
+        manager._albumPages = [makePage('1', [])];
+        manager._renderAlbumPages();
+        const selects = manager.albumPagesEl.querySelectorAll('.album-image-option-select');
+        expect(selects[0].value).toBe('none');
+        expect(selects[1].value).toBe('none');
+      });
+
+      it('should wrap selects in .album-image-options container', () => {
+        manager._albumPages = [makePage('1', [makeImage()])];
+        manager._renderAlbumPages();
+        const row = manager.albumPagesEl.querySelector('.album-image-options');
+        expect(row).not.toBeNull();
+        expect(row.querySelectorAll('.album-image-option-select')).toHaveLength(2);
+      });
+    });
+
+    describe('HTML-генерация с рамками и фильтрами', () => {
+      beforeEach(() => {
+        manager.albumHideTitle.checked = false;
+      });
+
+      it('should NOT add modifier classes when frame and filter are "none"', () => {
+        const pages = [makePage('1', [makeImage('data:img', '', 'none', 'none')])];
+        const html = manager._buildAlbumHtml('T', pages);
+        expect(html).toContain('class="photo-album__item"');
+        expect(html).not.toContain('--frame-');
+        expect(html).not.toContain('--filter-');
+      });
+
+      it('should add frame modifier class to figure', () => {
+        const pages = [makePage('1', [makeImage('data:img', '', 'shadow', 'none')])];
+        const html = manager._buildAlbumHtml('T', pages);
+        expect(html).toContain('photo-album__item photo-album__item--frame-shadow');
+      });
+
+      it('should add filter modifier class to figure', () => {
+        const pages = [makePage('1', [makeImage('data:img', '', 'none', 'sepia')])];
+        const html = manager._buildAlbumHtml('T', pages);
+        expect(html).toContain('photo-album__item photo-album__item--filter-sepia');
+      });
+
+      it('should add both frame and filter modifier classes', () => {
+        const pages = [makePage('1', [makeImage('data:img', '', 'polaroid', 'grayscale')])];
+        const html = manager._buildAlbumHtml('T', pages);
+        expect(html).toContain('photo-album__item photo-album__item--frame-polaroid photo-album__item--filter-grayscale');
+      });
+
+      it('should NOT add modifiers to placeholder figures', () => {
+        const pages = [makePage('1', [null])];
+        const html = manager._buildAlbumHtml('T', pages);
+        expect(html).toContain('class="photo-album__item"');
+        expect(html).not.toContain('--frame-');
+      });
+
+      it('should handle images without frame/filter properties (backwards compat)', () => {
+        const pages = [makePage('1', [{ dataUrl: 'data:img', caption: '' }])];
+        const html = manager._buildAlbumHtml('T', pages);
+        expect(html).toContain('class="photo-album__item"');
+        expect(html).not.toContain('--frame-');
+        expect(html).not.toContain('--filter-');
+      });
     });
   });
 });
