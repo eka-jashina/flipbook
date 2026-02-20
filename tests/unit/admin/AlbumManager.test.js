@@ -769,4 +769,246 @@ describe('AlbumManager', () => {
       expect(mockModule._showToast).toHaveBeenCalled();
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _compressImage()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_compressImage()', () => {
+    let mockCtx, mockCanvas, originalCreateElement, imgInstances;
+
+    beforeEach(() => {
+      imgInstances = [];
+
+      // Мок canvas
+      mockCtx = { drawImage: vi.fn() };
+      mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: vi.fn(() => mockCtx),
+        toDataURL: vi.fn(() => 'data:image/jpeg;base64,compressed'),
+      };
+
+      originalCreateElement = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+        if (tag === 'canvas') return mockCanvas;
+        return originalCreateElement(tag);
+      });
+
+      // Мок URL.createObjectURL / revokeObjectURL
+      globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+      globalThis.URL.revokeObjectURL = vi.fn();
+
+      // Мок Image — класс-конструктор для ручного вызова onload/onerror
+      globalThis.Image = class MockImage {
+        constructor() {
+          this.onload = null;
+          this.onerror = null;
+          this.src = '';
+          this.naturalWidth = 800;
+          this.naturalHeight = 600;
+          imgInstances.push(this);
+        }
+      };
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    /** Создать mock-файл с указанным типом */
+    function fakeFile(type = 'image/jpeg') {
+      return new File(['data'], 'photo.jpg', { type });
+    }
+
+    /** Запустить _compressImage и немедленно вызвать onload с заданными размерами */
+    function compressAndLoad(file, w = 800, h = 600) {
+      const promise = manager._compressImage(file);
+      const img = imgInstances[imgInstances.length - 1];
+      img.naturalWidth = w;
+      img.naturalHeight = h;
+      img.onload();
+      return promise;
+    }
+
+    // --- масштабирование ---
+
+    it('should NOT scale images smaller than max dimension', async () => {
+      await compressAndLoad(fakeFile(), 1000, 800);
+      expect(mockCanvas.width).toBe(1000);
+      expect(mockCanvas.height).toBe(800);
+    });
+
+    it('should NOT scale images exactly at max dimension', async () => {
+      await compressAndLoad(fakeFile(), 1920, 1080);
+      expect(mockCanvas.width).toBe(1920);
+      expect(mockCanvas.height).toBe(1080);
+    });
+
+    it('should scale down landscape images exceeding max dimension', async () => {
+      await compressAndLoad(fakeFile(), 3840, 2160);
+      // ratio = 1920/3840 = 0.5
+      expect(mockCanvas.width).toBe(1920);
+      expect(mockCanvas.height).toBe(1080);
+    });
+
+    it('should scale down portrait images exceeding max dimension', async () => {
+      await compressAndLoad(fakeFile(), 2160, 3840);
+      // ratio = 1920/3840 = 0.5
+      expect(mockCanvas.width).toBe(1080);
+      expect(mockCanvas.height).toBe(1920);
+    });
+
+    it('should scale down square images exceeding max dimension', async () => {
+      await compressAndLoad(fakeFile(), 4000, 4000);
+      // ratio = 1920/4000 = 0.48
+      expect(mockCanvas.width).toBe(1920);
+      expect(mockCanvas.height).toBe(1920);
+    });
+
+    it('should scale when only width exceeds max dimension', async () => {
+      await compressAndLoad(fakeFile(), 3000, 1000);
+      // ratio = min(1920/3000, 1920/1000) = 0.64
+      expect(mockCanvas.width).toBe(1920);
+      expect(mockCanvas.height).toBe(640);
+    });
+
+    it('should scale when only height exceeds max dimension', async () => {
+      await compressAndLoad(fakeFile(), 1000, 3000);
+      // ratio = min(1920/1000, 1920/3000) = 0.64
+      expect(mockCanvas.width).toBe(640);
+      expect(mockCanvas.height).toBe(1920);
+    });
+
+    // --- формат вывода ---
+
+    it('should output JPEG for JPEG input', async () => {
+      await compressAndLoad(fakeFile('image/jpeg'));
+      expect(mockCanvas.toDataURL).toHaveBeenCalledWith('image/jpeg', 0.85);
+    });
+
+    it('should output JPEG for WebP input', async () => {
+      await compressAndLoad(fakeFile('image/webp'));
+      expect(mockCanvas.toDataURL).toHaveBeenCalledWith('image/jpeg', 0.85);
+    });
+
+    it('should output PNG for PNG input (preserves transparency)', async () => {
+      mockCanvas.toDataURL.mockReturnValue('data:image/png;base64,pngdata');
+      await compressAndLoad(fakeFile('image/png'));
+      expect(mockCanvas.toDataURL).toHaveBeenCalledWith('image/png');
+    });
+
+    // --- canvas drawImage ---
+
+    it('should call drawImage with correct arguments', async () => {
+      await compressAndLoad(fakeFile(), 800, 600);
+      const img = imgInstances[0];
+      expect(mockCtx.drawImage).toHaveBeenCalledWith(img, 0, 0, 800, 600);
+    });
+
+    // --- ресурсы ---
+
+    it('should create an object URL from the file', async () => {
+      const file = fakeFile();
+      await compressAndLoad(file);
+      expect(URL.createObjectURL).toHaveBeenCalledWith(file);
+    });
+
+    it('should revoke the object URL on success', async () => {
+      await compressAndLoad(fakeFile());
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+    });
+
+    it('should revoke the object URL on error', async () => {
+      const promise = manager._compressImage(fakeFile());
+      const img = imgInstances[0];
+      img.onerror();
+      await expect(promise).rejects.toThrow();
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+    });
+
+    // --- результат ---
+
+    it('should resolve with the compressed data URL', async () => {
+      mockCanvas.toDataURL.mockReturnValue('data:image/jpeg;base64,result123');
+      const result = await compressAndLoad(fakeFile());
+      expect(result).toBe('data:image/jpeg;base64,result123');
+    });
+
+    // --- ошибки ---
+
+    it('should reject when image fails to load', async () => {
+      const promise = manager._compressImage(fakeFile());
+      const img = imgInstances[0];
+      img.onerror();
+      await expect(promise).rejects.toThrow('Не удалось загрузить изображение');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _readPageImageFile() — async с компрессией
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_readPageImageFile()', () => {
+    beforeEach(() => {
+      manager._albumPages = [makePage('1', [])];
+    });
+
+    it('should call _compressImage with the file', async () => {
+      const spy = vi.spyOn(manager, '_compressImage').mockResolvedValue('data:image/jpeg;base64,ok');
+      vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
+      const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+      await manager._readPageImageFile(file, 0, 0);
+      expect(spy).toHaveBeenCalledWith(file);
+    });
+
+    it('should store the compressed data URL in the correct page/slot', async () => {
+      vi.spyOn(manager, '_compressImage').mockResolvedValue('data:image/jpeg;base64,compressed');
+      vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
+      await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
+      expect(manager._albumPages[0].images[0].dataUrl).toBe('data:image/jpeg;base64,compressed');
+    });
+
+    it('should preserve the existing caption', async () => {
+      manager._albumPages = [makePage('1', [{ dataUrl: '', caption: 'Закат' }])];
+      vi.spyOn(manager, '_compressImage').mockResolvedValue('data:image/jpeg;base64,new');
+      vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
+      await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
+      expect(manager._albumPages[0].images[0].caption).toBe('Закат');
+    });
+
+    it('should default caption to empty string when no prior image', async () => {
+      vi.spyOn(manager, '_compressImage').mockResolvedValue('data:image/jpeg;base64,ok');
+      vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
+      await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
+      expect(manager._albumPages[0].images[0].caption).toBe('');
+    });
+
+    it('should call _renderAlbumPages after successful compression', async () => {
+      vi.spyOn(manager, '_compressImage').mockResolvedValue('data:image/jpeg;base64,ok');
+      const renderSpy = vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
+      await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
+      expect(renderSpy).toHaveBeenCalled();
+    });
+
+    it('should NOT crash when page was removed during compression', async () => {
+      vi.spyOn(manager, '_compressImage').mockResolvedValue('data:image/jpeg;base64,ok');
+      vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
+      manager._albumPages = []; // Страница удалена
+      await expect(manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0)).resolves.toBeUndefined();
+    });
+
+    it('should show a toast when compression fails', async () => {
+      vi.spyOn(manager, '_compressImage').mockRejectedValue(new Error('fail'));
+      await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
+      expect(mockModule._showToast).toHaveBeenCalledWith('Ошибка при обработке изображения');
+    });
+
+    it('should NOT call _renderAlbumPages when compression fails', async () => {
+      vi.spyOn(manager, '_compressImage').mockRejectedValue(new Error('fail'));
+      const renderSpy = vi.spyOn(manager, '_renderAlbumPages').mockImplementation(() => {});
+      await manager._readPageImageFile(new File(['x'], 'p.jpg', { type: 'image/jpeg' }), 0, 0);
+      expect(renderSpy).not.toHaveBeenCalled();
+    });
+  });
 });
