@@ -641,7 +641,7 @@ npm run build:prod    # Creates optimized dist/
 Build includes:
 - Terser minification (removes console.log, console.debug, console.info)
 - Gzip + Brotli compression
-- Image optimization (imagemin)
+- Image optimization (Sharp + SVGO via vite-plugin-image-optimizer)
 - CSS minification + code splitting
 - Manual chunks (utils, managers, delegates)
 - PWA Service Worker generation (Workbox)
