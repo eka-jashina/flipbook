@@ -8,6 +8,76 @@ import { CONFIG } from '../../../js/config.js';
 
 const { MAX_RETRIES, INITIAL_RETRY_DELAY, FETCH_TIMEOUT } = CONFIG.NETWORK;
 
+/**
+ * Создаёт мок IndexedDB для тестирования _readAdminConfigFromIDB
+ * @param {Object|null} storedValue — значение, возвращаемое из store.get()
+ * @param {Object} [options] — параметры поведения мока
+ * @param {boolean} [options.openError] — симулировать ошибку открытия БД
+ * @param {boolean} [options.getError] — симулировать ошибку чтения из store
+ * @param {boolean} [options.txError] — симулировать ошибку создания транзакции
+ * @param {boolean} [options.needsUpgrade] — симулировать onupgradeneeded
+ */
+function createIndexedDBMock(storedValue, options = {}) {
+  const { openError = false, getError = false, txError = false, needsUpgrade = false } = options;
+
+  const mockGetReq = {
+    result: storedValue,
+    onsuccess: null,
+    onerror: null,
+  };
+
+  const mockStore = {
+    get: vi.fn(() => {
+      // Запланировать вызов onsuccess/onerror в следующем микротаске
+      Promise.resolve().then(() => {
+        if (getError) {
+          mockGetReq.onerror?.();
+        } else {
+          mockGetReq.onsuccess?.();
+        }
+      });
+      return mockGetReq;
+    }),
+  };
+
+  const mockDb = {
+    objectStoreNames: {
+      contains: vi.fn(() => !needsUpgrade),
+    },
+    createObjectStore: vi.fn(),
+    transaction: vi.fn((storeName, mode) => {
+      if (txError) throw new Error('Transaction failed');
+      return { objectStore: vi.fn(() => mockStore) };
+    }),
+    close: vi.fn(),
+  };
+
+  const mockRequest = {
+    result: mockDb,
+    onupgradeneeded: null,
+    onsuccess: null,
+    onerror: null,
+  };
+
+  const mockIndexedDB = {
+    open: vi.fn(() => {
+      Promise.resolve().then(() => {
+        if (openError) {
+          mockRequest.onerror?.();
+        } else {
+          if (needsUpgrade) {
+            mockRequest.onupgradeneeded?.();
+          }
+          mockRequest.onsuccess?.();
+        }
+      });
+      return mockRequest;
+    }),
+  };
+
+  return { mockIndexedDB, mockDb, mockStore, mockGetReq };
+}
+
 describe('ContentLoader', () => {
   let loader;
   let originalFetch;
@@ -346,6 +416,505 @@ describe('ContentLoader', () => {
       loader.cache.set('test.html', 'content');
       loader.destroy();
       expect(loader.cache.size).toBe(0);
+    });
+  });
+
+  describe('_fetchWithRetry — additional coverage', () => {
+    it('should throw timeout error after all attempts timeout', async () => {
+      // Все 3 попытки зависают → таймаут каждой
+      global.fetch = vi.fn().mockImplementation((_url, options) => {
+        return new Promise((_, reject) => {
+          options?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        });
+      });
+
+      const resultPromise = loader._fetchWithRetry('slow.html', null);
+      const expectPromise = expect(resultPromise)
+        .rejects.toThrow(`Failed to load slow.html after ${MAX_RETRIES} attempts`);
+
+      // Попытка 1 — таймаут
+      await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT);
+      // Retry delay 1
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY);
+      // Попытка 2 — таймаут
+      await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT);
+      // Retry delay 2
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY * 2);
+      // Попытка 3 — таймаут (последняя, без delay)
+      await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT);
+
+      await expectPromise;
+      expect(global.fetch).toHaveBeenCalledTimes(MAX_RETRIES);
+    });
+
+    it('should forward external abort to internal timeout controller', async () => {
+      const externalController = new AbortController();
+      let fetchSignal;
+
+      global.fetch = vi.fn().mockImplementation((_url, options) => {
+        fetchSignal = options?.signal;
+        // Зависший запрос — ждём abort
+        return new Promise((_, reject) => {
+          options?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        });
+      });
+
+      const resultPromise = loader._fetchWithRetry('test.html', externalController.signal);
+      const expectPromise = expect(resultPromise).rejects.toThrow('Aborted');
+
+      // Внешний abort до таймаута
+      externalController.abort();
+
+      await expectPromise;
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use exponential backoff delays', async () => {
+      const delays = [];
+      const originalDelay = loader._delay.bind(loader);
+      vi.spyOn(loader, '_delay').mockImplementation((ms, signal) => {
+        delays.push(ms);
+        return originalDelay(ms, signal);
+      });
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+      });
+
+      const resultPromise = loader._fetchWithRetry('test.html', null);
+      const expectPromise = expect(resultPromise).rejects.toThrow();
+
+      // Advance through retries
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY);
+      await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY * 2);
+
+      await expectPromise;
+
+      // Должно быть MAX_RETRIES - 1 задержек (последняя попытка без delay)
+      expect(delays).toHaveLength(MAX_RETRIES - 1);
+      expect(delays[0]).toBe(INITIAL_RETRY_DELAY);
+      expect(delays[1]).toBe(INITIAL_RETRY_DELAY * 2);
+    });
+
+    it('should abort delay when external signal is aborted during retry wait', async () => {
+      const externalController = new AbortController();
+      let fetchCount = 0;
+
+      global.fetch = vi.fn().mockImplementation(() => {
+        fetchCount++;
+        return Promise.reject(new Error('Network error'));
+      });
+
+      const resultPromise = loader._fetchWithRetry('test.html', externalController.signal);
+      const expectPromise = expect(resultPromise).rejects.toThrow('Aborted');
+
+      // Первая попытка — network error, начинается delay
+      await vi.advanceTimersByTimeAsync(0);
+      // Abort во время ожидания retry delay
+      externalController.abort();
+
+      await expectPromise;
+      expect(fetchCount).toBe(1);
+    });
+
+    it('should clean up timeout and event listeners in finally block', async () => {
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('content'),
+      });
+
+      const controller = new AbortController();
+      const removeEventListenerSpy = vi.spyOn(controller.signal, 'removeEventListener');
+
+      await loader._fetchWithRetry('test.html', controller.signal);
+
+      // clearTimeout должен быть вызван в finally
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      // removeEventListener должен быть вызван для очистки onExternalAbort
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('abort', expect.any(Function));
+    });
+
+    it('should include timeout message in final error when last attempt times out', async () => {
+      global.fetch = vi.fn().mockImplementation((_url, options) => {
+        return new Promise((_, reject) => {
+          options?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        });
+      });
+
+      const resultPromise = loader._fetchWithRetry('api/data', null);
+
+      // Attach rejection handler before advancing timers to avoid unhandled rejection
+      const expectPromise = expect(resultPromise).rejects.toThrow(/Request timeout/);
+
+      // Все 3 попытки — таймаут
+      for (let i = 0; i < MAX_RETRIES; i++) {
+        await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT);
+        if (i < MAX_RETRIES - 1) {
+          await vi.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY * Math.pow(2, i));
+        }
+      }
+
+      await expectPromise;
+    });
+  });
+
+  describe('load — chapter objects and inline content', () => {
+    beforeEach(() => {
+      global.fetch = vi.fn().mockImplementation((url) =>
+        Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(`<content>${url}</content>`),
+        })
+      );
+    });
+
+    it('should accept chapter objects with file property', async () => {
+      const result = await loader.load([{ file: 'page1.html' }]);
+      expect(result).toBe('<content>page1.html</content>');
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle mixed strings and objects', async () => {
+      const result = await loader.load([
+        'page1.html',
+        { file: 'page2.html' },
+      ]);
+      expect(result).toContain('page1.html');
+      expect(result).toContain('page2.html');
+    });
+
+    it('should cache inline htmlContent under file key', async () => {
+      const result = await loader.load([
+        { file: 'ch1', htmlContent: '<p>inline content</p>' },
+      ]);
+
+      expect(result).toBe('<p>inline content</p>');
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(loader.cache.get('ch1')).toBe('<p>inline content</p>');
+    });
+
+    it('should use __inline_ key when file is missing but id is present', async () => {
+      const result = await loader.load([
+        { htmlContent: '<p>no file</p>', id: 'chapter-42' },
+      ]);
+
+      expect(result).toBe('<p>no file</p>');
+      expect(loader.cache.has('__inline_chapter-42')).toBe(true);
+    });
+
+    it('should use __inline_ key when both file and id are missing', async () => {
+      const result = await loader.load([
+        { htmlContent: '<p>anonymous</p>' },
+      ]);
+
+      expect(result).toBe('<p>anonymous</p>');
+      expect(loader.cache.has('__inline_')).toBe(true);
+    });
+
+    it('should mix inline content with fetched URLs', async () => {
+      const result = await loader.load([
+        { file: 'ch1', htmlContent: '<p>inline</p>' },
+        { file: 'remote.html' },
+      ]);
+
+      expect(result).toBe('<p>inline</p>\n<content>remote.html</content>');
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not fetch items that have htmlContent', async () => {
+      await loader.load([
+        { file: 'same.html', htmlContent: '<p>already loaded</p>' },
+      ]);
+
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should handle items with _idb flag that already have htmlContent', async () => {
+      // _idb=true but htmlContent is already present → no IDB loading needed
+      const spy = vi.spyOn(loader, '_loadChaptersFromIDB');
+
+      const result = await loader.load([
+        { file: 'ch1', _idb: true, htmlContent: '<p>preloaded</p>', id: 'ch1' },
+      ]);
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(result).toBe('<p>preloaded</p>');
+    });
+
+    it('should call _loadChaptersFromIDB for _idb items without htmlContent', async () => {
+      vi.spyOn(loader, '_loadChaptersFromIDB').mockResolvedValue();
+
+      await loader.load([
+        { file: 'ch1', _idb: true, id: 'ch1' },
+      ]);
+
+      expect(loader._loadChaptersFromIDB).toHaveBeenCalledWith([
+        expect.objectContaining({ file: 'ch1', _idb: true, id: 'ch1' }),
+      ]);
+    });
+
+    it('should use htmlContent from IDB after loading', async () => {
+      // Мокаем _loadChaptersFromIDB — он подставляет htmlContent в items
+      vi.spyOn(loader, '_loadChaptersFromIDB').mockImplementation(async (items) => {
+        for (const item of items) {
+          item.htmlContent = '<p>from IDB</p>';
+        }
+      });
+
+      const result = await loader.load([
+        { file: 'ch1', _idb: true, id: 'ch1' },
+      ]);
+
+      expect(result).toBe('<p>from IDB</p>');
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should fetch items without file or htmlContent as empty', async () => {
+      // Item без file и без htmlContent — cache key = undefined, не попадает в missing
+      const result = await loader.load([
+        { file: 'page.html' },
+        { htmlContent: '<p>inline</p>', id: 'x' },
+      ]);
+
+      const parts = result.split('\n');
+      expect(parts).toHaveLength(2);
+    });
+  });
+
+  describe('_loadChaptersFromIDB', () => {
+    it('should return without modifying items when config is null', async () => {
+      vi.spyOn(loader, '_readAdminConfigFromIDB').mockResolvedValue(null);
+
+      const items = [{ id: 'ch1', _idb: true }];
+      await loader._loadChaptersFromIDB(items);
+
+      expect(items[0].htmlContent).toBeUndefined();
+    });
+
+    it('should return without modifying items when books array is missing', async () => {
+      vi.spyOn(loader, '_readAdminConfigFromIDB').mockResolvedValue({});
+
+      const items = [{ id: 'ch1', _idb: true }];
+      await loader._loadChaptersFromIDB(items);
+
+      expect(items[0].htmlContent).toBeUndefined();
+    });
+
+    it('should find book by activeBookId', async () => {
+      vi.spyOn(loader, '_readAdminConfigFromIDB').mockResolvedValue({
+        activeBookId: 'book-2',
+        books: [
+          { id: 'book-1', chapters: [{ id: 'ch1', htmlContent: '<p>wrong book</p>' }] },
+          { id: 'book-2', chapters: [{ id: 'ch1', htmlContent: '<p>correct book</p>' }] },
+        ],
+      });
+
+      const items = [{ id: 'ch1', _idb: true }];
+      await loader._loadChaptersFromIDB(items);
+
+      expect(items[0].htmlContent).toBe('<p>correct book</p>');
+    });
+
+    it('should fallback to first book when activeBookId does not match', async () => {
+      vi.spyOn(loader, '_readAdminConfigFromIDB').mockResolvedValue({
+        activeBookId: 'nonexistent',
+        books: [
+          { id: 'book-1', chapters: [{ id: 'ch1', htmlContent: '<p>first book</p>' }] },
+        ],
+      });
+
+      const items = [{ id: 'ch1', _idb: true }];
+      await loader._loadChaptersFromIDB(items);
+
+      expect(items[0].htmlContent).toBe('<p>first book</p>');
+    });
+
+    it('should return when book has no chapters', async () => {
+      vi.spyOn(loader, '_readAdminConfigFromIDB').mockResolvedValue({
+        activeBookId: 'book-1',
+        books: [{ id: 'book-1' }],
+      });
+
+      const items = [{ id: 'ch1', _idb: true }];
+      await loader._loadChaptersFromIDB(items);
+
+      expect(items[0].htmlContent).toBeUndefined();
+    });
+
+    it('should skip chapters without id or htmlContent', async () => {
+      vi.spyOn(loader, '_readAdminConfigFromIDB').mockResolvedValue({
+        activeBookId: 'book-1',
+        books: [{
+          id: 'book-1',
+          chapters: [
+            { id: 'ch1' },                                    // нет htmlContent
+            { htmlContent: '<p>no id</p>' },                   // нет id
+            { id: 'ch2', htmlContent: '<p>valid</p>' },       // валидная
+          ],
+        }],
+      });
+
+      const items = [
+        { id: 'ch1', _idb: true },
+        { id: 'ch2', _idb: true },
+      ];
+      await loader._loadChaptersFromIDB(items);
+
+      expect(items[0].htmlContent).toBeUndefined();
+      expect(items[1].htmlContent).toBe('<p>valid</p>');
+    });
+
+    it('should not modify items when their id is not found in book chapters', async () => {
+      vi.spyOn(loader, '_readAdminConfigFromIDB').mockResolvedValue({
+        activeBookId: 'book-1',
+        books: [{
+          id: 'book-1',
+          chapters: [{ id: 'ch-other', htmlContent: '<p>other</p>' }],
+        }],
+      });
+
+      const items = [{ id: 'ch-missing', _idb: true }];
+      await loader._loadChaptersFromIDB(items);
+
+      expect(items[0].htmlContent).toBeUndefined();
+    });
+
+    it('should warn on error and not throw', async () => {
+      vi.spyOn(loader, '_readAdminConfigFromIDB').mockRejectedValue(new Error('IDB error'));
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const items = [{ id: 'ch1', _idb: true }];
+      await expect(loader._loadChaptersFromIDB(items)).resolves.toBeUndefined();
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'ContentLoader: не удалось загрузить контент из IndexedDB',
+        expect.any(Error)
+      );
+    });
+  });
+
+  describe('_readAdminConfigFromIDB', () => {
+    let originalIndexedDB;
+
+    beforeEach(() => {
+      originalIndexedDB = global.indexedDB;
+    });
+
+    afterEach(() => {
+      global.indexedDB = originalIndexedDB;
+    });
+
+    it('should return config value from IndexedDB', async () => {
+      const configData = { books: [], activeBookId: 'b1' };
+      const { mockIndexedDB } = createIndexedDBMock(configData);
+      global.indexedDB = mockIndexedDB;
+
+      const result = await loader._readAdminConfigFromIDB();
+
+      expect(result).toEqual(configData);
+      expect(mockIndexedDB.open).toHaveBeenCalledWith('flipbook-admin', 1);
+    });
+
+    it('should return null when stored value is undefined', async () => {
+      const { mockIndexedDB } = createIndexedDBMock(undefined);
+      global.indexedDB = mockIndexedDB;
+
+      const result = await loader._readAdminConfigFromIDB();
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null on open error', async () => {
+      const { mockIndexedDB } = createIndexedDBMock(null, { openError: true });
+      global.indexedDB = mockIndexedDB;
+
+      const result = await loader._readAdminConfigFromIDB();
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null on get error', async () => {
+      const { mockIndexedDB } = createIndexedDBMock(null, { getError: true });
+      global.indexedDB = mockIndexedDB;
+
+      const result = await loader._readAdminConfigFromIDB();
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null on transaction error', async () => {
+      const { mockIndexedDB } = createIndexedDBMock(null, { txError: true });
+      global.indexedDB = mockIndexedDB;
+
+      const result = await loader._readAdminConfigFromIDB();
+
+      expect(result).toBeNull();
+    });
+
+    it('should create object store on upgrade if not exists', async () => {
+      const { mockIndexedDB, mockDb } = createIndexedDBMock({ data: true }, { needsUpgrade: true });
+      global.indexedDB = mockIndexedDB;
+
+      await loader._readAdminConfigFromIDB();
+
+      expect(mockDb.createObjectStore).toHaveBeenCalledWith('config');
+    });
+
+    it('should not create object store on upgrade if already exists', async () => {
+      // needsUpgrade=false → objectStoreNames.contains returns true
+      const configData = { books: [] };
+      const { mockIndexedDB, mockDb } = createIndexedDBMock(configData);
+      global.indexedDB = mockIndexedDB;
+
+      await loader._readAdminConfigFromIDB();
+
+      expect(mockDb.createObjectStore).not.toHaveBeenCalled();
+    });
+
+    it('should return null when indexedDB.open throws synchronously', async () => {
+      global.indexedDB = {
+        open: vi.fn(() => { throw new Error('SecurityError'); }),
+      };
+
+      const result = await loader._readAdminConfigFromIDB();
+
+      expect(result).toBeNull();
+    });
+
+    it('should close db after successful get', async () => {
+      const { mockIndexedDB, mockDb } = createIndexedDBMock({ books: [] });
+      global.indexedDB = mockIndexedDB;
+
+      await loader._readAdminConfigFromIDB();
+
+      expect(mockDb.close).toHaveBeenCalled();
+    });
+
+    it('should close db after get error', async () => {
+      const { mockIndexedDB, mockDb } = createIndexedDBMock(null, { getError: true });
+      global.indexedDB = mockIndexedDB;
+
+      await loader._readAdminConfigFromIDB();
+
+      expect(mockDb.close).toHaveBeenCalled();
+    });
+
+    it('should close db after transaction error', async () => {
+      const { mockIndexedDB, mockDb } = createIndexedDBMock(null, { txError: true });
+      global.indexedDB = mockIndexedDB;
+
+      await loader._readAdminConfigFromIDB();
+
+      expect(mockDb.close).toHaveBeenCalled();
     });
   });
 
