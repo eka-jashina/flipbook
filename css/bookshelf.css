@@ -62,6 +62,7 @@
   color: #e8dcc8;
   letter-spacing: 0.04em;
   text-shadow: 0 2px 4px rgb(0, 0, 0, 0.4);
+  animation: bookshelf-header-appear 0.7s cubic-bezier(0, 0, 0.2, 1) backwards;
 }
 
 .bookshelf-subtitle {
@@ -72,6 +73,21 @@
   font-weight: 400;
   color: rgb(232, 220, 200, 0.5);
   letter-spacing: 0.02em;
+  animation: bookshelf-header-appear 0.7s cubic-bezier(0, 0, 0.2, 1) 0.1s backwards;
+}
+
+@keyframes bookshelf-header-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+    filter: blur(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -171,7 +187,9 @@
   border-radius: 4px 8px 8px 4px;
   cursor: pointer;
   perspective: 600px;
-  transition: transform 0.3s ease, filter 0.3s ease;
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.3, 0.64, 1),
+    filter 0.3s ease;
   /* Сброс стилей кнопки */
   background: none;
   font: inherit;
@@ -179,12 +197,12 @@
 }
 
 .bookshelf-book:hover {
-  transform: translateY(-8px);
+  transform: perspective(700px) translateY(-12px) rotateY(-8deg) translateZ(6px);
   z-index: 2;
 }
 
 .bookshelf-book:active {
-  transform: translateY(-4px) scale(0.98);
+  transform: perspective(700px) translateY(-5px) rotateY(-4deg) scale(0.98);
 }
 
 .bookshelf-book:focus-visible {
@@ -384,12 +402,19 @@
   font-family: Georgia, serif;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition:
+    background 0.18s ease,
+    transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1);
   text-align: left;
 }
 
 .bookshelf-menu-item:hover {
   background: rgb(255, 255, 255, 0.1);
+  transform: translateX(3px);
+}
+
+.bookshelf-menu-item:active {
+  transform: translateX(1px);
 }
 
 .bookshelf-menu-item svg {
@@ -432,17 +457,30 @@
   font-size: 13px;
   cursor: pointer;
   transition:
-    background-color var(--timing-transition, 300ms),
-    color var(--timing-transition, 300ms);
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease;
 }
 
 .back-to-shelf-btn:hover {
   background: rgb(0, 0, 0, 0.1);
   color: var(--text-main, #1f1f1f);
+  transform: translateX(-3px);
+  box-shadow: 2px 2px 8px rgb(0, 0, 0, 0.06);
+}
+
+.back-to-shelf-btn:active {
+  transform: translateX(-1px) scale(0.97);
 }
 
 .back-to-shelf-btn svg {
   flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.back-to-shelf-btn:hover svg {
+  transform: translateX(-2px);
 }
 
 /* Показываем только если есть полка */
@@ -543,19 +581,22 @@ body[data-screen="reader"] .bookshelf-screen {
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.25s ease;
 }
 
 .bookshelf-add-btn:hover {
   background: rgb(255, 255, 255, 0.14);
-  border-color: rgb(232, 220, 200, 0.4);
-  transform: translateY(-2px);
+  border-color: rgb(232, 220, 200, 0.45);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgb(0, 0, 0, 0.25), 0 0 0 1px rgb(232, 220, 200, 0.1);
 }
 
 .bookshelf-add-btn:active {
-  transform: translateY(0);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgb(0, 0, 0, 0.2);
 }
 
 .bookshelf-add-btn svg {
@@ -599,6 +640,7 @@ body[data-screen="reader"] .bookshelf-screen {
   background: rgb(255, 255, 255, 0.12);
   color: #e8dcc8;
   border-color: rgb(232, 220, 200, 0.35);
+  transform: translateX(-3px);
 }
 
 .bookshelf-mode-title {
@@ -660,6 +702,14 @@ body[data-screen="reader"] .bookshelf-screen {
   border-radius: 16px;
   background: rgb(232, 220, 200, 0.1);
   color: #e8dcc8;
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.25s ease;
+}
+
+.bookshelf-mode-card:hover .bookshelf-mode-card-icon {
+  transform: scale(1.12);
+  background: rgb(232, 220, 200, 0.18);
 }
 
 .bookshelf-mode-card-title {
