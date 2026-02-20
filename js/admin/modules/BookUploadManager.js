@@ -91,6 +91,7 @@ export class BookUploadManager {
 
     const newChapters = chapters.map(ch => ({
       id: ch.id,
+      title: ch.title || '',
       file: '',
       htmlContent: ch.html,
       bg: '',

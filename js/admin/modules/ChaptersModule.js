@@ -51,6 +51,7 @@ export class ChaptersModule extends BaseModule {
     this.chapterForm = document.getElementById('chapterForm');
     this.cancelModal = document.getElementById('cancelModal');
     this.inputId = document.getElementById('chapterId');
+    this.inputTitle = document.getElementById('chapterTitle');
     this.inputBg = document.getElementById('chapterBg');
     this.inputBgMobile = document.getElementById('chapterBgMobile');
 
@@ -179,8 +180,8 @@ export class ChaptersModule extends BaseModule {
           </svg>
         </div>
         <div class="chapter-info">
-          <div class="chapter-title">${this._escapeHtml(ch.id)}</div>
-          <div class="chapter-meta">${ch.htmlContent ? 'Встроенный контент' : this._escapeHtml(ch.file)}</div>
+          <div class="chapter-title">${this._escapeHtml(ch.title || ch.id)}</div>
+          <div class="chapter-meta">${ch.title ? `${this._escapeHtml(ch.id)} · ` : ''}${ch.htmlContent ? 'Встроенный контент' : this._escapeHtml(ch.file)}</div>
         </div>
         <div class="chapter-actions">
           ${i > 0 ? `<button class="chapter-action-btn" data-action="up" data-index="${i}" title="Вверх">
@@ -306,6 +307,7 @@ export class ChaptersModule extends BaseModule {
       const ch = this.store.getChapters()[editIndex];
       this.modalTitle.textContent = 'Редактировать главу';
       this.inputId.value = ch.id;
+      this.inputTitle.value = ch.title || '';
       this.inputBg.value = ch.bg || '';
       this.inputBgMobile.value = ch.bgMobile || '';
 
@@ -331,8 +333,10 @@ export class ChaptersModule extends BaseModule {
   _handleChapterSubmit(e) {
     e.preventDefault();
 
+    const chapterTitle = this.inputTitle.value.trim();
     const chapter = {
       id: this.inputId.value.trim(),
+      title: chapterTitle || '',
       file: '',
       bg: this.inputBg.value.trim(),
       bgMobile: this.inputBgMobile.value.trim(),

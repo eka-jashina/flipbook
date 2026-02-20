@@ -149,6 +149,7 @@ export function createConfig(adminConfig = null) {
   const CHAPTERS = activeBook?.chapters?.length
     ? activeBook.chapters.map(ch => ({
         id: ch.id,
+        title: ch.title || '',
         file: resolveAssetPath(ch.file),
         htmlContent: ch.htmlContent || null,
         _idb: ch._idb || false,
