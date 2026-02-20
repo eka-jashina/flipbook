@@ -2,7 +2,7 @@ import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import viteCompression from 'vite-plugin-compression';
-import viteImagemin from 'vite-plugin-imagemin';
+import { ViteImageOptimizer } from 'vite-plugin-image-optimizer';
 import autoprefixer from 'autoprefixer';
 import mobileBackgrounds from './vite-plugin-mobile-backgrounds.js';
 
@@ -224,23 +224,23 @@ export default defineConfig(({ command, mode }) => {
         deleteOriginFile: false,
       }),
 
-      // Оптимизация изображений
-      viteImagemin({
-        gifsicle: {
-          optimizationLevel: 7,
-          interlaced: false,
+      // Оптимизация изображений (Sharp + SVGO)
+      ViteImageOptimizer({
+        png: {
+          quality: 80,
+          compressionLevel: 7,
         },
-        optipng: {
-          optimizationLevel: 7,
+        jpeg: {
+          quality: 85,
+          mozjpeg: true,
         },
-        mozjpeg: {
+        gif: {
+          effort: 7,
+        },
+        webp: {
           quality: 85,
         },
-        pngquant: {
-          quality: [0.8, 0.9],
-          speed: 4,
-        },
-        svgo: {
+        svg: {
           plugins: [
             {
               name: 'removeViewBox',
@@ -251,9 +251,6 @@ export default defineConfig(({ command, mode }) => {
               active: true,
             },
           ],
-        },
-        webp: {
-          quality: 85,
         },
       }),
     ],
