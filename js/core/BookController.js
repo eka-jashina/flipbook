@@ -85,7 +85,7 @@ export class BookController {
    */
   _assertDependencies(deps, phase) {
     const missing = Object.entries(deps)
-      .filter(([, value]) => value == null)
+      .filter(([, value]) => value === null || value === undefined)
       .map(([name]) => name);
 
     if (missing.length > 0) {
