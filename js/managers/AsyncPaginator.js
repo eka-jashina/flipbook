@@ -138,7 +138,7 @@ export class AsyncPaginator extends EventEmitter {
         // Выравнивание глав
         if (!isMobile) {
           this.emit("progress", { phase: "align", progress: 65 });
-          this._alignChapters(container, cols, pageWidth);
+          this._alignChapters(container, pageWidth);
           await this._yieldToUI(signal);
         }
 
@@ -330,17 +330,21 @@ export class AsyncPaginator extends EventEmitter {
    * Если глава попадает на нечётную страницу - вставляется пустой спейсер.
    *
    * @param {HTMLElement} container - Контейнер пагинации
-   * @param {HTMLElement} cols - Элемент с колонками
    * @param {number} pageWidth - Ширина одной страницы
    * @private
    */
-  _alignChapters(container, cols, pageWidth) {
+  _alignChapters(container, pageWidth) {
     const markers = [...container.querySelectorAll("[data-chapter-start]")];
-    const colsRect = cols.getBoundingClientRect();
 
+    // offsetLeft вместо getBoundingClientRect:
+    // - Не требует colsRect (один layout-read экономится)
+    // - offsetLeft возвращает позицию относительно offset-parent (cols),
+    //   что эквивалентно markerRect.left - colsRect.left для off-screen контейнера
+    // - Аналогично тому, что делает _calculateChapterStarts
+    // Layout thrashing при вставке spacer'ов неизбежен — каждый spacer меняет
+    // раскладку и влияет на позицию следующих маркеров (это намеренно).
     markers.forEach((marker) => {
-      const markerRect = marker.getBoundingClientRect();
-      const colIndex = Math.round((markerRect.left - colsRect.left) / pageWidth);
+      const colIndex = Math.round(marker.offsetLeft / pageWidth);
 
       if (colIndex % 2 !== 0) {
         const spacer = document.createElement("div");
