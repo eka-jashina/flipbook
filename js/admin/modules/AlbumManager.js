@@ -20,10 +20,30 @@ const IMAGE_QUALITY = 0.85;
 /** Максимальный размер загружаемого файла до сжатия (10 МБ) */
 const IMAGE_MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+/** Доступные рамки для фотографий */
+const FRAME_OPTIONS = [
+  { id: 'none', label: 'Без рамки' },
+  { id: 'thin', label: 'Тонкая' },
+  { id: 'shadow', label: 'Тень' },
+  { id: 'polaroid', label: 'Polaroid' },
+  { id: 'rounded', label: 'Скруглённая' },
+  { id: 'double', label: 'Двойная' },
+];
+
+/** Доступные фильтры для фотографий */
+const FILTER_OPTIONS = [
+  { id: 'none', label: 'Без фильтра' },
+  { id: 'grayscale', label: 'Ч/Б' },
+  { id: 'sepia', label: 'Сепия' },
+  { id: 'contrast', label: 'Контраст' },
+  { id: 'warm', label: 'Тёплый' },
+  { id: 'cool', label: 'Холодный' },
+];
+
 export class AlbumManager {
   constructor(chaptersModule) {
     this._module = chaptersModule;
-    this._albumPages = []; // [{ layout: '1', images: [{dataUrl, caption}] }]
+    this._albumPages = []; // [{ layout: '1', images: [{dataUrl, caption, frame, filter}] }]
   }
 
   get store() { return this._module.store; }
@@ -214,7 +234,51 @@ export class AlbumManager {
       });
       group.appendChild(captionInput);
 
+      // Рамка и фильтр
+      const optionsRow = document.createElement('div');
+      optionsRow.className = 'album-image-options';
+
+      const frameSelect = this._buildOptionSelect(
+        FRAME_OPTIONS, img?.frame || 'none', (val) => {
+          this._ensureImageData(page, i);
+          page.images[i].frame = val;
+        },
+      );
+      optionsRow.appendChild(frameSelect);
+
+      const filterSelect = this._buildOptionSelect(
+        FILTER_OPTIONS, img?.filter || 'none', (val) => {
+          this._ensureImageData(page, i);
+          page.images[i].filter = val;
+        },
+      );
+      optionsRow.appendChild(filterSelect);
+
+      group.appendChild(optionsRow);
+
       container.appendChild(group);
+    }
+  }
+
+  /** Создать <select> для выбора рамки/фильтра */
+  _buildOptionSelect(options, activeId, onChange) {
+    const select = document.createElement('select');
+    select.className = 'album-image-option-select';
+    for (const opt of options) {
+      const option = document.createElement('option');
+      option.value = opt.id;
+      option.textContent = opt.label;
+      if (opt.id === activeId) option.selected = true;
+      select.appendChild(option);
+    }
+    select.addEventListener('change', () => onChange(select.value));
+    return select;
+  }
+
+  /** Гарантировать наличие объекта изображения в слоте */
+  _ensureImageData(page, index) {
+    if (!page.images[index]) {
+      page.images[index] = { dataUrl: '', caption: '', frame: 'none', filter: 'none' };
     }
   }
 
@@ -223,9 +287,12 @@ export class AlbumManager {
       const dataUrl = await this._compressImage(file);
       const page = this._albumPages[pageIndex];
       if (!page) return; // Страница могла быть удалена во время сжатия
+      const prev = page.images[imageIndex];
       page.images[imageIndex] = {
         dataUrl,
-        caption: page.images[imageIndex]?.caption || '',
+        caption: prev?.caption || '',
+        frame: prev?.frame || 'none',
+        filter: prev?.filter || 'none',
       };
       this._renderAlbumPages();
     } catch {
@@ -327,11 +394,20 @@ export class AlbumManager {
         const caption = img.caption
           ? `<figcaption>${this._module._escapeHtml(img.caption)}</figcaption>`
           : '';
-        return `<figure class="photo-album__item"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}">${caption}</figure>`;
+        const modifiers = this._buildItemModifiers(img);
+        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}">${caption}</figure>`;
       });
       return `<div class="photo-album" data-layout="${page.layout}">${figures.join('')}</div>`;
     });
 
     return `<article><h2${h2Class}>${this._module._escapeHtml(title)}</h2>${albumDivs.join('')}</article>`;
+  }
+
+  /** Собрать CSS-модификаторы рамки и фильтра для figure */
+  _buildItemModifiers(img) {
+    let cls = '';
+    if (img.frame && img.frame !== 'none') cls += ` photo-album__item--frame-${img.frame}`;
+    if (img.filter && img.filter !== 'none') cls += ` photo-album__item--filter-${img.filter}`;
+    return cls;
   }
 }

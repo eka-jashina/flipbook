@@ -212,6 +212,37 @@
   gap: 4px;
 }
 
+/* === Рамка и фильтр === */
+.album-image-options {
+  display: flex;
+  gap: 4px;
+  width: 120px;
+}
+
+.album-image-option-select {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 4px;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  font-family: var(--admin-font);
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color var(--admin-transition);
+}
+
+.album-image-option-select:hover {
+  border-color: var(--admin-primary);
+}
+
+.album-image-option-select:focus {
+  border-color: var(--admin-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(107, 83, 64, 0.15);
+}
+
 /* === Мульти-страничный альбом === */
 .album-page-card {
   margin-bottom: 16px;
