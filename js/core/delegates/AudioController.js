@@ -4,6 +4,8 @@
  * Выделен из SettingsDelegate для снижения cyclomatic complexity.
  */
 
+import { sanitizeVolume } from "../../utils/index.js";
+
 export class AudioController {
   /**
    * @param {Object} deps
@@ -22,15 +24,15 @@ export class AudioController {
    */
   apply() {
     if (this._soundManager) {
-      this._soundManager.setEnabled(this._settings.get("soundEnabled"));
-      this._soundManager.setVolume(this._settings.get("soundVolume"));
+      this._soundManager.setEnabled(!!this._settings.get("soundEnabled"));
+      this._soundManager.setVolume(sanitizeVolume(this._settings.get("soundVolume"), 0.3));
     }
 
     // НЕ запускаем воспроизведение ambient — на мобильных браузерах
     // audio требует user gesture. Воспроизведение запустится
     // после первого взаимодействия (открытия книги).
     if (this._ambientManager) {
-      this._ambientManager.setVolume(this._settings.get("ambientVolume"));
+      this._ambientManager.setVolume(sanitizeVolume(this._settings.get("ambientVolume"), 0.5));
     }
   }
 
@@ -89,7 +91,7 @@ export class AudioController {
    */
   handleAmbientVolume(volume) {
     if (this._ambientManager) {
-      this._ambientManager.setVolume(volume);
+      this._ambientManager.setVolume(sanitizeVolume(volume, 0.5));
     }
   }
 }

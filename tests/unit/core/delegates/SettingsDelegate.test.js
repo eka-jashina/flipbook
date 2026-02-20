@@ -14,10 +14,14 @@ const { mockCssVars, mockAnnounce } = vi.hoisted(() => ({
   mockAnnounce: vi.fn(),
 }));
 
-vi.mock('../../../../js/utils/index.js', () => ({
-  cssVars: mockCssVars,
-  announce: mockAnnounce,
-}));
+vi.mock('../../../../js/utils/index.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    cssVars: mockCssVars,
+    announce: mockAnnounce,
+  };
+});
 
 vi.mock('../../../../js/config.js', () => ({
   CONFIG: {
