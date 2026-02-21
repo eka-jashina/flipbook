@@ -147,7 +147,9 @@ export class InstallPrompt {
    */
   _bindBannerEvents() {
     const banner = document.getElementById('install-prompt');
-    if (!banner) return;
+    if (!banner || banner._promptEventsBound) return;
+
+    banner._promptEventsBound = true;
 
     const installBtn = banner.querySelector('.install-prompt__btn--install');
     const dismissBtn = banner.querySelector('.install-prompt__btn--dismiss');

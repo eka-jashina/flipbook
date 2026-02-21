@@ -192,6 +192,7 @@ window.addEventListener('beforeunload', cleanup);
 // Реинициализация при восстановлении из bfcache (возврат через кнопку «Назад» браузера)
 window.addEventListener('pageshow', (event) => {
   if (event.persisted) {
+    cleanup();
     init();
   }
 });
