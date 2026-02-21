@@ -32,6 +32,11 @@
   box-shadow: 0 0 0 2px rgb(107, 83, 64, 0.2);
 }
 
+.book-card:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 2px;
+}
+
 .book-card-info {
   flex: 1;
   min-width: 0;

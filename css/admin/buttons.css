@@ -42,19 +42,37 @@
   background: var(--admin-danger-hover);
 }
 
+/* Размерный модификатор — не перебивает цветовой вариант */
 .btn-small {
   padding: 6px 12px;
   font-size: 12px;
+}
+
+/* Нейтральная кнопка по умолчанию (когда нет цветового варианта) */
+.btn-small:not(.btn-primary, .btn-secondary, .btn-danger) {
   background: var(--admin-bg);
   color: var(--admin-text-secondary);
   border: 1px solid var(--admin-border);
 }
 
-.btn-small:hover {
+.btn-small:not(.btn-primary, .btn-secondary, .btn-danger):hover {
   background: var(--admin-border);
 }
 
+/* Disabled */
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Утилита: отступ сверху для panel-actions */
 .panel-actions {
   display: flex;
   gap: 12px;
+}
+
+.panel-actions--top {
+  margin-top: 20px;
 }

@@ -49,10 +49,6 @@ function setupDOM() {
       <button class="appearance-theme-btn active" data-edit-theme="light">Light</button>
       <button class="appearance-theme-btn" data-edit-theme="dark">Dark</button>
     </div>
-    <div id="pageThemeSwitch">
-      <button class="appearance-theme-btn active" data-edit-theme="light">Light</button>
-      <button class="appearance-theme-btn" data-edit-theme="dark">Dark</button>
-    </div>
     <input id="coverBgStart" type="color" value="#3a2d1f">
     <input id="coverBgEnd" type="color" value="#2a2016">
     <input id="coverText" type="color" value="#f2e9d8">
@@ -158,19 +154,12 @@ describe('AppearanceModule', () => {
       expect(darkBtn.classList.contains('active')).toBe(true);
     });
 
-    it('should sync both cover and page theme switches', () => {
+    it('should toggle active class on single theme switch', () => {
       mod._switchEditTheme('dark');
 
-      const coverBtns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn');
-      const pageBtns = document.querySelectorAll('#pageThemeSwitch .appearance-theme-btn');
-
-      // Cover switch synced
-      expect(coverBtns[0].classList.contains('active')).toBe(false);
-      expect(coverBtns[1].classList.contains('active')).toBe(true);
-
-      // Page switch synced
-      expect(pageBtns[0].classList.contains('active')).toBe(false);
-      expect(pageBtns[1].classList.contains('active')).toBe(true);
+      const btns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn');
+      expect(btns[0].classList.contains('active')).toBe(false);
+      expect(btns[1].classList.contains('active')).toBe(true);
     });
   });
 

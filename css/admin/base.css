@@ -76,3 +76,12 @@ body {
   margin: 0 auto;
   padding: 24px;
 }
+
+.panel-description--spaced {
+  margin-bottom: 20px;
+}
+
+/* Универсальный отступ сверху для одиночных кнопок */
+.btn--top {
+  margin-top: 16px;
+}

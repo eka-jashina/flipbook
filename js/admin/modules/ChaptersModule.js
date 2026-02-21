@@ -141,6 +141,15 @@ export class ChaptersModule extends BaseModule {
       this._handleSelectBook(card.dataset.bookId);
     });
 
+    // Клавиатурная навигация для карточек книг (Enter / Space)
+    this.bookSelector.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('[data-book-id]');
+      if (!card) return;
+      e.preventDefault();
+      this._handleSelectBook(card.dataset.bookId);
+    });
+
     // Удаление активной книги (кнопка в editor)
     this.deleteBookBtn.addEventListener('click', () => {
       this._handleDeleteBook(this.store.getActiveBookId());
@@ -278,7 +287,7 @@ export class ChaptersModule extends BaseModule {
     const activeId = this.store.getActiveBookId();
 
     this.bookSelector.innerHTML = books.map((b, i) => `
-      <div class="book-card${b.id === activeId ? ' active' : ''}" data-book-id="${this._escapeHtml(b.id)}">
+      <div class="book-card${b.id === activeId ? ' active' : ''}" data-book-id="${this._escapeHtml(b.id)}" tabindex="0" role="button" aria-label="${this._escapeHtml(b.title || 'Без названия')}">
         ${books.length > 1 ? `<div class="book-card-drag" title="Перетащите для изменения порядка">
           <svg viewBox="0 0 24 24" width="16" height="16">
             <path fill="currentColor" d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>

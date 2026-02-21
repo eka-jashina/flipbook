@@ -228,7 +228,9 @@ class AdminApp {
 
   _switchEditorTab(tabName) {
     this.editorTabs.forEach(t => {
-      t.classList.toggle('active', t.dataset.editorTab === tabName);
+      const isActive = t.dataset.editorTab === tabName;
+      t.classList.toggle('active', isActive);
+      t.setAttribute('aria-selected', isActive);
     });
     this.editorPanels.forEach(p => {
       const isActive = p.dataset.editorPanel === tabName;

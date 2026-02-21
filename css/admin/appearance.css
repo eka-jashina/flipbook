@@ -118,6 +118,10 @@
   padding: 0 8px;
 }
 
+.setting-fieldset--top {
+  margin-top: 20px;
+}
+
 .settings-grid--inner {
   margin-bottom: 0;
 }
