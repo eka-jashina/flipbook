@@ -7,6 +7,8 @@
  * что позволяет повторно редактировать альбомы после создания.
  */
 
+import { PhotoCropper } from './PhotoCropper.js';
+
 /** Количество изображений для каждого шаблона */
 const LAYOUT_IMAGE_COUNT = {
   '1': 1, '2': 2, '2h': 2,
@@ -52,6 +54,7 @@ export class AlbumManager {
     this._albumPages = []; // [{ layout: '1', images: [{dataUrl, caption, frame, filter, filterIntensity}] }]
     /** @type {number|null} Индекс редактируемой главы (null = создание новой) */
     this._editingChapterIndex = null;
+    this._cropper = new PhotoCropper();
   }
 
   get store() { return this._module.store; }
@@ -224,6 +227,9 @@ export class AlbumManager {
           Фото ${i + 1}
         </span>
         <span class="album-image-slot-num">${i + 1}</span>
+        <button class="album-image-slot-crop" type="button" title="Кадрировать">
+          <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/></svg>
+        </button>
         <button class="album-image-slot-remove" type="button" title="Удалить">&times;</button>
       `;
 
@@ -241,7 +247,13 @@ export class AlbumManager {
 
       slot.addEventListener('click', (e) => {
         if (e.target.closest('.album-image-slot-remove')) return;
+        if (e.target.closest('.album-image-slot-crop')) return;
         fileInput.click();
+      });
+
+      slot.querySelector('.album-image-slot-crop').addEventListener('click', () => {
+        if (!page.images[i]?.dataUrl) return;
+        this._cropPageImage(pageIndex, i);
       });
 
       fileInput.addEventListener('change', () => {
@@ -360,6 +372,26 @@ export class AlbumManager {
   _ensureImageData(page, index) {
     if (!page.images[index]) {
       page.images[index] = { dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: DEFAULT_FILTER_INTENSITY };
+    }
+  }
+
+  /** Открыть диалог кадрирования для изображения */
+  async _cropPageImage(pageIndex, imageIndex) {
+    const page = this._albumPages[pageIndex];
+    if (!page) return;
+    const img = page.images[imageIndex];
+    if (!img?.dataUrl) return;
+
+    try {
+      const cropped = await this._cropper.crop(img.dataUrl);
+      // null = пользователь отменил
+      if (!cropped) return;
+      // Страница могла быть удалена во время кадрирования
+      if (!this._albumPages[pageIndex]) return;
+      this._albumPages[pageIndex].images[imageIndex].dataUrl = cropped;
+      this._renderAlbumPages();
+    } catch {
+      this._module._showToast('Ошибка при кадрировании');
     }
   }
 

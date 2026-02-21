@@ -154,10 +154,10 @@
   border-radius: 6px;
 }
 
-.album-image-slot-remove {
+.album-image-slot-remove,
+.album-image-slot-crop {
   position: absolute;
   top: 4px;
-  right: 4px;
   width: 22px;
   height: 22px;
   display: none;
@@ -170,9 +170,19 @@
   font-size: 14px;
   cursor: pointer;
   z-index: 1;
+  transition: background var(--admin-transition);
 }
 
-.album-image-slot.has-image .album-image-slot-remove {
+.album-image-slot-remove { right: 4px; }
+.album-image-slot-crop { right: 30px; }
+
+.album-image-slot-remove:hover,
+.album-image-slot-crop:hover {
+  background: rgb(0, 0, 0, 0.8);
+}
+
+.album-image-slot.has-image .album-image-slot-remove,
+.album-image-slot.has-image .album-image-slot-crop {
   display: flex;
 }
 
