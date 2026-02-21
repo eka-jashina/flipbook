@@ -22,6 +22,7 @@ This document provides essential context for AI assistants working on this codeb
 - Admin config persistence via localStorage (large content via IndexedDB)
 - PWA — installable as native app, offline access via Service Worker
 - Book import from txt, doc, docx, epub, fb2 formats
+- WYSIWYG chapter editor (Quill) with formatting, tables, and images
 
 **Live Demo:** Deployed to GitHub Pages at `/flipbook/`
 
@@ -125,6 +126,7 @@ flipbook/
 │       ├── appearance.css    # Appearance customization
 │       ├── settings.css      # Settings panel
 │       ├── album.css         # Album/gallery management
+│       ├── editor.css        # Quill WYSIWYG editor styles
 │       ├── export.css        # Export functionality
 │       └── toast.css         # Toast notifications
 │
@@ -140,9 +142,11 @@ flipbook/
 │   │   ├── TimerManager.js   # Debounced timers
 │   │   ├── LRUCache.js       # Page DOM caching
 │   │   ├── TransitionHelper.js  # CSS transition promises
-│   │   ├── HTMLSanitizer.js  # XSS protection
+│   │   ├── HTMLSanitizer.js  # XSS protection (DOMPurify engine)
 │   │   ├── ErrorHandler.js   # Centralized error handling
 │   │   ├── StorageManager.js # localStorage abstraction
+│   │   ├── IdbStorage.js     # IndexedDB wrapper for large data
+│   │   ├── SettingsValidator.js # Settings validation & sanitization
 │   │   ├── SoundManager.js   # Audio playback control
 │   │   ├── AmbientManager.js # Background music
 │   │   ├── RateLimiter.js    # Call rate limiting
@@ -188,11 +192,15 @@ flipbook/
 │   │       ├── DragDelegate.js        # Touch drag coordination
 │   │       ├── DragAnimator.js        # Drag rotation animation
 │   │       ├── DragDOMPreparer.js     # Drag DOM setup
-│   │       └── DragShadowRenderer.js  # Drag shadow effects
+│   │       ├── DragShadowRenderer.js  # Drag shadow effects
+│   │       ├── AudioController.js     # Audio & ambient sound control
+│   │       ├── FontController.js      # Font selection operations
+│   │       └── ThemeController.js     # Theme switching operations
 │   │
 │   └── admin/                 # Admin panel
 │       ├── index.js               # Admin entry point
 │       ├── AdminConfigStore.js    # Persistent admin config storage
+│       ├── AdminConfigDefaults.js # Pure defaults constants
 │       ├── BookParser.js          # Book parsing dispatch
 │       ├── modules/               # Admin functional modules
 │       │   ├── BaseModule.js          # Abstract module base
@@ -203,6 +211,7 @@ flipbook/
 │       │   ├── ChaptersModule.js      # Chapter management
 │       │   ├── ExportModule.js        # Config export
 │       │   ├── FontsModule.js         # Font management
+│       │   ├── QuillEditorWrapper.js  # Quill WYSIWYG editor wrapper
 │       │   ├── SettingsModule.js      # Global settings
 │       │   └── SoundsModule.js        # Sound effects management
 │       └── parsers/               # Book format parsers
@@ -317,13 +326,20 @@ DOM + CSS Animations
 | DragAnimator | `core/delegates/DragAnimator.js` | Drag rotation animation |
 | DragDOMPreparer | `core/delegates/DragDOMPreparer.js` | Drag DOM setup |
 | DragShadowRenderer | `core/delegates/DragShadowRenderer.js` | Drag shadow effects |
+| AudioController | `core/delegates/AudioController.js` | Audio & ambient sound control |
+| FontController | `core/delegates/FontController.js` | Font selection operations |
+| ThemeController | `core/delegates/ThemeController.js` | Theme switching operations |
 | CoreServices | `core/services/CoreServices.js` | DOM, events, timers, storage |
 | AudioServices | `core/services/AudioServices.js` | Sounds & ambient |
 | RenderServices | `core/services/RenderServices.js` | Rendering & animations |
 | ContentServices | `core/services/ContentServices.js` | Loading & pagination |
 | PhotoLightbox | `utils/PhotoLightbox.js` | Photo album lightbox |
 | AdminConfigStore | `admin/AdminConfigStore.js` | Persistent admin configuration |
+| AdminConfigDefaults | `admin/AdminConfigDefaults.js` | Pure defaults constants for admin config |
 | BookParser | `admin/BookParser.js` | Book format parsing dispatch |
+| QuillEditorWrapper | `admin/modules/QuillEditorWrapper.js` | Quill WYSIWYG editor wrapper |
+| IdbStorage | `utils/IdbStorage.js` | IndexedDB wrapper for large data |
+| SettingsValidator | `utils/SettingsValidator.js` | Settings validation & sanitization |
 
 ## Code Conventions
 
@@ -349,7 +365,7 @@ DOM + CSS Animations
 ### JavaScript Patterns
 - ES Modules (import/export)
 - Classes for components
-- No external frameworks (jszip is the only runtime dependency)
+- No external frameworks — minimal runtime dependencies (dompurify, jszip, quill)
 - Async/await for asynchronous operations
 - Destructuring in function parameters
 
@@ -662,7 +678,9 @@ const base = mode === 'production' ? '/flipbook/' : '/';
 ## Dependencies
 
 ### Runtime
+- **dompurify** `^3.3.1` — XSS protection (sanitization engine for HTMLSanitizer)
 - **jszip** `^3.10.1` — ZIP operations (admin export, docx/epub parsing)
+- **quill** `^2.0.3` — WYSIWYG rich text editor (admin chapter editing)
 
 ### Dev Dependencies (key)
 - **vite** `^5.0.0` — Bundler
@@ -698,7 +716,8 @@ const base = mode === 'production' ? '/flipbook/' : '/';
 - Dedicated `accessibility.css` for focus styles
 
 ### Security
-- `HTMLSanitizer.js` for XSS protection
+- `HTMLSanitizer.js` for XSS protection (powered by DOMPurify — protects against mXSS, namespace pollution)
+- `SettingsValidator.js` for validating and sanitizing settings before DOM application
 - Content loaded from same origin only
 - Content Security Policy meta tag in `index.html`
 
