@@ -55,6 +55,17 @@
   border-radius: 4px;
 }
 
+/* ── Защита от скачивания ── */
+
+/* Прозрачный оверлей поверх изображения — блокирует прямой доступ к <img> */
+.photo-album__item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: zoom-in;
+}
+
 .photo-album .photo-album__item img {
   display: block;
   width: 100%;
@@ -67,6 +78,12 @@
   border-radius: 4px;
   background: none;
   animation: none;
+
+  /* Защита от скачивания */
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  pointer-events: none;
 }
 
 /* Поворот фотографий (inline style transform:rotate) */
@@ -81,6 +98,7 @@
   right: 0;
   bottom: 0;
   left: 0;
+  z-index: 2;
   padding: 0.4em 0.6em;
   font-size: 0.75em;
   color: #fff;
@@ -318,10 +336,7 @@ html[data-theme="dark"] .photo-album__item--frame-double {
    LIGHTBOX — полноэкранный просмотр фото
    ═══════════════════════════════════════════ */
 
-/* Курсор zoom-in на фотографиях альбома */
-.photo-album__item img {
-  cursor: zoom-in;
-}
+/* Курсор zoom-in перенесён на ::before оверлей (см. .photo-album__item::before) */
 
 /* Оверлей */
 .lightbox {
@@ -367,6 +382,20 @@ html[data-theme="dark"] .photo-album__item--frame-double {
   border-radius: 4px;
   will-change: transform;
   transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Защита от скачивания */
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  pointer-events: none;
+}
+
+/* Прозрачный щит поверх картинки в лайтбоксе — блокирует прямой доступ */
+.lightbox__shield {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: default;
 }
 
 /* Кнопка закрытия */
@@ -374,6 +403,7 @@ html[data-theme="dark"] .photo-album__item--frame-double {
   position: absolute;
   top: 16px;
   right: 16px;
+  z-index: 2;
   width: 44px;
   height: 44px;
   display: flex;
@@ -402,6 +432,7 @@ html[data-theme="dark"] .photo-album__item--frame-double {
   position: absolute;
   bottom: 20px;
   left: 50%;
+  z-index: 2;
   transform: translateX(-50%);
   max-width: 80%;
   padding: 8px 20px;
