@@ -26,6 +26,8 @@ export class PhotoLightbox {
     this._isOpen = false;
     /** @type {boolean} */
     this._isAnimating = false;
+    /** @type {string} Поворот изображения (например 'rotate(90deg)') */
+    this._rotation = '';
 
     this._onKeyDown = this._onKeyDown.bind(this);
     this._onPopState = this._onPopState.bind(this);
@@ -105,6 +107,10 @@ export class PhotoLightbox {
     const computedFilter = getComputedStyle(imgEl).filter;
     this._img.style.filter = (computedFilter && computedFilter !== 'none') ? computedFilter : '';
 
+    // Перенести поворот с миниатюры (inline style transform:rotate)
+    const rotateMatch = imgEl.style.transform?.match(/rotate\(\d+deg\)/);
+    this._rotation = rotateMatch ? rotateMatch[0] : '';
+
     // Подпись из figcaption
     const figcaption = imgEl.closest('.photo-album__item')?.querySelector('figcaption');
     if (figcaption?.textContent) {
@@ -124,7 +130,7 @@ export class PhotoLightbox {
       requestAnimationFrame(() => {
         // FLIP: Play — убрать трансформацию, картинка поедет в центр
         this._overlay.classList.add('lightbox--active');
-        this._img.style.transform = '';
+        this._img.style.transform = this._rotation || '';
 
         this._isOpen = true;
         this._isAnimating = false;
@@ -170,6 +176,7 @@ export class PhotoLightbox {
       this._isAnimating = false;
       this._originImg = null;
       this._originRect = null;
+      this._rotation = '';
     }, TRANSITION_MS);
   }
 

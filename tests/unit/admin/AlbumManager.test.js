@@ -1136,7 +1136,7 @@ describe('AlbumManager', () => {
     it('should create image data when slot is empty', () => {
       const page = makePage('1', []);
       manager._ensureImageData(page, 0);
-      expect(page.images[0]).toEqual({ dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: 100 });
+      expect(page.images[0]).toEqual({ dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: 100, rotation: 0 });
     });
 
     it('should not overwrite existing image data', () => {
@@ -1149,7 +1149,7 @@ describe('AlbumManager', () => {
     it('should create data when slot is null', () => {
       const page = makePage('1', [null]);
       manager._ensureImageData(page, 0);
-      expect(page.images[0]).toEqual({ dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: 100 });
+      expect(page.images[0]).toEqual({ dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: 100, rotation: 0 });
     });
   });
 

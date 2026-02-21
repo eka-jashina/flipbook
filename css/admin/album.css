@@ -155,7 +155,8 @@
 }
 
 .album-image-slot-remove,
-.album-image-slot-crop {
+.album-image-slot-crop,
+.album-image-slot-rotate {
   position: absolute;
   top: 4px;
   width: 22px;
@@ -175,14 +176,17 @@
 
 .album-image-slot-remove { right: 4px; }
 .album-image-slot-crop { right: 30px; }
+.album-image-slot-rotate { right: 56px; }
 
 .album-image-slot-remove:hover,
-.album-image-slot-crop:hover {
+.album-image-slot-crop:hover,
+.album-image-slot-rotate:hover {
   background: rgb(0, 0, 0, 0.8);
 }
 
 .album-image-slot.has-image .album-image-slot-remove,
-.album-image-slot.has-image .album-image-slot-crop {
+.album-image-slot.has-image .album-image-slot-crop,
+.album-image-slot.has-image .album-image-slot-rotate {
   display: flex;
 }
 

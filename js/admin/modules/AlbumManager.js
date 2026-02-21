@@ -45,6 +45,9 @@ const FILTER_OPTIONS = [
   { id: 'cool', label: 'Холодный' },
 ];
 
+/** Допустимые значения поворота (градусы) */
+const ROTATION_VALUES = [0, 90, 180, 270];
+
 /** Интенсивность фильтра по умолчанию (100 = максимальный эффект) */
 const DEFAULT_FILTER_INTENSITY = 100;
 
@@ -227,6 +230,9 @@ export class AlbumManager {
           Фото ${i + 1}
         </span>
         <span class="album-image-slot-num">${i + 1}</span>
+        <button class="album-image-slot-rotate" type="button" title="Повернуть на 90°">
+          <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47zM7.1 18.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32zM13 4.07V1L8.45 5.55 13 10V6.09c2.84.48 5 2.94 5 5.91s-2.16 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93s-3.05-7.44-7-7.93z"/></svg>
+        </button>
         <button class="album-image-slot-crop" type="button" title="Кадрировать">
           <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/></svg>
         </button>
@@ -237,6 +243,9 @@ export class AlbumManager {
         const imgEl = document.createElement('img');
         imgEl.className = 'album-image-slot-img';
         imgEl.src = img.dataUrl;
+        if (img.rotation) {
+          imgEl.style.transform = `rotate(${img.rotation}deg)`;
+        }
         slot.insertBefore(imgEl, slot.firstChild);
       }
 
@@ -248,12 +257,18 @@ export class AlbumManager {
       slot.addEventListener('click', (e) => {
         if (e.target.closest('.album-image-slot-remove')) return;
         if (e.target.closest('.album-image-slot-crop')) return;
+        if (e.target.closest('.album-image-slot-rotate')) return;
         fileInput.click();
       });
 
       slot.querySelector('.album-image-slot-crop').addEventListener('click', () => {
         if (!page.images[i]?.dataUrl) return;
         this._cropPageImage(pageIndex, i);
+      });
+
+      slot.querySelector('.album-image-slot-rotate').addEventListener('click', () => {
+        if (!page.images[i]?.dataUrl) return;
+        this._rotatePageImage(pageIndex, i);
       });
 
       fileInput.addEventListener('change', () => {
@@ -371,7 +386,7 @@ export class AlbumManager {
   /** Гарантировать наличие объекта изображения в слоте */
   _ensureImageData(page, index) {
     if (!page.images[index]) {
-      page.images[index] = { dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: DEFAULT_FILTER_INTENSITY };
+      page.images[index] = { dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: DEFAULT_FILTER_INTENSITY, rotation: 0 };
     }
   }
 
@@ -395,6 +410,19 @@ export class AlbumManager {
     }
   }
 
+  /** Повернуть изображение на 90° по часовой стрелке */
+  _rotatePageImage(pageIndex, imageIndex) {
+    const page = this._albumPages[pageIndex];
+    if (!page) return;
+    const img = page.images[imageIndex];
+    if (!img?.dataUrl) return;
+
+    const current = img.rotation || 0;
+    const next = ROTATION_VALUES[(ROTATION_VALUES.indexOf(current) + 1) % ROTATION_VALUES.length];
+    img.rotation = next;
+    this._renderAlbumPages();
+  }
+
   async _readPageImageFile(file, pageIndex, imageIndex) {
     try {
       const dataUrl = await this._compressImage(file);
@@ -407,6 +435,7 @@ export class AlbumManager {
         frame: prev?.frame || 'none',
         filter: prev?.filter || 'none',
         filterIntensity: prev?.filterIntensity ?? DEFAULT_FILTER_INTENSITY,
+        rotation: prev?.rotation || 0,
       };
       this._renderAlbumPages();
     } catch {
@@ -543,7 +572,8 @@ export class AlbumManager {
           ? `<figcaption>${this._module._escapeHtml(img.caption)}</figcaption>`
           : '';
         const modifiers = this._buildItemModifiers(img);
-        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}">${caption}</figure>`;
+        const rotateStyle = img.rotation ? ` style="transform:rotate(${img.rotation}deg)"` : '';
+        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}"${rotateStyle}>${caption}</figure>`;
       });
       return `<div class="photo-album" data-layout="${page.layout}">${figures.join('')}</div>`;
     });

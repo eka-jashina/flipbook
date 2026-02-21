@@ -69,6 +69,12 @@
   animation: none;
 }
 
+/* Поворот фотографий (inline style transform:rotate) */
+.photo-album .photo-album__item img[style*="rotate"] {
+  object-fit: cover;
+  object-position: center;
+}
+
 /* Подпись к фотографии */
 .photo-album__item figcaption {
   position: absolute;
