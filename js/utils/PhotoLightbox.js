@@ -49,6 +49,10 @@ export class PhotoLightbox {
     this._img.className = 'lightbox__img';
     this._img.alt = '';
 
+    // Прозрачный щит поверх картинки — блокирует прямой доступ к <img>
+    this._imgShield = document.createElement('div');
+    this._imgShield.className = 'lightbox__shield';
+
     this._closeBtn = document.createElement('button');
     this._closeBtn.className = 'lightbox__close';
     this._closeBtn.type = 'button';
@@ -60,15 +64,24 @@ export class PhotoLightbox {
     this._caption.className = 'lightbox__caption';
 
     this._overlay.appendChild(this._img);
+    this._overlay.appendChild(this._imgShield);
     this._overlay.appendChild(this._closeBtn);
     this._overlay.appendChild(this._caption);
 
-    // Клик по оверлею (но не по картинке) — закрыть
+    // Клик по оверлею или щиту — закрыть
     this._overlay.addEventListener('click', (e) => {
-      if (e.target === this._overlay) this.close();
+      if (e.target === this._overlay || e.target === this._imgShield) this.close();
     });
 
     this._closeBtn.addEventListener('click', () => this.close());
+
+    // Защита от скачивания: блокировка контекстного меню и перетаскивания
+    this._overlay.addEventListener('contextmenu', (e) => {
+      if (e.target === this._img || e.target === this._imgShield) {
+        e.preventDefault();
+      }
+    });
+    this._img.addEventListener('dragstart', (e) => e.preventDefault());
 
     document.body.appendChild(this._overlay);
   }
@@ -78,13 +91,30 @@ export class PhotoLightbox {
    * @param {HTMLElement} container — элемент, на котором слушать клики (обычно .book)
    */
   attach(container) {
+    // Клик по ::before оверлею (на .photo-album__item) открывает лайтбокс
     container.addEventListener('click', (e) => {
-      const img = e.target.closest('.photo-album__item img');
+      const item = e.target.closest('.photo-album__item');
+      if (!item) return;
+      const img = item.querySelector('img');
       if (!img) return;
 
       e.stopPropagation();
       e.preventDefault();
       this.open(img);
+    });
+
+    // Защита от скачивания: блокировка контекстного меню на фото
+    container.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('.photo-album__item')) {
+        e.preventDefault();
+      }
+    });
+
+    // Защита от скачивания: блокировка перетаскивания изображений
+    container.addEventListener('dragstart', (e) => {
+      if (e.target.closest('.photo-album__item')) {
+        e.preventDefault();
+      }
     });
   }
 
