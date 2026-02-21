@@ -2,10 +2,20 @@
 
 > Интерактивная читалка электронных книг с реалистичной 3D-анимацией перелистывания страниц
 
+[![Deploy to GitHub Pages](https://github.com/eka-jashina/flipbook/actions/workflows/deploy.yml/badge.svg)](https://github.com/eka-jashina/flipbook/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+
 [![Vanilla JS](https://img.shields.io/badge/Vanilla-JavaScript-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![ES Modules](https://img.shields.io/badge/ES-Modules-4285F4)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
 [![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![CSS3](https://img.shields.io/badge/CSS3-3D%20Transforms-1572B6?logo=css3)](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Transforms)
+[![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
+
+[![Vitest](https://img.shields.io/badge/Vitest-4.0-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
+[![ESLint](https://img.shields.io/badge/ESLint-9.x-4B32C3?logo=eslint&logoColor=white)](https://eslint.org/)
+[![Stylelint](https://img.shields.io/badge/Stylelint-17.x-263238?logo=stylelint&logoColor=white)](https://stylelint.io/)
 
 [**Live Demo**](https://eka-jashina.github.io/flipbook/) · [Документация](./CLAUDE.md)
 
@@ -17,6 +27,7 @@
 - **Мультиглавная навигация** — поддержка книг с несколькими главами
 - **Книжная полка** — стартовый экран с карточками книг, контекстное меню (читать / редактировать / удалить)
 - **Личный кабинет** — управление книгами, главами, шрифтами, звуками, оформлением
+- **WYSIWYG-редактор** — редактирование глав через Quill с поддержкой форматирования, таблиц и изображений
 - **Мультикнижность** — поддержка нескольких книг, per-book прогресс чтения (кнопка «Продолжить чтение»)
 - **Импорт книг** — загрузка из форматов txt, doc, docx, epub, fb2
 - **Персонализация** — выбор шрифта, размера текста, темы оформления
@@ -112,9 +123,11 @@ flipbook/
 │   │   ├── MediaQueryManager.js    # Реактивные media queries
 │   │   ├── TransitionHelper.js     # Промисификация CSS transitions
 │   │   ├── TimerManager.js         # Управление таймерами с debounce
-│   │   ├── HTMLSanitizer.js        # Защита от XSS
+│   │   ├── HTMLSanitizer.js        # Защита от XSS (движок DOMPurify)
 │   │   ├── ErrorHandler.js         # Централизованная обработка ошибок
 │   │   ├── StorageManager.js       # Абстракция над localStorage
+│   │   ├── IdbStorage.js           # IndexedDB-обёртка для крупных данных
+│   │   ├── SettingsValidator.js    # Валидация и санитизация настроек
 │   │   ├── SoundManager.js         # Управление звуковыми эффектами
 │   │   ├── AmbientManager.js       # Фоновые ambient-звуки
 │   │   ├── RateLimiter.js          # Ограничение частоты вызовов
@@ -160,11 +173,15 @@ flipbook/
 │   │       ├── DragShadowRenderer.js   # Рендеринг теней при drag
 │   │       ├── SettingsDelegate.js     # UI настроек
 │   │       ├── ChapterDelegate.js      # Переключение глав
-│   │       └── LifecycleDelegate.js    # Открытие/закрытие книги
+│   │       ├── LifecycleDelegate.js    # Открытие/закрытие книги
+│   │       ├── AudioController.js      # Управление аудио и ambient
+│   │       ├── FontController.js       # Управление шрифтами
+│   │       └── ThemeController.js      # Управление темами оформления
 │   │
 │   └── admin/                      # Админ-панель
 │       ├── index.js                # Точка входа админки
 │       ├── AdminConfigStore.js     # Персистентное хранилище конфига
+│       ├── AdminConfigDefaults.js  # Константы дефолтных значений конфига
 │       ├── BookParser.js           # Диспетчер парсинга книг
 │       ├── modules/                # Функциональные модули админки
 │       │   ├── BaseModule.js           # Абстрактный базовый модуль
@@ -175,6 +192,7 @@ flipbook/
 │       │   ├── ChaptersModule.js       # Управление главами
 │       │   ├── ExportModule.js         # Экспорт конфигурации
 │       │   ├── FontsModule.js          # Управление шрифтами
+│       │   ├── QuillEditorWrapper.js   # Обёртка WYSIWYG-редактора Quill
 │       │   ├── SettingsModule.js       # Глобальные настройки
 │       │   └── SoundsModule.js         # Управление звуковыми эффектами
 │       └── parsers/                # Парсеры форматов книг
@@ -230,6 +248,7 @@ flipbook/
 │       ├── appearance.css          # Кастомизация оформления
 │       ├── settings.css            # Настройки
 │       ├── album.css               # Фотоальбом
+│       ├── editor.css              # Стили WYSIWYG-редактора Quill
 │       ├── export.css              # Экспорт
 │       └── toast.css               # Toast-уведомления
 │
@@ -355,6 +374,9 @@ npm run dev
 | **DragAnimator** | `core/delegates/DragAnimator.js` | Анимация угла поворота при drag |
 | **DragDOMPreparer** | `core/delegates/DragDOMPreparer.js` | Подготовка DOM для drag |
 | **DragShadowRenderer** | `core/delegates/DragShadowRenderer.js` | Рендеринг теней при drag |
+| **AudioController** | `core/delegates/AudioController.js` | Управление аудио и ambient |
+| **FontController** | `core/delegates/FontController.js` | Управление шрифтами |
+| **ThemeController** | `core/delegates/ThemeController.js` | Управление темами оформления |
 | **CoreServices** | `core/services/CoreServices.js` | Группа: DOM, события, таймеры, storage |
 | **AudioServices** | `core/services/AudioServices.js` | Группа: звуки и ambient |
 | **RenderServices** | `core/services/RenderServices.js` | Группа: рендеринг и анимации |
@@ -365,7 +387,11 @@ npm run dev
 | **ScreenReaderAnnouncer** | `utils/ScreenReaderAnnouncer.js` | Анонсы для скринридеров (a11y) |
 | **RateLimiter** | `utils/RateLimiter.js` | Ограничение частоты вызовов |
 | **AdminConfigStore** | `admin/AdminConfigStore.js` | Персистентное хранилище конфига админки |
+| **AdminConfigDefaults** | `admin/AdminConfigDefaults.js` | Константы дефолтных значений конфига |
 | **BookParser** | `admin/BookParser.js` | Диспетчер парсинга книг |
+| **QuillEditorWrapper** | `admin/modules/QuillEditorWrapper.js` | Обёртка WYSIWYG-редактора Quill |
+| **IdbStorage** | `utils/IdbStorage.js` | IndexedDB-обёртка для крупных данных |
+| **SettingsValidator** | `utils/SettingsValidator.js` | Валидация и санитизация настроек |
 
 ---
 
@@ -377,7 +403,7 @@ npm run dev
 
 - **Управление книгами** — создание, выбор, удаление книг; экран выбора режима создания (загрузка файла или создание вручную)
 - **Загрузка книг** — импорт из txt, doc, docx, epub, fb2
-- **Управление главами** — добавление, редактирование, переупорядочивание глав; переключатель тем оформления (светлая/тёмная) прямо на вкладке «Страницы»
+- **Управление главами** — добавление, редактирование, переупорядочивание глав; WYSIWYG-редактор (Quill) с поддержкой форматирования, таблиц и изображений; переключатель тем оформления (светлая/тёмная) прямо на вкладке «Страницы»
 - **Шрифты** — выбор из встроенных или загрузка кастомных (woff2/ttf/otf)
 - **Звуки** — настройка звуков перелистывания и обложки
 - **Ambient-звуки** — добавление и настройка фоновых звуков
@@ -459,7 +485,8 @@ E2E-тесты используют Page Object модели для абстра
 - JSDoc-документация
 
 ### Безопасность
-- XSS-защита через `HTMLSanitizer`
+- XSS-защита через `HTMLSanitizer` (на базе DOMPurify — защита от mXSS, namespace pollution)
+- Валидация настроек через `SettingsValidator` перед применением к DOM
 - Загрузка контента только с того же origin
 
 ### Content Security Policy (CSP)
@@ -547,7 +574,9 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 ## Зависимости
 
 ### Runtime
+- **dompurify** `^3.3.1` — XSS-защита (движок санитизации HTML)
 - **jszip** `^3.10.1` — ZIP-операции (экспорт конфига, парсинг docx/epub)
+- **quill** `^2.0.3` — WYSIWYG-редактор (редактирование глав в личном кабинете)
 
 ### Dev Dependencies (ключевые)
 - **vite** `^5.0.0` — Бандлер
