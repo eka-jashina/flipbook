@@ -119,6 +119,7 @@ function setupDOM() {
     <button id="albumAddPage" type="button"></button>
     <button id="saveAlbum" type="button"></button>
     <button id="cancelAlbum" type="button"></button>
+    <h2 id="albumHeading">Фотоальбом</h2>
   `;
 }
 
@@ -641,10 +642,9 @@ describe('ChaptersModule', () => {
 
     describe('_buildAlbumHtml()', () => {
       it('should generate article HTML with title', () => {
-        mod._album.albumHideTitle.checked = false;
         const pages = [{ layout: '1', images: [{ dataUrl: 'data:img', caption: 'My photo' }] }];
 
-        const html = mod._album._buildAlbumHtml('Test Album', pages);
+        const html = mod._album._buildAlbumHtml({ title: 'Test Album', hideTitle: false, pages });
 
         expect(html).toContain('<article>');
         expect(html).toContain('<h2>Test Album</h2>');
@@ -654,19 +654,17 @@ describe('ChaptersModule', () => {
       });
 
       it('should add sr-only class when title hidden', () => {
-        mod._album.albumHideTitle.checked = true;
         const pages = [{ layout: '1', images: [{ dataUrl: 'data:img', caption: '' }] }];
 
-        const html = mod._album._buildAlbumHtml('Hidden Title', pages);
+        const html = mod._album._buildAlbumHtml({ title: 'Hidden Title', hideTitle: true, pages });
 
         expect(html).toContain('class="sr-only"');
       });
 
       it('should handle pages with empty image slots', () => {
-        mod._album.albumHideTitle.checked = false;
         const pages = [{ layout: '2', images: [null, { dataUrl: 'data:img', caption: '' }] }];
 
-        const html = mod._album._buildAlbumHtml('Test', pages);
+        const html = mod._album._buildAlbumHtml({ title: 'Test', hideTitle: false, pages });
 
         // Null image produces empty src
         expect(html).toContain('src=""');
@@ -689,8 +687,10 @@ describe('ChaptersModule', () => {
         const chapter = app.store.addChapter.mock.calls[0][0];
         expect(chapter.id).toMatch(/^album_\d+$/);
         expect(chapter.htmlContent).toContain('My Album');
+        expect(chapter.albumData).toBeDefined();
+        expect(chapter.albumData.title).toBe('My Album');
         expect(app._showToast).toHaveBeenCalledWith('Фотоальбом добавлен');
-        expect(app._showView).toHaveBeenCalledWith('editor');
+        expect(app.openEditor).toHaveBeenCalled();
       });
 
       it('should reject if title empty', () => {
