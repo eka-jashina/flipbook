@@ -28,13 +28,18 @@ function createMockModule() {
   return {
     store: {
       addChapter: vi.fn(),
+      updateCover: vi.fn(),
     },
     app: {
       _showView: vi.fn(),
+      _pendingBookId: null,
+      openEditor: vi.fn(),
+      _cleanupPendingBook: vi.fn(),
     },
     _showToast: vi.fn(),
     _escapeHtml: vi.fn((s) => escapeHtml(s)),
     _renderChapters: vi.fn(),
+    _renderBookSelector: vi.fn(),
     _renderJsonPreview: vi.fn(),
   };
 }
@@ -50,6 +55,7 @@ function setupDOM() {
     <button id="albumAddPage" type="button"></button>
     <button id="saveAlbum" type="button"></button>
     <button id="cancelAlbum" type="button"></button>
+    <h2 id="albumHeading">Фотоальбом</h2>
   `;
 }
 
@@ -551,53 +557,50 @@ describe('AlbumManager', () => {
   // ─────────────────────────────────────────────────────────────────────────
 
   describe('генерация HTML (_buildAlbumHtml)', () => {
-    beforeEach(() => {
-      manager.albumHideTitle.checked = false; // заголовок виден по умолчанию
-    });
+    /** Обёртка: создать albumData из title и pages */
+    function buildHtml(title, pages, hideTitle = false) {
+      return manager._buildAlbumHtml({ title, hideTitle, pages });
+    }
 
     it('should wrap output in <article>', () => {
-      const html = manager._buildAlbumHtml('T', [makePage()]);
+      const html = buildHtml('T', [makePage()]);
       expect(html).toMatch(/^<article>/);
       expect(html).toMatch(/<\/article>$/);
     });
 
     it('should include <h2> with album title', () => {
-      const html = manager._buildAlbumHtml('Горный поход', [makePage()]);
+      const html = buildHtml('Горный поход', [makePage()]);
       expect(html).toContain('<h2>Горный поход</h2>');
     });
 
     it('should NOT add class to h2 when hideTitle is false', () => {
-      const html = manager._buildAlbumHtml('Название', [makePage()]);
+      const html = buildHtml('Название', [makePage()], false);
       expect(html).not.toContain('sr-only');
     });
 
     it('should add class="sr-only" to h2 when hideTitle is checked', () => {
-      manager.albumHideTitle.checked = true;
-      const html = manager._buildAlbumHtml('Название', [makePage()]);
+      const html = buildHtml('Название', [makePage()], true);
       expect(html).toContain('class="sr-only"');
     });
 
     it('should include div.photo-album with correct data-layout', () => {
-      const html = manager._buildAlbumHtml('T', [makePage('2h')]);
+      const html = buildHtml('T', [makePage('2h')]);
       expect(html).toContain('data-layout="2h"');
     });
 
     describe('без изображений → placeholder figures', () => {
       it('should generate placeholder figure when image slot contains null', () => {
-        // explicit null entry → placeholder
-        const html = manager._buildAlbumHtml('T', [makePage('1', [null])]);
+        const html = buildHtml('T', [makePage('1', [null])]);
         expect(html).toContain('<figure class="photo-album__item"><img src="" alt=""></figure>');
       });
 
       it('should generate placeholder figure when images array is empty', () => {
-        // empty images[] → _getPageSlots pads with null → placeholder
-        const html = manager._buildAlbumHtml('T', [makePage('1', [])]);
+        const html = buildHtml('T', [makePage('1', [])]);
         expect(html).toContain('<figure class="photo-album__item"><img src="" alt=""></figure>');
       });
 
       it('should generate one placeholder per missing image slot', () => {
-        // layout "2" needs 2 slots; empty images[] → two placeholders
-        const html = manager._buildAlbumHtml('T', [makePage('2', [])]);
+        const html = buildHtml('T', [makePage('2', [])]);
         const matches = html.match(/<figure class="photo-album__item"><img src="" alt=""><\/figure>/g);
         expect(matches).toHaveLength(2);
       });
@@ -606,32 +609,31 @@ describe('AlbumManager', () => {
     describe('с изображениями → img с dataUrl', () => {
       it('should embed the dataUrl in the img src', () => {
         const pages = [makePage('1', [makeImage('data:image/png;base64,abc')])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('src="data:image/png;base64,abc"');
       });
 
       it('should NOT generate a placeholder figure when an image is present', () => {
         const pages = [makePage('1', [makeImage('data:image/png;base64,abc')])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).not.toContain('<img src="" alt="">');
       });
 
       it('should include figcaption when caption is set', () => {
         const pages = [makePage('1', [makeImage('data:image/png;base64,abc', 'Закат')])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('<figcaption>Закат</figcaption>');
       });
 
       it('should NOT include figcaption when caption is empty', () => {
         const pages = [makePage('1', [makeImage('data:image/png;base64,abc', '')])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).not.toContain('<figcaption>');
       });
 
       it('should only include images up to the layout count', () => {
-        // layout '1' → count=1, дополнительное изображение отбрасывается
         const pages = [makePage('1', [makeImage('first'), makeImage('second')])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('first');
         expect(html).not.toContain('second');
       });
@@ -640,7 +642,7 @@ describe('AlbumManager', () => {
     describe('caption экранируется (XSS)', () => {
       it('should escape < and > in caption', () => {
         const pages = [makePage('1', [makeImage('data:image/png;base64,abc', '<b>bold</b>')])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).not.toContain('<b>');
         expect(html).toContain('&lt;b&gt;');
       });
@@ -648,20 +650,20 @@ describe('AlbumManager', () => {
       it('should escape <script> injection in caption', () => {
         const xss = '<script>alert("xss")</script>';
         const pages = [makePage('1', [makeImage('data:image/png;base64,abc', xss)])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).not.toContain('<script>');
         expect(html).toContain('&lt;script&gt;');
       });
 
       it('should escape quotes in caption (used in alt attribute)', () => {
         const pages = [makePage('1', [makeImage('data:image/png;base64,abc', '"quoted"')])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).not.toContain('"quoted"');
         expect(html).toContain('&quot;quoted&quot;');
       });
 
       it('should escape title for XSS protection', () => {
-        const html = manager._buildAlbumHtml('<script>alert(1)</script>', [makePage()]);
+        const html = buildHtml('<script>alert(1)</script>', [makePage()]);
         expect(html).not.toContain('<script>');
         expect(html).toContain('&lt;script&gt;');
       });
@@ -670,14 +672,14 @@ describe('AlbumManager', () => {
     describe('несколько страниц', () => {
       it('should generate one photo-album div per page', () => {
         const pages = [makePage('1'), makePage('2')];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         const matches = html.match(/class="photo-album"/g);
         expect(matches).toHaveLength(2);
       });
 
       it('should preserve each page data-layout', () => {
         const pages = [makePage('1'), makePage('4')];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('data-layout="1"');
         expect(html).toContain('data-layout="4"');
       });
@@ -740,6 +742,18 @@ describe('AlbumManager', () => {
       expect(arg.htmlContent).toContain('<article>');
     });
 
+    it('should include albumData in the chapter data', () => {
+      manager.albumTitleInput.value = 'Мой альбом';
+      manager.albumHideTitle.checked = true;
+      manager._albumPages = [makePage('1', [makeImage()])];
+      manager._handleAlbumSubmit();
+      const arg = mockModule.store.addChapter.mock.calls[0][0];
+      expect(arg.albumData).toBeDefined();
+      expect(arg.albumData.title).toBe('Мой альбом');
+      expect(arg.albumData.hideTitle).toBe(true);
+      expect(arg.albumData.pages).toHaveLength(1);
+    });
+
     it('should generate a chapter id starting with "album_"', () => {
       manager.albumTitleInput.value = 'Тест';
       manager._albumPages = [makePage('1', [makeImage()])];
@@ -759,7 +773,7 @@ describe('AlbumManager', () => {
       manager.albumTitleInput.value = 'Тест';
       manager._albumPages = [makePage('1', [makeImage()])];
       manager._handleAlbumSubmit();
-      expect(mockModule.app._showView).toHaveBeenCalledWith('editor');
+      expect(mockModule.app.openEditor).toHaveBeenCalled();
     });
 
     it('should show a success toast after save', () => {
@@ -1184,13 +1198,14 @@ describe('AlbumManager', () => {
     });
 
     describe('HTML-генерация с рамками и фильтрами', () => {
-      beforeEach(() => {
-        manager.albumHideTitle.checked = false;
-      });
+      /** Обёртка для тестов рамок/фильтров */
+      function buildHtml(title, pages) {
+        return manager._buildAlbumHtml({ title, hideTitle: false, pages });
+      }
 
       it('should NOT add modifier classes or style when frame and filter are "none"', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'none')])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('class="photo-album__item"');
         expect(html).not.toContain('--frame-');
         expect(html).not.toContain('style=');
@@ -1198,33 +1213,33 @@ describe('AlbumManager', () => {
 
       it('should add frame modifier class to figure', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'shadow', 'none')])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('photo-album__item photo-album__item--frame-shadow');
       });
 
       it('should add inline filter style to img', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'sepia', 100)])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('style="filter:sepia(0.75)"');
       });
 
       it('should add frame class and inline filter style together', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'polaroid', 'grayscale', 100)])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('photo-album__item--frame-polaroid');
         expect(html).toContain('style="filter:grayscale(1)"');
       });
 
       it('should NOT add modifiers to placeholder figures', () => {
         const pages = [makePage('1', [null])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('class="photo-album__item"');
         expect(html).not.toContain('--frame-');
       });
 
       it('should handle images without frame/filter properties (backwards compat)', () => {
         const pages = [makePage('1', [{ dataUrl: 'data:img', caption: '' }])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('class="photo-album__item"');
         expect(html).not.toContain('--frame-');
         expect(html).not.toContain('style=');
@@ -1232,14 +1247,14 @@ describe('AlbumManager', () => {
 
       it('should apply reduced filter intensity in inline style', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'grayscale', 50)])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('style="filter:grayscale(0.5)"');
       });
 
       it('should NOT add style when filter intensity is 0', () => {
         // grayscale(0) is visually no effect, but technically still a filter value
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'grayscale', 0)])];
-        const html = manager._buildAlbumHtml('T', pages);
+        const html = buildHtml('T', pages);
         expect(html).toContain('style="filter:grayscale(0)"');
       });
     });

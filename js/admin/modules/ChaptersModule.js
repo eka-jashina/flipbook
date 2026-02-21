@@ -191,16 +191,24 @@ export class ChaptersModule extends BaseModule {
     }
 
     this.chaptersEmpty.hidden = true;
-    this.chaptersList.innerHTML = chapters.map((ch, i) => `
-      <div class="chapter-card" data-index="${i}">
+    this.chaptersList.innerHTML = chapters.map((ch, i) => {
+      const isAlbum = !!ch.albumData;
+      const typeLabel = isAlbum
+        ? '<span class="chapter-type-badge chapter-type-badge--album">Альбом</span>'
+        : '';
+      const metaText = isAlbum
+        ? `${ch.albumData.pages?.length || 0} стр.`
+        : (ch.htmlContent ? 'Встроенный контент' : this._escapeHtml(ch.file));
+      return `
+      <div class="chapter-card${isAlbum ? ' chapter-card--album' : ''}" data-index="${i}">
         <div class="chapter-drag" title="Перетащите для изменения порядка">
           <svg viewBox="0 0 24 24" width="20" height="20">
             <path fill="currentColor" d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
           </svg>
         </div>
         <div class="chapter-info">
-          <div class="chapter-title">${this._escapeHtml(ch.title || ch.id)}</div>
-          <div class="chapter-meta">${ch.title ? `${this._escapeHtml(ch.id)} · ` : ''}${ch.htmlContent ? 'Встроенный контент' : this._escapeHtml(ch.file)}</div>
+          <div class="chapter-title">${this._escapeHtml(ch.title || ch.id)}${typeLabel}</div>
+          <div class="chapter-meta">${ch.title ? `${this._escapeHtml(ch.id)} · ` : ''}${metaText}</div>
         </div>
         <div class="chapter-actions">
           ${i > 0 ? `<button class="chapter-action-btn" data-action="up" data-index="${i}" title="Вверх">
@@ -217,7 +225,8 @@ export class ChaptersModule extends BaseModule {
           </button>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     // Делегирование событий на кнопки
     this.chaptersList.onclick = (e) => {
@@ -240,9 +249,16 @@ export class ChaptersModule extends BaseModule {
           this._renderJsonPreview();
           this._showToast('Порядок изменён');
           break;
-        case 'edit':
-          this._openModal(index);
+        case 'edit': {
+          const chapter = this.store.getChapters()[index];
+          if (chapter?.albumData) {
+            this.app._showView('album');
+            this._album.openForEdit(index);
+          } else {
+            this._openModal(index);
+          }
           break;
+        }
         case 'delete':
           if (confirm('Удалить эту главу?')) {
             this.store.removeChapter(index);

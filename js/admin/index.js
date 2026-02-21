@@ -87,7 +87,11 @@ class AdminApp {
       this._cleanupPendingBook();
       this._showView('bookshelf');
     });
-    this.albumBack.addEventListener('click', () => this._showView('editor'));
+    this.albumBack.addEventListener('click', () => {
+      const hadPending = !!this._pendingBookId;
+      this._cleanupPendingBook();
+      this._showView(hadPending ? 'bookshelf' : 'editor');
+    });
 
     // Карточки выбора режима
     this.modeCards.forEach(card => {
@@ -185,10 +189,21 @@ class AdminApp {
         this.openEditor();
         break;
       }
-      case 'album':
+      case 'album': {
+        // Создать новую книгу-альбом и открыть редактор альбома
+        const albumBookId = `book_${Date.now()}`;
+        this.store.addBook({
+          id: albumBookId,
+          cover: { title: 'Фотоальбом', author: '', bg: '', bgMobile: '' },
+          chapters: [],
+        });
+        this.store.setActiveBook(albumBookId);
+        this._pendingBookId = albumBookId;
+        this._render();
         this._showView('album');
         this.chapters._album.openInView();
         break;
+      }
     }
   }
 
@@ -229,7 +244,7 @@ class AdminApp {
     const chapters = this.store.getChapters();
     const cover = this.store.getCover();
     const isUnchanged = chapters.length === 0
-      && cover.title === 'Новая книга'
+      && (cover.title === 'Новая книга' || cover.title === 'Фотоальбом')
       && !cover.author;
 
     if (isUnchanged) {

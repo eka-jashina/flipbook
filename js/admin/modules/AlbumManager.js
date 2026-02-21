@@ -1,7 +1,10 @@
 /**
  * Менеджер фотоальбомов
- * Управляет созданием мульти-страничных фотоальбомов с раскладками
+ * Управляет созданием и редактированием мульти-страничных фотоальбомов с раскладками
  * Работает как полноэкранный вид (screen-view), а не модалка
+ *
+ * Хранит структурированные данные альбома (albumData) в главе,
+ * что позволяет повторно редактировать альбомы после создания.
  */
 
 /** Количество изображений для каждого шаблона */
@@ -47,6 +50,8 @@ export class AlbumManager {
   constructor(chaptersModule) {
     this._module = chaptersModule;
     this._albumPages = []; // [{ layout: '1', images: [{dataUrl, caption, frame, filter, filterIntensity}] }]
+    /** @type {number|null} Индекс редактируемой главы (null = создание новой) */
+    this._editingChapterIndex = null;
   }
 
   get store() { return this._module.store; }
@@ -58,6 +63,7 @@ export class AlbumManager {
     this.albumAddPageBtn = document.getElementById('albumAddPage');
     this.saveAlbumBtn = document.getElementById('saveAlbum');
     this.cancelAlbumBtn = document.getElementById('cancelAlbum');
+    this.albumHeading = document.getElementById('albumHeading');
   }
 
   bindEvents() {
@@ -66,16 +72,44 @@ export class AlbumManager {
     this.cancelAlbumBtn.addEventListener('click', () => this._cancelAlbum());
   }
 
-  /** Открыть как полноэкранный вид (вызывается из роутера) */
+  /** Открыть для создания нового альбома (вызывается из роутера) */
   openInView() {
+    this._editingChapterIndex = null;
     this._albumPages = [{ layout: '1', images: [] }];
     this.albumTitleInput.value = '';
     this.albumHideTitle.checked = true;
+    this._updateUI();
     this._renderAlbumPages();
   }
 
+  /** Открыть для редактирования существующего альбома */
+  openForEdit(chapterIndex) {
+    this._editingChapterIndex = chapterIndex;
+    const chapter = this.store.getChapters()[chapterIndex];
+    if (!chapter?.albumData) return;
+
+    const data = chapter.albumData;
+    this.albumTitleInput.value = data.title || '';
+    this.albumHideTitle.checked = data.hideTitle !== false;
+    this._albumPages = structuredClone(data.pages) || [{ layout: '1', images: [] }];
+    this._updateUI();
+    this._renderAlbumPages();
+  }
+
+  /** Обновить UI в зависимости от режима (создание / редактирование) */
+  _updateUI() {
+    const isEditing = this._editingChapterIndex !== null;
+    this.saveAlbumBtn.textContent = isEditing ? 'Сохранить альбом' : 'Добавить альбом';
+    if (this.albumHeading) {
+      this.albumHeading.textContent = isEditing ? 'Редактирование альбома' : 'Фотоальбом';
+    }
+  }
+
   _cancelAlbum() {
-    this._module.app._showView('editor');
+    const app = this._module.app;
+    const hadPending = !!app._pendingBookId;
+    app._cleanupPendingBook();
+    app._showView(hadPending ? 'bookshelf' : 'editor');
   }
 
   _addAlbumPage() {
@@ -409,32 +443,66 @@ export class AlbumManager {
       return;
     }
 
-    const htmlContent = this._buildAlbumHtml(title, this._albumPages);
+    // Собрать структурированные данные альбома
+    const albumData = {
+      title,
+      hideTitle: this.albumHideTitle.checked,
+      pages: structuredClone(this._albumPages),
+    };
 
-    const chapterId = `album_${Date.now()}`;
-    this.store.addChapter({
-      id: chapterId,
-      file: '',
-      htmlContent,
-      bg: '',
-      bgMobile: '',
-    });
+    // Сгенерировать HTML из структурированных данных
+    const htmlContent = this._buildAlbumHtml(albumData);
 
-    // Вернуться к редактору и обновить список глав
+    if (this._editingChapterIndex !== null) {
+      // Редактирование существующего альбома
+      const existing = this.store.getChapters()[this._editingChapterIndex];
+      this.store.updateChapter(this._editingChapterIndex, {
+        ...existing,
+        title: title,
+        htmlContent,
+        albumData,
+      });
+      this._module._showToast('Фотоальбом обновлён');
+    } else {
+      // Создание нового альбома
+      const chapterId = `album_${Date.now()}`;
+      this.store.addChapter({
+        id: chapterId,
+        title: title,
+        file: '',
+        htmlContent,
+        albumData,
+        bg: '',
+        bgMobile: '',
+      });
+      this._module._showToast('Фотоальбом добавлен');
+    }
+
+    const app = this._module.app;
+
+    // Если книга была создана как pending (из mode-selector), подтвердить её
+    if (app._pendingBookId) {
+      this.store.updateCover({ title });
+      app._pendingBookId = null;
+    }
+
+    // Вернуться к редактору и обновить
     this._module._renderChapters();
+    this._module._renderBookSelector();
     this._module._renderJsonPreview();
-    this._module.app._showView('editor');
-    this._module._showToast('Фотоальбом добавлен');
+    app.openEditor();
   }
 
   /**
    * Сгенерировать HTML-разметку мульти-страничного фотоальбома
+   * из структурированных данных
+   * @param {Object} albumData - { title, hideTitle, pages }
+   * @returns {string} HTML-строка
    */
-  _buildAlbumHtml(title, pages) {
-    const hideTitle = this.albumHideTitle.checked;
-    const h2Class = hideTitle ? ' class="sr-only"' : '';
+  _buildAlbumHtml(albumData) {
+    const h2Class = albumData.hideTitle ? ' class="sr-only"' : '';
 
-    const albumDivs = pages.map(page => {
+    const albumDivs = albumData.pages.map(page => {
       const figures = this._getPageSlots(page).map(img => {
         if (!img?.dataUrl) {
           return '<figure class="photo-album__item"><img src="" alt=""></figure>';
@@ -450,7 +518,7 @@ export class AlbumManager {
       return `<div class="photo-album" data-layout="${page.layout}">${figures.join('')}</div>`;
     });
 
-    return `<article><h2${h2Class}>${this._module._escapeHtml(title)}</h2>${albumDivs.join('')}</article>`;
+    return `<article><h2${h2Class}>${this._module._escapeHtml(albumData.title)}</h2>${albumDivs.join('')}</article>`;
   }
 
   /** Собрать CSS-модификаторы рамки для figure */
