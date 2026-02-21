@@ -3,6 +3,16 @@
  */
 import { BaseModule } from './BaseModule.js';
 
+/** Конфигурация переключателей видимости */
+const VISIBILITY_TOGGLES = [
+  { key: 'fontSize', label: 'Размер шрифта' },
+  { key: 'theme', label: 'Тема' },
+  { key: 'font', label: 'Шрифт' },
+  { key: 'fullscreen', label: 'Полноэкранный режим' },
+  { key: 'sound', label: 'Звук перелистывания' },
+  { key: 'ambient', label: 'Атмосфера' },
+];
+
 export class SettingsModule extends BaseModule {
   cacheDOM() {
     this.defaultFont = document.getElementById('defaultFont');
@@ -17,8 +27,9 @@ export class SettingsModule extends BaseModule {
     this.saveSettingsBtn = document.getElementById('saveSettings');
     this.resetSettingsBtn = document.getElementById('resetSettings');
 
-    // Видимость настроек
+    // Видимость настроек — контейнер + генерация переключателей
     this.visibilityToggles = document.getElementById('visibilityToggles');
+    this._renderVisibilityTogglesHTML();
   }
 
   bindEvents() {
@@ -87,6 +98,16 @@ export class SettingsModule extends BaseModule {
     this.defaultAmbientGroup.innerHTML = ambients.map(a =>
       `<button class="setting-ambient-btn${a.id === s.ambientType ? ' active' : ''}" type="button" data-ambient="${this._escapeHtml(a.id)}">${this._escapeHtml(a.icon)} ${this._escapeHtml(a.shortLabel || a.label)}</button>`
     ).join('');
+  }
+
+  /** Сгенерировать HTML переключателей видимости из конфигурации */
+  _renderVisibilityTogglesHTML() {
+    this.visibilityToggles.innerHTML = VISIBILITY_TOGGLES.map(({ key, label }) => `
+      <div class="visibility-toggle-row">
+        <span class="visibility-toggle-label">${label}</span>
+        <label class="admin-toggle"><input type="checkbox" data-visibility="${key}" checked><span class="admin-toggle-slider"></span></label>
+      </div>
+    `).join('');
   }
 
   _renderSettingsVisibility() {
