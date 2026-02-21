@@ -60,6 +60,7 @@ class AdminApp {
     this.uploadBack = document.getElementById('uploadBack');
     this.editorBack = document.getElementById('editorBack');
     this.albumBack = document.getElementById('albumBack');
+    this.toShelfLink = document.getElementById('toShelfLink');
 
     // Контейнер карточек режимов (карточки генерируются динамически)
     this.modeCardsContainer = document.getElementById('modeCards');
@@ -93,6 +94,11 @@ class AdminApp {
       const hadPending = !!this._pendingBookId;
       this._cleanupPendingBook();
       this._showView(hadPending ? 'bookshelf' : 'editor');
+    });
+
+    // «На книжную полку» — очистить незавершённую книгу перед уходом
+    this.toShelfLink.addEventListener('click', () => {
+      this._cleanupPendingBook();
     });
 
     // Карточки выбора режима (делегирование событий)
