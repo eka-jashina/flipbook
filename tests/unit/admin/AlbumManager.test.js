@@ -1063,20 +1063,27 @@ describe('AlbumManager', () => {
       expect(result).toBe(' photo-album__item--frame-shadow');
     });
 
-    it('should NOT add filter modifier class (filters use inline style)', () => {
+    it('should add filter modifier class', () => {
       const result = manager._buildItemModifiers({ frame: 'none', filter: 'sepia' });
-      expect(result).toBe('');
+      expect(result).toBe(' photo-album__item--filter-sepia');
     });
 
-    it('should only add frame class when both frame and filter are set', () => {
+    it('should add both frame and filter classes when both are set', () => {
       const result = manager._buildItemModifiers({ frame: 'polaroid', filter: 'grayscale' });
-      expect(result).toBe(' photo-album__item--frame-polaroid');
+      expect(result).toBe(' photo-album__item--frame-polaroid photo-album__item--filter-grayscale');
     });
 
     it('should handle all frame types', () => {
       for (const frame of ['thin', 'shadow', 'polaroid', 'rounded', 'double']) {
         const result = manager._buildItemModifiers({ frame, filter: 'none' });
         expect(result).toContain(`photo-album__item--frame-${frame}`);
+      }
+    });
+
+    it('should handle all filter types', () => {
+      for (const filter of ['grayscale', 'sepia', 'contrast', 'warm', 'cool']) {
+        const result = manager._buildItemModifiers({ frame: 'none', filter });
+        expect(result).toContain(`photo-album__item--filter-${filter}`);
       }
     });
   });
@@ -1217,17 +1224,19 @@ describe('AlbumManager', () => {
         expect(html).toContain('photo-album__item photo-album__item--frame-shadow');
       });
 
-      it('should add inline filter style to img', () => {
+      it('should add filter modifier class to figure', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'sepia', 100)])];
         const html = buildHtml('T', pages);
-        expect(html).toContain('style="filter:sepia(0.75)"');
+        expect(html).toContain('photo-album__item--filter-sepia');
+        expect(html).not.toContain('style=');
       });
 
-      it('should add frame class and inline filter style together', () => {
+      it('should add frame class and filter class together', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'polaroid', 'grayscale', 100)])];
         const html = buildHtml('T', pages);
         expect(html).toContain('photo-album__item--frame-polaroid');
-        expect(html).toContain('style="filter:grayscale(1)"');
+        expect(html).toContain('photo-album__item--filter-grayscale');
+        expect(html).not.toContain('style=');
       });
 
       it('should NOT add modifiers to placeholder figures', () => {
@@ -1245,17 +1254,18 @@ describe('AlbumManager', () => {
         expect(html).not.toContain('style=');
       });
 
-      it('should apply reduced filter intensity in inline style', () => {
+      it('should add filter class regardless of intensity', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'grayscale', 50)])];
         const html = buildHtml('T', pages);
-        expect(html).toContain('style="filter:grayscale(0.5)"');
+        expect(html).toContain('photo-album__item--filter-grayscale');
+        expect(html).not.toContain('style=');
       });
 
-      it('should NOT add style when filter intensity is 0', () => {
-        // grayscale(0) is visually no effect, but technically still a filter value
+      it('should add filter class even when intensity is 0', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'grayscale', 0)])];
         const html = buildHtml('T', pages);
-        expect(html).toContain('style="filter:grayscale(0)"');
+        expect(html).toContain('photo-album__item--filter-grayscale');
+        expect(html).not.toContain('style=');
       });
     });
   });
