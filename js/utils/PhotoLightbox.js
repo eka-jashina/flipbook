@@ -101,6 +101,10 @@ export class PhotoLightbox {
     this._img.src = imgEl.src;
     this._img.alt = imgEl.alt || '';
 
+    // Перенести CSS-фильтр с миниатюры (применяется через класс на figure)
+    const computedFilter = getComputedStyle(imgEl).filter;
+    this._img.style.filter = (computedFilter && computedFilter !== 'none') ? computedFilter : '';
+
     // Подпись из figcaption
     const figcaption = imgEl.closest('.photo-album__item')?.querySelector('figcaption');
     if (figcaption?.textContent) {
@@ -160,6 +164,7 @@ export class PhotoLightbox {
     setTimeout(() => {
       this._overlay.classList.remove('lightbox--visible');
       this._img.style.transform = '';
+      this._img.style.filter = '';
       this._img.src = '';
       this._isOpen = false;
       this._isAnimating = false;

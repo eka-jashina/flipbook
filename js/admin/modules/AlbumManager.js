@@ -511,9 +511,7 @@ export class AlbumManager {
           ? `<figcaption>${this._module._escapeHtml(img.caption)}</figcaption>`
           : '';
         const modifiers = this._buildItemModifiers(img);
-        const filterStyle = this._computeFilterStyle(img.filter, img.filterIntensity);
-        const styleAttr = filterStyle ? ` style="filter:${filterStyle}"` : '';
-        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}"${styleAttr}>${caption}</figure>`;
+        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}">${caption}</figure>`;
       });
       return `<div class="photo-album" data-layout="${page.layout}">${figures.join('')}</div>`;
     });
@@ -521,10 +519,11 @@ export class AlbumManager {
     return `<article><h2${h2Class}>${this._module._escapeHtml(albumData.title)}</h2>${albumDivs.join('')}</article>`;
   }
 
-  /** Собрать CSS-модификаторы рамки для figure */
+  /** Собрать CSS-модификаторы рамки и фильтра для figure */
   _buildItemModifiers(img) {
     let cls = '';
     if (img.frame && img.frame !== 'none') cls += ` photo-album__item--frame-${img.frame}`;
+    if (img.filter && img.filter !== 'none') cls += ` photo-album__item--filter-${img.filter}`;
     return cls;
   }
 
