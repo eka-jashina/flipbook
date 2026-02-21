@@ -1,0 +1,68 @@
+            <!-- === Таб: Настройки чтения === -->
+            <div class="editor-panel" data-editor-panel="defaults">
+              <p class="panel-description" style="margin-bottom: 20px;">Значения, которые читатель увидит при первом открытии этой книги</p>
+
+              <fieldset class="setting-fieldset">
+                <legend class="setting-fieldset-legend">Чтение</legend>
+                <div class="settings-grid settings-grid--inner">
+                  <div class="setting-card">
+                    <label class="setting-label" for="defaultFont">Шрифт</label>
+                    <select class="setting-select" id="defaultFont">
+                      <option value="georgia">Georgia</option>
+                      <option value="merriweather">Merriweather</option>
+                      <option value="libre-baskerville">Libre Baskerville</option>
+                      <option value="inter">Inter</option>
+                      <option value="roboto">Roboto</option>
+                      <option value="open-sans">Open Sans</option>
+                    </select>
+                  </div>
+                  <div class="setting-card">
+                    <label class="setting-label" for="defaultFontSize">Размер шрифта</label>
+                    <div class="setting-range-row">
+                      <input class="setting-range" type="range" id="defaultFontSize" min="14" max="22" value="18">
+                      <span class="setting-range-value" id="fontSizeValue">18px</span>
+                    </div>
+                  </div>
+                  <div class="setting-card">
+                    <label class="setting-label">Тема</label>
+                    <div class="setting-theme-group" id="defaultTheme">
+                      <button class="setting-theme-btn active" type="button" data-theme="light">Светлая</button>
+                      <button class="setting-theme-btn" type="button" data-theme="dark">Тёмная</button>
+                      <button class="setting-theme-btn" type="button" data-theme="bw">Ч/Б</button>
+                    </div>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset class="setting-fieldset" style="margin-top: 20px;">
+                <legend class="setting-fieldset-legend">Звук</legend>
+                <div class="settings-grid settings-grid--inner">
+                  <div class="setting-card">
+                    <label class="setting-label">Звук перелистывания</label>
+                    <div class="setting-toggle-row">
+                      <label class="admin-toggle">
+                        <input type="checkbox" id="defaultSound" checked>
+                        <span class="admin-toggle-slider"></span>
+                      </label>
+                      <span class="setting-toggle-label" id="soundLabel">Включён</span>
+                    </div>
+                  </div>
+                  <div class="setting-card">
+                    <label class="setting-label" for="defaultVolume">Громкость</label>
+                    <div class="setting-range-row">
+                      <input class="setting-range" type="range" id="defaultVolume" min="0" max="100" value="30">
+                      <span class="setting-range-value" id="volumeValue">30%</span>
+                    </div>
+                  </div>
+                  <div class="setting-card">
+                    <label class="setting-label">Атмосфера</label>
+                    <div class="setting-ambient-group" id="defaultAmbient"></div>
+                  </div>
+                </div>
+              </fieldset>
+
+              <div class="panel-actions" style="margin-top: 20px;">
+                <button class="btn btn-primary" id="saveSettings" type="button">Сохранить</button>
+                <button class="btn btn-secondary" id="resetSettings" type="button">Сбросить</button>
+              </div>
+            </div>

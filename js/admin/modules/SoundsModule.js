@@ -3,25 +3,54 @@
  */
 import { BaseModule } from './BaseModule.js';
 
+/** Конфигурация звуковых карточек */
+const SOUND_CARDS = [
+  { key: 'pageFlip', label: 'Перелистывание', placeholder: 'sounds/page-flip.mp3', defaultHint: 'sounds/page-flip.mp3' },
+  { key: 'bookOpen', label: 'Открытие книги', placeholder: 'sounds/cover-flip.mp3', defaultHint: 'sounds/cover-flip.mp3' },
+  { key: 'bookClose', label: 'Закрытие книги', placeholder: 'sounds/cover-flip.mp3', defaultHint: 'sounds/cover-flip.mp3' },
+];
+
 export class SoundsModule extends BaseModule {
   cacheDOM() {
-    this.soundPageFlip = document.getElementById('soundPageFlip');
-    this.soundBookOpen = document.getElementById('soundBookOpen');
-    this.soundBookClose = document.getElementById('soundBookClose');
-    this.soundPageFlipUpload = document.getElementById('soundPageFlipUpload');
-    this.soundBookOpenUpload = document.getElementById('soundBookOpenUpload');
-    this.soundBookCloseUpload = document.getElementById('soundBookCloseUpload');
-    this.soundPageFlipHint = document.getElementById('soundPageFlipHint');
-    this.soundBookOpenHint = document.getElementById('soundBookOpenHint');
-    this.soundBookCloseHint = document.getElementById('soundBookCloseHint');
+    // Контейнер для звуковых карточек
+    this.soundCardsGrid = document.getElementById('soundCardsGrid');
+    this._renderSoundCardsHTML();
+
+    // Кэшируем сгенерированные элементы
+    this._fields = {};
+    this._uploads = {};
+    this._hints = {};
+    for (const { key } of SOUND_CARDS) {
+      this._fields[key] = document.getElementById(`sound-${key}`);
+      this._uploads[key] = document.getElementById(`sound-${key}-upload`);
+      this._hints[key] = document.getElementById(`sound-${key}-hint`);
+    }
+
     this.saveSoundsBtn = document.getElementById('saveSounds');
     this.resetSoundsBtn = document.getElementById('resetSounds');
   }
 
+  /** Сгенерировать HTML звуковых карточек */
+  _renderSoundCardsHTML() {
+    this.soundCardsGrid.innerHTML = SOUND_CARDS.map(({ key, label, placeholder, defaultHint }) => `
+      <div class="setting-card">
+        <label class="setting-label" for="sound-${key}">${label}</label>
+        <div class="sound-input-row">
+          <input class="form-input" type="text" id="sound-${key}" placeholder="${placeholder}">
+          <label class="btn btn-small upload-btn" title="Загрузить файл">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+            <input type="file" id="sound-${key}-upload" accept="audio/*" hidden>
+          </label>
+        </div>
+        <span class="form-hint" id="sound-${key}-hint">Дефолт: ${defaultHint}</span>
+      </div>
+    `).join('');
+  }
+
   bindEvents() {
-    this.soundPageFlipUpload.addEventListener('change', (e) => this._handleSoundUpload(e, 'pageFlip'));
-    this.soundBookOpenUpload.addEventListener('change', (e) => this._handleSoundUpload(e, 'bookOpen'));
-    this.soundBookCloseUpload.addEventListener('change', (e) => this._handleSoundUpload(e, 'bookClose'));
+    for (const { key } of SOUND_CARDS) {
+      this._uploads[key].addEventListener('change', (e) => this._handleSoundUpload(e, key));
+    }
     this.saveSoundsBtn.addEventListener('click', () => this._saveSounds());
     this.resetSoundsBtn.addEventListener('click', () => this._resetSounds());
   }
@@ -32,17 +61,18 @@ export class SoundsModule extends BaseModule {
 
   _renderSounds() {
     const sounds = this.store.getSounds();
-    const fields = { pageFlip: this.soundPageFlip, bookOpen: this.soundBookOpen, bookClose: this.soundBookClose };
-    const hints = { pageFlip: this.soundPageFlipHint, bookOpen: this.soundBookOpenHint, bookClose: this.soundBookCloseHint };
 
-    for (const [key, input] of Object.entries(fields)) {
+    for (const { key, defaultHint } of SOUND_CARDS) {
+      const input = this._fields[key];
+      const hint = this._hints[key];
       const value = sounds[key] || '';
+
       if (value.startsWith('data:')) {
         input.value = '';
-        hints[key].textContent = 'Загруженный файл';
+        hint.textContent = 'Загруженный файл';
       } else {
         input.value = value;
-        hints[key].textContent = `Дефолт: ${key === 'pageFlip' ? 'sounds/page-flip.mp3' : 'sounds/cover-flip.mp3'}`;
+        hint.textContent = `Дефолт: ${defaultHint}`;
       }
     }
   }
@@ -66,9 +96,10 @@ export class SoundsModule extends BaseModule {
 
   _saveSounds() {
     const update = {};
-    if (this.soundPageFlip.value.trim()) update.pageFlip = this.soundPageFlip.value.trim();
-    if (this.soundBookOpen.value.trim()) update.bookOpen = this.soundBookOpen.value.trim();
-    if (this.soundBookClose.value.trim()) update.bookClose = this.soundBookClose.value.trim();
+    for (const { key } of SOUND_CARDS) {
+      const value = this._fields[key].value.trim();
+      if (value) update[key] = value;
+    }
 
     const current = this.store.getSounds();
     this.store.updateSounds({

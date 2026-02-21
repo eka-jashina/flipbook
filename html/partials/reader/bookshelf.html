@@ -1,0 +1,41 @@
+    <!-- Книжная полка (стартовый экран) -->
+    <div class="bookshelf-screen" id="bookshelf-screen" hidden>
+      <div class="bookshelf-header">
+        <h1 class="bookshelf-title">Книжная полка</h1>
+        <span class="bookshelf-subtitle" id="bookshelf-subtitle"></span>
+      </div>
+      <div class="bookshelf-shelves" id="bookshelf-shelves"></div>
+      <div class="bookshelf-actions" id="bookshelf-actions">
+        <button type="button" class="bookshelf-add-btn" data-action="add-book" aria-label="Создать книгу">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          Создать книгу
+        </button>
+      </div>
+      <div class="bookshelf-empty" id="bookshelf-empty" hidden>
+        <div class="bookshelf-empty-icon">📚</div>
+        <div class="bookshelf-empty-text">Книги пока не добавлены</div>
+        <button type="button" class="bookshelf-add-btn" data-action="add-book" aria-label="Создать книгу">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          Создать книгу
+        </button>
+      </div>
+      <div class="bookshelf-mode-selector" id="bookshelf-mode-selector" hidden>
+        <div class="bookshelf-mode-header">
+          <button type="button" class="bookshelf-mode-back" data-action="back-to-shelf" aria-label="Назад к полке">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+            Назад
+          </button>
+          <h2 class="bookshelf-mode-title">Как вы хотите создать книгу?</h2>
+          <p class="bookshelf-mode-desc">Выберите способ — вы всегда сможете отредактировать результат</p>
+        </div>
+        <div class="bookshelf-mode-cards" id="bookshelf-mode-cards">
+          <!-- Карточки режимов генерируются из JS -->
+        </div>
+      </div>
+    </div>

@@ -10,6 +10,7 @@ import { AmbientsModule } from './modules/AmbientsModule.js';
 import { AppearanceModule } from './modules/AppearanceModule.js';
 import { FontsModule } from './modules/FontsModule.js';
 import { ExportModule } from './modules/ExportModule.js';
+import { renderModeCards } from './modeCardsData.js';
 
 class AdminApp {
   constructor(store) {
@@ -60,8 +61,9 @@ class AdminApp {
     this.editorBack = document.getElementById('editorBack');
     this.albumBack = document.getElementById('albumBack');
 
-    // Карточки режимов
-    this.modeCards = document.querySelectorAll('.mode-card');
+    // Контейнер карточек режимов (карточки генерируются динамически)
+    this.modeCardsContainer = document.getElementById('modeCards');
+    renderModeCards(this.modeCardsContainer);
 
     // Toast
     this.toast = document.getElementById('toast');
@@ -89,9 +91,10 @@ class AdminApp {
     });
     this.albumBack.addEventListener('click', () => this._showView('editor'));
 
-    // Карточки выбора режима
-    this.modeCards.forEach(card => {
-      card.addEventListener('click', () => this._handleModeSelect(card.dataset.mode));
+    // Карточки выбора режима (делегирование событий)
+    this.modeCardsContainer.addEventListener('click', (e) => {
+      const card = e.target.closest('.mode-card');
+      if (card) this._handleModeSelect(card.dataset.mode);
     });
 
     // Табы редактора

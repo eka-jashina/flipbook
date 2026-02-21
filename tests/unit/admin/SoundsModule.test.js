@@ -24,15 +24,7 @@ function createMockApp() {
 
 function setupDOM() {
   document.body.innerHTML = `
-    <input id="soundPageFlip" type="text">
-    <input id="soundBookOpen" type="text">
-    <input id="soundBookClose" type="text">
-    <input id="soundPageFlipUpload" type="file">
-    <input id="soundBookOpenUpload" type="file">
-    <input id="soundBookCloseUpload" type="file">
-    <span id="soundPageFlipHint"></span>
-    <span id="soundBookOpenHint"></span>
-    <span id="soundBookCloseHint"></span>
+    <div id="soundCardsGrid"></div>
     <button id="saveSounds"></button>
     <button id="resetSounds"></button>
   `;
@@ -55,12 +47,19 @@ describe('SoundsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('cacheDOM()', () => {
-    it('should cache all required DOM elements', () => {
-      expect(mod.soundPageFlip).toBe(document.getElementById('soundPageFlip'));
-      expect(mod.soundBookOpen).toBe(document.getElementById('soundBookOpen'));
-      expect(mod.soundBookClose).toBe(document.getElementById('soundBookClose'));
+    it('should generate sound cards and cache DOM elements', () => {
+      expect(mod._fields.pageFlip).toBe(document.getElementById('sound-pageFlip'));
+      expect(mod._fields.bookOpen).toBe(document.getElementById('sound-bookOpen'));
+      expect(mod._fields.bookClose).toBe(document.getElementById('sound-bookClose'));
+      expect(mod._uploads.pageFlip).toBe(document.getElementById('sound-pageFlip-upload'));
+      expect(mod._hints.pageFlip).toBe(document.getElementById('sound-pageFlip-hint'));
       expect(mod.saveSoundsBtn).toBe(document.getElementById('saveSounds'));
       expect(mod.resetSoundsBtn).toBe(document.getElementById('resetSounds'));
+    });
+
+    it('should generate 3 sound cards in the grid', () => {
+      const cards = document.querySelectorAll('#soundCardsGrid .setting-card');
+      expect(cards.length).toBe(3);
     });
   });
 
@@ -72,16 +71,16 @@ describe('SoundsModule', () => {
     it('should populate inputs with store sounds', () => {
       mod._renderSounds();
 
-      expect(mod.soundPageFlip.value).toBe('sounds/page-flip.mp3');
-      expect(mod.soundBookOpen.value).toBe('sounds/cover-flip.mp3');
-      expect(mod.soundBookClose.value).toBe('sounds/cover-flip.mp3');
+      expect(mod._fields.pageFlip.value).toBe('sounds/page-flip.mp3');
+      expect(mod._fields.bookOpen.value).toBe('sounds/cover-flip.mp3');
+      expect(mod._fields.bookClose.value).toBe('sounds/cover-flip.mp3');
     });
 
     it('should show default hint for file paths', () => {
       mod._renderSounds();
 
-      expect(mod.soundPageFlipHint.textContent).toBe('Дефолт: sounds/page-flip.mp3');
-      expect(mod.soundBookOpenHint.textContent).toBe('Дефолт: sounds/cover-flip.mp3');
+      expect(mod._hints.pageFlip.textContent).toBe('Дефолт: sounds/page-flip.mp3');
+      expect(mod._hints.bookOpen.textContent).toBe('Дефолт: sounds/cover-flip.mp3');
     });
 
     it('should show "Загруженный файл" hint for data URLs', () => {
@@ -93,8 +92,8 @@ describe('SoundsModule', () => {
 
       mod._renderSounds();
 
-      expect(mod.soundPageFlip.value).toBe('');
-      expect(mod.soundPageFlipHint.textContent).toBe('Загруженный файл');
+      expect(mod._fields.pageFlip.value).toBe('');
+      expect(mod._hints.pageFlip.textContent).toBe('Загруженный файл');
     });
   });
 
@@ -162,9 +161,9 @@ describe('SoundsModule', () => {
 
   describe('_saveSounds()', () => {
     it('should save input values to store', () => {
-      mod.soundPageFlip.value = 'custom/flip.mp3';
-      mod.soundBookOpen.value = 'custom/open.mp3';
-      mod.soundBookClose.value = '';
+      mod._fields.pageFlip.value = 'custom/flip.mp3';
+      mod._fields.bookOpen.value = 'custom/open.mp3';
+      mod._fields.bookClose.value = '';
 
       mod._saveSounds();
 
@@ -177,9 +176,9 @@ describe('SoundsModule', () => {
     });
 
     it('should keep current values for empty inputs', () => {
-      mod.soundPageFlip.value = '';
-      mod.soundBookOpen.value = '';
-      mod.soundBookClose.value = '';
+      mod._fields.pageFlip.value = '';
+      mod._fields.bookOpen.value = '';
+      mod._fields.bookClose.value = '';
 
       mod._saveSounds();
 

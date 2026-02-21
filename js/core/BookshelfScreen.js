@@ -9,6 +9,8 @@
  * Динамические элементы (полки, карточки книг) клонируются из <template>.
  */
 
+import { renderModeCards } from '../admin/modeCardsData.js';
+
 const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
 const READING_SESSION_KEY = 'flipbook-reading-session';
 const BOOKS_PER_SHELF = 5;
@@ -54,6 +56,17 @@ export class BookshelfScreen {
       header: container.querySelector('.bookshelf-header'),
       modeSelector: container.querySelector('#bookshelf-mode-selector'),
     };
+
+    // Генерация карточек режимов из общих данных
+    const modeCardsContainer = container.querySelector('#bookshelf-mode-cards');
+    if (modeCardsContainer) {
+      renderModeCards(modeCardsContainer, {
+        cardClass: 'bookshelf-mode-card',
+        iconClass: 'bookshelf-mode-card-icon',
+        titleClass: 'bookshelf-mode-card-title',
+        descClass: 'bookshelf-mode-card-desc',
+      });
+    }
   }
 
   /**
