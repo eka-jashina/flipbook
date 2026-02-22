@@ -126,9 +126,35 @@
   background: rgb(107, 83, 64, 0.06);
 }
 
+.album-image-slot.drag-over {
+  border-color: var(--admin-primary);
+  border-style: solid;
+  background: rgb(107, 83, 64, 0.12);
+  box-shadow: 0 0 0 2px rgb(107, 83, 64, 0.25);
+}
+
 .album-image-slot.has-image {
   border-style: solid;
   border-color: var(--admin-border);
+}
+
+.album-image-slot.loading {
+  pointer-events: none;
+}
+
+.album-image-slot.loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgb(255, 255, 255, 0.6);
+  border-radius: inherit;
+  animation: album-slot-pulse 1s ease-in-out infinite;
+}
+
+@keyframes album-slot-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
 }
 
 .album-image-slot-placeholder {

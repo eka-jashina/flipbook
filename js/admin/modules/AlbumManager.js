@@ -299,6 +299,24 @@ export class AlbumManager {
         fileInput.value = '';
       });
 
+      // Drag & Drop загрузка фото
+      slot.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        slot.classList.add('drag-over');
+      });
+      slot.addEventListener('dragleave', () => {
+        slot.classList.remove('drag-over');
+      });
+      slot.addEventListener('drop', (e) => {
+        e.preventDefault();
+        slot.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+        if (!this._module._validateFile(file, { maxSize: IMAGE_MAX_FILE_SIZE, mimePrefix: 'image/' })) return;
+        this._readPageImageFile(file, pageIndex, i);
+      });
+
       slot.querySelector('.album-image-slot-remove').addEventListener('click', () => {
         this._isDirty = true;
         page.images[i] = null;
@@ -449,6 +467,10 @@ export class AlbumManager {
   }
 
   async _readPageImageFile(file, pageIndex, imageIndex) {
+    // Показать индикатор загрузки на слоте
+    const slotEl = this._getSlotElement(pageIndex, imageIndex);
+    slotEl?.classList.add('loading');
+
     try {
       const dataUrl = await this._compressImage(file);
       const page = this._albumPages[pageIndex];
@@ -465,8 +487,17 @@ export class AlbumManager {
       };
       this._renderAlbumPages();
     } catch {
+      slotEl?.classList.remove('loading');
       this._module._showToast('Ошибка при обработке изображения');
     }
+  }
+
+  /** Получить DOM-элемент слота по индексу страницы и изображения */
+  _getSlotElement(pageIndex, imageIndex) {
+    const pageCard = this.albumPagesEl?.children[pageIndex];
+    if (!pageCard) return null;
+    const slots = pageCard.querySelectorAll('.album-image-slot');
+    return slots[imageIndex] || null;
   }
 
   /**
