@@ -862,7 +862,8 @@ export class AlbumManager {
         const modifiers = this._buildItemModifiers(img);
         const imgStyles = this._buildImgInlineStyle(img);
         const styleAttr = imgStyles ? ` style="${imgStyles}"` : '';
-        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}"${styleAttr}>${caption}</figure>`;
+        const dataAttrs = this._buildImgDataAttrs(img);
+        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}"${styleAttr}${dataAttrs}>${caption}</figure>`;
       });
       return `<div class="photo-album" data-layout="${page.layout}">${figures.join('')}</div>`;
     });
@@ -870,10 +871,11 @@ export class AlbumManager {
     return `<article><h2${h2Class}>${this._module._escapeHtml(albumData.title)}</h2>${albumDivs.join('')}</article>`;
   }
 
-  /** Собрать CSS-модификаторы рамки для figure (фильтр — через inline style) */
+  /** Собрать CSS-модификаторы рамки и фильтра для figure */
   _buildItemModifiers(img) {
     let cls = '';
     if (img.frame && img.frame !== 'none') cls += ` photo-album__item--frame-${img.frame}`;
+    if (img.filter && img.filter !== 'none') cls += ` photo-album__item--filter-${img.filter}`;
     return cls;
   }
 
@@ -884,6 +886,23 @@ export class AlbumManager {
     const filterStyle = this._computeFilterStyle(img.filter, img.filterIntensity);
     if (filterStyle) parts.push(`filter:${filterStyle}`);
     return parts.join(';');
+  }
+
+  /**
+   * Собрать data-атрибуты для <img>, чтобы стили выжили после HTML-санитизации.
+   * Санитайзер удаляет inline style, но data-атрибуты из белого списка сохраняются.
+   * AsyncPaginator после санитизации восстанавливает inline-стили из этих атрибутов.
+   */
+  _buildImgDataAttrs(img) {
+    const attrs = [];
+    if (img.filter && img.filter !== 'none') {
+      attrs.push(`data-filter="${img.filter}"`);
+      attrs.push(`data-filter-intensity="${img.filterIntensity ?? DEFAULT_FILTER_INTENSITY}"`);
+    }
+    if (img.rotation) {
+      attrs.push(`data-rotation="${img.rotation}"`);
+    }
+    return attrs.length ? ` ${attrs.join(' ')}` : '';
   }
 
   /**

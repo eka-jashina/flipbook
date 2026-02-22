@@ -98,6 +98,7 @@ export class AsyncPaginator extends EventEmitter {
       // Парсинг
       this.emit("progress", { phase: "parse", progress: 10 });
       const doc = new DOMParser().parseFromString(sanitizedHtml, "text/html");
+      this._restoreAlbumPhotoStyles(doc);
       const articles = [...doc.querySelectorAll("article")];
 
       if (!articles.length) {
@@ -417,6 +418,55 @@ export class AsyncPaginator extends EventEmitter {
     this.emit("progress", { phase: "slice", progress: 100 });
 
     return { sourceElement, pageCount, pageWidth, pageHeight, hasTOC };
+  }
+
+  /**
+   * Восстановить inline-стили фотоальбома из data-атрибутов после санитизации.
+   *
+   * Санитайзер удаляет inline style (для безопасности), но data-атрибуты
+   * из белого списка сохраняются. Этот метод читает data-filter,
+   * data-filter-intensity и data-rotation и применяет соответствующие
+   * CSS filter / transform как inline-стили.
+   *
+   * @param {Document} doc - Распарсенный DOM документа
+   * @private
+   */
+  _restoreAlbumPhotoStyles(doc) {
+    for (const img of doc.querySelectorAll('.photo-album__item img')) {
+      const filter = img.dataset.filter;
+      const intensity = img.dataset.filterIntensity;
+      const rotation = img.dataset.rotation;
+
+      if (filter && filter !== 'none') {
+        const filterStyle = this._computePhotoFilter(filter, Number(intensity) || 100);
+        if (filterStyle) img.style.filter = filterStyle;
+      }
+
+      if (rotation && rotation !== '0') {
+        img.style.transform = `rotate(${rotation}deg)`;
+      }
+    }
+  }
+
+  /**
+   * Вычислить CSS filter для фото альбома
+   * (дублирует логику AlbumManager._computeFilterStyle для изоляции от admin-кода)
+   *
+   * @param {string} filter - Тип фильтра (grayscale, sepia, contrast, warm, cool)
+   * @param {number} intensity - Интенсивность 0–100
+   * @returns {string} CSS filter value
+   * @private
+   */
+  _computePhotoFilter(filter, intensity) {
+    const t = Math.max(0, Math.min(100, intensity)) / 100;
+    switch (filter) {
+      case 'grayscale': return `grayscale(${t})`;
+      case 'sepia': return `sepia(${+(t * 0.75).toFixed(3)})`;
+      case 'contrast': return `contrast(${+(1 + t * 0.35).toFixed(3)})`;
+      case 'warm': return `saturate(${+(1 + t * 0.3).toFixed(3)}) hue-rotate(${+(-t * 10).toFixed(2)}deg)`;
+      case 'cool': return `saturate(${+(1 + t * 0.1).toFixed(3)}) hue-rotate(${+(t * 15).toFixed(2)}deg) brightness(${+(1 + t * 0.05).toFixed(3)})`;
+      default: return '';
+    }
   }
 
   /**
