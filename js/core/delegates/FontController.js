@@ -122,6 +122,7 @@ export class FontController {
     const customFonts = CONFIG.CUSTOM_FONTS;
     if (customFonts?.length) {
       for (const f of customFonts) {
+        if (!f.dataUrl) continue;
         const fontName = `CustomReading_${f.id}`;
         this._registerFont(fontName, f.dataUrl).then(() => {
           CONFIG.FONTS[f.id] = `${fontName}, ${f.family.split(',').pop().trim()}`;

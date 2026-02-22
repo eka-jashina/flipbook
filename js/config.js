@@ -98,6 +98,7 @@ function buildAmbientConfig(adminAmbients) {
       shortLabel: a.shortLabel || a.label,
       icon: a.icon,
       file,
+      _idb: a._idb || false,
     };
   }
   return result;
@@ -123,8 +124,8 @@ function buildFontsConfig(adminReadingFonts) {
   for (const f of adminReadingFonts) {
     if (!f.enabled) continue;
     fonts[f.id] = f.family;
-    if (!f.builtin && f.dataUrl) {
-      customFonts.push({ id: f.id, label: f.label, family: f.family, dataUrl: f.dataUrl });
+    if (!f.builtin && (f.dataUrl || f._idb)) {
+      customFonts.push({ id: f.id, label: f.label, family: f.family, dataUrl: f.dataUrl || null, _idb: f._idb || false });
     }
   }
   return { fonts, fontsList: adminReadingFonts.filter(f => f.enabled), customFonts };
@@ -305,6 +306,71 @@ export function createConfig(adminConfig = null) {
       VISIBILITY_RESUME_DELAY: 100,
     },
   });
+}
+
+// ─── Дозагрузка data URL из IndexedDB ────────────────────────────────────────
+
+/**
+ * Обогатить CONFIG данными из IndexedDB.
+ *
+ * При сохранении в localStorage крупные data URL (шрифты, амбиенты)
+ * вырезаются и заменяются маркером `_idb: true` — аналогично htmlContent глав.
+ * Эта функция дозагружает полные данные из IndexedDB и подставляет их в CONFIG.
+ *
+ * Вызывается один раз при старте ридера, до создания BookController.
+ *
+ * @param {Object} config - Объект CONFIG (top-level заморожен, вложенные — нет)
+ */
+export async function enrichConfigFromIDB(config) {
+  const needsIdb =
+    config.DECORATIVE_FONT?._idb ||
+    config.CUSTOM_FONTS?.some(f => f._idb) ||
+    Object.values(config.AMBIENT).some(a => a._idb);
+
+  if (!needsIdb) return;
+
+  let adminConfig;
+  try {
+    const { IdbStorage } = await import('./utils/IdbStorage.js');
+    const idb = new IdbStorage('flipbook-admin', 'config');
+    adminConfig = await idb.get('flipbook-admin-config');
+  } catch {
+    return;
+  }
+  if (!adminConfig) return;
+
+  const activeBook = getActiveBook(adminConfig);
+
+  // Декоративный шрифт
+  if (config.DECORATIVE_FONT?._idb && activeBook?.decorativeFont?.dataUrl) {
+    config.DECORATIVE_FONT.dataUrl = activeBook.decorativeFont.dataUrl;
+  }
+
+  // Амбиенты
+  if (activeBook?.ambients) {
+    const ambientMap = new Map(activeBook.ambients.map(a => [a.id, a]));
+    for (const [type, cfg] of Object.entries(config.AMBIENT)) {
+      if (cfg._idb) {
+        const src = ambientMap.get(type);
+        if (src?.file) {
+          cfg.file = src.file;
+        }
+      }
+    }
+  }
+
+  // Пользовательские шрифты для чтения
+  if (config.CUSTOM_FONTS?.length && adminConfig.readingFonts) {
+    const fontMap = new Map(adminConfig.readingFonts.map(f => [f.id, f]));
+    for (const font of config.CUSTOM_FONTS) {
+      if (font._idb) {
+        const src = fontMap.get(font.id);
+        if (src?.dataUrl) {
+          font.dataUrl = src.dataUrl;
+        }
+      }
+    }
+  }
 }
 
 // ─── Синглтон для production ─────────────────────────────────────────────────
