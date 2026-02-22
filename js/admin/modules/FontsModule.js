@@ -4,6 +4,9 @@
 import { BaseModule } from './BaseModule.js';
 
 const FONT_EXTENSIONS = ['.woff2', '.woff', '.ttf', '.otf'];
+// Reader loads admin config from localStorage; data URL expands file size (~33%),
+// so keep uploaded decorative font compact to avoid quota overflow.
+const MAX_DECORATIVE_FONT_SIZE = 400 * 1024;
 
 export class FontsModule extends BaseModule {
   constructor(app) {
@@ -70,7 +73,7 @@ export class FontsModule extends BaseModule {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, extensions: FONT_EXTENSIONS, inputEl: e.target })) return;
+    if (!this._validateFile(file, { maxSize: MAX_DECORATIVE_FONT_SIZE, extensions: FONT_EXTENSIONS, inputEl: e.target })) return;
 
     const reader = new FileReader();
     reader.onload = () => {

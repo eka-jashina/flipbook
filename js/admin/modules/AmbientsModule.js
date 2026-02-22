@@ -131,7 +131,9 @@ export class AmbientsModule extends BaseModule {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!this._validateFile(file, { maxSize: 5 * 1024 * 1024, mimePrefix: 'audio/', inputEl: e.target })) return;
+    // Reader uses localStorage snapshot from AdminConfigStore; large data URLs may not fit quota
+    // and then new ambients won't be visible in the reader config.
+    if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'audio/', inputEl: e.target })) return;
 
     const reader = new FileReader();
     reader.onload = () => {
