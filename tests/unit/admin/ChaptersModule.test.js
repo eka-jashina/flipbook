@@ -118,6 +118,7 @@ function setupDOM() {
     <input id="albumHideTitle" type="checkbox">
     <div id="albumPages"></div>
     <button id="albumAddPage" type="button"></button>
+    <button id="albumBulkUpload" type="button"></button>
     <button id="saveAlbum" type="button"></button>
     <button id="cancelAlbum" type="button"></button>
     <h2 id="albumHeading">Фотоальбом</h2>
