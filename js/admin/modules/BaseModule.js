@@ -9,6 +9,11 @@ export class BaseModule {
   }
 
   _showToast(message, type) {
+    if (type === undefined) {
+      this.app._showToast(message);
+      return;
+    }
+
     this.app._showToast(message, type);
   }
 
