@@ -621,17 +621,17 @@ describe('ChaptersModule', () => {
     });
 
     describe('_selectPageLayout()', () => {
-      it('should update layout for page', () => {
+      it('should update layout for page', async () => {
         mod._album._albumPages = [{ layout: '1', images: [{ dataUrl: 'a', caption: '' }, { dataUrl: 'b', caption: '' }] }];
-        mod._album._selectPageLayout(0, '1');
+        await mod._album._selectPageLayout(0, '1');
         // Layout '1' supports only 1 image, so images array is truncated
         expect(mod._album._albumPages[0].layout).toBe('1');
         expect(mod._album._albumPages[0].images.length).toBe(1);
       });
 
-      it('should keep images that fit the layout', () => {
+      it('should keep images that fit the layout', async () => {
         mod._album._albumPages = [{ layout: '1', images: [{ dataUrl: 'a', caption: '' }] }];
-        mod._album._selectPageLayout(0, '4');
+        await mod._album._selectPageLayout(0, '4');
         // Layout '4' supports 4 images, existing 1 should stay
         expect(mod._album._albumPages[0].images.length).toBe(1);
       });
@@ -658,13 +658,14 @@ describe('ChaptersModule', () => {
         expect(html).toContain('class="sr-only"');
       });
 
-      it('should handle pages with empty image slots', () => {
+      it('should skip empty image slots in generated HTML', () => {
         const pages = [{ layout: '2', images: [null, { dataUrl: 'data:img', caption: '' }] }];
 
         const html = mod._album._buildAlbumHtml({ title: 'Test', hideTitle: false, pages });
 
-        // Null image produces empty src
-        expect(html).toContain('src=""');
+        // Null slots are filtered out, only the valid image remains
+        expect(html).not.toContain('src=""');
+        expect(html).toContain('src="data:img"');
       });
     });
 

@@ -37,6 +37,7 @@ function createMockModule() {
       _cleanupPendingBook: vi.fn(),
     },
     _showToast: vi.fn(),
+    _confirm: vi.fn(() => Promise.resolve(true)),
     _escapeHtml: vi.fn((s) => escapeHtml(s)),
     _renderChapters: vi.fn(),
     _renderBookSelector: vi.fn(),
@@ -266,44 +267,55 @@ describe('AlbumManager', () => {
       manager._albumPages = [makePage('1', [makeImage()])];
     });
 
-    it('should update the page layout', () => {
-      manager._selectPageLayout(0, '2');
+    it('should update the page layout', async () => {
+      await manager._selectPageLayout(0, '2');
       expect(manager._albumPages[0].layout).toBe('2');
     });
 
-    it('should trim images when switching to a smaller layout', () => {
+    it('should trim images when switching to a smaller layout', async () => {
       manager._albumPages = [makePage('4', [
         makeImage('a'), makeImage('b'), makeImage('c'), makeImage('d'),
       ])];
-      manager._selectPageLayout(0, '1'); // layout '1' → count=1
+      await manager._selectPageLayout(0, '1'); // layout '1' → count=1
       expect(manager._albumPages[0].images).toHaveLength(1);
     });
 
-    it('should keep existing images when switching to a larger layout', () => {
+    it('should keep existing images when switching to a larger layout', async () => {
       manager._albumPages = [makePage('1', [makeImage('img1')])];
-      manager._selectPageLayout(0, '4'); // layout '4' → count=4
+      await manager._selectPageLayout(0, '4'); // layout '4' → count=4
       // slice(0, 4) on a 1-item array yields 1 item
       expect(manager._albumPages[0].images).toHaveLength(1);
     });
 
-    it('should preserve remaining images when trimming', () => {
+    it('should preserve remaining images when trimming', async () => {
       manager._albumPages = [makePage('4', [
         makeImage('keep'), makeImage('drop'), makeImage('drop'), makeImage('drop'),
       ])];
-      manager._selectPageLayout(0, '1');
+      await manager._selectPageLayout(0, '1');
       expect(manager._albumPages[0].images[0].dataUrl).toBe('keep');
     });
 
-    it('should call _renderAlbumPages after layout change', () => {
+    it('should call _renderAlbumPages after layout change', async () => {
       const spy = vi.spyOn(manager, '_renderAlbumPages');
-      manager._selectPageLayout(0, '2');
+      await manager._selectPageLayout(0, '2');
       expect(spy).toHaveBeenCalled();
     });
 
-    it('should handle unknown layout id by defaulting to count=1', () => {
+    it('should handle unknown layout id by defaulting to count=1', async () => {
       manager._albumPages = [makePage('unknown', [makeImage('a'), makeImage('b')])];
-      manager._selectPageLayout(0, 'unknown');
+      await manager._selectPageLayout(0, 'unknown');
       expect(manager._albumPages[0].images).toHaveLength(1);
+    });
+
+    it('should ask confirmation when images would be lost', async () => {
+      manager._module._confirm.mockResolvedValueOnce(false);
+      manager._albumPages = [makePage('4', [
+        makeImage('a'), makeImage('b'), makeImage('c'), makeImage('d'),
+      ])];
+      await manager._selectPageLayout(0, '1');
+      // Confirm rejected — images should stay
+      expect(manager._albumPages[0].images).toHaveLength(4);
+      expect(manager._module._confirm).toHaveBeenCalled();
     });
   });
 
@@ -588,21 +600,21 @@ describe('AlbumManager', () => {
       expect(html).toContain('data-layout="2h"');
     });
 
-    describe('без изображений → placeholder figures', () => {
-      it('should generate placeholder figure when image slot contains null', () => {
+    describe('без изображений → пустые слоты фильтруются', () => {
+      it('should NOT generate figure when image slot contains null', () => {
         const html = buildHtml('T', [makePage('1', [null])]);
-        expect(html).toContain('<figure class="photo-album__item"><img src="" alt=""></figure>');
+        expect(html).not.toContain('<figure');
+        expect(html).not.toContain('<img');
       });
 
-      it('should generate placeholder figure when images array is empty', () => {
+      it('should NOT generate figure when images array is empty', () => {
         const html = buildHtml('T', [makePage('1', [])]);
-        expect(html).toContain('<figure class="photo-album__item"><img src="" alt=""></figure>');
+        expect(html).not.toContain('<figure');
       });
 
-      it('should generate one placeholder per missing image slot', () => {
+      it('should skip all empty slots', () => {
         const html = buildHtml('T', [makePage('2', [])]);
-        const matches = html.match(/<figure class="photo-album__item"><img src="" alt=""><\/figure>/g);
-        expect(matches).toHaveLength(2);
+        expect(html).not.toContain('<figure');
       });
     });
 
@@ -1063,14 +1075,14 @@ describe('AlbumManager', () => {
       expect(result).toBe(' photo-album__item--frame-shadow');
     });
 
-    it('should add filter modifier class', () => {
+    it('should NOT add filter class (filter is now inline style)', () => {
       const result = manager._buildItemModifiers({ frame: 'none', filter: 'sepia' });
-      expect(result).toBe(' photo-album__item--filter-sepia');
+      expect(result).toBe('');
     });
 
-    it('should add both frame and filter classes when both are set', () => {
+    it('should add only frame class when both frame and filter are set', () => {
       const result = manager._buildItemModifiers({ frame: 'polaroid', filter: 'grayscale' });
-      expect(result).toBe(' photo-album__item--frame-polaroid photo-album__item--filter-grayscale');
+      expect(result).toBe(' photo-album__item--frame-polaroid');
     });
 
     it('should handle all frame types', () => {
@@ -1079,12 +1091,26 @@ describe('AlbumManager', () => {
         expect(result).toContain(`photo-album__item--frame-${frame}`);
       }
     });
+  });
 
-    it('should handle all filter types', () => {
-      for (const filter of ['grayscale', 'sepia', 'contrast', 'warm', 'cool']) {
-        const result = manager._buildItemModifiers({ frame: 'none', filter });
-        expect(result).toContain(`photo-album__item--filter-${filter}`);
-      }
+  describe('_buildImgInlineStyle()', () => {
+    it('should return empty string when no rotation and no filter', () => {
+      expect(manager._buildImgInlineStyle({ rotation: 0, filter: 'none' })).toBe('');
+    });
+
+    it('should include rotation', () => {
+      expect(manager._buildImgInlineStyle({ rotation: 90, filter: 'none' })).toBe('transform:rotate(90deg)');
+    });
+
+    it('should include filter with intensity', () => {
+      const result = manager._buildImgInlineStyle({ rotation: 0, filter: 'sepia', filterIntensity: 50 });
+      expect(result).toContain('filter:sepia(');
+    });
+
+    it('should include both rotation and filter', () => {
+      const result = manager._buildImgInlineStyle({ rotation: 180, filter: 'grayscale', filterIntensity: 100 });
+      expect(result).toContain('transform:rotate(180deg)');
+      expect(result).toContain('filter:grayscale(');
     });
   });
 
@@ -1210,7 +1236,7 @@ describe('AlbumManager', () => {
         return manager._buildAlbumHtml({ title, hideTitle: false, pages });
       }
 
-      it('should NOT add modifier classes or style when frame and filter are "none"', () => {
+      it('should NOT add modifier classes or inline style when frame and filter are "none"', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'none')])];
         const html = buildHtml('T', pages);
         expect(html).toContain('class="photo-album__item"');
@@ -1224,26 +1250,24 @@ describe('AlbumManager', () => {
         expect(html).toContain('photo-album__item photo-album__item--frame-shadow');
       });
 
-      it('should add filter modifier class to figure', () => {
+      it('should add filter as inline style on img', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'sepia', 100)])];
         const html = buildHtml('T', pages);
-        expect(html).toContain('photo-album__item--filter-sepia');
-        expect(html).not.toContain('style=');
+        expect(html).toContain('style="filter:sepia(');
+        expect(html).not.toContain('--filter-');
       });
 
-      it('should add frame class and filter class together', () => {
+      it('should add frame class and filter inline style together', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'polaroid', 'grayscale', 100)])];
         const html = buildHtml('T', pages);
         expect(html).toContain('photo-album__item--frame-polaroid');
-        expect(html).toContain('photo-album__item--filter-grayscale');
-        expect(html).not.toContain('style=');
+        expect(html).toContain('style="filter:grayscale(');
       });
 
-      it('should NOT add modifiers to placeholder figures', () => {
+      it('should skip empty slots (no placeholder figures)', () => {
         const pages = [makePage('1', [null])];
         const html = buildHtml('T', pages);
-        expect(html).toContain('class="photo-album__item"');
-        expect(html).not.toContain('--frame-');
+        expect(html).not.toContain('<figure');
       });
 
       it('should handle images without frame/filter properties (backwards compat)', () => {
@@ -1254,18 +1278,16 @@ describe('AlbumManager', () => {
         expect(html).not.toContain('style=');
       });
 
-      it('should add filter class regardless of intensity', () => {
+      it('should apply filter intensity via inline style', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'grayscale', 50)])];
         const html = buildHtml('T', pages);
-        expect(html).toContain('photo-album__item--filter-grayscale');
-        expect(html).not.toContain('style=');
+        expect(html).toContain('style="filter:grayscale(0.5)"');
       });
 
-      it('should add filter class even when intensity is 0', () => {
+      it('should add filter inline style even when intensity is 0', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'grayscale', 0)])];
         const html = buildHtml('T', pages);
-        expect(html).toContain('photo-album__item--filter-grayscale');
-        expect(html).not.toContain('style=');
+        expect(html).toContain('style="filter:grayscale(0)"');
       });
     });
   });

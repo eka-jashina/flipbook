@@ -100,9 +100,7 @@ class AdminApp {
       this._showView('bookshelf');
     });
     this.albumBack.addEventListener('click', () => {
-      const hadPending = !!this._pendingBookId;
-      this._cleanupPendingBook();
-      this._showView(hadPending ? 'bookshelf' : 'editor');
+      this.chapters._album._cancelAlbum();
     });
 
     // «На книжную полку» — очистить незавершённую книгу перед уходом
