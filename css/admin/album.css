@@ -182,14 +182,16 @@
 
 .album-image-slot-remove,
 .album-image-slot-crop,
+.album-image-slot-uncrop,
 .album-image-slot-rotate {
   position: absolute;
   top: 4px;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   display: none;
   align-items: center;
   justify-content: center;
+  padding: 0;
   border: none;
   border-radius: 50%;
   background: rgb(0, 0, 0, 0.6);
@@ -200,18 +202,31 @@
   transition: background var(--admin-transition);
 }
 
+/* Расширенная touch-область до 44px (WCAG) */
+.album-image-slot-remove::before,
+.album-image-slot-crop::before,
+.album-image-slot-uncrop::before,
+.album-image-slot-rotate::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
 .album-image-slot-remove { right: 4px; }
-.album-image-slot-crop { right: 30px; }
-.album-image-slot-rotate { right: 56px; }
+.album-image-slot-crop { right: 36px; }
+.album-image-slot-uncrop { right: 68px; }
+.album-image-slot-rotate { right: 100px; }
 
 .album-image-slot-remove:hover,
 .album-image-slot-crop:hover,
+.album-image-slot-uncrop:hover,
 .album-image-slot-rotate:hover {
   background: rgb(0, 0, 0, 0.8);
 }
 
 .album-image-slot.has-image .album-image-slot-remove,
 .album-image-slot.has-image .album-image-slot-crop,
+.album-image-slot.has-image .album-image-slot-uncrop,
 .album-image-slot.has-image .album-image-slot-rotate {
   display: flex;
 }
@@ -325,13 +340,39 @@
 .album-page-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 10px;
 }
 
 .album-page-title {
   font-size: 13px;
   font-weight: 600;
+  color: var(--admin-text);
+  margin-right: auto;
+}
+
+.album-page-move {
+  display: flex;
+  gap: 2px;
+}
+
+.album-page-move-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  background: var(--admin-surface);
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: all var(--admin-transition);
+}
+
+.album-page-move-btn:hover {
+  background: var(--admin-hover);
   color: var(--admin-text);
 }
 
