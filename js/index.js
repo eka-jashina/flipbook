@@ -8,6 +8,7 @@
 
 import { BookController } from './core/BookController.js';
 import { BookshelfScreen, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
+import { CONFIG, enrichConfigFromIDB } from './config.js';
 import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
@@ -120,6 +121,10 @@ function showBookshelf(books) {
  * Инициализация ридера (книги)
  */
 async function initReader() {
+  // Дозагрузить data URL шрифтов/амбиентов из IndexedDB
+  // (в localStorage хранится облегчённая версия без тяжёлых data URL)
+  await enrichConfigFromIDB(CONFIG);
+
   app = new BookController();
   await app.init();
 

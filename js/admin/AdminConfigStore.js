@@ -210,17 +210,46 @@ export class AdminConfigStore {
     try {
       const lsSnapshot = structuredClone(snapshot);
       for (const book of lsSnapshot.books) {
-        if (!book.chapters) continue;
-        for (const ch of book.chapters) {
-          if (ch.htmlContent) {
-            ch._idb = true;    // маркер: контент в IndexedDB
-            delete ch.htmlContent;
+        // Убираем тяжёлый htmlContent глав
+        if (book.chapters) {
+          for (const ch of book.chapters) {
+            if (ch.htmlContent) {
+              ch._idb = true;    // маркер: контент в IndexedDB
+              delete ch.htmlContent;
+            }
+          }
+        }
+
+        // Убираем data URL декоративного шрифта
+        if (book.decorativeFont?.dataUrl) {
+          book.decorativeFont = { name: book.decorativeFont.name, _idb: true };
+        }
+
+        // Убираем data URL амбиентов
+        if (book.ambients) {
+          for (const a of book.ambients) {
+            if (a.file && a.file.startsWith('data:')) {
+              a._idb = true;
+              delete a.file;
+            }
           }
         }
       }
+
+      // Убираем data URL пользовательских шрифтов для чтения
+      if (lsSnapshot.readingFonts) {
+        for (const f of lsSnapshot.readingFonts) {
+          if (f.dataUrl) {
+            f._idb = true;
+            delete f.dataUrl;
+          }
+        }
+      }
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(lsSnapshot));
     } catch {
-      // localStorage переполнен даже без htmlContent — не критично, IndexedDB основной
+      // localStorage переполнен — не критично, IndexedDB основной.
+      // Ридер дозагрузит данные из IndexedDB через enrichConfigFromIDB().
     }
 
     this._savePromise = this._idb.put(STORAGE_KEY, snapshot)
