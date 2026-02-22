@@ -28,7 +28,8 @@
 
 .book-card.active {
   border-color: var(--admin-primary);
-  background: rgb(107, 83, 64, 0.06);
+  border-left: 4px solid var(--admin-primary);
+  background: rgb(107, 83, 64, 0.08);
   box-shadow: 0 0 0 2px rgb(107, 83, 64, 0.2);
 }
 
@@ -63,22 +64,6 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-}
-
-.book-card-drag {
-  cursor: grab;
-  color: var(--admin-text-secondary);
-  flex-shrink: 0;
-  opacity: 0.5;
-  transition: opacity var(--admin-transition);
-}
-
-.book-card-drag:active {
-  cursor: grabbing;
-}
-
-.book-card:hover .book-card-drag {
-  opacity: 1;
 }
 
 .book-card-sort {

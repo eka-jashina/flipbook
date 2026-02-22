@@ -74,6 +74,10 @@ function setupDOM() {
     <span id="fontMinValue">14px</span>
     <input id="fontMax" type="range" min="16" max="30" value="22">
     <span id="fontMaxValue">22px</span>
+    <div id="appearancePreview">
+      <div id="previewCover"><span id="previewTitle"></span><span id="previewAuthor"></span></div>
+      <div id="previewPage"><div class="appearance-preview-text"></div></div>
+    </div>
     <button id="saveAppearance"></button>
     <button id="resetAppearance"></button>
     <button id="savePlatform"></button>

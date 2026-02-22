@@ -64,3 +64,19 @@
   gap: 12px;
   margin-top: 28px;
 }
+
+/* Confirm dialog */
+.admin-modal--confirm {
+  max-width: 400px;
+}
+
+.admin-modal--confirm .modal-title {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.confirm-message {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--admin-text-secondary);
+}

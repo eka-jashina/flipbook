@@ -52,6 +52,7 @@ function createMockApp() {
     _render: vi.fn(),
     _showView: vi.fn(),
     openEditor: vi.fn(),
+    _confirm: vi.fn(() => Promise.resolve(true)),
   };
 }
 
@@ -557,34 +558,30 @@ describe('ChaptersModule', () => {
       expect(app.store.removeBook).not.toHaveBeenCalled();
     });
 
-    it('should delete book after confirmation', () => {
+    it('should delete book after confirmation', async () => {
       app.store.getBooks.mockReturnValue([
         { id: 'book1', title: 'Book 1' },
         { id: 'book2', title: 'Book 2' },
       ]);
-      vi.spyOn(global, 'confirm').mockReturnValue(true);
+      app._confirm.mockResolvedValue(true);
 
-      mod._handleDeleteBook('book2');
+      await mod._handleDeleteBook('book2');
 
       expect(app.store.removeBook).toHaveBeenCalledWith('book2');
       expect(app._render).toHaveBeenCalled();
       expect(app._showView).toHaveBeenCalledWith('bookshelf');
-
-      global.confirm.mockRestore();
     });
 
-    it('should not delete on cancel', () => {
+    it('should not delete on cancel', async () => {
       app.store.getBooks.mockReturnValue([
         { id: 'book1', title: 'Book 1' },
         { id: 'book2', title: 'Book 2' },
       ]);
-      vi.spyOn(global, 'confirm').mockReturnValue(false);
+      app._confirm.mockResolvedValue(false);
 
-      mod._handleDeleteBook('book2');
+      await mod._handleDeleteBook('book2');
 
       expect(app.store.removeBook).not.toHaveBeenCalled();
-
-      global.confirm.mockRestore();
     });
   });
 

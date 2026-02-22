@@ -20,6 +20,10 @@ export class BaseModule {
     this.app._renderJsonPreview();
   }
 
+  _confirm(message, opts) {
+    return this.app._confirm(message, opts);
+  }
+
   /**
    * Проверить файл перед загрузкой: размер, MIME-тип или расширение.
    * При ошибке показывает toast и очищает inputEl (если передан).

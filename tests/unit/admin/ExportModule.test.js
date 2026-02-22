@@ -17,6 +17,7 @@ function createMockApp() {
     _escapeHtml: vi.fn((s) => s),
     _renderJsonPreview: vi.fn(),
     _render: vi.fn(),
+    _confirm: vi.fn(() => Promise.resolve(true)),
   };
 }
 
@@ -155,26 +156,22 @@ describe('ExportModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_resetAll()', () => {
-    it('should clear store and re-render on confirm', () => {
-      vi.spyOn(global, 'confirm').mockReturnValue(true);
+    it('should clear store and re-render on confirm', async () => {
+      app._confirm.mockResolvedValue(true);
 
-      mod._resetAll();
+      await mod._resetAll();
 
       expect(app.store.clear).toHaveBeenCalled();
       expect(app._render).toHaveBeenCalled();
       expect(app._showToast).toHaveBeenCalledWith('Всё сброшено');
-
-      global.confirm.mockRestore();
     });
 
-    it('should do nothing on cancel', () => {
-      vi.spyOn(global, 'confirm').mockReturnValue(false);
+    it('should do nothing on cancel', async () => {
+      app._confirm.mockResolvedValue(false);
 
-      mod._resetAll();
+      await mod._resetAll();
 
       expect(app.store.clear).not.toHaveBeenCalled();
-
-      global.confirm.mockRestore();
     });
   });
 

@@ -60,12 +60,16 @@ export class ExportModule extends BaseModule {
     e.target.value = '';
   }
 
-  _resetAll() {
-    if (confirm('Сбросить все настройки? Ридер вернётся к конфигурации по умолчанию.')) {
-      this.store.clear();
-      this.app._render();
-      this._showToast('Всё сброшено');
-    }
+  async _resetAll() {
+    const ok = await this._confirm(
+      'Сбросить все настройки? Ридер вернётся к конфигурации по умолчанию.',
+      { title: 'Сброс настроек', okText: 'Сбросить' },
+    );
+    if (!ok) return;
+
+    this.store.clear();
+    this.app._render();
+    this._showToast('Всё сброшено');
   }
 
   _copyJson() {
