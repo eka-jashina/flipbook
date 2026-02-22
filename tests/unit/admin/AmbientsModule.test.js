@@ -165,14 +165,14 @@ describe('AmbientsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_handleAmbientFileUpload()', () => {
-    it('should reject files over 5MB', () => {
+    it('should reject files over 2MB', () => {
       const event = {
         target: { files: [{ size: 6 * 1024 * 1024, type: 'audio/mp3' }], value: 'big.mp3' },
       };
 
       mod._handleAmbientFileUpload(event);
 
-      expect(app._showToast).toHaveBeenCalledWith('Файл слишком большой (макс. 5 МБ)');
+      expect(app._showToast).toHaveBeenCalledWith('Файл слишком большой (макс. 2 МБ)');
     });
 
     it('should reject non-audio files', () => {

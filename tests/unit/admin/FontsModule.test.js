@@ -106,14 +106,14 @@ describe('FontsModule', () => {
   });
 
   describe('_handleDecorativeFontUpload()', () => {
-    it('should reject files over 2MB', () => {
+    it('should reject decorative files over 400KB', () => {
       const event = {
         target: { files: [{ size: 3 * 1024 * 1024, name: 'big.woff2' }], value: 'big.woff2' },
       };
 
       mod._handleDecorativeFontUpload(event);
 
-      expect(app._showToast).toHaveBeenCalledWith('Файл слишком большой (макс. 2 МБ)');
+      expect(app._showToast).toHaveBeenCalledWith('Файл слишком большой (макс. 0.390625 МБ)');
     });
 
     it('should reject invalid font extensions', () => {
