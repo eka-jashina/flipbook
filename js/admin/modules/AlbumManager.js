@@ -139,6 +139,24 @@ export class AlbumManager {
     this._renderAlbumPages();
   }
 
+  /** Переместить страницу вверх */
+  _movePageUp(pageIndex) {
+    if (pageIndex <= 0) return;
+    this._isDirty = true;
+    const pages = this._albumPages;
+    [pages[pageIndex - 1], pages[pageIndex]] = [pages[pageIndex], pages[pageIndex - 1]];
+    this._renderAlbumPages();
+  }
+
+  /** Переместить страницу вниз */
+  _movePageDown(pageIndex) {
+    if (pageIndex >= this._albumPages.length - 1) return;
+    this._isDirty = true;
+    const pages = this._albumPages;
+    [pages[pageIndex], pages[pageIndex + 1]] = [pages[pageIndex + 1], pages[pageIndex]];
+    this._renderAlbumPages();
+  }
+
   async _selectPageLayout(pageIndex, layout) {
     const page = this._albumPages[pageIndex];
     const count = LAYOUT_IMAGE_COUNT[layout] || 1;
@@ -161,6 +179,10 @@ export class AlbumManager {
 
   /** Отрисовать все страницы альбома */
   _renderAlbumPages() {
+    // Сохранить позицию скролла и фокус перед перерисовкой
+    const scrollParent = this.albumPagesEl.closest('.admin-section-content') || this.albumPagesEl.parentElement;
+    const savedScroll = scrollParent?.scrollTop ?? 0;
+
     this.albumPagesEl.innerHTML = '';
 
     this._albumPages.forEach((page, pageIndex) => {
@@ -178,6 +200,32 @@ export class AlbumManager {
       header.appendChild(title);
 
       if (this._albumPages.length > 1) {
+        // Кнопки перемещения
+        const moveWrap = document.createElement('span');
+        moveWrap.className = 'album-page-move';
+
+        if (pageIndex > 0) {
+          const upBtn = document.createElement('button');
+          upBtn.type = 'button';
+          upBtn.className = 'album-page-move-btn';
+          upBtn.title = 'Переместить вверх';
+          upBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>';
+          upBtn.addEventListener('click', () => this._movePageUp(pageIndex));
+          moveWrap.appendChild(upBtn);
+        }
+
+        if (pageIndex < this._albumPages.length - 1) {
+          const downBtn = document.createElement('button');
+          downBtn.type = 'button';
+          downBtn.className = 'album-page-move-btn';
+          downBtn.title = 'Переместить вниз';
+          downBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>';
+          downBtn.addEventListener('click', () => this._movePageDown(pageIndex));
+          moveWrap.appendChild(downBtn);
+        }
+
+        header.appendChild(moveWrap);
+
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'album-page-remove';
@@ -208,6 +256,11 @@ export class AlbumManager {
 
       this.albumPagesEl.appendChild(card);
     });
+
+    // Восстановить позицию скролла после перерисовки
+    if (scrollParent && savedScroll) {
+      scrollParent.scrollTop = savedScroll;
+    }
   }
 
   /** Получить слоты изображений для страницы — всегда length === LAYOUT_IMAGE_COUNT */
@@ -256,6 +309,9 @@ export class AlbumManager {
         <button class="album-image-slot-crop" type="button" title="Кадрировать">
           <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/></svg>
         </button>
+        <button class="album-image-slot-uncrop" type="button" title="Сбросить кадрирование">
+          <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        </button>
         <button class="album-image-slot-remove" type="button" title="Удалить">&times;</button>
       `;
 
@@ -274,9 +330,15 @@ export class AlbumManager {
       fileInput.accept = 'image/*';
       fileInput.hidden = true;
 
+      // Показывать кнопку сброса кадрирования только если есть оригинал, отличный от текущего
+      const isCropped = img?.originalDataUrl && img.originalDataUrl !== img.dataUrl;
+      const uncropBtn = slot.querySelector('.album-image-slot-uncrop');
+      if (!isCropped) uncropBtn.style.display = 'none';
+
       slot.addEventListener('click', (e) => {
         if (e.target.closest('.album-image-slot-remove')) return;
         if (e.target.closest('.album-image-slot-crop')) return;
+        if (e.target.closest('.album-image-slot-uncrop')) return;
         if (e.target.closest('.album-image-slot-rotate')) return;
         fileInput.click();
       });
@@ -284,6 +346,10 @@ export class AlbumManager {
       slot.querySelector('.album-image-slot-crop').addEventListener('click', () => {
         if (!page.images[i]?.dataUrl) return;
         this._cropPageImage(pageIndex, i);
+      });
+
+      uncropBtn.addEventListener('click', () => {
+        this._resetCrop(pageIndex, i);
       });
 
       slot.querySelector('.album-image-slot-rotate').addEventListener('click', () => {
@@ -438,18 +504,36 @@ export class AlbumManager {
     const img = page.images[imageIndex];
     if (!img?.dataUrl) return;
 
+    // Кадрировать из оригинала, чтобы не терять качество при повторном кадрировании
+    const source = img.originalDataUrl || img.dataUrl;
+
     try {
-      const cropped = await this._cropper.crop(img.dataUrl);
+      const cropped = await this._cropper.crop(source);
       // null = пользователь отменил
       if (!cropped) return;
       // Страница могла быть удалена во время кадрирования
       if (!this._albumPages[pageIndex]) return;
       this._isDirty = true;
-      this._albumPages[pageIndex].images[imageIndex].dataUrl = cropped;
+      const target = this._albumPages[pageIndex].images[imageIndex];
+      target.dataUrl = cropped;
+      // Сохранить оригинал если его ещё нет
+      if (!target.originalDataUrl) target.originalDataUrl = source;
       this._renderAlbumPages();
     } catch {
       this._module._showToast('Ошибка при кадрировании');
     }
+  }
+
+  /** Сбросить кадрирование — вернуть оригинальное изображение */
+  _resetCrop(pageIndex, imageIndex) {
+    const page = this._albumPages[pageIndex];
+    if (!page) return;
+    const img = page.images[imageIndex];
+    if (!img?.originalDataUrl || img.dataUrl === img.originalDataUrl) return;
+
+    this._isDirty = true;
+    img.dataUrl = img.originalDataUrl;
+    this._renderAlbumPages();
   }
 
   /** Повернуть изображение на 90° по часовой стрелке */
@@ -479,6 +563,7 @@ export class AlbumManager {
       this._isDirty = true;
       page.images[imageIndex] = {
         dataUrl,
+        originalDataUrl: dataUrl,
         caption: prev?.caption || '',
         frame: prev?.frame || 'none',
         filter: prev?.filter || 'none',
