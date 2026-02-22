@@ -134,6 +134,38 @@
   padding: 3px;
   margin-bottom: 24px;
   overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.editor-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Градиентная маска для индикации скролла */
+.editor-tabs-wrapper {
+  position: relative;
+}
+
+.editor-tabs-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 32px;
+  height: 100%;
+  background: linear-gradient(to right, transparent, var(--admin-bg));
+  pointer-events: none;
+  border-radius: 0 var(--admin-radius-sm) var(--admin-radius-sm) 0;
+  opacity: 0;
+  transition: opacity var(--admin-transition);
+}
+
+.editor-tabs-wrapper.has-scroll::after {
+  opacity: 1;
+}
+
+.editor-tabs-wrapper.scrolled-end::after {
+  opacity: 0;
 }
 
 .editor-tab {
@@ -237,8 +269,9 @@
   }
 
   .editor-tab {
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: 10px 12px;
+    font-size: 13px;
+    min-height: 44px;
   }
 
   .screen-back-row {

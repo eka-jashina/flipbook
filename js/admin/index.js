@@ -50,6 +50,8 @@ class AdminApp {
     this.screenViews = document.querySelectorAll('.screen-view');
 
     // Табы редактора книги
+    this.editorTabsWrapper = document.getElementById('editorTabsWrapper');
+    this.editorTabsContainer = document.getElementById('editorTabs');
     this.editorTabs = document.querySelectorAll('.editor-tab');
     this.editorPanels = document.querySelectorAll('.editor-panel');
     this.editorTitle = document.getElementById('editorTitle');
@@ -69,6 +71,13 @@ class AdminApp {
     // Toast
     this.toast = document.getElementById('toast');
     this.toastMessage = document.getElementById('toastMessage');
+
+    // Confirm dialog
+    this.confirmDialog = document.getElementById('confirmDialog');
+    this.confirmTitle = document.getElementById('confirmTitle');
+    this.confirmMessage = document.getElementById('confirmMessage');
+    this.confirmOk = document.getElementById('confirmOk');
+    this.confirmCancel = document.getElementById('confirmCancel');
 
     // DOM для модулей
     this._modules.forEach(m => m.cacheDOM());
@@ -111,6 +120,11 @@ class AdminApp {
     this.editorTabs.forEach(tab => {
       tab.addEventListener('click', () => this._switchEditorTab(tab.dataset.editorTab));
     });
+
+    // Индикация горизонтального скролла для editor-tabs
+    this._updateTabsScroll();
+    this.editorTabsContainer.addEventListener('scroll', () => this._updateTabsScroll());
+    window.addEventListener('resize', () => this._updateTabsScroll());
 
     // События модулей
     this._modules.forEach(m => m.bindEvents());
@@ -228,7 +242,9 @@ class AdminApp {
 
   _switchEditorTab(tabName) {
     this.editorTabs.forEach(t => {
-      t.classList.toggle('active', t.dataset.editorTab === tabName);
+      const isActive = t.dataset.editorTab === tabName;
+      t.classList.toggle('active', isActive);
+      t.setAttribute('aria-selected', isActive);
     });
     this.editorPanels.forEach(p => {
       const isActive = p.dataset.editorPanel === tabName;
@@ -238,6 +254,15 @@ class AdminApp {
   }
 
   // --- Утилиты ---
+
+  /** Обновить fade-маску скроллируемых editor-tabs */
+  _updateTabsScroll() {
+    const el = this.editorTabsContainer;
+    const hasScroll = el.scrollWidth > el.clientWidth + 1;
+    const scrolledEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+    this.editorTabsWrapper.classList.toggle('has-scroll', hasScroll);
+    this.editorTabsWrapper.classList.toggle('scrolled-end', scrolledEnd);
+  }
 
   /**
    * Удалить книгу, созданную через «Создать вручную», если пользователь
@@ -260,6 +285,37 @@ class AdminApp {
       this.store.removeBook(bookId);
       this._render();
     }
+  }
+
+  /**
+   * Стилизованный диалог подтверждения (замена native confirm()).
+   * @param {string} message — текст вопроса
+   * @param {Object} [opts]
+   * @param {string} [opts.title='Подтверждение'] — заголовок
+   * @param {string} [opts.okText='Удалить'] — текст кнопки подтверждения
+   * @returns {Promise<boolean>}
+   */
+  _confirm(message, { title = 'Подтверждение', okText = 'Удалить' } = {}) {
+    this.confirmTitle.textContent = title;
+    this.confirmMessage.textContent = message;
+    this.confirmOk.textContent = okText;
+
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        this.confirmOk.removeEventListener('click', onOk);
+        this.confirmCancel.removeEventListener('click', onCancel);
+        this.confirmDialog.removeEventListener('close', onClose);
+      };
+      const onOk = () => { cleanup(); this.confirmDialog.close(); resolve(true); };
+      const onCancel = () => { cleanup(); this.confirmDialog.close(); resolve(false); };
+      const onClose = () => { cleanup(); resolve(false); };
+
+      this.confirmOk.addEventListener('click', onOk);
+      this.confirmCancel.addEventListener('click', onCancel);
+      this.confirmDialog.addEventListener('close', onClose);
+
+      this.confirmDialog.showModal();
+    });
   }
 
   _showToast(message) {

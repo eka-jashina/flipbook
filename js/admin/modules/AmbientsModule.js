@@ -92,13 +92,14 @@ export class AmbientsModule extends BaseModule {
 
       const deleteBtn = e.target.closest('[data-ambient-delete]');
       if (deleteBtn) {
-        if (confirm('Удалить эту атмосферу?')) {
+        this._confirm('Удалить эту атмосферу?').then((ok) => {
+          if (!ok) return;
           this.store.removeAmbient(parseInt(deleteBtn.dataset.ambientDelete, 10));
           this._renderAmbients();
           this.app.settings.render();
           this._renderJsonPreview();
           this._showToast('Атмосфера удалена');
-        }
+        });
       }
     };
   }

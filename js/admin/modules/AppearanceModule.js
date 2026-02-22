@@ -11,10 +11,8 @@ export class AppearanceModule extends BaseModule {
   }
 
   cacheDOM() {
-    // Переключатель темы (в editor → cover tab и appearance tab)
-    this.coverThemeBtns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn');
-    this.pageThemeBtns = document.querySelectorAll('#pageThemeSwitch .appearance-theme-btn');
-    this.appearanceThemeBtns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn, #pageThemeSwitch .appearance-theme-btn');
+    // Переключатель темы (единый, в табе «Оформление»)
+    this.themeBtns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn');
 
     // Cover per-theme fields (editor → cover tab)
     this.coverBgStart = document.getElementById('coverBgStart');
@@ -41,6 +39,12 @@ export class AppearanceModule extends BaseModule {
     this.saveAppearanceBtn = document.getElementById('saveAppearance');
     this.resetAppearanceBtn = document.getElementById('resetAppearance');
 
+    // Live preview
+    this.previewCover = document.getElementById('previewCover');
+    this.previewPage = document.getElementById('previewPage');
+    this.previewTitle = document.getElementById('previewTitle');
+    this.previewAuthor = document.getElementById('previewAuthor');
+
     // Platform settings: fontMin/fontMax
     this.fontMin = document.getElementById('fontMin');
     this.fontMinValue = document.getElementById('fontMinValue');
@@ -51,7 +55,7 @@ export class AppearanceModule extends BaseModule {
 
   bindEvents() {
     // Переключатель темы
-    this.appearanceThemeBtns.forEach(btn => {
+    this.themeBtns.forEach(btn => {
       btn.addEventListener('click', () => this._switchEditTheme(btn.dataset.editTheme));
     });
 
@@ -71,6 +75,7 @@ export class AppearanceModule extends BaseModule {
 
     this.bgPage.addEventListener('input', () => {
       this.bgPageSwatch.style.background = this.bgPage.value;
+      this._updateAppearancePreview();
     });
     this.bgApp.addEventListener('input', () => {
       this.bgAppSwatch.style.background = this.bgApp.value;
@@ -100,11 +105,7 @@ export class AppearanceModule extends BaseModule {
   _switchEditTheme(theme) {
     this._saveCurrentThemeFromForm();
     this._editTheme = theme;
-    // Синхронизируем оба переключателя (cover + pages)
-    this.coverThemeBtns.forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.editTheme === theme);
-    });
-    this.pageThemeBtns.forEach(btn => {
+    this.themeBtns.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.editTheme === theme);
     });
     this._renderAppearanceThemeFields();
@@ -162,6 +163,24 @@ export class AppearanceModule extends BaseModule {
     this.coverTextPreview.style.color = this.coverText.value;
     const cover = this.store.getCover();
     this.coverTextPreview.textContent = cover.title || 'Заголовок';
+
+    // Live preview — обложка
+    const a = this.store.getAppearance();
+    const t = a[this._editTheme] || a.light;
+
+    this.previewCover.style.background = bg;
+    this.previewCover.style.color = this.coverText.value;
+    if (t.coverBgImage) {
+      this.previewCover.style.backgroundImage = `url(${t.coverBgImage})`;
+    } else {
+      this.previewCover.style.backgroundImage = '';
+    }
+    this.previewTitle.textContent = cover.title || 'Заголовок';
+    this.previewAuthor.textContent = cover.author || 'Автор';
+
+    // Live preview — страница
+    this.previewPage.style.backgroundColor = this.bgPage.value;
+    this.previewPage.style.color = this._editTheme === 'dark' ? '#ddd' : '#333';
   }
 
   // --- Фон обложки ---

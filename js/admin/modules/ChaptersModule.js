@@ -141,6 +141,15 @@ export class ChaptersModule extends BaseModule {
       this._handleSelectBook(card.dataset.bookId);
     });
 
+    // Клавиатурная навигация для карточек книг (Enter / Space)
+    this.bookSelector.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('[data-book-id]');
+      if (!card) return;
+      e.preventDefault();
+      this._handleSelectBook(card.dataset.bookId);
+    });
+
     // Удаление активной книги (кнопка в editor)
     this.deleteBookBtn.addEventListener('click', () => {
       this._handleDeleteBook(this.store.getActiveBookId());
@@ -260,12 +269,13 @@ export class ChaptersModule extends BaseModule {
           break;
         }
         case 'delete':
-          if (confirm('Удалить эту главу?')) {
+          this._confirm('Удалить эту главу?').then((ok) => {
+            if (!ok) return;
             this.store.removeChapter(index);
             this._renderChapters();
             this._renderJsonPreview();
             this._showToast('Глава удалена');
-          }
+          });
           break;
       }
     };
@@ -278,12 +288,7 @@ export class ChaptersModule extends BaseModule {
     const activeId = this.store.getActiveBookId();
 
     this.bookSelector.innerHTML = books.map((b, i) => `
-      <div class="book-card${b.id === activeId ? ' active' : ''}" data-book-id="${this._escapeHtml(b.id)}">
-        ${books.length > 1 ? `<div class="book-card-drag" title="Перетащите для изменения порядка">
-          <svg viewBox="0 0 24 24" width="16" height="16">
-            <path fill="currentColor" d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-          </svg>
-        </div>` : ''}
+      <div class="book-card${b.id === activeId ? ' active' : ''}" data-book-id="${this._escapeHtml(b.id)}" tabindex="0" role="button" aria-label="${this._escapeHtml(b.title || 'Без названия')}">
         <div class="book-card-info">
           <div class="book-card-title">${this._escapeHtml(b.title || 'Без названия')}</div>
           <div class="book-card-meta">${this._escapeHtml(b.author || '')}${b.author ? ' · ' : ''}${b.chaptersCount} гл.</div>
@@ -316,14 +321,14 @@ export class ChaptersModule extends BaseModule {
     this.app.openEditor();
   }
 
-  _handleDeleteBook(bookId) {
+  async _handleDeleteBook(bookId) {
     const books = this.store.getBooks();
     if (books.length <= 1) {
       this._showToast('Нельзя удалить единственную книгу');
       return;
     }
     const book = books.find(b => b.id === bookId);
-    if (!confirm(`Удалить книгу «${book?.title || bookId}»?`)) return;
+    if (!await this._confirm(`Удалить книгу «${book?.title || bookId}»?`)) return;
 
     this.store.removeBook(bookId);
     this.app._render();

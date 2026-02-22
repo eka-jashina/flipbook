@@ -152,13 +152,14 @@ export class FontsModule extends BaseModule {
 
       const deleteBtn = e.target.closest('[data-font-delete]');
       if (deleteBtn) {
-        if (confirm('Удалить этот шрифт?')) {
+        this._confirm('Удалить этот шрифт?').then((ok) => {
+          if (!ok) return;
           this.store.removeReadingFont(parseInt(deleteBtn.dataset.fontDelete, 10));
           this._renderReadingFonts();
           this.app.settings.render();
           this._renderJsonPreview();
           this._showToast('Шрифт удалён');
-        }
+        });
       }
     };
 
