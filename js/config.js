@@ -235,8 +235,10 @@ export function createConfig(adminConfig = null) {
         coverBgEnd: bookAppearance.light?.coverBgEnd || '#2a2016',
         coverText: bookAppearance.light?.coverText || '#f2e9d8',
         coverBgImage: bookAppearance.light?.coverBgImage || null,
+        _idbCoverBgImage: bookAppearance.light?._idbCoverBgImage || false,
         pageTexture: bookAppearance.light?.pageTexture || 'default',
         customTextureData: bookAppearance.light?.customTextureData || null,
+        _idbCustomTexture: bookAppearance.light?._idbCustomTexture || false,
         bgPage: bookAppearance.light?.bgPage || '#fdfcf8',
         bgApp: bookAppearance.light?.bgApp || '#e6e3dc',
       },
@@ -245,8 +247,10 @@ export function createConfig(adminConfig = null) {
         coverBgEnd: bookAppearance.dark?.coverBgEnd || '#000000',
         coverText: bookAppearance.dark?.coverText || '#eaeaea',
         coverBgImage: bookAppearance.dark?.coverBgImage || null,
+        _idbCoverBgImage: bookAppearance.dark?._idbCoverBgImage || false,
         pageTexture: bookAppearance.dark?.pageTexture || 'none',
         customTextureData: bookAppearance.dark?.customTextureData || null,
+        _idbCustomTexture: bookAppearance.dark?._idbCustomTexture || false,
         bgPage: bookAppearance.dark?.bgPage || '#1e1e1e',
         bgApp: bookAppearance.dark?.bgApp || '#121212',
       },
@@ -322,10 +326,16 @@ export function createConfig(adminConfig = null) {
  * @param {Object} config - Объект CONFIG (top-level заморожен, вложенные — нет)
  */
 export async function enrichConfigFromIDB(config) {
+  const appearanceNeedsIdb = ['light', 'dark'].some(theme => {
+    const t = config.APPEARANCE?.[theme];
+    return t?._idbCoverBgImage || t?._idbCustomTexture;
+  });
+
   const needsIdb =
     config.DECORATIVE_FONT?._idb ||
     config.CUSTOM_FONTS?.some(f => f._idb) ||
-    Object.values(config.AMBIENT).some(a => a._idb);
+    Object.values(config.AMBIENT).some(a => a._idb) ||
+    appearanceNeedsIdb;
 
   if (!needsIdb) return;
 
@@ -368,6 +378,22 @@ export async function enrichConfigFromIDB(config) {
         if (src?.dataUrl) {
           font.dataUrl = src.dataUrl;
         }
+      }
+    }
+  }
+
+  // Оформление: coverBgImage и customTextureData
+  if (appearanceNeedsIdb && activeBook?.appearance) {
+    for (const theme of ['light', 'dark']) {
+      const target = config.APPEARANCE?.[theme];
+      const src = activeBook.appearance[theme];
+      if (!target || !src) continue;
+
+      if (target._idbCoverBgImage && src.coverBgImage) {
+        target.coverBgImage = src.coverBgImage;
+      }
+      if (target._idbCustomTexture && src.customTextureData) {
+        target.customTextureData = src.customTextureData;
       }
     }
   }

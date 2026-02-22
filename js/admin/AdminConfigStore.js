@@ -234,6 +234,22 @@ export class AdminConfigStore {
             }
           }
         }
+
+        // Убираем data URL из оформления (coverBgImage, customTextureData)
+        if (book.appearance) {
+          for (const theme of ['light', 'dark']) {
+            const t = book.appearance[theme];
+            if (!t) continue;
+            if (t.coverBgImage?.startsWith('data:')) {
+              t._idbCoverBgImage = true;
+              delete t.coverBgImage;
+            }
+            if (t.customTextureData?.startsWith('data:')) {
+              t._idbCustomTexture = true;
+              delete t.customTextureData;
+            }
+          }
+        }
       }
 
       // Убираем data URL пользовательских шрифтов для чтения
