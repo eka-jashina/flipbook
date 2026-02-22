@@ -37,7 +37,7 @@ const DEFAULT_ALLOWED_ATTRS_BY_TAG = {
   th: ["colspan", "rowspan", "scope"],
 };
 
-const DEFAULT_ALLOWED_DATA_ATTRS = ["data-chapter", "data-chapter-start", "data-index", "data-layout"];
+const DEFAULT_ALLOWED_DATA_ATTRS = ["data-chapter", "data-chapter-start", "data-index", "data-layout", "data-filter", "data-filter-intensity", "data-rotation"];
 
 // Разрешённые URI-схемы: стандартные протоколы + безопасные растровые data:image/ URI.
 // SVG в data: URL намеренно не разрешён — может содержать <script>.

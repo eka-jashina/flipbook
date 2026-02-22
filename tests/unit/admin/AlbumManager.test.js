@@ -1076,14 +1076,14 @@ describe('AlbumManager', () => {
       expect(result).toBe(' photo-album__item--frame-shadow');
     });
 
-    it('should NOT add filter class (filter is now inline style)', () => {
+    it('should add filter class', () => {
       const result = manager._buildItemModifiers({ frame: 'none', filter: 'sepia' });
-      expect(result).toBe('');
+      expect(result).toBe(' photo-album__item--filter-sepia');
     });
 
-    it('should add only frame class when both frame and filter are set', () => {
+    it('should add both frame and filter classes when both are set', () => {
       const result = manager._buildItemModifiers({ frame: 'polaroid', filter: 'grayscale' });
-      expect(result).toBe(' photo-album__item--frame-polaroid');
+      expect(result).toBe(' photo-album__item--frame-polaroid photo-album__item--filter-grayscale');
     });
 
     it('should handle all frame types', () => {
@@ -1251,11 +1251,13 @@ describe('AlbumManager', () => {
         expect(html).toContain('photo-album__item photo-album__item--frame-shadow');
       });
 
-      it('should add filter as inline style on img', () => {
+      it('should add filter as inline style and class modifier on img', () => {
         const pages = [makePage('1', [makeImage('data:img', '', 'none', 'sepia', 100)])];
         const html = buildHtml('T', pages);
         expect(html).toContain('style="filter:sepia(');
-        expect(html).not.toContain('--filter-');
+        expect(html).toContain('photo-album__item--filter-sepia');
+        expect(html).toContain('data-filter="sepia"');
+        expect(html).toContain('data-filter-intensity="100"');
       });
 
       it('should add frame class and filter inline style together', () => {
