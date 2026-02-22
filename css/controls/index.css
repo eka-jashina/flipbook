@@ -65,20 +65,25 @@
    ═══════════════════════════════════════════ */
 
 .settings {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    opacity var(--timing-transition) ease-in-out,
+    grid-template-rows var(--timing-transition) ease-in-out;
+  visibility: hidden;
+}
+
+.settings-inner {
   display: flex;
   flex-direction: column;
   gap: 5px;
   justify-content: center;
   align-items: center;
-  max-height: 0;
-  opacity: 0;
-  transition:
-    opacity var(--timing-transition) ease-in-out,
-    max-height var(--timing-transition) ease-in-out;
-  visibility: hidden;
+  overflow: hidden;
 }
 
-.settings div {
+.settings-inner div {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
@@ -87,9 +92,8 @@
 
 /* Показываем при чекнутом чекбоксе через :has() */
 .controls:has(.settings-checkbox:checked) .settings {
+  grid-template-rows: 1fr;
   opacity: 1;
-  min-height: auto;
-  max-height: 1000px;
   visibility: visible;
 }
 
@@ -165,22 +169,24 @@
   }
 
   .settings {
+    grid-template-rows: 0fr;
+    grid-template-columns: 0fr;
+    transition:
+      opacity var(--timing-transition) ease-in-out,
+      grid-template-rows var(--timing-transition) ease-in-out,
+      grid-template-columns var(--timing-transition) ease-in-out;
+  }
+
+  .settings-inner {
     flex-direction: row;
     gap: 16px;
     align-items: flex-start;
-    max-height: 0;
     overflow: hidden;
-    width: 0;
-    padding: 0;
-    transition:
-      opacity var(--timing-transition) ease-in-out,
-      max-height var(--timing-transition) ease-in-out,
-      width var(--timing-transition) ease-in-out;
   }
 
   .controls:has(.settings-checkbox:checked) .settings {
-    width: auto;
-    max-height: 1000px;
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr;
   }
 
   .copyright {
