@@ -10,6 +10,8 @@
 
 import { cssVars } from '../utils/CSSVariables.js';
 import { mediaQueries } from '../utils/MediaQueryManager.js';
+import { BookState } from '../config.js';
+import { SwipeHint } from '../utils/SwipeHint.js';
 
 export class SubscriptionManager {
   constructor() {
@@ -57,6 +59,21 @@ export class SubscriptionManager {
       }
     });
     
+    this.subscriptions.push(unsub);
+  }
+
+  /**
+   * Подписаться на показ подсказки свайпа при первом открытии книги
+   * @param {BookStateMachine} stateMachine
+   */
+  subscribeToSwipeHint(stateMachine) {
+    const hint = new SwipeHint();
+    const unsub = stateMachine.subscribe(state => {
+      if (state === BookState.OPENED) {
+        hint.showIfNeeded();
+      }
+    });
+
     this.subscriptions.push(unsub);
   }
 

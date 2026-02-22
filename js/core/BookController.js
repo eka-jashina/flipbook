@@ -308,6 +308,8 @@ export class BookController {
         () => this.stateMachine.isOpened
       );
 
+      this.subscriptions.subscribeToSwipeHint(this.stateMachine);
+
       this.resizeHandler.bind();
       this.mediator.updateDebug();
     } catch (error) {

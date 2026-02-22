@@ -100,21 +100,22 @@
   filter: brightness(1.05);
 }
 
-/* Во время переворота - курсор ожидания */
+/* Во время переворота - блокируем взаимодействие */
 .book[data-state="flipping"] {
-  cursor: wait;
+  cursor: default;
+  pointer-events: none;
 }
 
 /* Зоны клика на страницах (только на десктопе) */
 @media (min-width: 769px) {
   /* Левая страница - перелистывание назад */
   .book[data-state="opened"] .page[data-side="left"]:hover {
-    cursor: w-resize;
+    cursor: pointer;
   }
 
   /* Правая страница - перелистывание вперёд */
   .book[data-state="opened"] .page[data-side="right"]:hover {
-    cursor: e-resize;
+    cursor: pointer;
   }
 
   /* TOC имеет свой курсор, не перекрываем */

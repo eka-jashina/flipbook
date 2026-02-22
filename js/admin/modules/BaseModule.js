@@ -8,8 +8,8 @@ export class BaseModule {
     this.store = app.store;
   }
 
-  _showToast(message) {
-    this.app._showToast(message);
+  _showToast(message, type) {
+    this.app._showToast(message, type);
   }
 
   _escapeHtml(str) {

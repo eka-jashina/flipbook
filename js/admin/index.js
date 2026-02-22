@@ -16,6 +16,7 @@ class AdminApp {
   constructor(store) {
     this.store = store;
     this._toastTimer = null;
+    this._saveIndicatorTimer = null;
     /** ID книги, созданной через «Создать вручную» (ещё не подтверждённой) */
     this._pendingBookId = null;
 
@@ -37,6 +38,13 @@ class AdminApp {
     this._bindEvents();
     this._render();
     this._handleUrlMode();
+
+    // Перехват сохранений store для показа индикатора
+    const originalSave = this.store._save.bind(this.store);
+    this.store._save = () => {
+      originalSave();
+      this._showSaveIndicator();
+    };
   }
 
   // --- DOM ---
@@ -71,6 +79,11 @@ class AdminApp {
     // Toast
     this.toast = document.getElementById('toast');
     this.toastMessage = document.getElementById('toastMessage');
+    this.toastIconPath = document.getElementById('toastIconPath');
+
+    // Save indicator
+    this.saveIndicator = document.getElementById('saveIndicator');
+    this.saveIndicatorText = document.getElementById('saveIndicatorText');
 
     // Confirm dialog
     this.confirmDialog = document.getElementById('confirmDialog');
@@ -316,9 +329,49 @@ class AdminApp {
     });
   }
 
-  _showToast(message) {
+  /** Показать индикатор «Сохранено» в заголовке редактора */
+  _showSaveIndicator() {
+    // Показываем только если открыт редактор
+    const editorView = document.querySelector('.screen-view[data-view="editor"]');
+    if (!editorView || !editorView.classList.contains('active')) return;
+
+    this.saveIndicator.classList.remove('fade-out');
+    this.saveIndicator.classList.add('visible');
+    this.saveIndicatorText.textContent = 'Сохранено';
+    this.saveIndicator.classList.add('save-indicator--saved');
+    this.saveIndicator.classList.remove('save-indicator--saving');
+
+    clearTimeout(this._saveIndicatorTimer);
+    this._saveIndicatorTimer = setTimeout(() => {
+      this.saveIndicator.classList.add('fade-out');
+      setTimeout(() => {
+        this.saveIndicator.classList.remove('visible', 'fade-out', 'save-indicator--saved');
+      }, 500);
+    }, 2000);
+  }
+
+  /** SVG-пути иконок для типов toast */
+  static TOAST_ICONS = {
+    success: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
+    error: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',
+    warning: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
+  };
+
+  /**
+   * @param {string} message — текст уведомления
+   * @param {'success'|'error'|'warning'} [type] — тип (определяет цвет и иконку)
+   */
+  _showToast(message, type) {
     this.toastMessage.textContent = message;
     this.toast.hidden = false;
+
+    // Тип уведомления
+    if (type && AdminApp.TOAST_ICONS[type]) {
+      this.toast.dataset.type = type;
+      this.toastIconPath.setAttribute('d', AdminApp.TOAST_ICONS[type]);
+    } else {
+      delete this.toast.dataset.type;
+    }
 
     requestAnimationFrame(() => {
       this.toast.classList.add('visible');
