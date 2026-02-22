@@ -274,6 +274,7 @@ vi.mock('../../../js/core/SubscriptionManager.js', () => ({
       this.subscribeToState = vi.fn();
       this.subscribeToPagination = vi.fn();
       this.subscribeToMediaQueries = vi.fn();
+      this.subscribeToSwipeHint = vi.fn();
       this.unsubscribeAll = vi.fn();
       mockInstances.subscriptionManager = this;
     }
