@@ -69,6 +69,7 @@ export class AlbumManager {
     this.albumHideTitle = document.getElementById('albumHideTitle');
     this.albumPagesEl = document.getElementById('albumPages');
     this.albumAddPageBtn = document.getElementById('albumAddPage');
+    this.albumBulkUploadBtn = document.getElementById('albumBulkUpload');
     this.saveAlbumBtn = document.getElementById('saveAlbum');
     this.cancelAlbumBtn = document.getElementById('cancelAlbum');
     this.albumHeading = document.getElementById('albumHeading');
@@ -76,6 +77,7 @@ export class AlbumManager {
 
   bindEvents() {
     this.albumAddPageBtn.addEventListener('click', () => this._addAlbumPage());
+    this.albumBulkUploadBtn.addEventListener('click', () => this._bulkUpload());
     this.saveAlbumBtn.addEventListener('click', () => this._handleAlbumSubmit());
     this.cancelAlbumBtn.addEventListener('click', () => this._cancelAlbum());
   }
@@ -129,6 +131,128 @@ export class AlbumManager {
   _addAlbumPage() {
     this._isDirty = true;
     this._albumPages.push({ layout: '1', images: [] });
+    this._renderAlbumPages();
+  }
+
+  /**
+   * Массовая загрузка фото на уровне альбома
+   * Заполняет пустые слоты существующих страниц, затем создаёт новые (layout=4)
+   */
+  _bulkUpload() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.addEventListener('change', () => {
+      const files = [...input.files].filter(f => f.type.startsWith('image/'));
+      if (!files.length) return;
+      this._distributeBulkFiles(files);
+    });
+    input.click();
+  }
+
+  /**
+   * Массовая загрузка на уровне одной страницы
+   * Заполняет пустые слоты только этой страницы
+   */
+  _bulkUploadToPage(pageIndex) {
+    const page = this._albumPages[pageIndex];
+    if (!page) return;
+    const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
+    const emptySlots = [];
+    for (let i = 0; i < count; i++) {
+      if (!page.images[i]?.dataUrl) emptySlots.push(i);
+    }
+    if (!emptySlots.length) {
+      this._module._showToast('Нет пустых слотов на этой странице');
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.addEventListener('change', () => {
+      const files = [...input.files].filter(f => f.type.startsWith('image/'));
+      if (!files.length) return;
+      // Ограничить количество файлов количеством пустых слотов
+      const limited = files.slice(0, emptySlots.length);
+      const slots = emptySlots.slice(0, limited.length).map(imageIndex => ({
+        pageIndex,
+        imageIndex,
+      }));
+      this._processBulkFiles(limited, slots);
+    });
+    input.click();
+  }
+
+  /**
+   * Распределить файлы по пустым слотам всех страниц, создать новые если нужно
+   */
+  async _distributeBulkFiles(files) {
+    // Валидация файлов
+    const validFiles = files.filter(f =>
+      this._module._validateFile(f, { maxSize: IMAGE_MAX_FILE_SIZE, mimePrefix: 'image/' }),
+    );
+    if (!validFiles.length) return;
+
+    // Собрать все пустые слоты существующих страниц
+    const slots = [];
+    for (let p = 0; p < this._albumPages.length; p++) {
+      const page = this._albumPages[p];
+      const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
+      for (let i = 0; i < count; i++) {
+        if (!page.images[i]?.dataUrl) {
+          slots.push({ pageIndex: p, imageIndex: i });
+        }
+      }
+    }
+
+    // Создать новые страницы для оставшихся файлов
+    let remaining = validFiles.length - slots.length;
+    while (remaining > 0) {
+      const pageIndex = this._albumPages.length;
+      this._albumPages.push({ layout: '4', images: [] });
+      const count = LAYOUT_IMAGE_COUNT['4'];
+      for (let i = 0; i < count && remaining > 0; i++) {
+        slots.push({ pageIndex, imageIndex: i });
+        remaining--;
+      }
+    }
+
+    this._renderAlbumPages();
+    await this._processBulkFiles(validFiles, slots);
+  }
+
+  /**
+   * Обработать массив файлов и загрузить в указанные слоты
+   */
+  async _processBulkFiles(files, slots) {
+    const promises = files.map(async (file, idx) => {
+      const { pageIndex, imageIndex } = slots[idx];
+      const slotEl = this._getSlotElement(pageIndex, imageIndex);
+      slotEl?.classList.add('loading');
+      try {
+        const dataUrl = await this._compressImage(file);
+        const page = this._albumPages[pageIndex];
+        if (!page) return;
+        this._isDirty = true;
+        const prev = page.images[imageIndex];
+        page.images[imageIndex] = {
+          dataUrl,
+          originalDataUrl: dataUrl,
+          caption: prev?.caption || '',
+          frame: prev?.frame || 'none',
+          filter: prev?.filter || 'none',
+          filterIntensity: prev?.filterIntensity ?? DEFAULT_FILTER_INTENSITY,
+          rotation: prev?.rotation || 0,
+        };
+      } catch {
+        slotEl?.classList.remove('loading');
+      }
+    });
+
+    await Promise.all(promises);
     this._renderAlbumPages();
   }
 
@@ -234,6 +358,15 @@ export class AlbumManager {
         removeBtn.addEventListener('click', () => this._removeAlbumPage(pageIndex));
         header.appendChild(removeBtn);
       }
+
+      // Кнопка массовой загрузки на уровне страницы
+      const pageBulkBtn = document.createElement('button');
+      pageBulkBtn.type = 'button';
+      pageBulkBtn.className = 'album-page-bulk-btn';
+      pageBulkBtn.title = 'Загрузить несколько фото';
+      pageBulkBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>';
+      pageBulkBtn.addEventListener('click', () => this._bulkUploadToPage(pageIndex));
+      header.appendChild(pageBulkBtn);
 
       card.appendChild(header);
 

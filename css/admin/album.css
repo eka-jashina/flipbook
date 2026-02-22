@@ -396,8 +396,49 @@
   color: #ff3b30;
 }
 
+.album-page-bulk-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  background: var(--admin-surface);
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: all var(--admin-transition);
+}
+
+.album-page-bulk-btn:hover {
+  background: var(--admin-hover);
+  color: var(--admin-primary);
+}
+
 .album-page-card .album-layouts {
   margin-bottom: 10px;
+}
+
+/* Ряд кнопок под списком страниц */
+.album-actions-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.album-actions-row .album-add-page-btn {
+  flex: 1;
+}
+
+.album-bulk-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.album-bulk-upload-btn svg {
+  flex-shrink: 0;
 }
 
 .album-add-page-btn {
