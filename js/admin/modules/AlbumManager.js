@@ -57,6 +57,8 @@ export class AlbumManager {
     this._albumPages = []; // [{ layout: '1', images: [{dataUrl, caption, frame, filter, filterIntensity}] }]
     /** @type {number|null} Индекс редактируемой главы (null = создание новой) */
     this._editingChapterIndex = null;
+    /** @type {boolean} Были ли внесены изменения с момента открытия/сохранения */
+    this._isDirty = false;
     this._cropper = new PhotoCropper();
   }
 
@@ -81,6 +83,7 @@ export class AlbumManager {
   /** Открыть для создания нового альбома (вызывается из роутера) */
   openInView() {
     this._editingChapterIndex = null;
+    this._isDirty = false;
     this._albumPages = [{ layout: '1', images: [] }];
     this.albumTitleInput.value = '';
     this.albumHideTitle.checked = true;
@@ -91,6 +94,7 @@ export class AlbumManager {
   /** Открыть для редактирования существующего альбома */
   openForEdit(chapterIndex) {
     this._editingChapterIndex = chapterIndex;
+    this._isDirty = false;
     const chapter = this.store.getChapters()[chapterIndex];
     if (!chapter?.albumData) return;
 
@@ -111,7 +115,11 @@ export class AlbumManager {
     }
   }
 
-  _cancelAlbum() {
+  async _cancelAlbum() {
+    if (this._isDirty) {
+      const ok = await this._module._confirm('Несохранённые изменения будут потеряны. Выйти?');
+      if (!ok) return;
+    }
     const app = this._module.app;
     const hadPending = !!app._pendingBookId;
     app._cleanupPendingBook();
@@ -119,21 +127,33 @@ export class AlbumManager {
   }
 
   _addAlbumPage() {
+    this._isDirty = true;
     this._albumPages.push({ layout: '1', images: [] });
     this._renderAlbumPages();
   }
 
   _removeAlbumPage(pageIndex) {
     if (this._albumPages.length <= 1) return;
+    this._isDirty = true;
     this._albumPages.splice(pageIndex, 1);
     this._renderAlbumPages();
   }
 
-  _selectPageLayout(pageIndex, layout) {
+  async _selectPageLayout(pageIndex, layout) {
     const page = this._albumPages[pageIndex];
-    page.layout = layout;
-
     const count = LAYOUT_IMAGE_COUNT[layout] || 1;
+
+    // Проверить, будут ли потеряны загруженные фото
+    const lostImages = page.images.slice(count).filter(img => img?.dataUrl);
+    if (lostImages.length > 0) {
+      const ok = await this._module._confirm(
+        `При смене раскладки ${lostImages.length === 1 ? 'будет удалено 1 фото' : `будут удалены ${lostImages.length} фото`}. Продолжить?`,
+      );
+      if (!ok) return;
+    }
+
+    this._isDirty = true;
+    page.layout = layout;
     page.images = page.images.slice(0, count);
 
     this._renderAlbumPages();
@@ -280,6 +300,7 @@ export class AlbumManager {
       });
 
       slot.querySelector('.album-image-slot-remove').addEventListener('click', () => {
+        this._isDirty = true;
         page.images[i] = null;
         this._renderAlbumPages();
       });
@@ -293,6 +314,7 @@ export class AlbumManager {
       captionInput.placeholder = 'Подпись...';
       captionInput.value = img?.caption || '';
       captionInput.addEventListener('input', () => {
+        this._isDirty = true;
         if (!page.images[i]) page.images[i] = { dataUrl: '', caption: '' };
         page.images[i].caption = captionInput.value;
       });
@@ -385,6 +407,7 @@ export class AlbumManager {
 
   /** Гарантировать наличие объекта изображения в слоте */
   _ensureImageData(page, index) {
+    this._isDirty = true;
     if (!page.images[index]) {
       page.images[index] = { dataUrl: '', caption: '', frame: 'none', filter: 'none', filterIntensity: DEFAULT_FILTER_INTENSITY, rotation: 0 };
     }
@@ -403,6 +426,7 @@ export class AlbumManager {
       if (!cropped) return;
       // Страница могла быть удалена во время кадрирования
       if (!this._albumPages[pageIndex]) return;
+      this._isDirty = true;
       this._albumPages[pageIndex].images[imageIndex].dataUrl = cropped;
       this._renderAlbumPages();
     } catch {
@@ -417,6 +441,7 @@ export class AlbumManager {
     const img = page.images[imageIndex];
     if (!img?.dataUrl) return;
 
+    this._isDirty = true;
     const current = img.rotation || 0;
     const next = ROTATION_VALUES[(ROTATION_VALUES.indexOf(current) + 1) % ROTATION_VALUES.length];
     img.rotation = next;
@@ -429,6 +454,7 @@ export class AlbumManager {
       const page = this._albumPages[pageIndex];
       if (!page) return; // Страница могла быть удалена во время сжатия
       const prev = page.images[imageIndex];
+      this._isDirty = true;
       page.images[imageIndex] = {
         dataUrl,
         caption: prev?.caption || '',
@@ -488,7 +514,7 @@ export class AlbumManager {
     });
   }
 
-  _handleAlbumSubmit() {
+  async _handleAlbumSubmit() {
     const title = this.albumTitleInput.value.trim();
     if (!title) {
       this._module._showToast('Укажите название альбома');
@@ -502,6 +528,21 @@ export class AlbumManager {
     if (!hasAnyImage) {
       this._module._showToast('Добавьте хотя бы одно изображение');
       return;
+    }
+
+    // Проверить незаполненные слоты
+    let emptySlots = 0;
+    for (const page of this._albumPages) {
+      const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
+      for (let i = 0; i < count; i++) {
+        if (!page.images[i]?.dataUrl) emptySlots++;
+      }
+    }
+    if (emptySlots > 0) {
+      const ok = await this._module._confirm(
+        `${emptySlots === 1 ? 'Остался 1 незаполненный слот' : `Осталось незаполненных слотов: ${emptySlots}`}. Пустые места не будут отображаться. Сохранить?`,
+      );
+      if (!ok) return;
     }
 
     // Собрать структурированные данные альбома
@@ -539,6 +580,7 @@ export class AlbumManager {
       this._module._showToast('Фотоальбом добавлен');
     }
 
+    this._isDirty = false;
     const app = this._module.app;
 
     // Если книга была создана как pending (из mode-selector), подтвердить её
@@ -564,16 +606,14 @@ export class AlbumManager {
     const h2Class = albumData.hideTitle ? ' class="sr-only"' : '';
 
     const albumDivs = albumData.pages.map(page => {
-      const figures = this._getPageSlots(page).map(img => {
-        if (!img?.dataUrl) {
-          return '<figure class="photo-album__item"><img src="" alt=""></figure>';
-        }
+      const figures = this._getPageSlots(page).filter(img => img?.dataUrl).map(img => {
         const caption = img.caption
           ? `<figcaption>${this._module._escapeHtml(img.caption)}</figcaption>`
           : '';
         const modifiers = this._buildItemModifiers(img);
-        const rotateStyle = img.rotation ? ` style="transform:rotate(${img.rotation}deg)"` : '';
-        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}"${rotateStyle}>${caption}</figure>`;
+        const imgStyles = this._buildImgInlineStyle(img);
+        const styleAttr = imgStyles ? ` style="${imgStyles}"` : '';
+        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}"${styleAttr}>${caption}</figure>`;
       });
       return `<div class="photo-album" data-layout="${page.layout}">${figures.join('')}</div>`;
     });
@@ -581,12 +621,20 @@ export class AlbumManager {
     return `<article><h2${h2Class}>${this._module._escapeHtml(albumData.title)}</h2>${albumDivs.join('')}</article>`;
   }
 
-  /** Собрать CSS-модификаторы рамки и фильтра для figure */
+  /** Собрать CSS-модификаторы рамки для figure (фильтр — через inline style) */
   _buildItemModifiers(img) {
     let cls = '';
     if (img.frame && img.frame !== 'none') cls += ` photo-album__item--frame-${img.frame}`;
-    if (img.filter && img.filter !== 'none') cls += ` photo-album__item--filter-${img.filter}`;
     return cls;
+  }
+
+  /** Собрать inline style для <img>: rotation + filter с учётом интенсивности */
+  _buildImgInlineStyle(img) {
+    const parts = [];
+    if (img.rotation) parts.push(`transform:rotate(${img.rotation}deg)`);
+    const filterStyle = this._computeFilterStyle(img.filter, img.filterIntensity);
+    if (filterStyle) parts.push(`filter:${filterStyle}`);
+    return parts.join(';');
   }
 
   /**
