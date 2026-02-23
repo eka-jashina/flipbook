@@ -30,12 +30,15 @@
 
 ### 1.3 Аутентификация
 
-**Решение: express-session + connect-pg-simple + Passport.js (local strategy)**
+**Решение: express-session + connect-pg-simple + Passport.js (local + Google OAuth)**
 
 - Серверные сессии — простая инвалидация (выход, смена пароля — мгновенно)
 - connect-pg-simple — хранение сессий в PostgreSQL (отдельная таблица `session`)
-- Passport.js (local strategy) — стандартный модуль аутентификации
+- Passport.js стратегии:
+  - **passport-local** — вход по email + password
+  - **passport-google-oauth20** — вход через Google (Google Cloud Console → OAuth 2.0)
 - httpOnly Secure cookie для session ID
+- При входе через Google: если аккаунт с таким email уже существует — привязка, иначе — создание нового пользователя
 - **На будущее:** при росте нагрузки — заменить connect-pg-simple на connect-redis (Redis) без изменения остального кода
 
 ### 1.4 Файловое хранилище
@@ -76,12 +79,18 @@ User 1──* ReadingProgress (per book)
 CREATE TABLE users (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email         VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255),                  -- NULL для OAuth-only пользователей
     display_name  VARCHAR(100),
+    avatar_url    VARCHAR(500),                  -- URL аватара (из Google)
+    google_id     VARCHAR(255) UNIQUE,           -- Google OAuth subject ID
     created_at    TIMESTAMPTZ DEFAULT NOW(),
     updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX idx_users_google_id ON users(google_id);
 ```
+
+> **Примечание:** Пользователь может иметь и пароль, и Google OAuth. При входе через Google, если аккаунт с таким email уже есть — привязывается `google_id`. Если `password_hash` IS NULL и `google_id` IS NULL — невалидное состояние (CHECK constraint).
 
 #### books
 ```sql
@@ -282,6 +291,8 @@ CREATE INDEX "IDX_session_expire" ON "session" ("expire");
 
 ### 3.1 Аутентификация (серверные сессии + Passport.js)
 
+#### Email + Password
+
 | Метод  | Эндпоинт              | Описание                         | Тело запроса                         |
 |--------|------------------------|----------------------------------|--------------------------------------|
 | POST   | `/api/auth/register`   | Регистрация + автоматический вход | `{email, password, displayName?}`   |
@@ -289,19 +300,38 @@ CREATE INDEX "IDX_session_expire" ON "session" ("expire");
 | POST   | `/api/auth/logout`     | Выход (уничтожает сессию)        | —                                   |
 | GET    | `/api/auth/me`         | Получить текущего пользователя   | —                                   |
 
-**Механизм:**
-- При login/register сервер создаёт сессию в PostgreSQL (connect-pg-simple)
+#### Google OAuth 2.0
+
+| Метод  | Эндпоинт                    | Описание                                      |
+|--------|-------------------------------|-----------------------------------------------|
+| GET    | `/api/auth/google`            | Редирект на Google для авторизации             |
+| GET    | `/api/auth/google/callback`   | Callback от Google → создание сессии → редирект на фронтенд |
+
+**Флоу Google OAuth:**
+1. Клиент открывает `/api/auth/google` (или popup)
+2. Passport.js редиректит на Google consent screen
+3. Google редиректит на `/api/auth/google/callback` с authorization code
+4. Passport обменивает code на токен, получает профиль пользователя
+5. Если email уже есть в БД — привязывает `google_id`, входит
+6. Если email новый — создаёт пользователя (без пароля), входит
+7. Редирект на фронтенд (`/` или `/admin`)
+
+**Механизм сессий:**
+- При login/register/google callback сервер создаёт сессию в PostgreSQL (connect-pg-simple)
 - Session ID передаётся в httpOnly Secure cookie (`connect.sid`)
 - Все последующие запросы автоматически включают cookie
 - При logout — `req.session.destroy()` удаляет сессию из БД
 
-**Формат ответа (login/register):**
+**Формат ответа (login/register/me):**
 ```json
 {
   "user": {
     "id": "uuid",
     "email": "user@example.com",
-    "displayName": "Username"
+    "displayName": "Username",
+    "avatarUrl": "https://...",
+    "hasPassword": true,
+    "hasGoogle": true
   }
 }
 ```
@@ -558,7 +588,7 @@ server/
 │   │   └── export.routes.ts       # /api/export, /api/import
 │   │
 │   ├── services/
-│   │   ├── auth.service.ts        # Логика аутентификации (хэширование, JWT)
+│   │   ├── auth.service.ts        # Логика аутентификации (хэширование, OAuth привязка)
 │   │   ├── books.service.ts       # CRUD книг
 │   │   ├── chapters.service.ts    # CRUD глав
 │   │   ├── appearance.service.ts  # Внешний вид книги
@@ -689,9 +719,9 @@ class ApiClient {
 ### 5.3 Новые компоненты UI
 
 #### Экран аутентификации
-- Форма входа / регистрации
+- Форма входа / регистрации (email + password)
+- Кнопка «Войти через Google» → переход на `/api/auth/google`
 - Валидация на стороне клиента
-- Восстановление пароля (опционально, фаза 2)
 
 #### Индикатор синхронизации
 - Показывать статус: «Сохранено» / «Сохранение...» / «Ошибка синхронизации»
@@ -752,7 +782,7 @@ class ApiClient {
 
 - Серверные сессии в PostgreSQL (connect-pg-simple), cookie httpOnly + Secure + SameSite=Lax
 - Session TTL: 7 дней, автоматическая очистка просроченных сессий
-- Passport.js local strategy для login/register
+- Passport.js: local strategy для email+password, google-oauth20 для Google
 - Все API эндпоинты (кроме auth) требуют активную сессию (`req.isAuthenticated()`)
 - Проверка владения: все операции с книгами/главами проверяют `book.user_id === currentUser.id`
 - Rate limiting: ограничение запросов (100 req/min для обычных, 5 req/min для auth)
@@ -791,6 +821,11 @@ SESSION_SECRET=your-session-secret-min-32-chars
 SESSION_MAX_AGE=604800000             # 7 дней в миллисекундах
 SESSION_SECURE=false                  # true в production (HTTPS only)
 
+# Google OAuth 2.0
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:4000/api/auth/google/callback
+
 # S3 / MinIO
 S3_ENDPOINT=http://localhost:9000     # MinIO для разработки, убрать для AWS S3
 S3_BUCKET=flipbook-uploads
@@ -824,7 +859,7 @@ RATE_LIMIT_MAX=100                    # запросов в окно
 3. Настройка Prisma + PostgreSQL, создание схемы
 4. S3 StorageService (@aws-sdk/client-s3) — единый интерфейс для MinIO/AWS S3
 5. Middleware: CORS, JSON parsing, error handler, request logging, session (express-session + connect-pg-simple)
-6. Аутентификация: Passport.js (local strategy), register, login, logout, auth middleware
+6. Аутентификация: Passport.js (local + google-oauth20), register, login, Google OAuth, logout, auth middleware
 7. CRUD книг: GET /api/books, POST, GET /:id, PATCH /:id, DELETE /:id
 8. CRUD глав: GET, POST, GET /:id, PATCH, DELETE, GET /:id/content
 9. Базовые тесты API (supertest)
@@ -899,6 +934,7 @@ RATE_LIMIT_MAX=100                    # запросов в окно
   "connect-pg-simple": "^10.0.0",
   "passport": "^0.7.0",
   "passport-local": "^1.0.0",
+  "passport-google-oauth20": "^2.0.0",
   "zod": "^3.23.0",
   "multer": "^1.4.0",
   "@aws-sdk/client-s3": "^3.700.0",
@@ -929,6 +965,7 @@ RATE_LIMIT_MAX=100                    # запросов в окно
   "@types/connect-pg-simple": "^7.0.0",
   "@types/passport": "^1.0.0",
   "@types/passport-local": "^1.0.0",
+  "@types/passport-google-oauth20": "^2.0.0",
   "@types/bcrypt": "^5.0.0",
   "@types/multer": "^1.4.0",
   "@types/cors": "^2.8.0"
@@ -1011,6 +1048,9 @@ services:
     environment:
       DATABASE_URL: postgresql://flipbook:flipbook_dev@postgres:5432/flipbook
       SESSION_SECRET: dev-session-secret-change-in-production
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: http://localhost:4000/api/auth/google/callback
       S3_ENDPOINT: http://minio:9000
       S3_BUCKET: flipbook-uploads
       S3_ACCESS_KEY: minioadmin
@@ -1035,16 +1075,16 @@ volumes:
 | Вопрос | Решение |
 |--------|---------|
 | ORM | Prisma |
-| Аутентификация | express-session + connect-pg-simple + Passport.js (local) |
+| Аутентификация | express-session + connect-pg-simple + Passport.js (local + Google OAuth) |
 | Файлы | S3 с первого дня (MinIO для dev, AWS S3 для prod) |
 | Структура | Монорепо (`server/` в этом репозитории) |
 | API | REST |
 | Деплой | Docker + docker-compose |
 | Redis | На будущее (замена connect-pg-simple → connect-redis) |
+| Шеринг книг | Нет — один пользователь = свой набор книг |
+| OAuth | Google OAuth 2.0 (passport-google-oauth20) |
+| WebSocket | Не нужны — синхронизация через REST |
 
-## 14. Открытые вопросы
+## 15. Открытые вопросы
 
-1. **Мультитенантность:** Один пользователь = один набор книг? Или поддержка шаринга книг?
-2. **OAuth:** Нужна ли авторизация через Google/GitHub или достаточно email+password?
-3. **Лимиты:** Максимальное количество книг/глав на пользователя? Квота S3 хранилища?
-4. **Реальное время:** Нужны ли WebSocket для уведомлений о синхронизации?
+1. **Лимиты:** Максимальное количество книг/глав на пользователя? Квота S3 хранилища?
