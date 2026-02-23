@@ -160,19 +160,28 @@ export function createConfig(adminConfig = null) {
     : [
         {
           id: "part_1",
+          title: '',
           file: `${BASE_URL}content/part_1.html`,
+          htmlContent: null,
+          _idb: false,
           bg: `${BASE_URL}images/backgrounds/part_1.webp`,
           bgMobile: `${BASE_URL}images/backgrounds/part_1-mobile.webp`,
         },
         {
           id: "part_2",
+          title: '',
           file: `${BASE_URL}content/part_2.html`,
+          htmlContent: null,
+          _idb: false,
           bg: `${BASE_URL}images/backgrounds/part_2.webp`,
           bgMobile: `${BASE_URL}images/backgrounds/part_2-mobile.webp`,
         },
         {
           id: "part_3",
+          title: '',
           file: `${BASE_URL}content/part_3.html`,
+          htmlContent: null,
+          _idb: false,
           bg: `${BASE_URL}images/backgrounds/part_3.webp`,
           bgMobile: `${BASE_URL}images/backgrounds/part_3-mobile.webp`,
         },
