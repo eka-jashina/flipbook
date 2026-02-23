@@ -30,17 +30,23 @@
 
 ### 1.3 Аутентификация
 
-**Рекомендация: JWT (access + refresh tokens)**
+**Решение: express-session + connect-pg-simple + Passport.js (local strategy)**
 
-- Stateless аутентификация, хорошо масштабируется
-- Access token (15-30 мин) + Refresh token (7-30 дней)
-- Хранение refresh token в httpOnly cookie
-- Альтернатива: сессии с express-session + Redis (проще, но требует стейт на сервере)
+- Серверные сессии — простая инвалидация (выход, смена пароля — мгновенно)
+- connect-pg-simple — хранение сессий в PostgreSQL (отдельная таблица `session`)
+- Passport.js (local strategy) — стандартный модуль аутентификации
+- httpOnly Secure cookie для session ID
+- **На будущее:** при росте нагрузки — заменить connect-pg-simple на connect-redis (Redis) без изменения остального кода
 
 ### 1.4 Файловое хранилище
 
-- Все data URL (шрифты, аудио, обложки, текстуры) заменяются на файлы в объектном хранилище
+**Решение: S3-совместимое хранилище с первого дня**
+
+- **Production:** AWS S3 (или DigitalOcean Spaces, Cloudflare R2)
+- **Разработка/self-hosted:** MinIO в Docker — полностью S3-совместимый API
+- Все data URL (шрифты, аудио, обложки, текстуры) заменяются на файлы в S3
 - Сервер генерирует уникальные имена файлов и возвращает URL
+- Единый интерфейс `StorageService` с S3 SDK (@aws-sdk/client-s3) — работает и с AWS S3, и с MinIO
 - Поддержка multipart/form-data для загрузки
 - Лимиты размера: шрифты 400 КБ, звуки 2 МБ, изображения 5 МБ
 
@@ -254,38 +260,44 @@ CREATE TABLE reading_progress (
 CREATE INDEX idx_reading_progress_user_book ON reading_progress(user_id, book_id);
 ```
 
-#### refresh_tokens
+#### session (управляется connect-pg-simple автоматически)
 ```sql
-CREATE TABLE refresh_tokens (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash    VARCHAR(255) NOT NULL,
-    expires_at    TIMESTAMPTZ NOT NULL,
-    created_at    TIMESTAMPTZ DEFAULT NOW()
+-- Таблица создаётся автоматически connect-pg-simple при первом запуске
+-- или через sql-скрипт из пакета connect-pg-simple
+CREATE TABLE "session" (
+    "sid"    VARCHAR NOT NULL COLLATE "default",
+    "sess"   JSON NOT NULL,
+    "expire" TIMESTAMP(6) NOT NULL,
+    PRIMARY KEY ("sid")
 );
 
-CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
-CREATE INDEX idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+CREATE INDEX "IDX_session_expire" ON "session" ("expire");
 ```
+
+> **Примечание:** При миграции на Redis в будущем — эта таблица больше не нужна. Заменяем `connect-pg-simple` на `connect-redis`, остальной код не меняется.
 
 ---
 
 ## 3. REST API
 
-### 3.1 Аутентификация
+### 3.1 Аутентификация (серверные сессии + Passport.js)
 
-| Метод  | Эндпоинт              | Описание                    | Тело запроса                         |
-|--------|------------------------|-----------------------------|--------------------------------------|
-| POST   | `/api/auth/register`   | Регистрация                 | `{email, password, displayName?}`    |
-| POST   | `/api/auth/login`      | Вход                        | `{email, password}`                  |
-| POST   | `/api/auth/refresh`    | Обновление токена           | httpOnly cookie с refresh token      |
-| POST   | `/api/auth/logout`     | Выход                       | httpOnly cookie с refresh token      |
-| GET    | `/api/auth/me`         | Получить текущего пользователя | —                                  |
+| Метод  | Эндпоинт              | Описание                         | Тело запроса                         |
+|--------|------------------------|----------------------------------|--------------------------------------|
+| POST   | `/api/auth/register`   | Регистрация + автоматический вход | `{email, password, displayName?}`   |
+| POST   | `/api/auth/login`      | Вход (создаёт сессию)            | `{email, password}`                 |
+| POST   | `/api/auth/logout`     | Выход (уничтожает сессию)        | —                                   |
+| GET    | `/api/auth/me`         | Получить текущего пользователя   | —                                   |
+
+**Механизм:**
+- При login/register сервер создаёт сессию в PostgreSQL (connect-pg-simple)
+- Session ID передаётся в httpOnly Secure cookie (`connect.sid`)
+- Все последующие запросы автоматически включают cookie
+- При logout — `req.session.destroy()` удаляет сессию из БД
 
 **Формат ответа (login/register):**
 ```json
 {
-  "accessToken": "eyJhbG...",
   "user": {
     "id": "uuid",
     "email": "user@example.com",
@@ -526,11 +538,11 @@ server/
 │   ├── config.ts                  # Конфигурация из переменных окружения
 │   │
 │   ├── middleware/
-│   │   ├── auth.ts                # JWT аутентификация middleware
+│   │   ├── auth.ts                # Passport.js сессионная аутентификация
 │   │   ├── errorHandler.ts        # Глобальная обработка ошибок
 │   │   ├── validate.ts            # Валидация запросов (zod)
 │   │   ├── rateLimit.ts           # Rate limiting
-│   │   └── upload.ts              # Multer для загрузки файлов
+│   │   └── upload.ts              # Multer для загрузки файлов (memory storage → S3)
 │   │
 │   ├── routes/
 │   │   ├── auth.routes.ts         # /api/auth/*
@@ -567,19 +579,14 @@ server/
 │   │   └── Fb2Parser.ts
 │   │
 │   ├── utils/
-│   │   ├── jwt.ts                 # JWT генерация и верификация
-│   │   ├── password.ts            # Хэширование паролей (bcrypt/argon2)
-│   │   ├── storage.ts             # Абстракция над файловым хранилищем
+│   │   ├── password.ts            # Хэширование паролей (bcrypt)
+│   │   ├── storage.ts             # S3 StorageService (@aws-sdk/client-s3) — единый интерфейс для MinIO и AWS S3
 │   │   └── sanitize.ts            # Санитизация HTML (server-side DOMPurify)
 │   │
 │   └── types/
 │       ├── api.ts                 # Типы запросов/ответов API
 │       └── models.ts              # Доменные типы
 │
-├── uploads/                       # Локальное файловое хранилище (dev)
-│   ├── fonts/
-│   ├── sounds/
-│   └── images/
 │
 └── tests/
     ├── setup.ts
@@ -601,14 +608,14 @@ server/
 class ApiClient {
     constructor(baseUrl) { ... }
 
-    // Авто-обновление токена при 401
+    // credentials: 'include' для отправки session cookie
+    // Редирект на login при 401
     async request(method, path, body, options) { ... }
 
-    // Auth
+    // Auth (session-based)
     async register(email, password, displayName) { ... }
     async login(email, password) { ... }
     async logout() { ... }
-    async refreshToken() { ... }
     async getMe() { ... }
 
     // Books
@@ -743,11 +750,13 @@ class ApiClient {
 
 ### 8.1 Аутентификация и авторизация
 
-- JWT access token: короткоживущий (15-30 мин)
-- Refresh token: долгоживущий (7-30 дней), в httpOnly Secure cookie
-- Все API эндпоинты (кроме auth) требуют валидный access token
+- Серверные сессии в PostgreSQL (connect-pg-simple), cookie httpOnly + Secure + SameSite=Lax
+- Session TTL: 7 дней, автоматическая очистка просроченных сессий
+- Passport.js local strategy для login/register
+- Все API эндпоинты (кроме auth) требуют активную сессию (`req.isAuthenticated()`)
 - Проверка владения: все операции с книгами/главами проверяют `book.user_id === currentUser.id`
 - Rate limiting: ограничение запросов (100 req/min для обычных, 5 req/min для auth)
+- **На будущее:** connect-redis для хранения сессий при высокой нагрузке
 
 ### 8.2 Валидация данных
 
@@ -763,7 +772,7 @@ class ApiClient {
 - Helmet.js для HTTP заголовков безопасности
 - SQL injection: предотвращается ORM (Prisma/Drizzle)
 - XSS: санитизация HTML, Content-Security-Policy
-- CSRF: SameSite cookies + double submit token (если нужно)
+- CSRF: SameSite=Lax cookie + проверка Origin/Referer заголовков
 
 ---
 
@@ -777,18 +786,19 @@ NODE_ENV=development
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/flipbook
 
-# JWT
-JWT_SECRET=your-secret-key-min-32-chars
-JWT_ACCESS_EXPIRES=15m
-JWT_REFRESH_EXPIRES=30d
+# Session
+SESSION_SECRET=your-session-secret-min-32-chars
+SESSION_MAX_AGE=604800000             # 7 дней в миллисекундах
+SESSION_SECURE=false                  # true в production (HTTPS only)
 
-# File Storage
-STORAGE_TYPE=local                    # 'local' | 's3'
-UPLOAD_DIR=./uploads                  # для local storage
-S3_BUCKET=flipbook-uploads            # для S3
+# S3 / MinIO
+S3_ENDPOINT=http://localhost:9000     # MinIO для разработки, убрать для AWS S3
+S3_BUCKET=flipbook-uploads
 S3_REGION=us-east-1
-S3_ACCESS_KEY=...
-S3_SECRET_KEY=...
+S3_ACCESS_KEY=minioadmin              # MinIO default, заменить в production
+S3_SECRET_KEY=minioadmin              # MinIO default, заменить в production
+S3_FORCE_PATH_STYLE=true             # true для MinIO, false для AWS S3
+S3_PUBLIC_URL=http://localhost:9000/flipbook-uploads  # Публичный URL для доступа к файлам
 
 # CORS
 CORS_ORIGIN=http://localhost:3000
@@ -796,6 +806,9 @@ CORS_ORIGIN=http://localhost:3000
 # Rate Limiting
 RATE_LIMIT_WINDOW=60000               # 1 минута
 RATE_LIMIT_MAX=100                    # запросов в окно
+
+# --- Future: Redis ---
+# REDIS_URL=redis://localhost:6379    # Раскомментировать при переходе на Redis
 ```
 
 ---
@@ -806,29 +819,31 @@ RATE_LIMIT_MAX=100                    # запросов в окно
 
 **Цель:** Работающий сервер с аутентификацией и CRUD книг
 
-1. Инициализация серверного проекта (package.json, tsconfig, eslint)
-2. Настройка Prisma + PostgreSQL, создание схемы
-3. Middleware: CORS, JSON parsing, error handler, request logging
-4. Аутентификация: register, login, refresh, logout, auth middleware
-5. CRUD книг: GET /api/books, POST, GET /:id, PATCH /:id, DELETE /:id
-6. CRUD глав: GET, POST, GET /:id, PATCH, DELETE, GET /:id/content
-7. Базовые тесты API (supertest)
+1. Docker-compose: PostgreSQL + MinIO + Node.js сервер
+2. Инициализация серверного проекта (package.json, tsconfig, eslint)
+3. Настройка Prisma + PostgreSQL, создание схемы
+4. S3 StorageService (@aws-sdk/client-s3) — единый интерфейс для MinIO/AWS S3
+5. Middleware: CORS, JSON parsing, error handler, request logging, session (express-session + connect-pg-simple)
+6. Аутентификация: Passport.js (local strategy), register, login, logout, auth middleware
+7. CRUD книг: GET /api/books, POST, GET /:id, PATCH /:id, DELETE /:id
+8. CRUD глав: GET, POST, GET /:id, PATCH, DELETE, GET /:id/content
+9. Базовые тесты API (supertest)
 
-**Результат:** Сервер с auth + книги + главы, можно тестировать через curl/Postman
+**Результат:** Сервер с auth + книги + главы + S3 хранилище, `docker compose up` и всё работает
 
 ### Фаза 2: Полный API
 
 **Цель:** Все ресурсы доступны через API
 
-8. Appearance API (GET, PATCH per-theme)
-9. Sounds API (GET, PATCH)
-10. Ambients API (CRUD)
-11. Fonts API (reading fonts CRUD + decorative font)
-12. Global settings API (GET, PATCH)
-13. Reading progress API (GET, PUT)
-14. Загрузка файлов (multer + local storage)
-15. Парсинг книг на сервере (перенос парсеров)
-16. Export/Import API
+10. Appearance API (GET, PATCH per-theme)
+11. Sounds API (GET, PATCH)
+12. Ambients API (CRUD)
+13. Fonts API (reading fonts CRUD + decorative font)
+14. Global settings API (GET, PATCH)
+15. Reading progress API (GET, PUT)
+16. Загрузка файлов (multer memory storage → S3)
+17. Парсинг книг на сервере (перенос парсеров)
+18. Export/Import API
 
 **Результат:** Полный API, полностью покрывающий текущую функциональность AdminConfigStore
 
@@ -836,14 +851,14 @@ RATE_LIMIT_MAX=100                    # запросов в окно
 
 **Цель:** Фронтенд переключён на API
 
-17. Создать ApiClient.js
-18. Добавить UI аутентификации (login/register)
-19. Адаптировать config.js для загрузки с сервера
-20. Адаптировать BookshelfScreen.js
-21. Адаптировать ContentLoader.js
-22. Адаптировать SettingsManager.js (debounced progress sync)
-23. Адаптировать все админ-модули
-24. Удалить клиентские парсеры (или оставить fallback)
+19. Создать ApiClient.js (fetch + credentials: 'include')
+20. Добавить UI аутентификации (login/register)
+21. Адаптировать config.js для загрузки с сервера
+22. Адаптировать BookshelfScreen.js
+23. Адаптировать ContentLoader.js
+24. Адаптировать SettingsManager.js (debounced progress sync)
+25. Адаптировать все админ-модули
+26. Удалить клиентские парсеры (или оставить fallback)
 
 **Результат:** Приложение работает через API
 
@@ -851,23 +866,22 @@ RATE_LIMIT_MAX=100                    # запросов в окно
 
 **Цель:** Надёжная работа в реальных условиях
 
-25. Индикатор синхронизации в UI
-26. Offline fallback: localStorage cache + sync queue
-27. Обработка конфликтов прогресса чтения
-28. Миграция данных: импорт из localStorage при первом входе
-29. Оптимистичные обновления в UI
-30. E2E тесты с бэкендом
+27. Индикатор синхронизации в UI
+28. Offline fallback: localStorage cache + sync queue
+29. Обработка конфликтов прогресса чтения
+30. Миграция данных: импорт из localStorage при первом входе
+31. Оптимистичные обновления в UI
+32. E2E тесты с бэкендом
 
 ### Фаза 5: Production
 
 **Цель:** Готовность к деплою
 
-31. Настройка S3/MinIO для файлов (вместо локальной FS)
-32. Docker / docker-compose конфигурация
 33. CI/CD: тесты + деплой сервера
 34. Мониторинг и логирование (pino + structured logs)
 35. Документация API (Swagger/OpenAPI)
 36. Настройка HTTPS, домена, CDN для статики
+37. **(По необходимости):** Миграция сессий на Redis (connect-redis + ioredis)
 
 ---
 
@@ -881,13 +895,16 @@ RATE_LIMIT_MAX=100                    # запросов в окно
   "prisma": "^6.0.0",
   "@prisma/client": "^6.0.0",
   "bcrypt": "^5.1.0",
-  "jsonwebtoken": "^9.0.0",
+  "express-session": "^1.18.0",
+  "connect-pg-simple": "^10.0.0",
+  "passport": "^0.7.0",
+  "passport-local": "^1.0.0",
   "zod": "^3.23.0",
   "multer": "^1.4.0",
+  "@aws-sdk/client-s3": "^3.700.0",
   "helmet": "^8.0.0",
   "cors": "^2.8.0",
   "express-rate-limit": "^7.0.0",
-  "cookie-parser": "^1.4.0",
   "dompurify": "^3.3.0",
   "jsdom": "^25.0.0",
   "jszip": "^3.10.0",
@@ -896,6 +913,8 @@ RATE_LIMIT_MAX=100                    # запросов в окно
   "dotenv": "^16.0.0"
 }
 ```
+
+> **На будущее (Redis):** Когда понадобится — добавить `connect-redis` + `ioredis`, заменить store в express-session.
 
 ### Dev
 
@@ -906,11 +925,13 @@ RATE_LIMIT_MAX=100                    # запросов в окно
   "vitest": "^4.0.0",
   "supertest": "^7.0.0",
   "@types/express": "^5.0.0",
+  "@types/express-session": "^1.18.0",
+  "@types/connect-pg-simple": "^7.0.0",
+  "@types/passport": "^1.0.0",
+  "@types/passport-local": "^1.0.0",
   "@types/bcrypt": "^5.0.0",
-  "@types/jsonwebtoken": "^9.0.0",
   "@types/multer": "^1.4.0",
-  "@types/cors": "^2.8.0",
-  "@types/cookie-parser": "^1.4.0"
+  "@types/cors": "^2.8.0"
 }
 ```
 
@@ -930,25 +951,100 @@ export default defineConfig({
         target: 'http://localhost:4000',
         changeOrigin: true,
       },
-      '/uploads': {
-        target: 'http://localhost:4000',
-        changeOrigin: true,
-      },
     },
   },
 });
 ```
 
+> **Примечание:** Файлы из S3/MinIO загружаются по прямым URL. В dev-режиме MinIO доступен на `http://localhost:9000`.
+
 ---
 
-## 13. Вопросы для уточнения
+## 13. Docker Compose (dev-окружение)
 
-Перед началом реализации рекомендуется определить:
+```yaml
+# docker-compose.yml
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: flipbook
+      POSTGRES_USER: flipbook
+      POSTGRES_PASSWORD: flipbook_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
-1. **Мультитенантность:** Один пользователь = один набор книг? Или поддержка шаринга книг между пользователями?
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"    # S3 API
+      - "9001:9001"    # Web-консоль MinIO
+    volumes:
+      - minio_data:/data
+
+  # Автосоздание бакета при старте
+  minio-init:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb myminio/flipbook-uploads --ignore-existing;
+      mc anonymous set download myminio/flipbook-uploads;
+      "
+
+  server:
+    build: ./server
+    depends_on:
+      - postgres
+      - minio
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: postgresql://flipbook:flipbook_dev@postgres:5432/flipbook
+      SESSION_SECRET: dev-session-secret-change-in-production
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: flipbook-uploads
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_FORCE_PATH_STYLE: "true"
+      S3_PUBLIC_URL: http://localhost:9000/flipbook-uploads
+      CORS_ORIGIN: http://localhost:3000
+    volumes:
+      - ./server/src:/app/src  # Hot reload
+
+volumes:
+  pgdata:
+  minio_data:
+```
+
+> **Для запуска:** `docker compose up` — поднимает PostgreSQL, MinIO и сервер. Фронтенд запускается отдельно через `npm run dev`.
+
+---
+
+## 14. Принятые решения
+
+| Вопрос | Решение |
+|--------|---------|
+| ORM | Prisma |
+| Аутентификация | express-session + connect-pg-simple + Passport.js (local) |
+| Файлы | S3 с первого дня (MinIO для dev, AWS S3 для prod) |
+| Структура | Монорепо (`server/` в этом репозитории) |
+| API | REST |
+| Деплой | Docker + docker-compose |
+| Redis | На будущее (замена connect-pg-simple → connect-redis) |
+
+## 14. Открытые вопросы
+
+1. **Мультитенантность:** Один пользователь = один набор книг? Или поддержка шаринга книг?
 2. **OAuth:** Нужна ли авторизация через Google/GitHub или достаточно email+password?
-3. **Хостинг:** Self-hosted (VPS/Docker) или облачный (Railway, Render, Fly.io)?
-4. **Лимиты:** Максимальное количество книг/глав на пользователя? Квота хранилища?
-5. **Реальное время:** Нужны ли WebSocket для уведомлений о синхронизации?
-6. **TypeScript на бэкенде:** Использовать TypeScript (рекомендуется) или чистый JavaScript?
-7. **Тестовая БД:** SQLite для тестов или отдельный PostgreSQL?
+3. **Лимиты:** Максимальное количество книг/глав на пользователя? Квота S3 хранилища?
+4. **Реальное время:** Нужны ли WebSocket для уведомлений о синхронизации?
