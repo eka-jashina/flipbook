@@ -14,6 +14,15 @@ import { logger } from './utils/logger.js';
 import authRoutes from './routes/auth.routes.js';
 import booksRoutes from './routes/books.routes.js';
 import chaptersRoutes from './routes/chapters.routes.js';
+import appearanceRoutes from './routes/appearance.routes.js';
+import soundsRoutes from './routes/sounds.routes.js';
+import ambientsRoutes from './routes/ambients.routes.js';
+import decorativeFontRoutes from './routes/decorativeFont.routes.js';
+import progressRoutes from './routes/progress.routes.js';
+import fontsRoutes from './routes/fonts.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
+import exportImportRoutes from './routes/exportImport.routes.js';
 
 export function createApp() {
   const config = getConfig();
@@ -74,6 +83,15 @@ export function createApp() {
   app.use('/api/auth', authRoutes);
   app.use('/api/books', booksRoutes);
   app.use('/api/books/:bookId/chapters', chaptersRoutes);
+  app.use('/api/books/:bookId/appearance', appearanceRoutes);
+  app.use('/api/books/:bookId/sounds', soundsRoutes);
+  app.use('/api/books/:bookId/ambients', ambientsRoutes);
+  app.use('/api/books/:bookId/decorative-font', decorativeFontRoutes);
+  app.use('/api/books/:bookId/progress', progressRoutes);
+  app.use('/api/fonts', fontsRoutes);
+  app.use('/api/settings', settingsRoutes);
+  app.use('/api/upload', uploadRoutes);
+  app.use('/api', exportImportRoutes);
 
   // Health check
   app.get('/api/health', (_req, res) => {

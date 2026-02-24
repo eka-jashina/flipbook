@@ -1,23 +1,7 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { verifyBookOwnership } from '../utils/ownership.js';
 import type { ChapterListItem, ChapterDetail } from '../types/api.js';
-
-/**
- * Verify book ownership and return book ID.
- */
-async function verifyBookOwnership(
-  bookId: string,
-  userId: string,
-): Promise<void> {
-  const prisma = getPrisma();
-  const book = await prisma.book.findUnique({
-    where: { id: bookId },
-    select: { userId: true },
-  });
-
-  if (!book) throw new AppError(404, 'Book not found');
-  if (book.userId !== userId) throw new AppError(403, 'Access denied');
-}
 
 /**
  * Get all chapters for a book (metadata, no content).

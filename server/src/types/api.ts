@@ -115,3 +115,56 @@ export interface AmbientItem {
   builtin: boolean;
   position: number;
 }
+
+export interface ReadingProgressDetail {
+  page: number;
+  font: string;
+  fontSize: number;
+  theme: string;
+  soundEnabled: boolean;
+  soundVolume: number;
+  ambientType: string;
+  ambientVolume: number;
+  updatedAt: string;
+}
+
+export interface SettingsVisibility {
+  fontSize: boolean;
+  theme: boolean;
+  font: boolean;
+  fullscreen: boolean;
+  sound: boolean;
+  ambient: boolean;
+}
+
+export interface GlobalSettingsDetail {
+  fontMin: number;
+  fontMax: number;
+  settingsVisibility: SettingsVisibility;
+}
+
+export interface ReadingFontItem {
+  id: string;
+  fontKey: string;
+  label: string;
+  family: string;
+  builtin: boolean;
+  enabled: boolean;
+  fileUrl: string | null;
+  position: number;
+}
+
+export interface DecorativeFontDetail {
+  name: string;
+  fileUrl: string;
+}
+
+export interface UploadResponse {
+  fileUrl: string;
+}
+
+export interface ExportData {
+  books: BookDetail[];
+  readingFonts: ReadingFontItem[];
+  globalSettings: GlobalSettingsDetail | null;
+}

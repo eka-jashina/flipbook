@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import multer from 'multer';
 import { logger } from '../utils/logger.js';
 
 export class AppError extends Error {
@@ -36,6 +37,17 @@ export function errorHandler(
       statusCode: 400,
       details: err.errors,
     });
+    return;
+  }
+
+  if (err instanceof multer.MulterError) {
+    const statusCode = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    res.status(statusCode).json({ error: 'UploadError', message: err.message, statusCode });
+    return;
+  }
+
+  if (err.message?.startsWith('Invalid ') && err.message?.includes('file type')) {
+    res.status(400).json({ error: 'UploadError', message: err.message, statusCode: 400 });
     return;
   }
 
