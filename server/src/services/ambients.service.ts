@@ -1,0 +1,178 @@
+import { getPrisma } from '../utils/prisma.js';
+import { verifyBookOwnership } from '../utils/ownership.js';
+import { AppError } from '../middleware/errorHandler.js';
+import type { AmbientItem } from '../types/api.js';
+
+/**
+ * Get all ambients for a book.
+ */
+export async function getAmbients(
+  bookId: string,
+  userId: string,
+): Promise<AmbientItem[]> {
+  await verifyBookOwnership(bookId, userId);
+
+  const prisma = getPrisma();
+  const ambients = await prisma.ambient.findMany({
+    where: { bookId },
+    orderBy: { position: 'asc' },
+  });
+
+  return ambients.map(mapAmbient);
+}
+
+/**
+ * Create a new ambient for a book.
+ */
+export async function createAmbient(
+  bookId: string,
+  userId: string,
+  data: {
+    ambientKey: string;
+    label: string;
+    shortLabel?: string;
+    icon?: string;
+    fileUrl?: string;
+    visible?: boolean;
+    builtin?: boolean;
+  },
+): Promise<AmbientItem> {
+  await verifyBookOwnership(bookId, userId);
+
+  const prisma = getPrisma();
+
+  // Get next position
+  const lastAmbient = await prisma.ambient.findFirst({
+    where: { bookId },
+    orderBy: { position: 'desc' },
+    select: { position: true },
+  });
+  const nextPosition = (lastAmbient?.position ?? -1) + 1;
+
+  const ambient = await prisma.ambient.create({
+    data: {
+      bookId,
+      ambientKey: data.ambientKey,
+      label: data.label,
+      shortLabel: data.shortLabel || null,
+      icon: data.icon || null,
+      fileUrl: data.fileUrl || null,
+      visible: data.visible ?? true,
+      builtin: data.builtin ?? false,
+      position: nextPosition,
+    },
+  });
+
+  return mapAmbient(ambient);
+}
+
+/**
+ * Update an ambient.
+ */
+export async function updateAmbient(
+  bookId: string,
+  ambientId: string,
+  userId: string,
+  data: {
+    ambientKey?: string;
+    label?: string;
+    shortLabel?: string | null;
+    icon?: string | null;
+    fileUrl?: string | null;
+    visible?: boolean;
+  },
+): Promise<AmbientItem> {
+  await verifyBookOwnership(bookId, userId);
+
+  const prisma = getPrisma();
+  const ambient = await prisma.ambient.findUnique({
+    where: { id: ambientId },
+    select: { bookId: true },
+  });
+
+  if (!ambient || ambient.bookId !== bookId) {
+    throw new AppError(404, 'Ambient not found');
+  }
+
+  const updated = await prisma.ambient.update({
+    where: { id: ambientId },
+    data: {
+      ...(data.ambientKey !== undefined && { ambientKey: data.ambientKey }),
+      ...(data.label !== undefined && { label: data.label }),
+      ...(data.shortLabel !== undefined && { shortLabel: data.shortLabel }),
+      ...(data.icon !== undefined && { icon: data.icon }),
+      ...(data.fileUrl !== undefined && { fileUrl: data.fileUrl }),
+      ...(data.visible !== undefined && { visible: data.visible }),
+    },
+  });
+
+  return mapAmbient(updated);
+}
+
+/**
+ * Delete an ambient.
+ */
+export async function deleteAmbient(
+  bookId: string,
+  ambientId: string,
+  userId: string,
+): Promise<void> {
+  await verifyBookOwnership(bookId, userId);
+
+  const prisma = getPrisma();
+  const ambient = await prisma.ambient.findUnique({
+    where: { id: ambientId },
+    select: { bookId: true },
+  });
+
+  if (!ambient || ambient.bookId !== bookId) {
+    throw new AppError(404, 'Ambient not found');
+  }
+
+  await prisma.ambient.delete({ where: { id: ambientId } });
+}
+
+/**
+ * Reorder ambients for a book.
+ */
+export async function reorderAmbients(
+  bookId: string,
+  userId: string,
+  ambientIds: string[],
+): Promise<void> {
+  await verifyBookOwnership(bookId, userId);
+
+  const prisma = getPrisma();
+  const ambients = await prisma.ambient.findMany({
+    where: { bookId, id: { in: ambientIds } },
+    select: { id: true },
+  });
+
+  if (ambients.length !== ambientIds.length) {
+    throw new AppError(400, 'Some ambient IDs are invalid');
+  }
+
+  await prisma.$transaction(
+    ambientIds.map((id, index) =>
+      prisma.ambient.update({
+        where: { id },
+        data: { position: index },
+      }),
+    ),
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapAmbient(a: any): AmbientItem {
+  return {
+    id: a.id,
+    ambientKey: a.ambientKey,
+    label: a.label,
+    shortLabel: a.shortLabel,
+    icon: a.icon,
+    fileUrl: a.fileUrl,
+    visible: a.visible,
+    builtin: a.builtin,
+    position: a.position,
+  };
+}

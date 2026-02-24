@@ -1,0 +1,163 @@
+import type { Request, Response, NextFunction } from 'express';
+import passport from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { getPrisma } from '../utils/prisma.js';
+import { verifyPassword } from '../utils/password.js';
+import { getConfig } from '../config.js';
+import { logger } from '../utils/logger.js';
+
+// Extend Express User type
+declare global {
+  namespace Express {
+    interface User {
+      id: string;
+      email: string;
+      displayName: string | null;
+      avatarUrl: string | null;
+      passwordHash: string | null;
+      googleId: string | null;
+    }
+  }
+}
+
+export function configurePassport(): void {
+  const config = getConfig();
+  const prisma = getPrisma();
+
+  // Serialize user ID to session
+  passport.serializeUser((user: Express.User, done) => {
+    done(null, user.id);
+  });
+
+  // Deserialize user from session by ID
+  passport.deserializeUser(async (id: string, done) => {
+    try {
+      const user = await prisma.user.findUnique({ where: { id } });
+      if (!user) {
+        done(null, false);
+        return;
+      }
+      done(null, user);
+    } catch (err) {
+      done(err);
+    }
+  });
+
+  // Local strategy (email + password)
+  passport.use(
+    new LocalStrategy(
+      { usernameField: 'email', passwordField: 'password' },
+      async (email, password, done) => {
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email: email.toLowerCase() },
+          });
+
+          if (!user || !user.passwordHash) {
+            done(null, false, { message: 'Invalid email or password' });
+            return;
+          }
+
+          const isValid = await verifyPassword(password, user.passwordHash);
+          if (!isValid) {
+            done(null, false, { message: 'Invalid email or password' });
+            return;
+          }
+
+          done(null, user);
+        } catch (err) {
+          done(err);
+        }
+      },
+    ),
+  );
+
+  // Google OAuth strategy (only if credentials are configured)
+  if (
+    config.GOOGLE_CLIENT_ID !== 'placeholder' &&
+    config.GOOGLE_CLIENT_SECRET !== 'placeholder'
+  ) {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: config.GOOGLE_CLIENT_ID,
+          clientSecret: config.GOOGLE_CLIENT_SECRET,
+          callbackURL: config.GOOGLE_CALLBACK_URL,
+          scope: ['profile', 'email'],
+        },
+        async (_accessToken, _refreshToken, profile, done) => {
+          try {
+            const email = profile.emails?.[0]?.value;
+            if (!email) {
+              done(new Error('No email from Google profile'));
+              return;
+            }
+
+            // Check if user already exists by Google ID
+            let user = await prisma.user.findUnique({
+              where: { googleId: profile.id },
+            });
+
+            if (user) {
+              done(null, user);
+              return;
+            }
+
+            // Check if user exists by email — link Google account
+            user = await prisma.user.findUnique({
+              where: { email: email.toLowerCase() },
+            });
+
+            if (user) {
+              user = await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                  googleId: profile.id,
+                  avatarUrl: profile.photos?.[0]?.value || user.avatarUrl,
+                  displayName: user.displayName || profile.displayName,
+                },
+              });
+              done(null, user);
+              return;
+            }
+
+            // Create new user
+            user = await prisma.user.create({
+              data: {
+                email: email.toLowerCase(),
+                googleId: profile.id,
+                displayName: profile.displayName || null,
+                avatarUrl: profile.photos?.[0]?.value || null,
+              },
+            });
+
+            logger.info({ userId: user.id, email }, 'New user via Google OAuth');
+            done(null, user);
+          } catch (err) {
+            done(err);
+          }
+        },
+      ),
+    );
+  }
+}
+
+/**
+ * Middleware that requires an authenticated session.
+ */
+export function requireAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (req.isAuthenticated()) {
+    next();
+    return;
+  }
+  res.status(401).json({
+    error: 'Unauthorized',
+    message: 'Authentication required',
+    statusCode: 401,
+  });
+}
