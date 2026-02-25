@@ -42,4 +42,6 @@ export async function cleanDatabase() {
   await prisma.readingFont.deleteMany();
   await prisma.globalSettings.deleteMany();
   await prisma.user.deleteMany();
+  // Clean session table (managed by connect-pg-simple, not Prisma)
+  await prisma.$executeRawUnsafe('DELETE FROM "session"');
 }

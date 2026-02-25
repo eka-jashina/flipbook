@@ -22,6 +22,7 @@ import progressRoutes from './routes/progress.routes.js';
 import fontsRoutes from './routes/fonts.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import defaultSettingsRoutes from './routes/defaultSettings.routes.js';
 import exportImportRoutes from './routes/exportImport.routes.js';
 
 export function createApp() {
@@ -79,6 +80,11 @@ export function createApp() {
     next();
   });
 
+  // Health check (before auth-protected routes)
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Routes
   app.use('/api/auth', authRoutes);
   app.use('/api/books', booksRoutes);
@@ -88,15 +94,11 @@ export function createApp() {
   app.use('/api/books/:bookId/ambients', ambientsRoutes);
   app.use('/api/books/:bookId/decorative-font', decorativeFontRoutes);
   app.use('/api/books/:bookId/progress', progressRoutes);
+  app.use('/api/books/:bookId/default-settings', defaultSettingsRoutes);
   app.use('/api/fonts', fontsRoutes);
   app.use('/api/settings', settingsRoutes);
   app.use('/api/upload', uploadRoutes);
   app.use('/api', exportImportRoutes);
-
-  // Health check
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
 
   // Error handler (must be last)
   app.use(errorHandler);
