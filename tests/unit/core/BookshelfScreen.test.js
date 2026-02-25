@@ -675,10 +675,9 @@ describe('BookshelfScreen', () => {
         expect(onBookSelect).toHaveBeenCalledWith('b1');
       });
 
-      it('should save activeBookId to localStorage', () => {
+      it('should set reading session in sessionStorage on read', () => {
         screen._handleBookAction('read', 'b1');
-        const stored = JSON.parse(localStorage.getItem('flipbook-admin-config'));
-        expect(stored.activeBookId).toBe('b1');
+        expect(sessionStorage.getItem('flipbook-reading-session')).toBe('1');
       });
 
       it('should set reading session flag in sessionStorage', () => {

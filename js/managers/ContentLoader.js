@@ -9,6 +9,7 @@
  * - Автоматический пропуск уже закэшированных URL
  * - Retry с exponential backoff при сетевых ошибках
  * - Загрузка inline-контента из IndexedDB (для книг, загруженных из EPUB/FB2)
+ * - Загрузка контента через API (Фаза 3: GET /api/books/:bookId/chapters/:chapterId/content)
  */
 
 import { CONFIG } from '../config.js';
@@ -19,11 +20,20 @@ const IDB_VERSION = 1;
 const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
 
 export class ContentLoader {
-  constructor() {
+  /**
+   * @param {Object} [options]
+   * @param {import('../utils/ApiClient.js').ApiClient} [options.apiClient] - API клиент (Фаза 3)
+   * @param {string} [options.bookId] - ID книги для загрузки через API
+   */
+  constructor({ apiClient, bookId } = {}) {
     /** @type {Map<string, string>} Кэш URL → HTML */
     this.cache = new Map();
     /** @type {AbortController|null} Контроллер текущей загрузки */
     this.controller = null;
+    /** @type {import('../utils/ApiClient.js').ApiClient|null} */
+    this._api = apiClient || null;
+    /** @type {string|null} */
+    this._bookId = bookId || null;
   }
 
   /**
@@ -104,8 +114,21 @@ export class ContentLoader {
   }
 
   /**
+   * Загрузить контент главы через API
+   * @private
+   * @param {string} chapterId
+   * @returns {Promise<string>} HTML-контент
+   */
+  async _fetchChapterFromAPI(chapterId) {
+    const data = await this._api.getChapterContent(this._bookId, chapterId);
+    // API может вернуть объект { htmlContent: "..." } или строку напрямую
+    if (typeof data === 'string') return data;
+    return data?.htmlContent || data?.content || '';
+  }
+
+  /**
    * Загрузить контент глав
-   * @param {Array<{file: string, htmlContent?: string, _idb?: boolean}>} chapters - Главы (URL, inline-контент или IDB)
+   * @param {Array<{file: string, htmlContent?: string, _idb?: boolean, _hasHtmlContent?: boolean, id?: string}>} chapters - Главы
    * @returns {Promise<string>} Объединённый HTML всех глав
    * @throws {Error} При ошибке загрузки
    */
@@ -120,26 +143,65 @@ export class ContentLoader {
     this.controller = new AbortController();
     const { signal } = this.controller;
 
-    // Загружаем контент из IndexedDB для глав с маркером _idb
-    const idbItems = items.filter(item => item._idb && !item.htmlContent);
-    if (idbItems.length > 0) {
-      await this._loadChaptersFromIDB(idbItems);
-    }
+    // Фаза 3: загрузка контента через API для глав с _hasHtmlContent
+    if (this._api && this._bookId) {
+      const apiItems = items.filter(item => item._hasHtmlContent && item.id && !this.cache.has(`api:${item.id}`));
+      if (apiItems.length > 0) {
+        await Promise.all(
+          apiItems.map(async (item) => {
+            try {
+              const html = await this._fetchChapterFromAPI(item.id);
+              this.cache.set(`api:${item.id}`, html);
+            } catch (err) {
+              console.warn(`ContentLoader: ошибка загрузки главы ${item.id} через API`, err);
+            }
+          })
+        );
+      }
 
-    // Кэшируем inline-контент и определяем что нужно загружать
-    for (const item of items) {
-      if (item.htmlContent) {
-        // Inline-контент — сразу в кэш по ключу
-        const key = item.file || `__inline_${item.id || ''}`;
-        item._cacheKey = key;
-        this.cache.set(key, item.htmlContent);
-      } else {
-        item._cacheKey = item.file;
+      // Для API-режима: собираем контент
+      for (const item of items) {
+        if (item._hasHtmlContent && item.id) {
+          item._cacheKey = `api:${item.id}`;
+          if (!this.cache.has(item._cacheKey)) {
+            // Пробуем загрузить сейчас
+            try {
+              const html = await this._fetchChapterFromAPI(item.id);
+              this.cache.set(item._cacheKey, html);
+            } catch { /* ignore */ }
+          }
+        } else if (item.htmlContent) {
+          const key = item.file || `__inline_${item.id || ''}`;
+          item._cacheKey = key;
+          this.cache.set(key, item.htmlContent);
+        } else {
+          item._cacheKey = item.file;
+        }
+      }
+    } else {
+      // Старый путь: IndexedDB + inline content + fetch URL
+
+      // Загружаем контент из IndexedDB для глав с маркером _idb
+      const idbItems = items.filter(item => item._idb && !item.htmlContent);
+      if (idbItems.length > 0) {
+        await this._loadChaptersFromIDB(idbItems);
+      }
+
+      // Кэшируем inline-контент и определяем что нужно загружать
+      for (const item of items) {
+        if (item.htmlContent) {
+          // Inline-контент — сразу в кэш по ключу
+          const key = item.file || `__inline_${item.id || ''}`;
+          item._cacheKey = key;
+          this.cache.set(key, item.htmlContent);
+        } else {
+          item._cacheKey = item.file;
+        }
       }
     }
 
-    // Загружаем только URL, которых нет в кэше
-    const missing = items.filter(item => !item.htmlContent && item.file && !this.cache.has(item.file));
+    // Загружаем только URL, которых нет в кэше (для глав со статическим filePath)
+    const missing = items.filter(item => !item.htmlContent && !item._hasHtmlContent && item.file && !this.cache.has(item.file));
 
     if (missing.length) {
       await Promise.all(

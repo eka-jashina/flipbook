@@ -1,0 +1,176 @@
+/**
+ * AUTH MODAL STYLES
+ *
+ * Модальное окно аутентификации (логин/регистрация).
+ * Показывается поверх bookshelf при 401.
+ */
+
+/* Оверлей */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  animation: auth-fade-in 0.3s ease;
+}
+
+/* Модалка */
+.auth-modal {
+  width: 100%;
+  max-width: 400px;
+  margin: 16px;
+  padding: 32px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgb(0, 0, 0, 0.3);
+  animation: auth-slide-up 0.3s ease;
+}
+
+.auth-modal-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-modal-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.auth-modal-subtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Форма */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.auth-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #444;
+}
+
+.auth-input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #1a1a2e;
+  background: #fafafa;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: #5b6abf;
+  box-shadow: 0 0 0 3px rgb(91, 106, 191, 0.15);
+  background: #fff;
+}
+
+.auth-input::placeholder {
+  color: #aaa;
+}
+
+/* Ошибка */
+.auth-error {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Кнопка отправки */
+.auth-submit {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #5b6abf;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.auth-submit:hover:not(:disabled) {
+  background: #4a59a8;
+}
+
+.auth-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Переключение режима */
+.auth-switch {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+}
+
+.auth-switch-btn {
+  background: none;
+  border: none;
+  color: #5b6abf;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.auth-switch-btn:hover {
+  color: #4a59a8;
+}
+
+/* Анимации */
+@keyframes auth-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes auth-slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Мобильные */
+@media (max-width: 480px) {
+  .auth-modal {
+    padding: 24px 20px;
+    margin: 12px;
+  }
+
+  .auth-modal-title {
+    font-size: 20px;
+  }
+}

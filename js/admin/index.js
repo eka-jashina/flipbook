@@ -1,8 +1,14 @@
 /**
  * Точка входа админ-панели
  * Роутер экранов + инициализация модулей
+ *
+ * Фаза 3: при доступности сервера использует ServerAdminConfigStore (API),
+ * иначе — AdminConfigStore (localStorage/IndexedDB).
  */
 import { AdminConfigStore } from './AdminConfigStore.js';
+import { ServerAdminConfigStore } from './ServerAdminConfigStore.js';
+import { ApiClient } from '../utils/ApiClient.js';
+import { AuthModal } from '../core/AuthModal.js';
 import { ChaptersModule } from './modules/ChaptersModule.js';
 import { SettingsModule } from './modules/SettingsModule.js';
 import { SoundsModule } from './modules/SoundsModule.js';
@@ -108,8 +114,8 @@ class AdminApp {
     this.addBookBtn.addEventListener('click', () => this._showView('mode-selector'));
     this.modeSelectorBack.addEventListener('click', () => this._showView('bookshelf'));
     this.uploadBack.addEventListener('click', () => this._showView('mode-selector'));
-    this.editorBack.addEventListener('click', () => {
-      this._cleanupPendingBook();
+    this.editorBack.addEventListener('click', async () => {
+      await this._cleanupPendingBook();
       this._showView('bookshelf');
     });
     this.albumBack.addEventListener('click', () => {
@@ -117,8 +123,10 @@ class AdminApp {
     });
 
     // «На книжную полку» — очистить незавершённую книгу перед уходом
-    this.toShelfLink.addEventListener('click', () => {
-      this._cleanupPendingBook();
+    this.toShelfLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await this._cleanupPendingBook();
+      window.location.href = this.toShelfLink.href;
     });
 
     // Карточки выбора режима (делегирование событий)
@@ -195,7 +203,7 @@ class AdminApp {
     });
   }
 
-  _handleModeSelect(mode) {
+  async _handleModeSelect(mode) {
     switch (mode) {
       case 'upload':
         this._showView('upload');
@@ -206,31 +214,31 @@ class AdminApp {
         sessionStorage.removeItem('flipbook-admin-edit-book');
         if (editBookId) this.store.setActiveBook(editBookId);
         this._render();
-        this.openEditor();
+        await this.openEditor();
         break;
       }
       case 'manual': {
         // Создать новую пустую книгу и открыть редактор
-        const bookId = `book_${Date.now()}`;
-        this.store.addBook({
-          id: bookId,
+        const created = await this.store.addBook({
+          id: `book_${Date.now()}`,
           cover: { title: 'Новая книга', author: '', bg: '', bgMobile: '' },
           chapters: [],
         });
+        const bookId = created?.id || `book_${Date.now()}`;
         this.store.setActiveBook(bookId);
         this._pendingBookId = bookId;
         this._render();
-        this.openEditor();
+        await this.openEditor();
         break;
       }
       case 'album': {
         // Создать новую книгу-альбом и открыть редактор альбома
-        const albumBookId = `book_${Date.now()}`;
-        this.store.addBook({
-          id: albumBookId,
+        const albumCreated = await this.store.addBook({
+          id: `book_${Date.now()}`,
           cover: { title: 'Фотоальбом', author: '', bg: '', bgMobile: '' },
           chapters: [],
         });
+        const albumBookId = albumCreated?.id || `book_${Date.now()}`;
         this.store.setActiveBook(albumBookId);
         this._pendingBookId = albumBookId;
         this._render();
@@ -242,8 +250,8 @@ class AdminApp {
   }
 
   /** Открыть редактор для текущей активной книги */
-  openEditor() {
-    const cover = this.store.getCover();
+  async openEditor() {
+    const cover = await this.store.getCover();
     this.editorTitle.textContent = cover.title || 'Редактор книги';
     this._switchEditorTab('cover');
     this._showView('editor');
@@ -279,21 +287,21 @@ class AdminApp {
    * Удалить книгу, созданную через «Создать вручную», если пользователь
    * не внёс никаких изменений и вышел из редактора кнопкой «Назад».
    */
-  _cleanupPendingBook() {
+  async _cleanupPendingBook() {
     if (!this._pendingBookId) return;
 
     const bookId = this._pendingBookId;
     this._pendingBookId = null;
 
     // Проверить, осталась ли книга в исходном состоянии
-    const chapters = this.store.getChapters();
-    const cover = this.store.getCover();
+    const chapters = await this.store.getChapters();
+    const cover = await this.store.getCover();
     const isUnchanged = chapters.length === 0
       && (cover.title === 'Новая книга' || cover.title === 'Фотоальбом')
       && !cover.author;
 
     if (isUnchanged) {
-      this.store.removeBook(bookId);
+      await this.store.removeBook(bookId);
       this._render();
     }
   }
@@ -391,5 +399,54 @@ class AdminApp {
   }
 }
 
-// Запуск (асинхронная инициализация из-за IndexedDB)
-AdminConfigStore.create().then(store => new AdminApp(store));
+/**
+ * Инициализация: проверить сервер → авторизация → ServerAdminConfigStore,
+ * или fallback → AdminConfigStore (localStorage/IndexedDB).
+ */
+async function initAdmin() {
+  let store;
+
+  try {
+    // Проверить доступность сервера
+    const resp = await fetch('/api/health', { method: 'GET' });
+    if (resp.ok) {
+      // Сервер доступен — используем API
+      const apiClient = new ApiClient({
+        onUnauthorized: () => {
+          // При 401 — показать модалку и перезапустить после авторизации
+          const authModal = new AuthModal({
+            apiClient,
+            onAuth: () => location.reload(),
+          });
+          authModal.show();
+        },
+      });
+
+      // Проверить авторизацию
+      const user = await apiClient.getMe();
+      if (!user) {
+        // Не авторизован — показать модалку
+        await new Promise((resolve) => {
+          const authModal = new AuthModal({
+            apiClient,
+            onAuth: () => resolve(),
+          });
+          authModal.show();
+        });
+      }
+
+      store = await ServerAdminConfigStore.create(apiClient);
+    }
+  } catch {
+    // Сервер недоступен — fallback
+  }
+
+  // Fallback: localStorage/IndexedDB
+  if (!store) {
+    store = await AdminConfigStore.create();
+  }
+
+  new AdminApp(store);
+}
+
+initAdmin();

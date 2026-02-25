@@ -2,13 +2,23 @@
  * MAIN ENTRY POINT
  *
  * Инициализация приложения после загрузки DOM.
- * Стартовый экран — книжная полка.
- * После выбора книги загружается ридер.
+ *
+ * Фаза 3: поток аутентификации
+ * 1. GET /api/health → проверка доступности сервера
+ * 2. GET /api/auth/me → если 401 → модалка логина/регистрации
+ * 3. После авторизации → проверка миграции localStorage
+ * 4. GET /api/books → книжная полка
+ * 5. Выбор книги → loadConfigFromAPI() → ридер
+ *
+ * Fallback: если сервер недоступен — работа через localStorage (как раньше).
  */
 
 import { BookController } from './core/BookController.js';
-import { BookshelfScreen, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
-import { CONFIG, enrichConfigFromIDB } from './config.js';
+import { BookshelfScreen, loadBooksFromAPI, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
+import { CONFIG, enrichConfigFromIDB, loadConfigFromAPI } from './config.js';
+import { ApiClient } from './utils/ApiClient.js';
+import { AuthModal } from './core/AuthModal.js';
+import { MigrationHelper } from './core/MigrationHelper.js';
 import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
@@ -17,11 +27,12 @@ import { photoLightbox } from './utils/PhotoLightbox.js';
 // Глобальная ссылка на контроллер (для отладки)
 let app = null;
 let bookshelf = null;
+let authModal = null;
+let apiClient = null;
 
 // Регистрация Service Worker для PWA
 const updateSW = registerSW({
   onNeedRefresh() {
-    // Показываем уведомление о доступном обновлении
     const shouldUpdate = confirm('Доступна новая версия приложения. Обновить?');
     if (shouldUpdate) {
       updateSW(true);
@@ -47,37 +58,22 @@ function setupInstallButton() {
 
   if (!installSection || !installBtn) return;
 
-  // Функция обновления видимости кнопки
   const updateVisibility = () => {
-    if (installPrompt.canInstall) {
-      installSection.hidden = false;
-    } else {
-      installSection.hidden = true;
-    }
+    installSection.hidden = !installPrompt.canInstall;
   };
 
-  // Подписываемся на изменения состояния
   installPrompt.onStateChange((event) => {
-    if (event === 'available') {
-      updateVisibility();
-    } else if (event === 'installed' || event === 'dismissed') {
-      // После установки или отклонения всё ещё можем показывать кнопку
+    if (event === 'available' || event === 'installed' || event === 'dismissed') {
       updateVisibility();
     }
   });
 
-  // Обработчик клика
   installBtn.addEventListener('click', async () => {
     installPrompt.resetDismissed();
-    const installed = await installPrompt.install();
-    if (!installed) {
-      // Если пользователь отменил - показываем баннер позже
-      console.log('Установка отменена пользователем');
-    }
+    await installPrompt.install();
     updateVisibility();
   });
 
-  // Начальная проверка
   updateVisibility();
 }
 
@@ -89,7 +85,9 @@ function setupBackToShelfButton() {
   if (!btn) return;
 
   btn.addEventListener('click', () => {
+    // Очищаем и localStorage, и sessionStorage
     clearActiveBook();
+    sessionStorage.removeItem('flipbook-active-book-id');
     location.reload();
   });
 }
@@ -106,9 +104,22 @@ function showBookshelf(books) {
   bookshelf = new BookshelfScreen({
     container,
     books,
-    onBookSelect: () => {
-      // После сохранения activeBookId перезагружаем —
-      // config.js подхватит новый activeBookId
+    apiClient,
+    onBookSelect: (bookId) => {
+      // Запоминаем bookId в sessionStorage и перезагружаем
+      sessionStorage.setItem('flipbook-active-book-id', bookId);
+      sessionStorage.setItem('flipbook-reading-session', '1');
+
+      // Для localStorage fallback — также сохраняем activeBookId
+      if (!apiClient) {
+        try {
+          const raw = localStorage.getItem('flipbook-admin-config');
+          const config = raw ? JSON.parse(raw) : { books: [] };
+          config.activeBookId = bookId;
+          localStorage.setItem('flipbook-admin-config', JSON.stringify(config));
+        } catch { /* ignore */ }
+      }
+
       location.reload();
     },
   });
@@ -118,29 +129,83 @@ function showBookshelf(books) {
 }
 
 /**
- * Инициализация ридера (книги)
+ * Инициализация ридера через API (Фаза 3)
  */
-async function initReader() {
-  // Дозагрузить data URL шрифтов/амбиентов из IndexedDB
-  // (в localStorage хранится облегчённая версия без тяжёлых data URL)
-  await enrichConfigFromIDB(CONFIG);
+async function initReaderFromAPI(bookId) {
+  const config = await loadConfigFromAPI(apiClient, bookId);
 
-  app = new BookController();
+  // Загрузить прогресс чтения с сервера
+  const progress = await apiClient.getProgress(bookId).catch(() => null);
+
+  app = new BookController(config, { apiClient, bookId, serverProgress: progress });
   await app.init();
 
-  // Лайтбокс для фотоальбомов — привязать к контейнеру книги
   const bookEl = document.querySelector('.book');
   if (bookEl) {
     photoLightbox.attach(bookEl);
   }
 
-  // Настраиваем кнопку установки PWA
   setupInstallButton();
 
-  // Экспортируем в window для отладки
   if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
     window.bookApp = app;
   }
+}
+
+/**
+ * Инициализация ридера через localStorage (fallback)
+ */
+async function initReaderFallback() {
+  await enrichConfigFromIDB(CONFIG);
+
+  app = new BookController();
+  await app.init();
+
+  const bookEl = document.querySelector('.book');
+  if (bookEl) {
+    photoLightbox.attach(bookEl);
+  }
+
+  setupInstallButton();
+
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    window.bookApp = app;
+  }
+}
+
+/**
+ * Инициализация с авторизацией (Фаза 3)
+ * @returns {Promise<Object>} user
+ */
+async function initWithAuth() {
+  apiClient = new ApiClient({
+    onUnauthorized: () => {
+      if (authModal) authModal.show();
+    },
+  });
+
+  // Проверяем авторизацию
+  const user = await apiClient.getMe();
+
+  if (!user) {
+    // Не авторизован — показываем модалку
+    return new Promise((resolve) => {
+      authModal = new AuthModal({
+        apiClient,
+        onAuth: async (loggedInUser) => {
+          const migration = new MigrationHelper(apiClient);
+          await migration.checkAndMigrate();
+          resolve(loggedInUser);
+        },
+      });
+      authModal.show();
+    });
+  }
+
+  // Авторизован — проверить миграцию при первом логине
+  const migration = new MigrationHelper(apiClient);
+  await migration.checkAndMigrate();
+  return user;
 }
 
 /**
@@ -148,20 +213,55 @@ async function initReader() {
  */
 async function init() {
   try {
-    // Проверяем, нужно ли показать книжный шкаф
-    const { shouldShow, books } = getBookshelfData();
-
-    if (shouldShow) {
-      showBookshelf(books);
-      return;
+    // Проверяем, доступен ли сервер
+    let useAPI = false;
+    try {
+      const resp = await fetch('/api/health', { method: 'GET' });
+      useAPI = resp.ok;
+    } catch {
+      // Сервер недоступен — работаем в localStorage-режиме
     }
 
-    // Всегда показываем кнопку «К полке» — книжная полка является главным экраном
-    document.body.dataset.screen = 'reader';
-    document.body.dataset.hasBookshelf = 'true';
-    setupBackToShelfButton();
+    if (useAPI) {
+      // ═══════════════════════════════════════
+      // Фаза 3: работа через API
+      // ═══════════════════════════════════════
+      await initWithAuth();
 
-    await initReader();
+      // Проверяем, есть ли сохранённый bookId из предыдущего выбора
+      const savedBookId = sessionStorage.getItem('flipbook-active-book-id');
+      const isReadingSession = !!sessionStorage.getItem('flipbook-reading-session');
+
+      if (savedBookId && isReadingSession) {
+        // Показываем ридер для выбранной книги
+        document.body.dataset.screen = 'reader';
+        document.body.dataset.hasBookshelf = 'true';
+        setupBackToShelfButton();
+
+        await initReaderFromAPI(savedBookId);
+      } else {
+        // Показываем книжную полку
+        const books = await loadBooksFromAPI(apiClient);
+        showBookshelf(books);
+      }
+    } else {
+      // ═══════════════════════════════════════
+      // Fallback: localStorage-режим
+      // ═══════════════════════════════════════
+      const { shouldShow, books } = getBookshelfData();
+
+      if (shouldShow) {
+        showBookshelf(books);
+        return;
+      }
+
+      // Всегда показываем кнопку «К полке»
+      document.body.dataset.screen = 'reader';
+      document.body.dataset.hasBookshelf = 'true';
+      setupBackToShelfButton();
+
+      await initReaderFallback();
+    }
   } catch (error) {
     console.error('Failed to initialize Book Reader:', error);
   }
@@ -171,6 +271,10 @@ async function init() {
  * Очистка при выгрузке страницы
  */
 function cleanup() {
+  if (authModal) {
+    authModal.destroy();
+    authModal = null;
+  }
   if (bookshelf) {
     bookshelf.destroy();
     bookshelf = null;
@@ -194,7 +298,7 @@ if (document.readyState === 'loading') {
 // Очистка при закрытии/переходе
 window.addEventListener('beforeunload', cleanup);
 
-// Реинициализация при восстановлении из bfcache (возврат через кнопку «Назад» браузера)
+// Реинициализация при восстановлении из bfcache
 window.addEventListener('pageshow', (event) => {
   if (event.persisted) {
     cleanup();
