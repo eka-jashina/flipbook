@@ -37,6 +37,9 @@
 
   /* Стрелка выпадающего списка (закодированный SVG) */
   --pod-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%238b4513' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+
+  /* Индикатор ошибки */
+  --pod-error: #c0392b;
 }
 
 /* ═══════════════════════════════════════════
@@ -58,6 +61,7 @@ html[data-theme="dark"] {
   --pod-input-focus-border: rgb(200, 150, 100, 0.4);
   --pod-slider-thumb: linear-gradient(135deg, #c8966d, #a07850);
   --pod-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23c8966d' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  --pod-error: #e74c3c;
 }
 
 /* ═══════════════════════════════════════════
@@ -82,4 +86,5 @@ html[data-theme="bw"] {
   --pod-input-focus-border: #000;
   --pod-slider-thumb: #000;
   --pod-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  --pod-error: #c0392b;
 }

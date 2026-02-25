@@ -51,6 +51,14 @@ class AdminApp {
       originalSave();
       this._showSaveIndicator();
     };
+
+    // Подписка на ошибки store (Фаза 4)
+    if (this.store.onError !== undefined) {
+      this.store.onError = (message) => {
+        this._showToast(message, 'error');
+        this._showSaveError();
+      };
+    }
   }
 
   // --- DOM ---
@@ -343,7 +351,7 @@ class AdminApp {
     const editorView = document.querySelector('.screen-view[data-view="editor"]');
     if (!editorView || !editorView.classList.contains('active')) return;
 
-    this.saveIndicator.classList.remove('fade-out');
+    this.saveIndicator.classList.remove('fade-out', 'save-indicator--error');
     this.saveIndicator.classList.add('visible');
     this.saveIndicatorText.textContent = 'Сохранено';
     this.saveIndicator.classList.add('save-indicator--saved');
@@ -356,6 +364,21 @@ class AdminApp {
         this.saveIndicator.classList.remove('visible', 'fade-out', 'save-indicator--saved');
       }, 500);
     }, 2000);
+  }
+
+  /** Показать ошибку сохранения в индикаторе */
+  _showSaveError() {
+    this.saveIndicator.classList.remove('fade-out', 'save-indicator--saved', 'save-indicator--saving');
+    this.saveIndicator.classList.add('visible', 'save-indicator--error');
+    this.saveIndicatorText.textContent = 'Ошибка сохранения';
+
+    clearTimeout(this._saveIndicatorTimer);
+    this._saveIndicatorTimer = setTimeout(() => {
+      this.saveIndicator.classList.add('fade-out');
+      setTimeout(() => {
+        this.saveIndicator.classList.remove('visible', 'fade-out', 'save-indicator--error');
+      }, 500);
+    }, 4000);
   }
 
   /** SVG-пути иконок для типов toast */

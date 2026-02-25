@@ -147,7 +147,8 @@ describe('ComponentFactory', () => {
 
       expect(SettingsManager).toHaveBeenCalledWith(
         mockCore.storage,
-        expect.objectContaining({ font: 'georgia' })
+        expect.objectContaining({ font: 'georgia' }),
+        {}
       );
       expect(result.type).toBe('settingsManager');
     });

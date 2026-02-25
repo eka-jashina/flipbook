@@ -20,6 +20,28 @@ export class ServerAdminConfigStore {
     this._activeBookId = null;
     this._books = [];
     this._savePromise = null;
+    /** @type {Function|null} Колбэк для уведомления UI об ошибках: (message: string) => void */
+    this._onError = null;
+  }
+
+  /**
+   * Установить обработчик ошибок (для показа toast в AdminApp)
+   * @param {Function} callback - (message: string) => void
+   */
+  set onError(callback) {
+    this._onError = callback;
+  }
+
+  /**
+   * Уведомить об ошибке через колбэк
+   * @private
+   * @param {string} action - Описание действия
+   * @param {Error} err - Ошибка
+   */
+  _handleError(action, err) {
+    const message = `${action}: ${err.message || 'Ошибка сервера'}`;
+    console.error(message, err);
+    if (this._onError) this._onError(message);
   }
 
   /**
@@ -80,19 +102,23 @@ export class ServerAdminConfigStore {
 
   /** Добавить новую книгу */
   async addBook(book) {
-    const created = await this._api.createBook({
-      title: book.cover?.title || book.title || '',
-      author: book.cover?.author || book.author || '',
-    });
-    // Обновить локальный кэш
-    this._books.push({
-      id: created.id,
-      title: created.title,
-      author: created.author,
-      chaptersCount: 0,
-    });
-    this._save();
-    return created;
+    try {
+      const created = await this._api.createBook({
+        title: book.cover?.title || book.title || '',
+        author: book.cover?.author || book.author || '',
+      });
+      this._books.push({
+        id: created.id,
+        title: created.title,
+        author: created.author,
+        chaptersCount: 0,
+      });
+      this._save();
+      return created;
+    } catch (err) {
+      this._handleError('Не удалось создать книгу', err);
+      throw err;
+    }
   }
 
   /** Переместить книгу */
@@ -103,34 +129,51 @@ export class ServerAdminConfigStore {
     const [moved] = this._books.splice(fromIndex, 1);
     this._books.splice(toIndex, 0, moved);
 
-    this._savePromise = this._api.reorderBooks(this._books.map(b => b.id));
-    await this._savePromise;
-    this._save();
+    try {
+      this._savePromise = this._api.reorderBooks(this._books.map(b => b.id));
+      await this._savePromise;
+      this._save();
+    } catch (err) {
+      // Откат порядка
+      this._books.splice(toIndex, 1);
+      this._books.splice(fromIndex, 0, moved);
+      this._handleError('Не удалось переместить книгу', err);
+      throw err;
+    }
   }
 
   /** Удалить книгу */
   async removeBook(bookId) {
-    await this._api.deleteBook(bookId);
-    this._books = this._books.filter(b => b.id !== bookId);
-
-    if (this._activeBookId === bookId) {
-      this._activeBookId = this._books.length > 0 ? this._books[0].id : '';
+    try {
+      await this._api.deleteBook(bookId);
+      this._books = this._books.filter(b => b.id !== bookId);
+      if (this._activeBookId === bookId) {
+        this._activeBookId = this._books.length > 0 ? this._books[0].id : '';
+      }
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось удалить книгу', err);
+      throw err;
     }
-    this._save();
   }
 
   /** Переименовать книгу */
   async updateBookMeta(bookId, meta) {
-    await this._api.updateBook(bookId, {
-      title: meta.title,
-      author: meta.author,
-    });
-    const book = this._books.find(b => b.id === bookId);
-    if (book) {
-      if (meta.title !== undefined) book.title = meta.title;
-      if (meta.author !== undefined) book.author = meta.author;
+    try {
+      await this._api.updateBook(bookId, {
+        title: meta.title,
+        author: meta.author,
+      });
+      const book = this._books.find(b => b.id === bookId);
+      if (book) {
+        if (meta.title !== undefined) book.title = meta.title;
+        if (meta.author !== undefined) book.author = meta.author;
+      }
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить книгу', err);
+      throw err;
     }
-    this._save();
   }
 
   // --- Обложка (активной книги) ---
@@ -156,8 +199,13 @@ export class ServerAdminConfigStore {
     if (cover.bgMode !== undefined) data.coverBgMode = cover.bgMode;
     if (cover.bgCustomData !== undefined) data.coverBgCustomUrl = cover.bgCustomData;
 
-    await this._api.updateBook(this._activeBookId, data);
-    this._save();
+    try {
+      await this._api.updateBook(this._activeBookId, data);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить обложку', err);
+      throw err;
+    }
   }
 
   // --- Главы (активной книги) ---
@@ -178,54 +226,73 @@ export class ServerAdminConfigStore {
 
   async addChapter(chapter) {
     if (!this._activeBookId) return;
-    await this._api.createChapter(this._activeBookId, {
-      title: chapter.title || '',
-      htmlContent: chapter.htmlContent || null,
-      filePath: chapter.file || null,
-      bg: chapter.bg || '',
-      bgMobile: chapter.bgMobile || '',
-    });
-    this._save();
+    try {
+      await this._api.createChapter(this._activeBookId, {
+        title: chapter.title || '',
+        htmlContent: chapter.htmlContent || null,
+        filePath: chapter.file || null,
+        bg: chapter.bg || '',
+        bgMobile: chapter.bgMobile || '',
+      });
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось добавить главу', err);
+      throw err;
+    }
   }
 
   async updateChapter(index, chapter) {
     if (!this._activeBookId) return;
-    const chapters = await this._api.getChapters(this._activeBookId);
-    if (index < 0 || index >= chapters.length) return;
-    const chapterId = chapters[index].id;
+    try {
+      const chapters = await this._api.getChapters(this._activeBookId);
+      if (index < 0 || index >= chapters.length) return;
+      const chapterId = chapters[index].id;
 
-    await this._api.updateChapter(this._activeBookId, chapterId, {
-      title: chapter.title,
-      htmlContent: chapter.htmlContent,
-      filePath: chapter.file,
-      bg: chapter.bg,
-      bgMobile: chapter.bgMobile,
-    });
-    this._save();
+      await this._api.updateChapter(this._activeBookId, chapterId, {
+        title: chapter.title,
+        htmlContent: chapter.htmlContent,
+        filePath: chapter.file,
+        bg: chapter.bg,
+        bgMobile: chapter.bgMobile,
+      });
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить главу', err);
+      throw err;
+    }
   }
 
   async removeChapter(index) {
     if (!this._activeBookId) return;
-    const chapters = await this._api.getChapters(this._activeBookId);
-    if (index < 0 || index >= chapters.length) return;
+    try {
+      const chapters = await this._api.getChapters(this._activeBookId);
+      if (index < 0 || index >= chapters.length) return;
 
-    await this._api.deleteChapter(this._activeBookId, chapters[index].id);
-    this._save();
+      await this._api.deleteChapter(this._activeBookId, chapters[index].id);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось удалить главу', err);
+      throw err;
+    }
   }
 
   async moveChapter(fromIndex, toIndex) {
     if (!this._activeBookId) return;
-    const chapters = await this._api.getChapters(this._activeBookId);
-    if (fromIndex < 0 || fromIndex >= chapters.length) return;
-    if (toIndex < 0 || toIndex >= chapters.length) return;
+    try {
+      const chapters = await this._api.getChapters(this._activeBookId);
+      if (fromIndex < 0 || fromIndex >= chapters.length) return;
+      if (toIndex < 0 || toIndex >= chapters.length) return;
 
-    // Пересчитываем порядок
-    const ids = chapters.map(ch => ch.id);
-    const [moved] = ids.splice(fromIndex, 1);
-    ids.splice(toIndex, 0, moved);
+      const ids = chapters.map(ch => ch.id);
+      const [moved] = ids.splice(fromIndex, 1);
+      ids.splice(toIndex, 0, moved);
 
-    await this._api.reorderChapters(this._activeBookId, ids);
-    this._save();
+      await this._api.reorderChapters(this._activeBookId, ids);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось переместить главу', err);
+      throw err;
+    }
   }
 
   // --- Амбиенты (per-book, активной книги) ---
@@ -247,41 +314,56 @@ export class ServerAdminConfigStore {
 
   async addAmbient(ambient) {
     if (!this._activeBookId) return;
-    await this._api.createAmbient(this._activeBookId, {
-      ambientKey: ambient.id || `ambient_${Date.now()}`,
-      label: ambient.label,
-      shortLabel: ambient.shortLabel || ambient.label,
-      icon: ambient.icon || '',
-      fileUrl: ambient.file || null,
-      visible: ambient.visible ?? true,
-      builtin: ambient.builtin ?? false,
-    });
-    this._save();
+    try {
+      await this._api.createAmbient(this._activeBookId, {
+        ambientKey: ambient.id || `ambient_${Date.now()}`,
+        label: ambient.label,
+        shortLabel: ambient.shortLabel || ambient.label,
+        icon: ambient.icon || '',
+        fileUrl: ambient.file || null,
+        visible: ambient.visible ?? true,
+        builtin: ambient.builtin ?? false,
+      });
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось добавить эмбиент', err);
+      throw err;
+    }
   }
 
   async updateAmbient(index, data) {
     if (!this._activeBookId) return;
-    const ambients = await this._api.getAmbients(this._activeBookId);
-    if (index < 0 || index >= ambients.length) return;
+    try {
+      const ambients = await this._api.getAmbients(this._activeBookId);
+      if (index < 0 || index >= ambients.length) return;
 
-    const updateData = {};
-    if (data.label !== undefined) updateData.label = data.label;
-    if (data.shortLabel !== undefined) updateData.shortLabel = data.shortLabel;
-    if (data.icon !== undefined) updateData.icon = data.icon;
-    if (data.file !== undefined) updateData.fileUrl = data.file;
-    if (data.visible !== undefined) updateData.visible = data.visible;
+      const updateData = {};
+      if (data.label !== undefined) updateData.label = data.label;
+      if (data.shortLabel !== undefined) updateData.shortLabel = data.shortLabel;
+      if (data.icon !== undefined) updateData.icon = data.icon;
+      if (data.file !== undefined) updateData.fileUrl = data.file;
+      if (data.visible !== undefined) updateData.visible = data.visible;
 
-    await this._api.updateAmbient(this._activeBookId, ambients[index].id, updateData);
-    this._save();
+      await this._api.updateAmbient(this._activeBookId, ambients[index].id, updateData);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить эмбиент', err);
+      throw err;
+    }
   }
 
   async removeAmbient(index) {
     if (!this._activeBookId) return;
-    const ambients = await this._api.getAmbients(this._activeBookId);
-    if (index < 0 || index >= ambients.length) return;
+    try {
+      const ambients = await this._api.getAmbients(this._activeBookId);
+      if (index < 0 || index >= ambients.length) return;
 
-    await this._api.deleteAmbient(this._activeBookId, ambients[index].id);
-    this._save();
+      await this._api.deleteAmbient(this._activeBookId, ambients[index].id);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось удалить эмбиент', err);
+      throw err;
+    }
   }
 
   // --- Звуки (per-book, активной книги) ---
@@ -303,8 +385,13 @@ export class ServerAdminConfigStore {
     if (sounds.bookOpen !== undefined) data.bookOpenUrl = sounds.bookOpen;
     if (sounds.bookClose !== undefined) data.bookCloseUrl = sounds.bookClose;
 
-    await this._api.updateSounds(this._activeBookId, data);
-    this._save();
+    try {
+      await this._api.updateSounds(this._activeBookId, data);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить звуки', err);
+      throw err;
+    }
   }
 
   // --- Настройки по умолчанию (per-book, активной книги) ---
@@ -316,8 +403,13 @@ export class ServerAdminConfigStore {
 
   async updateDefaultSettings(settings) {
     if (!this._activeBookId) return;
-    await this._api.updateDefaultSettings(this._activeBookId, settings);
-    this._save();
+    try {
+      await this._api.updateDefaultSettings(this._activeBookId, settings);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить настройки по умолчанию', err);
+      throw err;
+    }
   }
 
   // --- Декоративный шрифт (per-book, активной книги) ---
@@ -329,15 +421,20 @@ export class ServerAdminConfigStore {
 
   async setDecorativeFont(fontData) {
     if (!this._activeBookId) return;
-    if (fontData) {
-      await this._api.setDecorativeFont(this._activeBookId, {
-        name: fontData.name,
-        fileUrl: fontData.dataUrl || fontData.fileUrl,
-      });
-    } else {
-      await this._api.deleteDecorativeFont(this._activeBookId);
+    try {
+      if (fontData) {
+        await this._api.setDecorativeFont(this._activeBookId, {
+          name: fontData.name,
+          fileUrl: fontData.dataUrl || fontData.fileUrl,
+        });
+      } else {
+        await this._api.deleteDecorativeFont(this._activeBookId);
+      }
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить декоративный шрифт', err);
+      throw err;
     }
-    this._save();
   }
 
   // --- Шрифты для чтения (global) ---
@@ -356,37 +453,52 @@ export class ServerAdminConfigStore {
   }
 
   async addReadingFont(font) {
-    await this._api.createFont({
-      fontKey: font.id || `font_${Date.now()}`,
-      label: font.label,
-      family: font.family,
-      builtin: font.builtin ?? false,
-      enabled: font.enabled ?? true,
-      fileUrl: font.dataUrl || null,
-    });
-    this._save();
+    try {
+      await this._api.createFont({
+        fontKey: font.id || `font_${Date.now()}`,
+        label: font.label,
+        family: font.family,
+        builtin: font.builtin ?? false,
+        enabled: font.enabled ?? true,
+        fileUrl: font.dataUrl || null,
+      });
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось добавить шрифт', err);
+      throw err;
+    }
   }
 
   async updateReadingFont(index, data) {
-    const fonts = await this._api.getFonts();
-    if (index < 0 || index >= fonts.length) return;
+    try {
+      const fonts = await this._api.getFonts();
+      if (index < 0 || index >= fonts.length) return;
 
-    const updateData = {};
-    if (data.label !== undefined) updateData.label = data.label;
-    if (data.family !== undefined) updateData.family = data.family;
-    if (data.enabled !== undefined) updateData.enabled = data.enabled;
-    if (data.dataUrl !== undefined) updateData.fileUrl = data.dataUrl;
+      const updateData = {};
+      if (data.label !== undefined) updateData.label = data.label;
+      if (data.family !== undefined) updateData.family = data.family;
+      if (data.enabled !== undefined) updateData.enabled = data.enabled;
+      if (data.dataUrl !== undefined) updateData.fileUrl = data.dataUrl;
 
-    await this._api.updateFont(fonts[index].id, updateData);
-    this._save();
+      await this._api.updateFont(fonts[index].id, updateData);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить шрифт', err);
+      throw err;
+    }
   }
 
   async removeReadingFont(index) {
-    const fonts = await this._api.getFonts();
-    if (index < 0 || index >= fonts.length) return;
+    try {
+      const fonts = await this._api.getFonts();
+      if (index < 0 || index >= fonts.length) return;
 
-    await this._api.deleteFont(fonts[index].id);
-    this._save();
+      await this._api.deleteFont(fonts[index].id);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось удалить шрифт', err);
+      throw err;
+    }
   }
 
   // --- Оформление ---
@@ -425,27 +537,28 @@ export class ServerAdminConfigStore {
   }
 
   async updateAppearanceGlobal(data) {
-    // fontMin/fontMax — глобальные (per-user)
     const updateData = {};
     if (data.fontMin !== undefined) updateData.fontMin = data.fontMin;
     if (data.fontMax !== undefined) updateData.fontMax = data.fontMax;
 
-    if (Object.keys(updateData).length > 0) {
-      await this._api.updateSettings(updateData);
+    try {
+      if (Object.keys(updateData).length > 0) {
+        await this._api.updateSettings(updateData);
+      }
+      if (this._activeBookId) {
+        await this._api.updateAppearance(this._activeBookId, updateData);
+      }
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить оформление', err);
+      throw err;
     }
-
-    // Также обновляем appearance книги
-    if (this._activeBookId) {
-      await this._api.updateAppearance(this._activeBookId, updateData);
-    }
-    this._save();
   }
 
   async updateAppearanceTheme(theme, data) {
     if (theme !== 'light' && theme !== 'dark') return;
     if (!this._activeBookId) return;
 
-    // Конвертация имён полей для API
     const apiData = {};
     if (data.coverBgStart !== undefined) apiData.coverBgStart = data.coverBgStart;
     if (data.coverBgEnd !== undefined) apiData.coverBgEnd = data.coverBgEnd;
@@ -456,8 +569,13 @@ export class ServerAdminConfigStore {
     if (data.bgPage !== undefined) apiData.bgPage = data.bgPage;
     if (data.bgApp !== undefined) apiData.bgApp = data.bgApp;
 
-    await this._api.updateAppearanceTheme(this._activeBookId, theme, apiData);
-    this._save();
+    try {
+      await this._api.updateAppearanceTheme(this._activeBookId, theme, apiData);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить тему оформления', err);
+      throw err;
+    }
   }
 
   // --- Видимость настроек (global) ---
@@ -471,7 +589,6 @@ export class ServerAdminConfigStore {
   }
 
   async updateSettingsVisibility(data) {
-    // Конвертируем в формат API (visFontSize, visTheme, ...)
     const apiData = {};
     if (data.fontSize !== undefined) apiData.visFontSize = data.fontSize;
     if (data.theme !== undefined) apiData.visTheme = data.theme;
@@ -480,8 +597,13 @@ export class ServerAdminConfigStore {
     if (data.sound !== undefined) apiData.visSound = data.sound;
     if (data.ambient !== undefined) apiData.visAmbient = data.ambient;
 
-    await this._api.updateSettings(apiData);
-    this._save();
+    try {
+      await this._api.updateSettings(apiData);
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось обновить видимость настроек', err);
+      throw err;
+    }
   }
 
   // --- Экспорт/Импорт ---
@@ -492,24 +614,33 @@ export class ServerAdminConfigStore {
   }
 
   async importJSON(jsonString) {
-    const parsed = JSON.parse(jsonString);
-    await this._api.importConfig(parsed);
-    // Перезагрузить список книг
-    this._books = await this._api.getBooks();
-    if (this._books.length > 0) {
-      this._activeBookId = this._books[0].id;
+    try {
+      const parsed = JSON.parse(jsonString);
+      await this._api.importConfig(parsed);
+      this._books = await this._api.getBooks();
+      if (this._books.length > 0) {
+        this._activeBookId = this._books[0].id;
+      }
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось импортировать конфигурацию', err);
+      throw err;
     }
-    this._save();
   }
 
   /** Сбросить (удалить все книги) */
   async reset() {
-    for (const book of this._books) {
-      await this._api.deleteBook(book.id);
+    try {
+      for (const book of this._books) {
+        await this._api.deleteBook(book.id);
+      }
+      this._books = [];
+      this._activeBookId = '';
+      this._save();
+    } catch (err) {
+      this._handleError('Не удалось сбросить данные', err);
+      throw err;
     }
-    this._books = [];
-    this._activeBookId = '';
-    this._save();
   }
 
   /** Получить полный конфиг (для совместимости) */

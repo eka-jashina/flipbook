@@ -25,6 +25,9 @@ export class ApiError extends Error {
   }
 }
 
+/** Настройки retry по умолчанию */
+const RETRY_DEFAULTS = { maxRetries: 2, initialDelay: 1000 };
+
 export class ApiClient {
   /**
    * @param {Object} [options]
@@ -96,6 +99,51 @@ export class ApiClient {
     return data;
   }
 
+  /**
+   * Задержка выполнения
+   * @private
+   * @param {number} ms
+   * @returns {Promise<void>}
+   */
+  _delay(ms) {
+    return new Promise(resolve => { setTimeout(resolve, ms); });
+  }
+
+  /**
+   * Fetch с автоматическим retry для 5xx и network-ошибок.
+   * Не ретраит 4xx (клиентские ошибки) и 401 (авторизация).
+   * @param {string} path
+   * @param {Object} [options] - fetch options
+   * @param {Object} [retryOpts] - { maxRetries, initialDelay }
+   * @returns {Promise<*>}
+   * @throws {ApiError}
+   */
+  async _fetchWithRetry(path, options = {}, retryOpts = {}) {
+    const { maxRetries, initialDelay } = { ...RETRY_DEFAULTS, ...retryOpts };
+    let lastError;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await this._fetch(path, options);
+      } catch (err) {
+        lastError = err;
+
+        // Не ретраим клиентские ошибки (4xx) — они не исправятся повтором
+        if (err.status && err.status >= 400 && err.status < 500) {
+          throw err;
+        }
+
+        // Последняя попытка — не ждём, бросаем
+        if (attempt >= maxRetries) break;
+
+        const delay = initialDelay * Math.pow(2, attempt);
+        await this._delay(delay);
+      }
+    }
+
+    throw lastError;
+  }
+
   // ═══════════════════════════════════════════
   // Аутентификация
   // ═══════════════════════════════════════════
@@ -140,32 +188,32 @@ export class ApiClient {
 
   /** Список книг (для полки) */
   async getBooks() {
-    return this._fetch('/api/books');
+    return this._fetchWithRetry('/api/books');
   }
 
   /** Создать книгу */
   async createBook(data) {
-    return this._fetch('/api/books', { method: 'POST', body: data });
+    return this._fetchWithRetry('/api/books', { method: 'POST', body: data });
   }
 
   /** Полная информация о книге */
   async getBook(bookId) {
-    return this._fetch(`/api/books/${bookId}`);
+    return this._fetchWithRetry(`/api/books/${bookId}`);
   }
 
   /** Обновить метаданные книги */
   async updateBook(bookId, data) {
-    return this._fetch(`/api/books/${bookId}`, { method: 'PATCH', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}`, { method: 'PATCH', body: data });
   }
 
   /** Удалить книгу */
   async deleteBook(bookId) {
-    return this._fetch(`/api/books/${bookId}`, { method: 'DELETE' });
+    return this._fetchWithRetry(`/api/books/${bookId}`, { method: 'DELETE' });
   }
 
   /** Изменить порядок книг */
   async reorderBooks(bookIds) {
-    return this._fetch('/api/books/reorder', { method: 'PATCH', body: { bookIds } });
+    return this._fetchWithRetry('/api/books/reorder', { method: 'PATCH', body: { bookIds } });
   }
 
   // ═══════════════════════════════════════════
@@ -174,37 +222,37 @@ export class ApiClient {
 
   /** Список глав (мета, без контента) */
   async getChapters(bookId) {
-    return this._fetch(`/api/books/${bookId}/chapters`);
+    return this._fetchWithRetry(`/api/books/${bookId}/chapters`);
   }
 
   /** Добавить главу */
   async createChapter(bookId, data) {
-    return this._fetch(`/api/books/${bookId}/chapters`, { method: 'POST', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}/chapters`, { method: 'POST', body: data });
   }
 
   /** Глава с метаданными */
   async getChapter(bookId, chapterId) {
-    return this._fetch(`/api/books/${bookId}/chapters/${chapterId}`);
+    return this._fetchWithRetry(`/api/books/${bookId}/chapters/${chapterId}`);
   }
 
   /** Обновить главу */
   async updateChapter(bookId, chapterId, data) {
-    return this._fetch(`/api/books/${bookId}/chapters/${chapterId}`, { method: 'PATCH', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}/chapters/${chapterId}`, { method: 'PATCH', body: data });
   }
 
   /** Удалить главу */
   async deleteChapter(bookId, chapterId) {
-    return this._fetch(`/api/books/${bookId}/chapters/${chapterId}`, { method: 'DELETE' });
+    return this._fetchWithRetry(`/api/books/${bookId}/chapters/${chapterId}`, { method: 'DELETE' });
   }
 
   /** Изменить порядок глав */
   async reorderChapters(bookId, chapterIds) {
-    return this._fetch(`/api/books/${bookId}/chapters/reorder`, { method: 'PATCH', body: { chapterIds } });
+    return this._fetchWithRetry(`/api/books/${bookId}/chapters/reorder`, { method: 'PATCH', body: { chapterIds } });
   }
 
   /** HTML-контент главы */
   async getChapterContent(bookId, chapterId) {
-    return this._fetch(`/api/books/${bookId}/chapters/${chapterId}/content`);
+    return this._fetchWithRetry(`/api/books/${bookId}/chapters/${chapterId}/content`);
   }
 
   // ═══════════════════════════════════════════
@@ -213,17 +261,17 @@ export class ApiClient {
 
   /** Настройки внешнего вида */
   async getAppearance(bookId) {
-    return this._fetch(`/api/books/${bookId}/appearance`);
+    return this._fetchWithRetry(`/api/books/${bookId}/appearance`);
   }
 
   /** Обновить общие настройки (fontMin, fontMax) */
   async updateAppearance(bookId, data) {
-    return this._fetch(`/api/books/${bookId}/appearance`, { method: 'PATCH', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}/appearance`, { method: 'PATCH', body: data });
   }
 
   /** Обновить тему (light/dark) */
   async updateAppearanceTheme(bookId, theme, data) {
-    return this._fetch(`/api/books/${bookId}/appearance/${theme}`, { method: 'PATCH', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}/appearance/${theme}`, { method: 'PATCH', body: data });
   }
 
   // ═══════════════════════════════════════════
@@ -232,12 +280,12 @@ export class ApiClient {
 
   /** Звуки книги */
   async getSounds(bookId) {
-    return this._fetch(`/api/books/${bookId}/sounds`);
+    return this._fetchWithRetry(`/api/books/${bookId}/sounds`);
   }
 
   /** Обновить звуки */
   async updateSounds(bookId, data) {
-    return this._fetch(`/api/books/${bookId}/sounds`, { method: 'PATCH', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}/sounds`, { method: 'PATCH', body: data });
   }
 
   // ═══════════════════════════════════════════
@@ -246,27 +294,27 @@ export class ApiClient {
 
   /** Список эмбиентов */
   async getAmbients(bookId) {
-    return this._fetch(`/api/books/${bookId}/ambients`);
+    return this._fetchWithRetry(`/api/books/${bookId}/ambients`);
   }
 
   /** Добавить эмбиент */
   async createAmbient(bookId, data) {
-    return this._fetch(`/api/books/${bookId}/ambients`, { method: 'POST', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}/ambients`, { method: 'POST', body: data });
   }
 
   /** Обновить эмбиент */
   async updateAmbient(bookId, ambientId, data) {
-    return this._fetch(`/api/books/${bookId}/ambients/${ambientId}`, { method: 'PATCH', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}/ambients/${ambientId}`, { method: 'PATCH', body: data });
   }
 
   /** Удалить эмбиент */
   async deleteAmbient(bookId, ambientId) {
-    return this._fetch(`/api/books/${bookId}/ambients/${ambientId}`, { method: 'DELETE' });
+    return this._fetchWithRetry(`/api/books/${bookId}/ambients/${ambientId}`, { method: 'DELETE' });
   }
 
   /** Изменить порядок эмбиентов */
   async reorderAmbients(bookId, ambientIds) {
-    return this._fetch(`/api/books/${bookId}/ambients/reorder`, { method: 'PATCH', body: { ambientIds } });
+    return this._fetchWithRetry(`/api/books/${bookId}/ambients/reorder`, { method: 'PATCH', body: { ambientIds } });
   }
 
   // ═══════════════════════════════════════════
@@ -276,7 +324,7 @@ export class ApiClient {
   /** Получить декоративный шрифт */
   async getDecorativeFont(bookId) {
     try {
-      return await this._fetch(`/api/books/${bookId}/decorative-font`);
+      return await this._fetchWithRetry(`/api/books/${bookId}/decorative-font`);
     } catch (err) {
       if (err.status === 404) return null;
       throw err;
@@ -285,12 +333,12 @@ export class ApiClient {
 
   /** Установить декоративный шрифт (upsert) */
   async setDecorativeFont(bookId, data) {
-    return this._fetch(`/api/books/${bookId}/decorative-font`, { method: 'PUT', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}/decorative-font`, { method: 'PUT', body: data });
   }
 
   /** Удалить декоративный шрифт */
   async deleteDecorativeFont(bookId) {
-    return this._fetch(`/api/books/${bookId}/decorative-font`, { method: 'DELETE' });
+    return this._fetchWithRetry(`/api/books/${bookId}/decorative-font`, { method: 'DELETE' });
   }
 
   // ═══════════════════════════════════════════
@@ -299,27 +347,27 @@ export class ApiClient {
 
   /** Список шрифтов */
   async getFonts() {
-    return this._fetch('/api/fonts');
+    return this._fetchWithRetry('/api/fonts');
   }
 
   /** Добавить шрифт */
   async createFont(data) {
-    return this._fetch('/api/fonts', { method: 'POST', body: data });
+    return this._fetchWithRetry('/api/fonts', { method: 'POST', body: data });
   }
 
   /** Обновить шрифт */
   async updateFont(fontId, data) {
-    return this._fetch(`/api/fonts/${fontId}`, { method: 'PATCH', body: data });
+    return this._fetchWithRetry(`/api/fonts/${fontId}`, { method: 'PATCH', body: data });
   }
 
   /** Удалить шрифт */
   async deleteFont(fontId) {
-    return this._fetch(`/api/fonts/${fontId}`, { method: 'DELETE' });
+    return this._fetchWithRetry(`/api/fonts/${fontId}`, { method: 'DELETE' });
   }
 
   /** Изменить порядок шрифтов */
   async reorderFonts(fontIds) {
-    return this._fetch('/api/fonts/reorder', { method: 'PATCH', body: { fontIds } });
+    return this._fetchWithRetry('/api/fonts/reorder', { method: 'PATCH', body: { fontIds } });
   }
 
   // ═══════════════════════════════════════════
@@ -328,22 +376,22 @@ export class ApiClient {
 
   /** Глобальные настройки */
   async getSettings() {
-    return this._fetch('/api/settings');
+    return this._fetchWithRetry('/api/settings');
   }
 
   /** Обновить глобальные настройки */
   async updateSettings(data) {
-    return this._fetch('/api/settings', { method: 'PATCH', body: data });
+    return this._fetchWithRetry('/api/settings', { method: 'PATCH', body: data });
   }
 
   /** Дефолтные настройки книги */
   async getDefaultSettings(bookId) {
-    return this._fetch(`/api/books/${bookId}/default-settings`);
+    return this._fetchWithRetry(`/api/books/${bookId}/default-settings`);
   }
 
   /** Обновить дефолтные настройки книги */
   async updateDefaultSettings(bookId, data) {
-    return this._fetch(`/api/books/${bookId}/default-settings`, { method: 'PATCH', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}/default-settings`, { method: 'PATCH', body: data });
   }
 
   // ═══════════════════════════════════════════
@@ -353,7 +401,7 @@ export class ApiClient {
   /** Получить прогресс чтения */
   async getProgress(bookId) {
     try {
-      return await this._fetch(`/api/books/${bookId}/progress`);
+      return await this._fetchWithRetry(`/api/books/${bookId}/progress`);
     } catch (err) {
       if (err.status === 404) return null;
       throw err;
@@ -362,7 +410,7 @@ export class ApiClient {
 
   /** Сохранить прогресс чтения (upsert) */
   async saveProgress(bookId, data) {
-    return this._fetch(`/api/books/${bookId}/progress`, { method: 'PUT', body: data });
+    return this._fetchWithRetry(`/api/books/${bookId}/progress`, { method: 'PUT', body: data });
   }
 
   // ═══════════════════════════════════════════
@@ -373,28 +421,28 @@ export class ApiClient {
   async uploadFont(file) {
     const form = new FormData();
     form.append('file', file);
-    return this._fetch('/api/upload/font', { method: 'POST', body: form });
+    return this._fetchWithRetry('/api/upload/font', { method: 'POST', body: form });
   }
 
   /** Загрузить звук */
   async uploadSound(file) {
     const form = new FormData();
     form.append('file', file);
-    return this._fetch('/api/upload/sound', { method: 'POST', body: form });
+    return this._fetchWithRetry('/api/upload/sound', { method: 'POST', body: form });
   }
 
   /** Загрузить изображение */
   async uploadImage(file) {
     const form = new FormData();
     form.append('file', file);
-    return this._fetch('/api/upload/image', { method: 'POST', body: form });
+    return this._fetchWithRetry('/api/upload/image', { method: 'POST', body: form });
   }
 
   /** Загрузить книгу (парсинг на сервере) */
   async uploadBook(file) {
     const form = new FormData();
     form.append('file', file);
-    return this._fetch('/api/upload/book', { method: 'POST', body: form });
+    return this._fetchWithRetry('/api/upload/book', { method: 'POST', body: form });
   }
 
   // ═══════════════════════════════════════════
@@ -403,12 +451,12 @@ export class ApiClient {
 
   /** Экспорт всей конфигурации */
   async exportConfig() {
-    return this._fetch('/api/export');
+    return this._fetchWithRetry('/api/export');
   }
 
   /** Импорт конфигурации */
   async importConfig(data) {
-    return this._fetch('/api/import', { method: 'POST', body: data });
+    return this._fetchWithRetry('/api/import', { method: 'POST', body: data });
   }
 
   // ═══════════════════════════════════════════

@@ -168,6 +168,10 @@
   }
 }
 
+.save-indicator--error {
+  color: var(--admin-danger, #b44a3e);
+}
+
 .save-indicator.fade-out {
   opacity: 0;
   transition: opacity 0.5s ease;

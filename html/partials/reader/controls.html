@@ -33,6 +33,11 @@
             <div class="progress-bar" id="reading-progress" style="width: 0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Прогресс чтения"></div>
           </div>
 
+          <!-- Sync indicator (Фаза 4) -->
+          <div class="sync-indicator" id="sync-indicator" aria-live="polite" hidden>
+            <span class="sync-indicator__text" id="sync-indicator-text"></span>
+          </div>
+
           <div class="nav-actions">
             <button class="back-to-shelf-btn" type="button" id="backToShelfBtn" aria-label="Назад к книжной полке">
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">

@@ -31,6 +31,7 @@ export class SettingsManager {
     this._bookId = bookId || null;
     this._syncTimer = null;
     this._dirty = false;
+    this._onSyncStateChange = null;
     this._boundBeforeUnload = this._onBeforeUnload.bind(this);
 
     // Сохранённые настройки перезаписывают defaults,
@@ -96,6 +97,25 @@ export class SettingsManager {
   }
 
   /**
+   * Установить колбэк для отслеживания состояния синхронизации.
+   * @param {Function} callback - (state: 'syncing'|'synced'|'error') => void
+   */
+  set onSyncStateChange(callback) {
+    this._onSyncStateChange = callback;
+  }
+
+  /**
+   * Уведомить о смене состояния синхронизации
+   * @private
+   * @param {'syncing'|'synced'|'error'} state
+   */
+  _notifySyncState(state) {
+    if (this._onSyncStateChange) {
+      this._onSyncStateChange(state);
+    }
+  }
+
+  /**
    * Запланировать отправку прогресса на сервер
    * @private
    */
@@ -103,6 +123,7 @@ export class SettingsManager {
     if (this._syncTimer) {
       clearTimeout(this._syncTimer);
     }
+    this._notifySyncState('syncing');
     this._syncTimer = setTimeout(() => {
       this._syncToServer();
     }, SYNC_DEBOUNCE);
@@ -129,10 +150,12 @@ export class SettingsManager {
     try {
       await this._api.saveProgress(this._bookId, data);
       this._dirty = false;
+      this._notifySyncState('synced');
     } catch (err) {
       console.warn('SettingsManager: не удалось сохранить прогресс на сервер', err);
-      // При ошибке сети — не критично, прогресс сохранён в localStorage.
-      // В Фазе 4 добавится sync queue.
+      this._notifySyncState('error');
+      // Прогресс сохранён в localStorage — не критично.
+      // Dirty-флаг остаётся true, следующее изменение запустит повторную попытку.
     }
   }
 
