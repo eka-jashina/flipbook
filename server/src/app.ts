@@ -22,6 +22,7 @@ import progressRoutes from './routes/progress.routes.js';
 import fontsRoutes from './routes/fonts.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import defaultSettingsRoutes from './routes/defaultSettings.routes.js';
 import exportImportRoutes from './routes/exportImport.routes.js';
 
 export function createApp() {
@@ -93,6 +94,7 @@ export function createApp() {
   app.use('/api/books/:bookId/ambients', ambientsRoutes);
   app.use('/api/books/:bookId/decorative-font', decorativeFontRoutes);
   app.use('/api/books/:bookId/progress', progressRoutes);
+  app.use('/api/books/:bookId/default-settings', defaultSettingsRoutes);
   app.use('/api/fonts', fontsRoutes);
   app.use('/api/settings', settingsRoutes);
   app.use('/api/upload', uploadRoutes);
