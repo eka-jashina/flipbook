@@ -79,6 +79,11 @@ export function createApp() {
     next();
   });
 
+  // Health check (before auth-protected routes)
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Routes
   app.use('/api/auth', authRoutes);
   app.use('/api/books', booksRoutes);
@@ -92,11 +97,6 @@ export function createApp() {
   app.use('/api/settings', settingsRoutes);
   app.use('/api/upload', uploadRoutes);
   app.use('/api', exportImportRoutes);
-
-  // Health check
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
 
   // Error handler (must be last)
   app.use(errorHandler);

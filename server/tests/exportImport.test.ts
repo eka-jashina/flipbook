@@ -13,7 +13,15 @@ describe('Export/Import API', () => {
     const res = await agent.get('/api/export').expect(200);
     expect(res.body.books).toEqual([]);
     expect(res.body.readingFonts).toEqual([]);
-    expect(res.body.globalSettings).toBeNull();
+    // Registration auto-creates default global settings
+    expect(res.body.globalSettings).toEqual({
+      fontMin: 14,
+      fontMax: 22,
+      settingsVisibility: {
+        fontSize: true, theme: true, font: true,
+        fullscreen: true, sound: true, ambient: true,
+      },
+    });
   });
 
   it('should include Content-Disposition header', async () => {
