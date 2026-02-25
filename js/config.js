@@ -6,6 +6,9 @@
  * API:
  * - createConfig(adminConfig) — чистая фабричная функция, не обращается к localStorage.
  *   Используется для тестирования и создания конфигурации с явными данными.
+ * - createConfigFromAPI(bookDetail, globalSettings, readingFonts) — создание конфига
+ *   из серверных данных (Фаза 3).
+ * - loadConfigFromAPI(apiClient, bookId) — загрузка конфига из API.
  * - CONFIG — синглтон для production. Вычисляется один раз при загрузке модуля.
  *   Единственный side effect этого модуля: читает localStorage через loadAdminConfig().
  */
@@ -131,7 +134,21 @@ function buildFontsConfig(adminReadingFonts) {
   return { fonts, fontsList: adminReadingFonts.filter(f => f.enabled), customFonts };
 }
 
-// ─── Фабричная функция ───────────────────────────────────────────────────────
+// ─── Общие настройки (timing, layout, UI и т.д.) ────────────────────────────
+
+function buildCommonConfig() {
+  return {
+    VIRTUALIZATION: { cacheLimit: 50 },
+    LAYOUT: { MIN_PAGE_WIDTH_RATIO: 0.4, SETTLE_DELAY: 100 },
+    TIMING_SAFETY_MARGIN: 100,
+    TIMING: { FLIP_THROTTLE: 100 },
+    UI: { ERROR_HIDE_TIMEOUT: 5000 },
+    NETWORK: { MAX_RETRIES: 3, INITIAL_RETRY_DELAY: 1000, FETCH_TIMEOUT: 10000 },
+    AUDIO: { VISIBILITY_RESUME_DELAY: 100 },
+  };
+}
+
+// ─── Фабричная функция (из localStorage / admin config) ─────────────────────
 
 /**
  * Создать конфигурацию приложения на основе данных из админки.
@@ -275,50 +292,202 @@ export function createConfig(adminConfig = null) {
       ambient: adminConfig?.settingsVisibility?.ambient ?? true,
     },
 
-    VIRTUALIZATION: {
-      cacheLimit: 50,
-    },
-
-    LAYOUT: {
-      // Минимальное соотношение ширины страницы к книге
-      // при котором считаем что layout стабилизировался
-      MIN_PAGE_WIDTH_RATIO: 0.4,
-
-      // Задержка ожидания стабилизации layout (ms)
-      SETTLE_DELAY: 100,
-    },
-
-    TIMING_SAFETY_MARGIN: 100,
-
-    // Настройки тайминга навигации
-    TIMING: {
-      // Минимальный интервал между перелистываниями для rate limiting (мс)
-      FLIP_THROTTLE: 100,
-    },
-
-    // Настройки UI
-    UI: {
-      // Время отображения сообщения об ошибке перед автоскрытием (мс)
-      ERROR_HIDE_TIMEOUT: 5000,
-    },
-
-    // Настройки сетевых операций
-    NETWORK: {
-      // Максимальное количество попыток загрузки
-      MAX_RETRIES: 3,
-      // Начальная задержка перед повторной попыткой (мс)
-      // Увеличивается экспоненциально: 1000 → 2000 → 4000
-      INITIAL_RETRY_DELAY: 1000,
-      // Таймаут для fetch/загрузки ресурсов (мс)
-      FETCH_TIMEOUT: 10000,
-    },
-
-    // Настройки аудио
-    AUDIO: {
-      // Задержка перед возобновлением ambient при возврате на вкладку (мс)
-      VISIBILITY_RESUME_DELAY: 100,
-    },
+    ...buildCommonConfig(),
   });
+}
+
+// ─── Фабричная функция (из серверного API) ──────────────────────────────────
+
+/**
+ * Создать конфигурацию из серверных данных (Фаза 3).
+ *
+ * Принимает данные из API (BookDetail, GlobalSettings, ReadingFont[])
+ * и формирует CONFIG в том же формате, что createConfig().
+ *
+ * @param {Object} bookDetail - Полная информация о книге из GET /api/books/:bookId
+ * @param {Object|null} globalSettings - Глобальные настройки из GET /api/settings
+ * @param {Array} readingFonts - Шрифты для чтения из GET /api/fonts
+ * @returns {Readonly<Object>}
+ */
+export function createConfigFromAPI(bookDetail, globalSettings, readingFonts) {
+  // Главы: из API (id, title, filePath, hasHtmlContent, bg, bgMobile)
+  // htmlContent грузится отдельно через ContentLoader → API
+  const CHAPTERS = bookDetail.chapters?.length
+    ? bookDetail.chapters.map(ch => ({
+        id: ch.id,
+        title: ch.title || '',
+        file: resolveAssetPath(ch.filePath),
+        htmlContent: null, // Контент загружается через API отдельно
+        _idb: false,
+        _hasHtmlContent: ch.hasHtmlContent, // Маркер: контент на сервере
+        bg: resolveAssetPath(ch.bg),
+        bgMobile: resolveAssetPath(ch.bgMobile),
+      }))
+    : [];
+
+  const cover = bookDetail.cover || {};
+  const appearance = bookDetail.appearance || {};
+  const sounds = bookDetail.sounds || {};
+  const defaults = bookDetail.defaultSettings || {};
+
+  // Обложка: режимы default/none/custom
+  let coverBg = `${BASE_URL}images/backgrounds/bg-cover.webp`;
+  let coverBgMobile = `${BASE_URL}images/backgrounds/bg-cover-mobile.webp`;
+  if (cover.bgMode === 'none') {
+    coverBg = null;
+    coverBgMobile = null;
+  } else if (cover.bgMode === 'custom' && cover.bgCustomUrl) {
+    coverBg = cover.bgCustomUrl;
+    coverBgMobile = cover.bgCustomUrl;
+  } else {
+    if (cover.bg) coverBg = resolveAssetPath(cover.bg);
+    if (cover.bgMobile) coverBgMobile = resolveAssetPath(cover.bgMobile);
+  }
+
+  // Амбиенты из API формата → CONFIG формат
+  const ambientConfig = {};
+  if (bookDetail.ambients?.length) {
+    for (const a of bookDetail.ambients) {
+      if (!a.visible) continue;
+      ambientConfig[a.ambientKey || a.id] = {
+        label: a.label,
+        shortLabel: a.shortLabel || a.label,
+        icon: a.icon,
+        file: a.fileUrl ? resolveAssetPath(a.fileUrl) : null,
+      };
+    }
+  }
+  // Если нет амбиентов — дефолтные
+  const AMBIENT = Object.keys(ambientConfig).length > 0
+    ? ambientConfig
+    : {
+        none: { label: "Без звука", shortLabel: "Нет", icon: "✕", file: null },
+        rain: { label: "Дождь", shortLabel: "Дождь", icon: "🌧️", file: `${BASE_URL}sounds/ambient/rain.mp3` },
+        fireplace: { label: "Камин", shortLabel: "Камин", icon: "🔥", file: `${BASE_URL}sounds/ambient/fireplace.mp3` },
+        cafe: { label: "Кафе", shortLabel: "Кафе", icon: "☕", file: `${BASE_URL}sounds/ambient/cafe.mp3` },
+      };
+
+  // Шрифты из API → CONFIG формат
+  const fonts = {};
+  const fontsList = [];
+  const customFonts = [];
+  if (readingFonts?.length) {
+    for (const f of readingFonts) {
+      if (!f.enabled) continue;
+      const key = f.fontKey || f.id;
+      fonts[key] = f.family;
+      fontsList.push({ id: key, label: f.label, family: f.family, builtin: f.builtin, enabled: f.enabled });
+      if (!f.builtin && f.fileUrl) {
+        customFonts.push({ id: key, label: f.label, family: f.family, dataUrl: f.fileUrl });
+      }
+    }
+  }
+  const FONTS = Object.keys(fonts).length > 0
+    ? fonts
+    : {
+        georgia: "Georgia, serif",
+        merriweather: '"Merriweather", serif',
+        "libre-baskerville": '"Libre Baskerville", serif',
+        inter: "Inter, sans-serif",
+        roboto: "Roboto, sans-serif",
+        "open-sans": '"Open Sans", sans-serif',
+      };
+
+  // Декоративный шрифт
+  const decorativeFont = bookDetail.decorativeFont
+    ? { name: bookDetail.decorativeFont.name, dataUrl: bookDetail.decorativeFont.fileUrl }
+    : null;
+
+  // Видимость настроек
+  const vis = globalSettings?.settingsVisibility || {};
+
+  return Object.freeze({
+    STORAGE_KEY: `reader-settings:${bookDetail.id}`,
+    BOOK_ID: bookDetail.id,
+    COVER_BG: coverBg,
+    COVER_BG_MOBILE: coverBgMobile,
+
+    CHAPTERS,
+
+    FONTS,
+    FONTS_LIST: fontsList.length > 0 ? fontsList : null,
+    CUSTOM_FONTS: customFonts,
+    DECORATIVE_FONT: decorativeFont,
+
+    SOUNDS: {
+      pageFlip: resolveSound(sounds.pageFlip, 'sounds/page-flip.mp3'),
+      bookOpen: resolveSound(sounds.bookOpen, 'sounds/cover-flip.mp3'),
+      bookClose: resolveSound(sounds.bookClose, 'sounds/cover-flip.mp3'),
+    },
+
+    AMBIENT,
+
+    DEFAULT_SETTINGS: {
+      font: defaults.font || "georgia",
+      fontSize: defaults.fontSize || 18,
+      theme: defaults.theme || "light",
+      page: 0,
+      soundEnabled: defaults.soundEnabled ?? true,
+      soundVolume: defaults.soundVolume ?? 0.3,
+      ambientType: defaults.ambientType || 'none',
+      ambientVolume: defaults.ambientVolume ?? 0.5
+    },
+
+    APPEARANCE: {
+      coverTitle: bookDetail.title || '',
+      coverAuthor: bookDetail.author || '',
+      fontMin: appearance.fontMin ?? globalSettings?.fontMin ?? 14,
+      fontMax: appearance.fontMax ?? globalSettings?.fontMax ?? 22,
+      light: {
+        coverBgStart: appearance.light?.coverBgStart || '#3a2d1f',
+        coverBgEnd: appearance.light?.coverBgEnd || '#2a2016',
+        coverText: appearance.light?.coverText || '#f2e9d8',
+        coverBgImage: appearance.light?.coverBgImageUrl || null,
+        pageTexture: appearance.light?.pageTexture || 'default',
+        customTextureData: appearance.light?.customTextureUrl || null,
+        bgPage: appearance.light?.bgPage || '#fdfcf8',
+        bgApp: appearance.light?.bgApp || '#e6e3dc',
+      },
+      dark: {
+        coverBgStart: appearance.dark?.coverBgStart || '#111111',
+        coverBgEnd: appearance.dark?.coverBgEnd || '#000000',
+        coverText: appearance.dark?.coverText || '#eaeaea',
+        coverBgImage: appearance.dark?.coverBgImageUrl || null,
+        pageTexture: appearance.dark?.pageTexture || 'none',
+        customTextureData: appearance.dark?.customTextureUrl || null,
+        bgPage: appearance.dark?.bgPage || '#1e1e1e',
+        bgApp: appearance.dark?.bgApp || '#121212',
+      },
+    },
+
+    SETTINGS_VISIBILITY: {
+      fontSize: vis.fontSize ?? true,
+      theme: vis.theme ?? true,
+      font: vis.font ?? true,
+      fullscreen: vis.fullscreen ?? true,
+      sound: vis.sound ?? true,
+      ambient: vis.ambient ?? true,
+    },
+
+    ...buildCommonConfig(),
+  });
+}
+
+/**
+ * Загрузить конфигурацию из серверного API.
+ *
+ * @param {import('./utils/ApiClient.js').ApiClient} apiClient
+ * @param {string} bookId - ID книги для загрузки
+ * @returns {Promise<Readonly<Object>>} CONFIG
+ */
+export async function loadConfigFromAPI(apiClient, bookId) {
+  const [bookDetail, globalSettings, readingFonts] = await Promise.all([
+    apiClient.getBook(bookId),
+    apiClient.getSettings().catch(() => null),
+    apiClient.getFonts().catch(() => []),
+  ]);
+
+  return createConfigFromAPI(bookDetail, globalSettings, readingFonts);
 }
 
 // ─── Дозагрузка data URL из IndexedDB ────────────────────────────────────────

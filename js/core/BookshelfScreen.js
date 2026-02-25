@@ -2,8 +2,11 @@
  * BOOKSHELF SCREEN
  *
  * Экран книжного шкафа — стартовая страница приложения.
- * Показывает все книги из конфигурации на деревянных полках.
+ * Показывает все книги из API (или localStorage для fallback).
  * Пользователь выбирает книгу → она становится активной → ридер загружается.
+ *
+ * Фаза 3: книги загружаются из GET /api/books, удаление через DELETE /api/books/:id.
+ * localStorage используется только как fallback (когда apiClient не передан).
  *
  * Статическая разметка (header, actions, empty, mode-selector) определена в index.html.
  * Динамические элементы (полки, карточки книг) клонируются из <template>.
@@ -15,13 +18,11 @@ const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
 const READING_SESSION_KEY = 'flipbook-reading-session';
 const BOOKS_PER_SHELF = 5;
 
-// Дефолтная книга для полки (когда нет конфига в localStorage)
+// Дефолтная книга для полки (когда нет конфига)
 const DEFAULT_BOOKSHELF_BOOK = {
   id: 'default',
-  cover: {
-    title: 'О хоббитах',
-    author: 'Дж.Р.Р.Толкин',
-  },
+  title: 'О хоббитах',
+  author: 'Дж.Р.Р.Толкин',
   appearance: {
     light: {
       coverBgStart: '#3a2d1f',
@@ -35,13 +36,15 @@ export class BookshelfScreen {
   /**
    * @param {Object} options
    * @param {HTMLElement} options.container - DOM-контейнер для шкафа
-   * @param {Array} options.books - Массив книг из админ-конфига
-   * @param {Function} options.onBookSelect - Колбэк при выборе книги
+   * @param {Array} options.books - Массив книг (из API или localStorage)
+   * @param {Function} options.onBookSelect - Колбэк при выборе книги (bookId)
+   * @param {import('../utils/ApiClient.js').ApiClient} [options.apiClient] - API клиент (Фаза 3)
    */
-  constructor({ container, books, onBookSelect }) {
+  constructor({ container, books, onBookSelect, apiClient }) {
     this.container = container;
     this.books = books;
     this.onBookSelect = onBookSelect;
+    this._api = apiClient || null;
     this._boundHandleClick = this._handleClick.bind(this);
     this._boundCloseMenu = this._closeBookMenu.bind(this);
     this._currentView = 'shelf';
@@ -173,7 +176,8 @@ export class BookshelfScreen {
   }
 
   /**
-   * Создать карточку книги из шаблона
+   * Создать карточку книги из шаблона.
+   * Поддерживает оба формата: localStorage (cover.title) и API (title).
    * @private
    * @param {Object} book
    * @returns {DocumentFragment}
@@ -182,12 +186,13 @@ export class BookshelfScreen {
     const tmpl = document.getElementById('tmpl-bookshelf-book');
     const frag = tmpl.content.cloneNode(true);
 
-    const title = book.cover?.title || 'Без названия';
-    const author = book.cover?.author || '';
+    // Поддержка обоих форматов: API (title/author на верхнем уровне) и localStorage (cover.title/cover.author)
+    const title = book.title || book.cover?.title || 'Без названия';
+    const author = book.author || book.cover?.author || '';
     const bgStart = book.appearance?.light?.coverBgStart || '#3a2d1f';
     const bgEnd = book.appearance?.light?.coverBgEnd || '#2a2016';
     const textColor = book.appearance?.light?.coverText || '#f2e9d8';
-    const coverBgImage = book.appearance?.light?.coverBgImage;
+    const coverBgImage = book.appearance?.light?.coverBgImage || book.appearance?.light?.coverBgImageUrl;
 
     // Wrapper
     const wrapper = frag.querySelector('.bookshelf-book-wrapper');
@@ -348,7 +353,6 @@ export class BookshelfScreen {
   _handleBookAction(action, bookId) {
     switch (action) {
       case 'read':
-        this._saveActiveBook(bookId);
         sessionStorage.setItem(READING_SESSION_KEY, '1');
         if (this.onBookSelect) this.onBookSelect(bookId);
         break;
@@ -369,41 +373,37 @@ export class BookshelfScreen {
    * Удалить книгу с полки
    * @private
    */
-  _deleteBook(bookId) {
+  async _deleteBook(bookId) {
     const book = this.books.find(b => b.id === bookId);
-    const title = book?.cover?.title || 'эту книгу';
+    const title = book?.title || book?.cover?.title || 'эту книгу';
 
     if (!confirm(`Удалить «${title}»?`)) return;
 
-    try {
-      const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-      if (raw) {
-        const config = JSON.parse(raw);
-        config.books = (config.books || []).filter(b => b.id !== bookId);
-        if (config.activeBookId === bookId) delete config.activeBookId;
-        localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
+    if (this._api) {
+      // Фаза 3: удаление через API
+      try {
+        await this._api.deleteBook(bookId);
+      } catch (err) {
+        console.error('Ошибка удаления книги:', err);
+        return;
       }
-    } catch { /* игнорируем */ }
+    } else {
+      // Fallback: localStorage
+      try {
+        const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
+        if (raw) {
+          const config = JSON.parse(raw);
+          config.books = (config.books || []).filter(b => b.id !== bookId);
+          if (config.activeBookId === bookId) delete config.activeBookId;
+          localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
+        }
+      } catch { /* игнорируем */ }
+    }
 
     // Обновляем массив и перерисовываем
     this.books = this.books.filter(b => b.id !== bookId);
     this.container.removeEventListener('click', this._boundHandleClick);
     this.render();
-  }
-
-  /**
-   * Сохранить activeBookId в localStorage
-   * @private
-   */
-  _saveActiveBook(bookId) {
-    try {
-      const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-      const config = raw ? JSON.parse(raw) : { books: [DEFAULT_BOOKSHELF_BOOK] };
-      config.activeBookId = bookId;
-      localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
-    } catch {
-      /* повреждённые данные — игнорируем */
-    }
   }
 
   /**
@@ -420,7 +420,17 @@ export class BookshelfScreen {
 }
 
 /**
- * Проверить, нужно ли показывать книжный шкаф
+ * Загрузить книги из API для bookshelf
+ * @param {import('../utils/ApiClient.js').ApiClient} apiClient
+ * @returns {Promise<Array>} Массив книг
+ */
+export async function loadBooksFromAPI(apiClient) {
+  const books = await apiClient.getBooks();
+  return books;
+}
+
+/**
+ * Проверить, нужно ли показывать книжный шкаф (localStorage fallback)
  * @returns {{ shouldShow: boolean, books: Array }}
  */
 export function getBookshelfData() {
