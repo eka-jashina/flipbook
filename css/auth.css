@@ -13,7 +13,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgb(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   animation: auth-fade-in 0.3s ease;
 }
@@ -26,7 +26,7 @@
   padding: 32px;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgb(0, 0, 0, 0.3);
   animation: auth-slide-up 0.3s ease;
 }
 
@@ -81,7 +81,7 @@
 .auth-input:focus {
   outline: none;
   border-color: #5b6abf;
-  box-shadow: 0 0 0 3px rgba(91, 106, 191, 0.15);
+  box-shadow: 0 0 0 3px rgb(91, 106, 191, 0.15);
   background: #fff;
 }
 
@@ -152,8 +152,15 @@
 }
 
 @keyframes auth-slide-up {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 /* Мобильные */
