@@ -38,8 +38,18 @@ import {
 } from './delegates/index.js';
 
 export class BookController {
-  constructor() {
+  /**
+   * @param {Object} [_config] - CONFIG (устанавливается через loadConfigFromAPI, здесь не используется)
+   * @param {Object} [options]
+   * @param {import('../utils/ApiClient.js').ApiClient} [options.apiClient] - API клиент
+   * @param {string} [options.bookId] - ID книги
+   * @param {Object} [options.serverProgress] - Прогресс чтения с сервера
+   */
+  constructor(_config, options = {}) {
     this.isDestroyed = false;
+    this._apiClient = options.apiClient || null;
+    this._bookId = options.bookId || null;
+    this._serverProgress = options.serverProgress || null;
 
     // Централизованное состояние (модифицируется только контроллером/медиатором)
     this.state = {
@@ -103,7 +113,19 @@ export class BookController {
   _createServices() {
     this.core = ComponentFactory.createCoreServices();
     this.factory = new ComponentFactory(this.core);
-    this.settings = this.factory.createSettingsManager();
+    this.settings = this.factory.createSettingsManager({
+      apiClient: this._apiClient,
+      bookId: this._bookId,
+    });
+
+    // Применить серверный прогресс и подключить sync-индикатор
+    if (this._serverProgress) {
+      this.settings.applyServerProgress(this._serverProgress);
+    }
+    if (this._apiClient && this._bookId) {
+      this._setupSyncIndicator();
+    }
+
     this.audio = this.factory.createAudioServices(this.settings);
     this.render = this.factory.createRenderServices();
     this.content = this.factory.createContentServices();
@@ -259,6 +281,38 @@ export class BookController {
       dragDelegate: this.dragDelegate,
       lifecycleDelegate: this.lifecycleDelegate,
     });
+  }
+
+  /**
+   * Подключить индикатор синхронизации к SettingsManager
+   * @private
+   */
+  _setupSyncIndicator() {
+    const el = document.getElementById('sync-indicator');
+    const textEl = document.getElementById('sync-indicator-text');
+    if (!el || !textEl) return;
+
+    this.settings.onSyncStateChange = (state) => {
+      el.hidden = false;
+      el.className = 'sync-indicator';
+
+      switch (state) {
+        case 'syncing':
+          el.classList.add('sync-indicator--syncing');
+          textEl.textContent = 'Сохранение...';
+          break;
+        case 'synced':
+          el.classList.add('sync-indicator--synced');
+          textEl.textContent = 'Сохранено';
+          // Скрыть через 2 секунды
+          setTimeout(() => { el.hidden = true; }, 2000);
+          break;
+        case 'error':
+          el.classList.add('sync-indicator--error');
+          textEl.textContent = 'Не сохранено';
+          break;
+      }
+    };
   }
 
   /**

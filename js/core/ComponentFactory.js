@@ -80,10 +80,11 @@ export class ComponentFactory {
 
   /**
    * Создать менеджер настроек
+   * @param {Object} [options] - { apiClient, bookId }
    * @returns {SettingsManager}
    */
-  createSettingsManager() {
-    return new SettingsManager(this.core.storage, CONFIG.DEFAULT_SETTINGS);
+  createSettingsManager(options = {}) {
+    return new SettingsManager(this.core.storage, CONFIG.DEFAULT_SETTINGS, options);
   }
 
   /**
