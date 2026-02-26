@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import passport from 'passport';
@@ -13,6 +14,7 @@ import { getConfig } from './config.js';
 import { configurePassport } from './middleware/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { createRateLimiter } from './middleware/rateLimit.js';
+import { doubleCsrfProtection } from './middleware/csrf.js';
 import { logger } from './utils/logger.js';
 import { swaggerSpec, swaggerHtml } from './swagger.js';
 
@@ -54,9 +56,10 @@ export function createApp() {
   // Rate limiting
   app.use('/api/', createRateLimiter());
 
-  // Body parsing
+  // Body & cookie parsing
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
+  app.use(cookieParser());
 
   // Session store (PostgreSQL)
   const PgSession = connectPgSimple(session);
@@ -84,6 +87,9 @@ export function createApp() {
   app.use(passport.initialize());
   app.use(passport.session());
   configurePassport();
+
+  // CSRF protection (double-submit cookie pattern)
+  app.use(doubleCsrfProtection);
 
   // Request ID + structured request logging via pino-http
   app.use((req: Request, _res: Response, next: NextFunction) => {

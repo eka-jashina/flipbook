@@ -1,5 +1,8 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { RESOURCE_LIMITS } from '../utils/limits.js';
+import { bulkUpdatePositions } from '../utils/reorder.js';
+import { withSerializableRetry } from '../utils/serializable.js';
 import type { ReadingFontItem } from '../types/api.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,9 +18,15 @@ export async function getReadingFonts(userId: string): Promise<ReadingFontItem[]
 
 export async function createReadingFont(userId: string, data: { fontKey: string; label: string; family: string; builtin?: boolean; enabled?: boolean; fileUrl?: string }): Promise<ReadingFontItem> {
   const prisma = getPrisma();
-  const last = await prisma.readingFont.findFirst({ where: { userId }, orderBy: { position: 'desc' }, select: { position: true } });
-  const font = await prisma.readingFont.create({
-    data: { userId, fontKey: data.fontKey, label: data.label, family: data.family, builtin: data.builtin ?? false, enabled: data.enabled ?? true, fileUrl: data.fileUrl || null, position: (last?.position ?? -1) + 1 },
+  const count = await prisma.readingFont.count({ where: { userId } });
+  if (count >= RESOURCE_LIMITS.MAX_FONTS_PER_USER) {
+    throw new AppError(403, `Font limit reached (max ${RESOURCE_LIMITS.MAX_FONTS_PER_USER})`);
+  }
+  const font = await withSerializableRetry(prisma, async (tx) => {
+    const last = await tx.readingFont.findFirst({ where: { userId }, orderBy: { position: 'desc' }, select: { position: true } });
+    return tx.readingFont.create({
+      data: { userId, fontKey: data.fontKey, label: data.label, family: data.family, builtin: data.builtin ?? false, enabled: data.enabled ?? true, fileUrl: data.fileUrl || null, position: (last?.position ?? -1) + 1 },
+    });
   });
   return mapFont(font);
 }
@@ -36,15 +45,20 @@ export async function updateReadingFont(fontId: string, userId: string, data: { 
 
 export async function deleteReadingFont(fontId: string, userId: string): Promise<void> {
   const prisma = getPrisma();
-  const font = await prisma.readingFont.findUnique({ where: { id: fontId }, select: { userId: true } });
+  const font = await prisma.readingFont.findUnique({ where: { id: fontId }, select: { userId: true, fileUrl: true } });
   if (!font) throw new AppError(404, 'Font not found');
   if (font.userId !== userId) throw new AppError(403, 'Access denied');
   await prisma.readingFont.delete({ where: { id: fontId } });
+  // Best-effort S3 cleanup
+  if (font.fileUrl) {
+    const { deleteFileByUrl } = await import('../utils/storage.js');
+    await deleteFileByUrl(font.fileUrl).catch(() => {});
+  }
 }
 
 export async function reorderReadingFonts(userId: string, fontIds: string[]): Promise<void> {
   const prisma = getPrisma();
   const fonts = await prisma.readingFont.findMany({ where: { userId, id: { in: fontIds } }, select: { id: true } });
   if (fonts.length !== fontIds.length) throw new AppError(400, 'Some font IDs are invalid');
-  await prisma.$transaction(fontIds.map((id, index) => prisma.readingFont.update({ where: { id }, data: { position: index } })));
+  await bulkUpdatePositions(prisma, 'reading_fonts', fontIds);
 }

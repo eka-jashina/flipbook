@@ -1,6 +1,10 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { verifyBookOwnership } from '../utils/ownership.js';
+import { RESOURCE_LIMITS } from '../utils/limits.js';
+import { bulkUpdatePositions } from '../utils/reorder.js';
+import { withSerializableRetry } from '../utils/serializable.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 import type { ChapterListItem, ChapterDetail } from '../types/api.js';
 
 /**
@@ -101,24 +105,31 @@ export async function createChapter(
 
   const prisma = getPrisma();
 
-  // Get next position
-  const lastChapter = await prisma.chapter.findFirst({
-    where: { bookId },
-    orderBy: { position: 'desc' },
-    select: { position: true },
-  });
-  const nextPosition = (lastChapter?.position ?? -1) + 1;
+  // Check resource limit (outside transaction for fast-fail)
+  const count = await prisma.chapter.count({ where: { bookId } });
+  if (count >= RESOURCE_LIMITS.MAX_CHAPTERS_PER_BOOK) {
+    throw new AppError(403, `Chapter limit reached (max ${RESOURCE_LIMITS.MAX_CHAPTERS_PER_BOOK})`);
+  }
 
-  const chapter = await prisma.chapter.create({
-    data: {
-      bookId,
-      title: data.title,
-      position: nextPosition,
-      htmlContent: data.htmlContent || null,
-      filePath: data.filePath || null,
-      bg: data.bg || '',
-      bgMobile: data.bgMobile || '',
-    },
+  const chapter = await withSerializableRetry(prisma, async (tx) => {
+    const lastChapter = await tx.chapter.findFirst({
+      where: { bookId },
+      orderBy: { position: 'desc' },
+      select: { position: true },
+    });
+    const nextPosition = (lastChapter?.position ?? -1) + 1;
+
+    return tx.chapter.create({
+      data: {
+        bookId,
+        title: data.title,
+        position: nextPosition,
+        htmlContent: data.htmlContent ? sanitizeHtml(data.htmlContent) : null,
+        filePath: data.filePath || null,
+        bg: data.bg || '',
+        bgMobile: data.bgMobile || '',
+      },
+    });
   });
 
   return {
@@ -165,7 +176,7 @@ export async function updateChapter(
     where: { id: chapterId },
     data: {
       ...(data.title !== undefined && { title: data.title }),
-      ...(data.htmlContent !== undefined && { htmlContent: data.htmlContent }),
+      ...(data.htmlContent !== undefined && { htmlContent: data.htmlContent ? sanitizeHtml(data.htmlContent) : data.htmlContent }),
       ...(data.filePath !== undefined && { filePath: data.filePath }),
       ...(data.bg !== undefined && { bg: data.bg }),
       ...(data.bgMobile !== undefined && { bgMobile: data.bgMobile }),
@@ -230,12 +241,5 @@ export async function reorderChapters(
     throw new AppError(400, 'Some chapter IDs are invalid');
   }
 
-  await prisma.$transaction(
-    chapterIds.map((id, index) =>
-      prisma.chapter.update({
-        where: { id },
-        data: { position: index },
-      }),
-    ),
-  );
+  await bulkUpdatePositions(prisma, 'chapters', chapterIds);
 }

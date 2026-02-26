@@ -7,7 +7,7 @@ import { verifyPassword } from '../utils/password.js';
 import { getConfig } from '../config.js';
 import { logger } from '../utils/logger.js';
 
-// Extend Express User type
+// Extend Express User type — passwordHash is never exposed in req.user
 declare global {
   namespace Express {
     interface User {
@@ -15,8 +15,8 @@ declare global {
       email: string;
       displayName: string | null;
       avatarUrl: string | null;
-      passwordHash: string | null;
       googleId: string | null;
+      hasPassword: boolean;
     }
   }
 }
@@ -30,15 +30,26 @@ export function configurePassport(): void {
     done(null, user.id);
   });
 
-  // Deserialize user from session by ID
+  // Deserialize user from session by ID — exclude passwordHash
   passport.deserializeUser(async (id: string, done) => {
     try {
-      const user = await prisma.user.findUnique({ where: { id } });
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          avatarUrl: true,
+          googleId: true,
+          passwordHash: true,
+        },
+      });
       if (!user) {
         done(null, false);
         return;
       }
-      done(null, user);
+      const { passwordHash, ...safeUser } = user;
+      done(null, { ...safeUser, hasPassword: passwordHash !== null });
     } catch (err) {
       done(err);
     }

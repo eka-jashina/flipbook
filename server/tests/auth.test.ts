@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
-import { cleanDatabase, createAuthenticatedAgent } from './helpers.js';
+import { cleanDatabase, createAuthenticatedAgent, createCsrfAgent } from './helpers.js';
 
 const app = createApp();
 
@@ -12,7 +12,9 @@ describe('Auth API', () => {
 
   describe('POST /api/auth/register', () => {
     it('should register a new user', async () => {
-      const res = await request(app)
+      const { agent } = await createCsrfAgent(app);
+
+      const res = await agent
         .post('/api/auth/register')
         .send({
           email: 'new@example.com',
@@ -31,12 +33,14 @@ describe('Auth API', () => {
     });
 
     it('should reject duplicate emails', async () => {
-      await request(app)
+      const { agent } = await createCsrfAgent(app);
+
+      await agent
         .post('/api/auth/register')
         .send({ email: 'dup@example.com', password: 'Password123!' })
         .expect(201);
 
-      const res = await request(app)
+      const res = await agent
         .post('/api/auth/register')
         .send({ email: 'dup@example.com', password: 'Password123!' })
         .expect(409);
@@ -45,7 +49,9 @@ describe('Auth API', () => {
     });
 
     it('should reject weak passwords', async () => {
-      const res = await request(app)
+      const { agent } = await createCsrfAgent(app);
+
+      const res = await agent
         .post('/api/auth/register')
         .send({ email: 'weak@example.com', password: 'short' })
         .expect(400);
@@ -54,7 +60,9 @@ describe('Auth API', () => {
     });
 
     it('should reject invalid emails', async () => {
-      await request(app)
+      const { agent } = await createCsrfAgent(app);
+
+      await agent
         .post('/api/auth/register')
         .send({ email: 'not-an-email', password: 'Password123!' })
         .expect(400);
@@ -63,12 +71,16 @@ describe('Auth API', () => {
 
   describe('POST /api/auth/login', () => {
     it('should login with valid credentials', async () => {
+      const { agent } = await createCsrfAgent(app);
+
       // Register first
-      await request(app)
+      await agent
         .post('/api/auth/register')
         .send({ email: 'login@example.com', password: 'Password123!' });
 
-      const agent = request.agent(app);
+      // Logout so we can test login
+      await agent.post('/api/auth/logout');
+
       const res = await agent
         .post('/api/auth/login')
         .send({ email: 'login@example.com', password: 'Password123!' })
@@ -78,18 +90,24 @@ describe('Auth API', () => {
     });
 
     it('should reject invalid password', async () => {
-      await request(app)
+      const { agent } = await createCsrfAgent(app);
+
+      await agent
         .post('/api/auth/register')
         .send({ email: 'wrong@example.com', password: 'Password123!' });
 
-      await request(app)
+      await agent.post('/api/auth/logout');
+
+      await agent
         .post('/api/auth/login')
         .send({ email: 'wrong@example.com', password: 'WrongPassword!' })
         .expect(401);
     });
 
     it('should reject non-existent user', async () => {
-      await request(app)
+      const { agent } = await createCsrfAgent(app);
+
+      await agent
         .post('/api/auth/login')
         .send({ email: 'nouser@example.com', password: 'Password123!' })
         .expect(401);
@@ -121,6 +139,20 @@ describe('Auth API', () => {
 
       // Should no longer be authenticated
       await agent.get('/api/auth/me').expect(401);
+    });
+  });
+
+  describe('CSRF protection', () => {
+    it('should reject POST without CSRF token', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'test@example.com', password: 'Password123!' })
+        .expect(403);
+    });
+
+    it('should allow GET without CSRF token', async () => {
+      const res = await request(app).get('/api/auth/csrf-token').expect(200);
+      expect(res.body.token).toBeDefined();
     });
   });
 });

@@ -51,6 +51,17 @@ export function errorHandler(
     return;
   }
 
+  // Handle CSRF and other http-errors (have statusCode property)
+  if ('statusCode' in err && typeof (err as any).statusCode === 'number') {
+    const statusCode = (err as any).statusCode as number;
+    res.status(statusCode).json({
+      error: err.name || 'ForbiddenError',
+      message: err.message,
+      statusCode,
+    });
+    return;
+  }
+
   logger.error({ err }, 'Unhandled error');
 
   res.status(500).json({

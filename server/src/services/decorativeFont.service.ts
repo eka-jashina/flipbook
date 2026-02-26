@@ -28,4 +28,9 @@ export async function deleteDecorativeFont(bookId: string, userId: string): Prom
   const font = await prisma.decorativeFont.findUnique({ where: { bookId } });
   if (!font) throw new AppError(404, 'Decorative font not found');
   await prisma.decorativeFont.delete({ where: { bookId } });
+  // Best-effort S3 cleanup
+  if (font.fileUrl) {
+    const { deleteFileByUrl } = await import('../utils/storage.js');
+    await deleteFileByUrl(font.fileUrl).catch(() => {});
+  }
 }

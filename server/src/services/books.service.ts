@@ -1,5 +1,8 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { RESOURCE_LIMITS } from '../utils/limits.js';
+import { bulkUpdatePositions } from '../utils/reorder.js';
+import { withSerializableRetry } from '../utils/serializable.js';
 import type { BookListItem, BookDetail } from '../types/api.js';
 
 /**
@@ -179,31 +182,39 @@ export async function createBook(
 ): Promise<BookDetail> {
   const prisma = getPrisma();
 
-  // Get next position
-  const lastBook = await prisma.book.findFirst({
-    where: { userId },
-    orderBy: { position: 'desc' },
-    select: { position: true },
+  // Check resource limit (outside transaction for fast-fail)
+  const count = await prisma.book.count({ where: { userId } });
+  if (count >= RESOURCE_LIMITS.MAX_BOOKS_PER_USER) {
+    throw new AppError(403, `Book limit reached (max ${RESOURCE_LIMITS.MAX_BOOKS_PER_USER})`);
+  }
+
+  const bookId = await withSerializableRetry(prisma, async (tx) => {
+    const lastBook = await tx.book.findFirst({
+      where: { userId },
+      orderBy: { position: 'desc' },
+      select: { position: true },
+    });
+    const nextPosition = (lastBook?.position ?? -1) + 1;
+
+    const book = await tx.book.create({
+      data: {
+        userId,
+        title: data.title,
+        author: data.author || '',
+        position: nextPosition,
+      },
+    });
+
+    await Promise.all([
+      tx.bookAppearance.create({ data: { bookId: book.id } }),
+      tx.bookSounds.create({ data: { bookId: book.id } }),
+      tx.bookDefaultSettings.create({ data: { bookId: book.id } }),
+    ]);
+
+    return book.id;
   });
-  const nextPosition = (lastBook?.position ?? -1) + 1;
 
-  const book = await prisma.book.create({
-    data: {
-      userId,
-      title: data.title,
-      author: data.author || '',
-      position: nextPosition,
-    },
-  });
-
-  // Create associated default records
-  await Promise.all([
-    prisma.bookAppearance.create({ data: { bookId: book.id } }),
-    prisma.bookSounds.create({ data: { bookId: book.id } }),
-    prisma.bookDefaultSettings.create({ data: { bookId: book.id } }),
-  ]);
-
-  return getBookById(book.id, userId);
+  return getBookById(bookId, userId);
 }
 
 /**
@@ -246,7 +257,7 @@ export async function updateBook(
 }
 
 /**
- * Delete a book.
+ * Delete a book and clean up associated S3 files (best-effort).
  */
 export async function deleteBook(
   bookId: string,
@@ -256,13 +267,38 @@ export async function deleteBook(
 
   const book = await prisma.book.findUnique({
     where: { id: bookId },
-    select: { userId: true },
+    include: {
+      ambients: { select: { fileUrl: true } },
+      sounds: { select: { pageFlipUrl: true, bookOpenUrl: true, bookCloseUrl: true } },
+      decorativeFont: { select: { fileUrl: true } },
+      appearance: { select: { lightCoverBgImageUrl: true, darkCoverBgImageUrl: true, lightCustomTextureUrl: true, darkCustomTextureUrl: true } },
+    },
   });
 
   if (!book) throw new AppError(404, 'Book not found');
   if (book.userId !== userId) throw new AppError(403, 'Access denied');
 
+  // Collect all S3 file URLs before deletion
+  const urls: string[] = [];
+  book.ambients?.forEach((a) => { if (a.fileUrl) urls.push(a.fileUrl); });
+  if (book.sounds) {
+    [book.sounds.pageFlipUrl, book.sounds.bookOpenUrl, book.sounds.bookCloseUrl]
+      .forEach((u) => { if (u && !u.startsWith('sounds/')) urls.push(u); });
+  }
+  if (book.decorativeFont?.fileUrl) urls.push(book.decorativeFont.fileUrl);
+  if (book.appearance) {
+    [book.appearance.lightCoverBgImageUrl, book.appearance.darkCoverBgImageUrl,
+     book.appearance.lightCustomTextureUrl, book.appearance.darkCustomTextureUrl]
+      .filter(Boolean).forEach((u) => urls.push(u!));
+  }
+
   await prisma.book.delete({ where: { id: bookId } });
+
+  // Best-effort S3 cleanup after successful DB deletion
+  if (urls.length > 0) {
+    const { deleteFileByUrl } = await import('../utils/storage.js');
+    await Promise.allSettled(urls.map((u) => deleteFileByUrl(u)));
+  }
 }
 
 /**
@@ -284,13 +320,5 @@ export async function reorderBooks(
     throw new AppError(400, 'Some book IDs are invalid');
   }
 
-  // Update positions in a transaction
-  await prisma.$transaction(
-    bookIds.map((id, index) =>
-      prisma.book.update({
-        where: { id },
-        data: { position: index },
-      }),
-    ),
-  );
+  await bulkUpdatePositions(prisma, 'books', bookIds);
 }

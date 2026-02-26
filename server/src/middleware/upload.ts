@@ -1,13 +1,20 @@
 import multer from 'multer';
+import os from 'node:os';
 
-// Use memory storage — files go to S3, not disk
-const storage = multer.memoryStorage();
+// Use memory storage for small files (fonts, sounds, images)
+const memoryStorage = multer.memoryStorage();
+
+// Use disk storage for large files (books up to 50 MB) to avoid OOM
+const bookDiskStorage = multer.diskStorage({
+  destination: os.tmpdir(),
+  filename: (_req, file, cb) => cb(null, `upload-${Date.now()}-${file.originalname}`),
+});
 
 /**
  * Font upload handler (max 400 KB, .woff2/.woff/.ttf/.otf).
  */
 export const fontUpload = multer({
-  storage,
+  storage: memoryStorage,
   limits: { fileSize: 400 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = [
@@ -33,7 +40,7 @@ export const fontUpload = multer({
  * Sound upload handler (max 2 MB, audio files).
  */
 export const soundUpload = multer({
-  storage,
+  storage: memoryStorage,
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith('audio/')) {
@@ -48,7 +55,7 @@ export const soundUpload = multer({
  * Image upload handler (max 5 MB, image files).
  */
 export const imageUpload = multer({
-  storage,
+  storage: memoryStorage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -63,7 +70,7 @@ export const imageUpload = multer({
  * Book upload handler (max 50 MB, document files).
  */
 export const bookUpload = multer({
-  storage,
+  storage: bookDiskStorage,
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = [

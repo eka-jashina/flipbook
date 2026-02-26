@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
-import { cleanDatabase, createAuthenticatedAgent } from './helpers.js';
+import { cleanDatabase, createAuthenticatedAgent, createCsrfAgent } from './helpers.js';
 
 const app = createApp();
 
@@ -198,6 +198,7 @@ describe('Export/Import API', () => {
   });
 
   it('should require authentication for import', async () => {
-    await request(app).post('/api/import').send({ books: [] }).expect(401);
+    const { agent } = await createCsrfAgent(app);
+    await agent.post('/api/import').send({ books: [] }).expect(401);
   });
 });

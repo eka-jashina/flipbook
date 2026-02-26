@@ -138,3 +138,22 @@ export function getPublicUrl(key: string): string {
   const config = getConfig();
   return `${config.S3_PUBLIC_URL}/${key}`;
 }
+
+/**
+ * Extract the S3 key from a public URL.
+ * Returns null if the URL doesn't match the configured S3_PUBLIC_URL prefix.
+ */
+export function extractKeyFromUrl(url: string): string | null {
+  const config = getConfig();
+  const prefix = config.S3_PUBLIC_URL + '/';
+  if (!url.startsWith(prefix)) return null;
+  return url.slice(prefix.length);
+}
+
+/**
+ * Delete a file from S3 by its public URL (best-effort).
+ */
+export async function deleteFileByUrl(url: string): Promise<void> {
+  const key = extractKeyFromUrl(url);
+  if (key) await deleteFile(key);
+}
