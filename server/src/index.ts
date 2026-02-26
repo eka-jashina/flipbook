@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import { loadConfig } from './config.js';
 import { createApp } from './app.js';
 import { logger } from './utils/logger.js';
@@ -5,6 +6,16 @@ import { disconnectPrisma } from './utils/prisma.js';
 
 // Load configuration from environment
 const config = loadConfig();
+
+// Initialize Sentry (only if DSN is configured)
+if (config.SENTRY_DSN) {
+  Sentry.init({
+    dsn: config.SENTRY_DSN,
+    environment: config.NODE_ENV,
+    tracesSampleRate: config.NODE_ENV === 'production' ? 0.2 : 1.0,
+  });
+  logger.info('Sentry initialized');
+}
 
 const app = createApp();
 

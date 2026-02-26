@@ -37,6 +37,8 @@ const envSchema = z.object({
 
   RATE_LIMIT_WINDOW: z.coerce.number().default(60000),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
+
+  SENTRY_DSN: z.string().optional(),
 });
 
 export type Config = z.infer<typeof envSchema>;

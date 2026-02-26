@@ -8,17 +8,17 @@ import mobileBackgrounds from './vite-plugin-mobile-backgrounds.js';
 import htmlIncludes from './vite-plugin-html-includes.js';
 
 /**
- * VITE CONFIG С ПОДДЕРЖКОЙ GITHUB PAGES
- * 
- * Автоматически определяет base path:
- * - Development: '/'
- * - GitHub Pages: '/repo-name/'
+ * VITE CONFIG
+ *
+ * Base path управляется через переменную окружения VITE_BASE_URL:
+ * - По умолчанию: '/'
+ * - GitHub Pages: VITE_BASE_URL=/flipbook/
  */
 
 export default defineConfig(({ command, mode }) => {
-  // Определяем base path для GitHub Pages
-  // Измените 'flipbook' на название вашего репозитория
-  const base = mode === 'production' ? '/flipbook/' : '/';
+  // Base path — по умолчанию '/'.
+  // Для GitHub Pages установите VITE_BASE_URL=/flipbook/ в CI.
+  const base = process.env.VITE_BASE_URL || '/';
 
   return {
     base,

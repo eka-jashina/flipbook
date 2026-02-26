@@ -5,10 +5,14 @@ import { createApp } from '../src/app.js';
 const app = createApp();
 
 describe('Health Check', () => {
-  it('GET /api/health should return ok', async () => {
-    const res = await request(app).get('/api/health').expect(200);
+  it('GET /api/health should return status with checks', async () => {
+    const res = await request(app).get('/api/health');
 
-    expect(res.body.status).toBe('ok');
     expect(res.body.timestamp).toBeDefined();
+    expect(res.body.checks).toBeDefined();
+    expect(res.body.checks.database).toBeDefined();
+    expect(res.body.checks.storage).toBeDefined();
+    // Status can be 'ok' or 'degraded' depending on available services
+    expect(['ok', 'degraded']).toContain(res.body.status);
   });
 });
