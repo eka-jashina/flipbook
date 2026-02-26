@@ -1,14 +1,20 @@
 import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import passport from 'passport';
+import pinoHttp from 'pino-http';
 import { getConfig } from './config.js';
 import { configurePassport } from './middleware/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { createRateLimiter } from './middleware/rateLimit.js';
 import { logger } from './utils/logger.js';
+import { swaggerSpec, swaggerHtml } from './swagger.js';
 
 // Routes
 import authRoutes from './routes/auth.routes.js';
@@ -25,9 +31,14 @@ import uploadRoutes from './routes/upload.routes.js';
 import defaultSettingsRoutes from './routes/defaultSettings.routes.js';
 import exportImportRoutes from './routes/exportImport.routes.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 export function createApp() {
   const config = getConfig();
   const app = express();
+
+  // Trust first proxy (Nginx / cloud LB)
+  app.set('trust proxy', 1);
 
   // Security headers
   app.use(helmet());
@@ -74,15 +85,64 @@ export function createApp() {
   app.use(passport.session());
   configurePassport();
 
-  // Request logging
-  app.use((req, _res, next) => {
-    logger.info({ method: req.method, url: req.url }, 'Request');
+  // Request ID + structured request logging via pino-http
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    req.id = randomUUID();
     next();
   });
 
-  // Health check (before auth-protected routes)
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  app.use(
+    pinoHttp({
+      logger,
+      genReqId: (req) => (req as Request).id as string,
+      autoLogging: {
+        ignore: (req) => (req as Request).url === '/api/health',
+      },
+    }),
+  );
+
+  // Health check with DB + S3 verification
+  app.get('/api/health', async (_req: Request, res: Response) => {
+    const checks: Record<string, string> = {};
+    let status = 'ok';
+
+    // Database check
+    try {
+      const { getPrisma } = await import('./utils/prisma.js');
+      await getPrisma().$queryRawUnsafe('SELECT 1');
+      checks.database = 'ok';
+    } catch {
+      checks.database = 'error';
+      status = 'degraded';
+    }
+
+    // S3 storage check
+    try {
+      const { getS3Client } = await import('./utils/storage.js');
+      const { HeadBucketCommand } = await import('@aws-sdk/client-s3');
+      await getS3Client().send(
+        new HeadBucketCommand({ Bucket: config.S3_BUCKET }),
+      );
+      checks.storage = 'ok';
+    } catch {
+      checks.storage = 'error';
+      status = 'degraded';
+    }
+
+    const httpStatus = status === 'ok' ? 200 : 503;
+    res.status(httpStatus).json({
+      status,
+      timestamp: new Date().toISOString(),
+      checks,
+    });
+  });
+
+  // Swagger / OpenAPI documentation
+  app.get('/api/docs/spec.json', (_req: Request, res: Response) => {
+    res.json(swaggerSpec);
+  });
+  app.get('/api/docs', (_req: Request, res: Response) => {
+    res.type('html').send(swaggerHtml);
   });
 
   // Routes
@@ -99,6 +159,18 @@ export function createApp() {
   app.use('/api/settings', settingsRoutes);
   app.use('/api/upload', uploadRoutes);
   app.use('/api', exportImportRoutes);
+
+  // Serve pre-built client in production
+  if (config.NODE_ENV === 'production') {
+    const clientDist = path.resolve(__dirname, '../../dist');
+    app.use(express.static(clientDist));
+
+    // SPA fallback — skip API routes (let them 404 via errorHandler)
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith('/api/')) return next();
+      res.sendFile(path.join(clientDist, 'index.html'));
+    });
+  }
 
   // Error handler (must be last)
   app.use(errorHandler);
