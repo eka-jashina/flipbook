@@ -10,12 +10,15 @@ import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import passport from 'passport';
 import pinoHttp from 'pino-http';
+import { HeadBucketCommand } from '@aws-sdk/client-s3';
 import { getConfig } from './config.js';
 import { configurePassport } from './middleware/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { createRateLimiter } from './middleware/rateLimit.js';
 import { doubleCsrfProtection } from './middleware/csrf.js';
 import { logger } from './utils/logger.js';
+import { getPrisma } from './utils/prisma.js';
+import { getS3Client } from './utils/storage.js';
 import { swaggerSpec, swaggerHtml } from './swagger.js';
 
 // Routes
@@ -114,8 +117,7 @@ export function createApp() {
 
     // Database check
     try {
-      const { getPrisma } = await import('./utils/prisma.js');
-      await getPrisma().$queryRawUnsafe('SELECT 1');
+      await getPrisma().$queryRaw`SELECT 1`;
       checks.database = 'ok';
     } catch {
       checks.database = 'error';
@@ -124,8 +126,6 @@ export function createApp() {
 
     // S3 storage check
     try {
-      const { getS3Client } = await import('./utils/storage.js');
-      const { HeadBucketCommand } = await import('@aws-sdk/client-s3');
       await getS3Client().send(
         new HeadBucketCommand({ Bucket: config.S3_BUCKET }),
       );

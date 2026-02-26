@@ -3,6 +3,14 @@ import { AppError } from '../middleware/errorHandler.js';
 import { RESOURCE_LIMITS } from '../utils/limits.js';
 import { bulkUpdatePositions } from '../utils/reorder.js';
 import { withSerializableRetry } from '../utils/serializable.js';
+import {
+  mapAppearanceToDto,
+  mapSoundsToDto,
+  mapDefaultSettingsToDto,
+  mapAmbientToDto,
+  mapChapterToListItem,
+  mapDecorativeFontToDto,
+} from '../utils/mappers.js';
 import type { BookListItem, BookDetail } from '../types/api.js';
 
 /**
@@ -100,75 +108,19 @@ export async function getBookById(
       bgMode: book.coverBgMode,
       bgCustomUrl: book.coverBgCustomUrl,
     },
-    chapters: book.chapters.map((ch) => ({
-      id: ch.id,
-      title: ch.title,
-      position: ch.position,
-      filePath: ch.filePath,
-      hasHtmlContent: ch.htmlContent !== null,
-      bg: ch.bg,
-      bgMobile: ch.bgMobile,
-    })),
+    chapters: book.chapters.map(mapChapterToListItem),
     defaultSettings: book.defaultSettings
-      ? {
-          font: book.defaultSettings.font,
-          fontSize: book.defaultSettings.fontSize,
-          theme: book.defaultSettings.theme,
-          soundEnabled: book.defaultSettings.soundEnabled,
-          soundVolume: book.defaultSettings.soundVolume,
-          ambientType: book.defaultSettings.ambientType,
-          ambientVolume: book.defaultSettings.ambientVolume,
-        }
+      ? mapDefaultSettingsToDto(book.defaultSettings)
       : null,
     appearance: book.appearance
-      ? {
-          fontMin: book.appearance.fontMin,
-          fontMax: book.appearance.fontMax,
-          light: {
-            coverBgStart: book.appearance.lightCoverBgStart,
-            coverBgEnd: book.appearance.lightCoverBgEnd,
-            coverText: book.appearance.lightCoverText,
-            coverBgImageUrl: book.appearance.lightCoverBgImageUrl,
-            pageTexture: book.appearance.lightPageTexture,
-            customTextureUrl: book.appearance.lightCustomTextureUrl,
-            bgPage: book.appearance.lightBgPage,
-            bgApp: book.appearance.lightBgApp,
-          },
-          dark: {
-            coverBgStart: book.appearance.darkCoverBgStart,
-            coverBgEnd: book.appearance.darkCoverBgEnd,
-            coverText: book.appearance.darkCoverText,
-            coverBgImageUrl: book.appearance.darkCoverBgImageUrl,
-            pageTexture: book.appearance.darkPageTexture,
-            customTextureUrl: book.appearance.darkCustomTextureUrl,
-            bgPage: book.appearance.darkBgPage,
-            bgApp: book.appearance.darkBgApp,
-          },
-        }
+      ? mapAppearanceToDto(book.appearance)
       : null,
     sounds: book.sounds
-      ? {
-          pageFlip: book.sounds.pageFlipUrl,
-          bookOpen: book.sounds.bookOpenUrl,
-          bookClose: book.sounds.bookCloseUrl,
-        }
+      ? mapSoundsToDto(book.sounds)
       : null,
-    ambients: book.ambients.map((a) => ({
-      id: a.id,
-      ambientKey: a.ambientKey,
-      label: a.label,
-      shortLabel: a.shortLabel,
-      icon: a.icon,
-      fileUrl: a.fileUrl,
-      visible: a.visible,
-      builtin: a.builtin,
-      position: a.position,
-    })),
+    ambients: book.ambients.map(mapAmbientToDto),
     decorativeFont: book.decorativeFont
-      ? {
-          name: book.decorativeFont.name,
-          fileUrl: book.decorativeFont.fileUrl,
-        }
+      ? mapDecorativeFontToDto(book.decorativeFont)
       : null,
   };
 }

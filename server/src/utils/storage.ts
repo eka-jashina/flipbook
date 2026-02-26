@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   S3Client,
   PutObjectCommand,
@@ -126,7 +127,7 @@ export function generateFileKey(
   originalName: string,
 ): string {
   const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
+  const random = randomUUID().split('-')[0];
   const ext = originalName.split('.').pop() || '';
   return `${folder}/${timestamp}-${random}.${ext}`;
 }
