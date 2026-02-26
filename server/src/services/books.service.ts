@@ -1,5 +1,6 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { RESOURCE_LIMITS } from '../utils/limits.js';
 import type { BookListItem, BookDetail } from '../types/api.js';
 
 /**
@@ -178,6 +179,12 @@ export async function createBook(
   data: { title: string; author?: string },
 ): Promise<BookDetail> {
   const prisma = getPrisma();
+
+  // Check resource limit
+  const count = await prisma.book.count({ where: { userId } });
+  if (count >= RESOURCE_LIMITS.MAX_BOOKS_PER_USER) {
+    throw new AppError(403, `Book limit reached (max ${RESOURCE_LIMITS.MAX_BOOKS_PER_USER})`);
+  }
 
   // Get next position
   const lastBook = await prisma.book.findFirst({

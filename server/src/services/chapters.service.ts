@@ -1,6 +1,7 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { verifyBookOwnership } from '../utils/ownership.js';
+import { RESOURCE_LIMITS } from '../utils/limits.js';
 import type { ChapterListItem, ChapterDetail } from '../types/api.js';
 
 /**
@@ -100,6 +101,12 @@ export async function createChapter(
   await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
+
+  // Check resource limit
+  const count = await prisma.chapter.count({ where: { bookId } });
+  if (count >= RESOURCE_LIMITS.MAX_CHAPTERS_PER_BOOK) {
+    throw new AppError(403, `Chapter limit reached (max ${RESOURCE_LIMITS.MAX_CHAPTERS_PER_BOOK})`);
+  }
 
   // Get next position
   const lastChapter = await prisma.chapter.findFirst({

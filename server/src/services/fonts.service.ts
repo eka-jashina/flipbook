@@ -1,5 +1,6 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { RESOURCE_LIMITS } from '../utils/limits.js';
 import type { ReadingFontItem } from '../types/api.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,6 +16,10 @@ export async function getReadingFonts(userId: string): Promise<ReadingFontItem[]
 
 export async function createReadingFont(userId: string, data: { fontKey: string; label: string; family: string; builtin?: boolean; enabled?: boolean; fileUrl?: string }): Promise<ReadingFontItem> {
   const prisma = getPrisma();
+  const count = await prisma.readingFont.count({ where: { userId } });
+  if (count >= RESOURCE_LIMITS.MAX_FONTS_PER_USER) {
+    throw new AppError(403, `Font limit reached (max ${RESOURCE_LIMITS.MAX_FONTS_PER_USER})`);
+  }
   const last = await prisma.readingFont.findFirst({ where: { userId }, orderBy: { position: 'desc' }, select: { position: true } });
   const font = await prisma.readingFont.create({
     data: { userId, fontKey: data.fontKey, label: data.label, family: data.family, builtin: data.builtin ?? false, enabled: data.enabled ?? true, fileUrl: data.fileUrl || null, position: (last?.position ?? -1) + 1 },

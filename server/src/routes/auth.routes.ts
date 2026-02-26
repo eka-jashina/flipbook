@@ -6,6 +6,7 @@ import { registerUser, formatUser } from '../services/auth.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createAuthRateLimiter } from '../middleware/rateLimit.js';
+import { generateToken } from '../middleware/csrf.js';
 import { getConfig } from '../config.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -37,17 +38,17 @@ router.post(
       const { email, password, displayName } = req.body;
       const userResponse = await registerUser(email, password, displayName);
 
-      // Auto-login after registration: fetch the full user object for passport
-      const { getPrisma } = await import('../utils/prisma.js');
-      const fullUser = await getPrisma().user.findUnique({
-        where: { id: userResponse.id },
-      });
+      // Auto-login after registration — only need id for serializeUser
+      const sessionUser: Express.User = {
+        id: userResponse.id,
+        email: userResponse.email,
+        displayName: userResponse.displayName,
+        avatarUrl: userResponse.avatarUrl,
+        googleId: null,
+        hasPassword: userResponse.hasPassword,
+      };
 
-      if (!fullUser) {
-        throw new AppError(500, 'Failed to retrieve created user');
-      }
-
-      req.login(fullUser, (err) => {
+      req.login(sessionUser, (err) => {
         if (err) {
           next(err);
           return;
@@ -126,6 +127,14 @@ router.get(
     res.json({ user: formatUser(req.user!) });
   },
 );
+
+/**
+ * GET /api/auth/csrf-token — Get CSRF token for SPA
+ */
+router.get('/csrf-token', (req: Request, res: Response) => {
+  const token = generateToken(req, res);
+  res.json({ token });
+});
 
 /**
  * GET /api/auth/google — Redirect to Google OAuth

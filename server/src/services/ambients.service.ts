@@ -1,6 +1,7 @@
 import { getPrisma } from '../utils/prisma.js';
 import { verifyBookOwnership } from '../utils/ownership.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { RESOURCE_LIMITS } from '../utils/limits.js';
 import type { AmbientItem } from '../types/api.js';
 
 /**
@@ -40,6 +41,12 @@ export async function createAmbient(
   await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
+
+  // Check resource limit
+  const count = await prisma.ambient.count({ where: { bookId } });
+  if (count >= RESOURCE_LIMITS.MAX_AMBIENTS_PER_BOOK) {
+    throw new AppError(403, `Ambient limit reached (max ${RESOURCE_LIMITS.MAX_AMBIENTS_PER_BOOK})`);
+  }
 
   // Get next position
   const lastAmbient = await prisma.ambient.findFirst({

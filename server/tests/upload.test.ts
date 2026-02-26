@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import request from 'supertest';
 import { createApp } from '../src/app.js';
-import { cleanDatabase, createAuthenticatedAgent } from './helpers.js';
+import { cleanDatabase, createAuthenticatedAgent, createCsrfAgent } from './helpers.js';
 
 const app = createApp();
 
@@ -11,10 +10,11 @@ describe('Upload API', () => {
   // ─── Auth ────────────────────────────────────────────────────────────
 
   it('should require authentication for all endpoints', async () => {
-    await request(app).post('/api/upload/font').expect(401);
-    await request(app).post('/api/upload/sound').expect(401);
-    await request(app).post('/api/upload/image').expect(401);
-    await request(app).post('/api/upload/book').expect(401);
+    const { agent } = await createCsrfAgent(app);
+    await agent.post('/api/upload/font').expect(401);
+    await agent.post('/api/upload/sound').expect(401);
+    await agent.post('/api/upload/image').expect(401);
+    await agent.post('/api/upload/book').expect(401);
   });
 
   // ─── Font upload ─────────────────────────────────────────────────────

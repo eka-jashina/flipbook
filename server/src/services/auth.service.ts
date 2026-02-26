@@ -5,21 +5,23 @@ import type { UserResponse } from '../types/api.js';
 
 /**
  * Format a User model for the API response.
+ * Accepts both Prisma user (with passwordHash) and Express.User (with hasPassword).
  */
 export function formatUser(user: {
   id: string;
   email: string;
   displayName: string | null;
   avatarUrl: string | null;
-  passwordHash: string | null;
   googleId: string | null;
+  passwordHash?: string | null;
+  hasPassword?: boolean;
 }): UserResponse {
   return {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
     avatarUrl: user.avatarUrl,
-    hasPassword: user.passwordHash !== null,
+    hasPassword: user.hasPassword ?? (user.passwordHash !== null),
     hasGoogle: user.googleId !== null,
   };
 }

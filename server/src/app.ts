@@ -13,6 +13,7 @@ import { getConfig } from './config.js';
 import { configurePassport } from './middleware/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { createRateLimiter } from './middleware/rateLimit.js';
+import { doubleCsrfProtection } from './middleware/csrf.js';
 import { logger } from './utils/logger.js';
 import { swaggerSpec, swaggerHtml } from './swagger.js';
 
@@ -84,6 +85,9 @@ export function createApp() {
   app.use(passport.initialize());
   app.use(passport.session());
   configurePassport();
+
+  // CSRF protection (double-submit cookie pattern)
+  app.use(doubleCsrfProtection);
 
   // Request ID + structured request logging via pino-http
   app.use((req: Request, _res: Response, next: NextFunction) => {

@@ -1,5 +1,6 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { RESOURCE_LIMITS } from '../utils/limits.js';
 import type { BookDetail, ReadingFontItem, GlobalSettingsDetail, ExportData } from '../types/api.js';
 
 export async function exportUserConfig(userId: string): Promise<ExportData> {
@@ -36,6 +37,18 @@ export async function exportUserConfig(userId: string): Promise<ExportData> {
 export async function importUserConfig(userId: string, data: ExportData): Promise<{ imported: { books: number; fonts: number } }> {
   const prisma = getPrisma();
   if (!data.books || !Array.isArray(data.books)) throw new AppError(400, 'Invalid import data: books array required');
+
+  // Check resource limits before starting import
+  const existingBooks = await prisma.book.count({ where: { userId } });
+  if (existingBooks + data.books.length > RESOURCE_LIMITS.MAX_BOOKS_PER_USER) {
+    throw new AppError(403, `Import would exceed book limit (max ${RESOURCE_LIMITS.MAX_BOOKS_PER_USER})`);
+  }
+  if (data.readingFonts?.length) {
+    const existingFonts = await prisma.readingFont.count({ where: { userId } });
+    if (existingFonts + data.readingFonts.length > RESOURCE_LIMITS.MAX_FONTS_PER_USER) {
+      throw new AppError(403, `Import would exceed font limit (max ${RESOURCE_LIMITS.MAX_FONTS_PER_USER})`);
+    }
+  }
 
   await prisma.$transaction(async (tx) => {
     for (const bookData of data.books) {
