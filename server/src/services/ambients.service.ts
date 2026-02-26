@@ -2,6 +2,8 @@ import { getPrisma } from '../utils/prisma.js';
 import { verifyBookOwnership } from '../utils/ownership.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { RESOURCE_LIMITS } from '../utils/limits.js';
+import { bulkUpdatePositions } from '../utils/reorder.js';
+import { withSerializableRetry } from '../utils/serializable.js';
 import type { AmbientItem } from '../types/api.js';
 
 /**
@@ -42,32 +44,33 @@ export async function createAmbient(
 
   const prisma = getPrisma();
 
-  // Check resource limit
+  // Check resource limit (outside transaction for fast-fail)
   const count = await prisma.ambient.count({ where: { bookId } });
   if (count >= RESOURCE_LIMITS.MAX_AMBIENTS_PER_BOOK) {
     throw new AppError(403, `Ambient limit reached (max ${RESOURCE_LIMITS.MAX_AMBIENTS_PER_BOOK})`);
   }
 
-  // Get next position
-  const lastAmbient = await prisma.ambient.findFirst({
-    where: { bookId },
-    orderBy: { position: 'desc' },
-    select: { position: true },
-  });
-  const nextPosition = (lastAmbient?.position ?? -1) + 1;
+  const ambient = await withSerializableRetry(prisma, async (tx) => {
+    const lastAmbient = await tx.ambient.findFirst({
+      where: { bookId },
+      orderBy: { position: 'desc' },
+      select: { position: true },
+    });
+    const nextPosition = (lastAmbient?.position ?? -1) + 1;
 
-  const ambient = await prisma.ambient.create({
-    data: {
-      bookId,
-      ambientKey: data.ambientKey,
-      label: data.label,
-      shortLabel: data.shortLabel || null,
-      icon: data.icon || null,
-      fileUrl: data.fileUrl || null,
-      visible: data.visible ?? true,
-      builtin: data.builtin ?? false,
-      position: nextPosition,
-    },
+    return tx.ambient.create({
+      data: {
+        bookId,
+        ambientKey: data.ambientKey,
+        label: data.label,
+        shortLabel: data.shortLabel || null,
+        icon: data.icon || null,
+        fileUrl: data.fileUrl || null,
+        visible: data.visible ?? true,
+        builtin: data.builtin ?? false,
+        position: nextPosition,
+      },
+    });
   });
 
   return mapAmbient(ambient);
@@ -129,7 +132,7 @@ export async function deleteAmbient(
   const prisma = getPrisma();
   const ambient = await prisma.ambient.findUnique({
     where: { id: ambientId },
-    select: { bookId: true },
+    select: { bookId: true, fileUrl: true },
   });
 
   if (!ambient || ambient.bookId !== bookId) {
@@ -137,6 +140,11 @@ export async function deleteAmbient(
   }
 
   await prisma.ambient.delete({ where: { id: ambientId } });
+  // Best-effort S3 cleanup
+  if (ambient.fileUrl) {
+    const { deleteFileByUrl } = await import('../utils/storage.js');
+    await deleteFileByUrl(ambient.fileUrl).catch(() => {});
+  }
 }
 
 /**
@@ -159,14 +167,7 @@ export async function reorderAmbients(
     throw new AppError(400, 'Some ambient IDs are invalid');
   }
 
-  await prisma.$transaction(
-    ambientIds.map((id, index) =>
-      prisma.ambient.update({
-        where: { id },
-        data: { position: index },
-      }),
-    ),
-  );
+  await bulkUpdatePositions(prisma, 'ambients', ambientIds);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -56,10 +56,12 @@ export async function importUserConfig(userId: string, data: ExportData): Promis
         data: { userId, title: bookData.title || '', author: bookData.author || '', coverBg: bookData.cover?.bg || '', coverBgMobile: bookData.cover?.bgMobile || '', coverBgMode: bookData.cover?.bgMode || 'default', coverBgCustomUrl: bookData.cover?.bgCustomUrl || null },
       });
       if (bookData.chapters?.length) {
-        for (let i = 0; i < bookData.chapters.length; i++) {
-          const ch = bookData.chapters[i];
-          await tx.chapter.create({ data: { bookId: book.id, title: ch.title || '', position: i, filePath: ch.filePath || null, bg: ch.bg || '', bgMobile: ch.bgMobile || '' } });
-        }
+        await tx.chapter.createMany({
+          data: bookData.chapters.map((ch, i) => ({
+            bookId: book.id, title: ch.title || '', position: i,
+            filePath: ch.filePath || null, bg: ch.bg || '', bgMobile: ch.bgMobile || '',
+          })),
+        });
       }
       if (bookData.appearance) {
         const a = bookData.appearance;
@@ -69,10 +71,14 @@ export async function importUserConfig(userId: string, data: ExportData): Promis
         await tx.bookSounds.create({ data: { bookId: book.id, pageFlipUrl: bookData.sounds.pageFlip || 'sounds/page-flip.mp3', bookOpenUrl: bookData.sounds.bookOpen || 'sounds/cover-flip.mp3', bookCloseUrl: bookData.sounds.bookClose || 'sounds/cover-flip.mp3' } });
       }
       if (bookData.ambients?.length) {
-        for (let i = 0; i < bookData.ambients.length; i++) {
-          const amb = bookData.ambients[i];
-          await tx.ambient.create({ data: { bookId: book.id, ambientKey: amb.ambientKey, label: amb.label, shortLabel: amb.shortLabel || null, icon: amb.icon || null, fileUrl: amb.fileUrl || null, visible: amb.visible ?? true, builtin: amb.builtin ?? false, position: i } });
-        }
+        await tx.ambient.createMany({
+          data: bookData.ambients.map((amb, i) => ({
+            bookId: book.id, ambientKey: amb.ambientKey, label: amb.label,
+            shortLabel: amb.shortLabel || null, icon: amb.icon || null,
+            fileUrl: amb.fileUrl || null, visible: amb.visible ?? true,
+            builtin: amb.builtin ?? false, position: i,
+          })),
+        });
       }
       if (bookData.decorativeFont) {
         await tx.decorativeFont.create({ data: { bookId: book.id, name: bookData.decorativeFont.name, fileUrl: bookData.decorativeFont.fileUrl } });
@@ -83,10 +89,13 @@ export async function importUserConfig(userId: string, data: ExportData): Promis
       }
     }
     if (data.readingFonts?.length) {
-      for (let i = 0; i < data.readingFonts.length; i++) {
-        const f = data.readingFonts[i];
-        await tx.readingFont.create({ data: { userId, fontKey: f.fontKey, label: f.label, family: f.family, builtin: f.builtin ?? false, enabled: f.enabled ?? true, fileUrl: f.fileUrl || null, position: i } });
-      }
+      await tx.readingFont.createMany({
+        data: data.readingFonts.map((f, i) => ({
+          userId, fontKey: f.fontKey, label: f.label, family: f.family,
+          builtin: f.builtin ?? false, enabled: f.enabled ?? true,
+          fileUrl: f.fileUrl || null, position: i,
+        })),
+      });
     }
     if (data.globalSettings) {
       const gs = data.globalSettings;
