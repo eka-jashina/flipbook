@@ -1,6 +1,11 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Prevent Vite from walking up to the root postcss.config.js
+  // (autoprefixer is a client-only dependency, not available in server/node_modules)
+  css: {
+    postcss: {},
+  },
   test: {
     globals: true,
     environment: 'node',
