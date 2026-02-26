@@ -1,5 +1,4 @@
 import { getPrisma } from '../utils/prisma.js';
-import { verifyBookOwnership } from '../utils/ownership.js';
 import { AppError } from '../middleware/errorHandler.js';
 import type { DefaultSettings } from '../types/api.js';
 
@@ -10,7 +9,6 @@ export async function getDefaultSettings(
   bookId: string,
   userId: string,
 ): Promise<DefaultSettings> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const settings = await prisma.bookDefaultSettings.findUnique({
@@ -48,7 +46,6 @@ export async function updateDefaultSettings(
     ambientVolume?: number;
   },
 ): Promise<DefaultSettings> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const settings = await prisma.bookDefaultSettings.upsert({

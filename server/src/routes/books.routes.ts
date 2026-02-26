@@ -10,6 +10,7 @@ import {
   reorderBooks,
 } from '../services/books.service.js';
 import { requireAuth } from '../middleware/auth.js';
+import { requireBookOwnership } from '../middleware/bookOwnership.js';
 import { validate } from '../middleware/validate.js';
 
 const router = Router();
@@ -86,6 +87,7 @@ router.patch(
  */
 router.get(
   '/:bookId',
+  requireBookOwnership,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const book = await getBookById(req.params.bookId as string, req.user!.id);
@@ -101,6 +103,7 @@ router.get(
  */
 router.patch(
   '/:bookId',
+  requireBookOwnership,
   validate(updateBookSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -121,6 +124,7 @@ router.patch(
  */
 router.delete(
   '/:bookId',
+  requireBookOwnership,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await deleteBook(req.params.bookId as string, req.user!.id);

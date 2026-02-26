@@ -1,6 +1,7 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { RESOURCE_LIMITS } from '../utils/limits.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 import {
   mapAppearanceToDto,
   mapSoundsToDto,
@@ -61,10 +62,16 @@ export async function importUserConfig(userId: string, data: ExportData): Promis
       });
       if (bookData.chapters?.length) {
         await tx.chapter.createMany({
-          data: bookData.chapters.map((ch, i) => ({
-            bookId: book.id, title: ch.title || '', position: i,
-            filePath: ch.filePath || null, bg: ch.bg || '', bgMobile: ch.bgMobile || '',
-          })),
+          data: bookData.chapters.map((ch, i) => {
+            // Sanitize htmlContent if present in import data (defense against stored XSS)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const rawHtml = (ch as any).htmlContent;
+            return {
+              bookId: book.id, title: ch.title || '', position: i,
+              filePath: ch.filePath || null, bg: ch.bg || '', bgMobile: ch.bgMobile || '',
+              htmlContent: typeof rawHtml === 'string' ? sanitizeHtml(rawHtml) : null,
+            };
+          }),
         });
       }
       if (bookData.appearance) {

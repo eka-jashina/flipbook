@@ -94,10 +94,7 @@ export async function getBookById(
     throw new AppError(404, 'Book not found');
   }
 
-  if (book.userId !== userId) {
-    throw new AppError(403, 'Access denied');
-  }
-
+  // Ownership verified by requireBookOwnership middleware
   return {
     id: book.id,
     title: book.title,
@@ -184,15 +181,7 @@ export async function updateBook(
 ): Promise<BookDetail> {
   const prisma = getPrisma();
 
-  // Check ownership
-  const book = await prisma.book.findUnique({
-    where: { id: bookId },
-    select: { userId: true },
-  });
-
-  if (!book) throw new AppError(404, 'Book not found');
-  if (book.userId !== userId) throw new AppError(403, 'Access denied');
-
+  // Ownership verified by requireBookOwnership middleware
   await prisma.book.update({
     where: { id: bookId },
     data: {
@@ -228,7 +217,7 @@ export async function deleteBook(
   });
 
   if (!book) throw new AppError(404, 'Book not found');
-  if (book.userId !== userId) throw new AppError(403, 'Access denied');
+  // Ownership verified by requireBookOwnership middleware
 
   // Collect all S3 file URLs before deletion
   const urls: string[] = [];

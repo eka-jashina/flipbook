@@ -1,10 +1,9 @@
 import { getPrisma } from '../utils/prisma.js';
-import { verifyBookOwnership } from '../utils/ownership.js';
 import { AppError } from '../middleware/errorHandler.js';
 import type { DecorativeFontDetail } from '../types/api.js';
 
 export async function getDecorativeFont(bookId: string, userId: string): Promise<DecorativeFontDetail | null> {
-  await verifyBookOwnership(bookId, userId);
+
   const prisma = getPrisma();
   const font = await prisma.decorativeFont.findUnique({ where: { bookId } });
   if (!font) return null;
@@ -12,7 +11,7 @@ export async function getDecorativeFont(bookId: string, userId: string): Promise
 }
 
 export async function upsertDecorativeFont(bookId: string, userId: string, data: { name: string; fileUrl: string }): Promise<DecorativeFontDetail> {
-  await verifyBookOwnership(bookId, userId);
+
   const prisma = getPrisma();
   const font = await prisma.decorativeFont.upsert({
     where: { bookId },
@@ -23,7 +22,7 @@ export async function upsertDecorativeFont(bookId: string, userId: string, data:
 }
 
 export async function deleteDecorativeFont(bookId: string, userId: string): Promise<void> {
-  await verifyBookOwnership(bookId, userId);
+
   const prisma = getPrisma();
   const font = await prisma.decorativeFont.findUnique({ where: { bookId } });
   if (!font) throw new AppError(404, 'Decorative font not found');
