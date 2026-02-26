@@ -6,7 +6,7 @@ import { registerUser, formatUser } from '../services/auth.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createAuthRateLimiter } from '../middleware/rateLimit.js';
-import { generateToken } from '../middleware/csrf.js';
+import { generateCsrfToken } from '../middleware/csrf.js';
 import { getConfig } from '../config.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -132,7 +132,7 @@ router.get(
  * GET /api/auth/csrf-token — Get CSRF token for SPA
  */
 router.get('/csrf-token', (req: Request, res: Response) => {
-  const token = generateToken(req, res);
+  const token = generateCsrfToken(req, res);
   res.json({ token });
 });
 

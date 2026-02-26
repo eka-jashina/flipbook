@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import passport from 'passport';
@@ -55,9 +56,10 @@ export function createApp() {
   // Rate limiting
   app.use('/api/', createRateLimiter());
 
-  // Body parsing
+  // Body & cookie parsing
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
+  app.use(cookieParser());
 
   // Session store (PostgreSQL)
   const PgSession = connectPgSimple(session);
