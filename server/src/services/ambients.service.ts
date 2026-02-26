@@ -4,6 +4,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { RESOURCE_LIMITS } from '../utils/limits.js';
 import { bulkUpdatePositions } from '../utils/reorder.js';
 import { withSerializableRetry } from '../utils/serializable.js';
+import { mapAmbientToDto } from '../utils/mappers.js';
 import type { AmbientItem } from '../types/api.js';
 
 /**
@@ -21,7 +22,7 @@ export async function getAmbients(
     orderBy: { position: 'asc' },
   });
 
-  return ambients.map(mapAmbient);
+  return ambients.map(mapAmbientToDto);
 }
 
 /**
@@ -73,7 +74,7 @@ export async function createAmbient(
     });
   });
 
-  return mapAmbient(ambient);
+  return mapAmbientToDto(ambient);
 }
 
 /**
@@ -116,7 +117,7 @@ export async function updateAmbient(
     },
   });
 
-  return mapAmbient(updated);
+  return mapAmbientToDto(updated);
 }
 
 /**
@@ -168,19 +169,4 @@ export async function reorderAmbients(
   }
 
   await bulkUpdatePositions(prisma, 'ambients', ambientIds);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapAmbient(a: any): AmbientItem {
-  return {
-    id: a.id,
-    ambientKey: a.ambientKey,
-    label: a.label,
-    shortLabel: a.shortLabel,
-    icon: a.icon,
-    fileUrl: a.fileUrl,
-    visible: a.visible,
-    builtin: a.builtin,
-    position: a.position,
-  };
 }
