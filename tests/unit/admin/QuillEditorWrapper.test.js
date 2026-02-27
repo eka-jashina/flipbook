@@ -47,13 +47,13 @@ describe('QuillEditorWrapper', () => {
       expect(wrapper.isInitialized).toBe(false);
     });
 
-    it('should be true after init', () => {
-      wrapper.init(container);
+    it('should be true after init', async () => {
+      await wrapper.init(container);
       expect(wrapper.isInitialized).toBe(true);
     });
 
-    it('should be false after destroy', () => {
-      wrapper.init(container);
+    it('should be false after destroy', async () => {
+      await wrapper.init(container);
       wrapper.destroy();
       expect(wrapper.isInitialized).toBe(false);
     });
@@ -64,17 +64,17 @@ describe('QuillEditorWrapper', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('init()', () => {
-    it('should create Quill instance', () => {
-      wrapper.init(container);
+    it('should create Quill instance', async () => {
+      await wrapper.init(container);
 
       expect(wrapper.isInitialized).toBe(true);
     });
 
-    it('should destroy previous instance before re-init', () => {
-      wrapper.init(container);
+    it('should destroy previous instance before re-init', async () => {
+      await wrapper.init(container);
       const spy = vi.spyOn(wrapper, 'destroy');
 
-      wrapper.init(container);
+      await wrapper.init(container);
 
       expect(spy).toHaveBeenCalled();
     });
@@ -85,8 +85,8 @@ describe('QuillEditorWrapper', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('setHTML()', () => {
-    it('should convert HTML and set contents', () => {
-      wrapper.init(container);
+    it('should convert HTML and set contents', async () => {
+      await wrapper.init(container);
 
       wrapper.setHTML('<p>Test</p>');
 
@@ -106,8 +106,8 @@ describe('QuillEditorWrapper', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('getHTML()', () => {
-    it('should return semantic HTML from editor', () => {
-      wrapper.init(container);
+    it('should return semantic HTML from editor', async () => {
+      await wrapper.init(container);
 
       const html = wrapper.getHTML();
 
@@ -125,15 +125,15 @@ describe('QuillEditorWrapper', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('isEmpty()', () => {
-    it('should return false when editor has text', () => {
-      wrapper.init(container);
+    it('should return false when editor has text', async () => {
+      await wrapper.init(container);
       mockQuillInstance.getText.mockReturnValue('Some text');
 
       expect(wrapper.isEmpty()).toBe(false);
     });
 
-    it('should return true when editor is empty', () => {
-      wrapper.init(container);
+    it('should return true when editor is empty', async () => {
+      await wrapper.init(container);
       mockQuillInstance.getText.mockReturnValue('  \n  ');
 
       expect(wrapper.isEmpty()).toBe(true);
@@ -149,8 +149,8 @@ describe('QuillEditorWrapper', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('clear()', () => {
-    it('should set text to empty string', () => {
-      wrapper.init(container);
+    it('should set text to empty string', async () => {
+      await wrapper.init(container);
 
       wrapper.clear();
 
@@ -168,8 +168,8 @@ describe('QuillEditorWrapper', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('destroy()', () => {
-    it('should clear container and null quill', () => {
-      wrapper.init(container);
+    it('should clear container and null quill', async () => {
+      await wrapper.init(container);
       container.innerHTML = '<div class="ql-editor">content</div>';
 
       wrapper.destroy();

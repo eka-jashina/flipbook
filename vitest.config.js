@@ -45,6 +45,7 @@ export default defineConfig({
         'js/utils/**/*.js',
         'js/managers/**/*.js',
         'js/core/**/*.js',
+        'js/admin/**/*.js',
       ],
 
       // Исключения
@@ -59,6 +60,12 @@ export default defineConfig({
         branches: 70,
         functions: 80,
         lines: 80,
+        'js/admin/**/*.js': {
+          statements: 60,
+          branches: 50,
+          functions: 60,
+          lines: 60,
+        },
       },
     },
 

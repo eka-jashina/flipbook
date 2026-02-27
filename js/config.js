@@ -30,6 +30,22 @@ function loadAdminConfig() {
 
 // ─── Чистые вспомогательные функции ─────────────────────────────────────────
 
+/**
+ * Рекурсивная заморозка объекта (глубокий Object.freeze).
+ * Предотвращает случайные мутации вложенных объектов конфигурации.
+ * @param {Object} obj
+ * @returns {Readonly<Object>}
+ */
+function deepFreeze(obj) {
+  Object.freeze(obj);
+  for (const value of Object.values(obj)) {
+    if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+      deepFreeze(value);
+    }
+  }
+  return obj;
+}
+
 // Резолвить путь к ресурсу (data: / http / относительный)
 function resolveAssetPath(value) {
   if (!value) return '';
@@ -212,7 +228,7 @@ export function createConfig(adminConfig = null) {
   const adminSounds = activeBook?.sounds || {};
   const fontsResult = buildFontsConfig(adminConfig?.readingFonts);
 
-  return Object.freeze({
+  return deepFreeze({
     STORAGE_KEY: activeBook?.id ? `reader-settings:${activeBook.id}` : "reader-settings",
     COVER_BG: resolveCoverBgFromCover(adminCover, 'images/backgrounds/bg-cover.webp'),
     COVER_BG_MOBILE: resolveCoverBgFromCover(adminCover, 'images/backgrounds/bg-cover-mobile.webp'),
@@ -401,7 +417,7 @@ export function createConfigFromAPI(bookDetail, globalSettings, readingFonts) {
   // Видимость настроек
   const vis = globalSettings?.settingsVisibility || {};
 
-  return Object.freeze({
+  return deepFreeze({
     STORAGE_KEY: `reader-settings:${bookDetail.id}`,
     BOOK_ID: bookDetail.id,
     COVER_BG: coverBg,
@@ -501,7 +517,8 @@ export async function loadConfigFromAPI(apiClient, bookId) {
  *
  * Вызывается один раз при старте ридера, до создания BookController.
  *
- * @param {Object} config - Объект CONFIG (top-level заморожен, вложенные — нет)
+ * @param {Readonly<Object>} config - Замороженный объект CONFIG
+ * @returns {Readonly<Object>} Новый замороженный CONFIG с данными из IDB (или исходный, если IDB не нужна)
  */
 export async function enrichConfigFromIDB(config) {
   const appearanceNeedsIdb = ['light', 'dark'].some(theme => {
@@ -515,7 +532,7 @@ export async function enrichConfigFromIDB(config) {
     Object.values(config.AMBIENT).some(a => a._idb) ||
     appearanceNeedsIdb;
 
-  if (!needsIdb) return;
+  if (!needsIdb) return config;
 
   let adminConfig;
   try {
@@ -523,58 +540,84 @@ export async function enrichConfigFromIDB(config) {
     const idb = new IdbStorage('flipbook-admin', 'config');
     adminConfig = await idb.get('flipbook-admin-config');
   } catch {
-    return;
+    return config;
   }
-  if (!adminConfig) return;
+  if (!adminConfig) return config;
 
   const activeBook = getActiveBook(adminConfig);
 
-  // Декоративный шрифт
-  if (config.DECORATIVE_FONT?._idb && activeBook?.decorativeFont?.dataUrl) {
-    config.DECORATIVE_FONT.dataUrl = activeBook.decorativeFont.dataUrl;
+  // Декоративный шрифт (иммутабельная копия)
+  let decorativeFont = config.DECORATIVE_FONT;
+  if (decorativeFont?._idb && activeBook?.decorativeFont?.dataUrl) {
+    decorativeFont = { ...decorativeFont, dataUrl: activeBook.decorativeFont.dataUrl };
   }
 
-  // Амбиенты
+  // Амбиенты (иммутабельные копии)
+  let ambient = config.AMBIENT;
   if (activeBook?.ambients) {
     const ambientMap = new Map(activeBook.ambients.map(a => [a.id, a]));
-    for (const [type, cfg] of Object.entries(config.AMBIENT)) {
+    const patchedAmbient = {};
+    let changed = false;
+    for (const [type, cfg] of Object.entries(ambient)) {
       if (cfg._idb) {
         const src = ambientMap.get(type);
         if (src?.file) {
-          cfg.file = src.file;
+          patchedAmbient[type] = { ...cfg, file: src.file };
+          changed = true;
+          continue;
         }
       }
+      patchedAmbient[type] = cfg;
     }
+    if (changed) ambient = patchedAmbient;
   }
 
-  // Пользовательские шрифты для чтения
-  if (config.CUSTOM_FONTS?.length && adminConfig.readingFonts) {
+  // Пользовательские шрифты для чтения (иммутабельные копии)
+  let customFonts = config.CUSTOM_FONTS;
+  if (customFonts?.length && adminConfig.readingFonts) {
     const fontMap = new Map(adminConfig.readingFonts.map(f => [f.id, f]));
-    for (const font of config.CUSTOM_FONTS) {
+    customFonts = customFonts.map(font => {
       if (font._idb) {
         const src = fontMap.get(font.id);
         if (src?.dataUrl) {
-          font.dataUrl = src.dataUrl;
+          return { ...font, dataUrl: src.dataUrl };
         }
       }
-    }
+      return font;
+    });
   }
 
-  // Оформление: coverBgImage и customTextureData
+  // Оформление: coverBgImage и customTextureData (иммутабельные копии)
+  let appearance = config.APPEARANCE;
   if (appearanceNeedsIdb && activeBook?.appearance) {
+    const patchedAppearance = { ...appearance };
     for (const theme of ['light', 'dark']) {
-      const target = config.APPEARANCE?.[theme];
+      const target = appearance[theme];
       const src = activeBook.appearance[theme];
       if (!target || !src) continue;
 
+      let patched = null;
       if (target._idbCoverBgImage && src.coverBgImage) {
-        target.coverBgImage = src.coverBgImage;
+        patched = { ...(patched || target), coverBgImage: src.coverBgImage };
       }
       if (target._idbCustomTexture && src.customTextureData) {
-        target.customTextureData = src.customTextureData;
+        patched = { ...(patched || target), customTextureData: src.customTextureData };
+      }
+      if (patched) {
+        patchedAppearance[theme] = patched;
       }
     }
+    appearance = patchedAppearance;
   }
+
+  // Собрать обновлённый конфиг
+  return deepFreeze({
+    ...config,
+    DECORATIVE_FONT: decorativeFont,
+    AMBIENT: ambient,
+    CUSTOM_FONTS: customFonts,
+    APPEARANCE: appearance,
+  });
 }
 
 // ─── Управляемый синглтон ────────────────────────────────────────────────────

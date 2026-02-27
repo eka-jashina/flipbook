@@ -268,18 +268,18 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_openModal()', () => {
-    it('should open modal for new chapter', () => {
+    it('should open modal for new chapter', async () => {
       const showModalSpy = vi.spyOn(mod.modal, 'showModal');
 
-      mod._openModal();
+      await mod._openModal();
 
       expect(mod._editingIndex).toBeNull();
       expect(mod.modalTitle.textContent).toBe('Добавить главу');
       expect(showModalSpy).toHaveBeenCalled();
     });
 
-    it('should open modal for editing chapter', () => {
-      mod._openModal(0);
+    it('should open modal for editing chapter', async () => {
+      await mod._openModal(0);
 
       expect(mod._editingIndex).toBe(0);
       expect(mod.modalTitle.textContent).toBe('Редактировать главу');
@@ -371,8 +371,8 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_switchInputMode()', () => {
-    it('should switch to editor mode', () => {
-      mod._switchInputMode('editor');
+    it('should switch to editor mode', async () => {
+      await mod._switchInputMode('editor');
 
       expect(mod._inputMode).toBe('editor');
       expect(mod.chapterUploadPanel.hidden).toBe(true);
@@ -380,9 +380,9 @@ describe('ChaptersModule', () => {
       expect(mod.modal.classList.contains('editor-active')).toBe(true);
     });
 
-    it('should switch to upload mode', () => {
-      mod._switchInputMode('editor');
-      mod._switchInputMode('upload');
+    it('should switch to upload mode', async () => {
+      await mod._switchInputMode('editor');
+      await mod._switchInputMode('upload');
 
       expect(mod._inputMode).toBe('upload');
       expect(mod.chapterUploadPanel.hidden).toBe(false);
@@ -390,24 +390,24 @@ describe('ChaptersModule', () => {
       expect(mod.modal.classList.contains('editor-active')).toBe(false);
     });
 
-    it('should toggle active class on buttons', () => {
-      mod._switchInputMode('editor');
+    it('should toggle active class on buttons', async () => {
+      await mod._switchInputMode('editor');
 
       const buttons = mod.chapterInputToggle.querySelectorAll('[data-input-mode]');
       expect(buttons[0].classList.contains('active')).toBe(false);
       expect(buttons[1].classList.contains('active')).toBe(true);
     });
 
-    it('should init editor lazily on first switch', () => {
-      mod._switchInputMode('editor');
+    it('should init editor lazily on first switch', async () => {
+      await mod._switchInputMode('editor');
 
       expect(mod._editor.init).toHaveBeenCalledWith(mod.chapterEditorContainer);
     });
 
-    it('should load pending HTML into editor when switching', () => {
+    it('should load pending HTML into editor when switching', async () => {
       mod._pendingHtmlContent = '<article>Test</article>';
 
-      mod._switchInputMode('editor');
+      await mod._switchInputMode('editor');
 
       expect(mod._editor.setHTML).toHaveBeenCalledWith('<article>Test</article>');
     });
@@ -471,26 +471,26 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_openModal() with editor', () => {
-    it('should open editor mode for chapter with htmlContent', () => {
+    it('should open editor mode for chapter with htmlContent', async () => {
       app.store.getChapters.mockReturnValue([
         { id: 'inline', title: 'Inline', file: '', htmlContent: '<p>Inline HTML</p>', bg: '', bgMobile: '' },
       ]);
 
-      mod._openModal(0);
+      await mod._openModal(0);
 
       expect(mod._inputMode).toBe('editor');
       expect(mod._editor.setHTML).toHaveBeenCalledWith('<p>Inline HTML</p>');
     });
 
-    it('should open upload mode for chapter with file path', () => {
-      mod._openModal(0);
+    it('should open upload mode for chapter with file path', async () => {
+      await mod._openModal(0);
 
       expect(mod._inputMode).toBe('upload');
       expect(mod.chapterFileName.textContent).toBe('content/part_1.html');
     });
 
-    it('should default to upload mode for new chapter', () => {
-      mod._openModal();
+    it('should default to upload mode for new chapter', async () => {
+      await mod._openModal();
 
       expect(mod._inputMode).toBe('upload');
     });

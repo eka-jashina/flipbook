@@ -15,7 +15,7 @@
 
 import { BookController } from './core/BookController.js';
 import { BookshelfScreen, loadBooksFromAPI, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
-import { CONFIG, enrichConfigFromIDB, loadConfigFromAPI } from './config.js';
+import { CONFIG, enrichConfigFromIDB, loadConfigFromAPI, setConfig } from './config.js';
 import { ApiClient } from './utils/ApiClient.js';
 import { AuthModal } from './core/AuthModal.js';
 import { MigrationHelper } from './core/MigrationHelper.js';
@@ -156,7 +156,8 @@ async function initReaderFromAPI(bookId) {
  * Инициализация ридера через localStorage (fallback)
  */
 async function initReaderFallback() {
-  await enrichConfigFromIDB(CONFIG);
+  const enriched = await enrichConfigFromIDB(CONFIG);
+  if (enriched !== CONFIG) setConfig(enriched);
 
   app = new BookController();
   await app.init();

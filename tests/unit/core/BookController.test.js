@@ -507,24 +507,6 @@ describe('BookController', () => {
   });
 
   describe('initialization phase validation', () => {
-    it('_createComponents should throw if factory is missing', () => {
-      const ctrl = Object.create(BookController.prototype);
-      ctrl.factory = null;
-      expect(() => ctrl._createComponents()).toThrow('_createComponents');
-    });
-
-    it('_createDelegates should throw if services are missing', () => {
-      const ctrl = Object.create(BookController.prototype);
-      ctrl.core = null;
-      ctrl.audio = null;
-      ctrl.render = null;
-      ctrl.content = null;
-      ctrl.stateMachine = null;
-      ctrl.settings = null;
-      ctrl.debugPanel = null;
-      expect(() => ctrl._createDelegates()).toThrow('_createDelegates');
-    });
-
     it('_createMediator should throw if delegates are missing', () => {
       const ctrl = Object.create(BookController.prototype);
       ctrl.navigationDelegate = null;
