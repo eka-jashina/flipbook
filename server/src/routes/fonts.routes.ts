@@ -1,27 +1,34 @@
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
 import { getReadingFonts, createReadingFont, updateReadingFont, deleteReadingFont, reorderReadingFonts } from '../services/fonts.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createFontSchema, updateFontSchema, reorderFontsSchema } from '../schemas.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created } from '../utils/response.js';
 
 const router = Router();
 router.use(requireAuth);
 
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json({ fonts: await getReadingFonts(req.user!.id) }); } catch (err) { next(err); }
-});
-router.post('/', validate(createFontSchema), async (req: Request, res: Response, next: NextFunction) => {
-  try { res.status(201).json(await createReadingFont(req.user!.id, req.body)); } catch (err) { next(err); }
-});
-router.patch('/reorder', validate(reorderFontsSchema), async (req: Request, res: Response, next: NextFunction) => {
-  try { await reorderReadingFonts(req.user!.id, req.body.fontIds); res.json({ message: 'Fonts reordered' }); } catch (err) { next(err); }
-});
-router.patch('/:fontId', validate(updateFontSchema), async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await updateReadingFont(req.params.fontId as string, req.user!.id, req.body)); } catch (err) { next(err); }
-});
-router.delete('/:fontId', async (req: Request, res: Response, next: NextFunction) => {
-  try { await deleteReadingFont(req.params.fontId as string, req.user!.id); res.status(204).send(); } catch (err) { next(err); }
-});
+router.get('/', asyncHandler(async (req, res) => {
+  ok(res, { fonts: await getReadingFonts(req.user!.id) });
+}));
+
+router.post('/', validate(createFontSchema), asyncHandler(async (req, res) => {
+  created(res, await createReadingFont(req.user!.id, req.body));
+}));
+
+router.patch('/reorder', validate(reorderFontsSchema), asyncHandler(async (req, res) => {
+  await reorderReadingFonts(req.user!.id, req.body.fontIds);
+  ok(res, { message: 'Fonts reordered' });
+}));
+
+router.patch('/:fontId', validate(updateFontSchema), asyncHandler(async (req, res) => {
+  ok(res, await updateReadingFont(req.params.fontId as string, req.user!.id, req.body));
+}));
+
+router.delete('/:fontId', asyncHandler(async (req, res) => {
+  await deleteReadingFont(req.params.fontId as string, req.user!.id);
+  res.status(204).send();
+}));
 
 export default router;

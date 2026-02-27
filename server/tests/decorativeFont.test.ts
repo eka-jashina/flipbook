@@ -11,7 +11,7 @@ describe('Decorative Font API', () => {
   async function createBookWithAgent() {
     const { agent } = await createAuthenticatedAgent(app);
     const bookRes = await agent.post('/api/books').send({ title: 'Test Book', author: 'Author' }).expect(201);
-    return { agent, bookId: bookRes.body.id };
+    return { agent, bookId: bookRes.body.data.id };
   }
 
   it('should return 204 when no font set', async () => {
@@ -26,14 +26,14 @@ describe('Decorative Font API', () => {
   it('should create a decorative font', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.put(`/api/books/${bookId}/decorative-font`).send({ name: 'Fantasy', fileUrl: 'fonts/fantasy.woff2' }).expect(200);
-    expect(res.body.name).toBe('Fantasy');
+    expect(res.body.data.name).toBe('Fantasy');
   });
 
   it('should upsert decorative font', async () => {
     const { agent, bookId } = await createBookWithAgent();
     await agent.put(`/api/books/${bookId}/decorative-font`).send({ name: 'Fantasy', fileUrl: 'fonts/fantasy.woff2' }).expect(200);
     const res = await agent.put(`/api/books/${bookId}/decorative-font`).send({ name: 'Gothic', fileUrl: 'fonts/gothic.woff2' }).expect(200);
-    expect(res.body.name).toBe('Gothic');
+    expect(res.body.data.name).toBe('Gothic');
   });
 
   it('should delete decorative font', async () => {

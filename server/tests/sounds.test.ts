@@ -11,14 +11,14 @@ describe('Sounds API', () => {
   async function createBookWithAgent() {
     const { agent } = await createAuthenticatedAgent(app);
     const bookRes = await agent.post('/api/books').send({ title: 'Test Book', author: 'Author' }).expect(201);
-    return { agent, bookId: bookRes.body.id };
+    return { agent, bookId: bookRes.body.data.id };
   }
 
   it('should return sounds with defaults', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.get(`/api/books/${bookId}/sounds`).expect(200);
-    expect(res.body.pageFlip).toBe('sounds/page-flip.mp3');
-    expect(res.body.bookOpen).toBe('sounds/cover-flip.mp3');
+    expect(res.body.data.pageFlip).toBe('sounds/page-flip.mp3');
+    expect(res.body.data.bookOpen).toBe('sounds/cover-flip.mp3');
   });
 
   it('should require authentication', async () => {
@@ -28,8 +28,8 @@ describe('Sounds API', () => {
   it('should update sound URLs', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.patch(`/api/books/${bookId}/sounds`).send({ pageFlip: 'custom/flip.mp3' }).expect(200);
-    expect(res.body.pageFlip).toBe('custom/flip.mp3');
-    expect(res.body.bookClose).toBe('sounds/cover-flip.mp3');
+    expect(res.body.data.pageFlip).toBe('custom/flip.mp3');
+    expect(res.body.data.bookClose).toBe('sounds/cover-flip.mp3');
   });
 
   it('should return 403 for another user', async () => {

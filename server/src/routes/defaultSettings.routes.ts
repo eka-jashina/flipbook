@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
 import { getDefaultSettings, updateDefaultSettings } from '../services/defaultSettings.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { updateDefaultSettingsSchema } from '../schemas.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok } from '../utils/response.js';
 
 const router = Router({ mergeParams: true });
 
@@ -14,17 +15,13 @@ router.use(requireAuth);
  */
 router.get(
   '/',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const settings = await getDefaultSettings(
-        req.params.bookId as string,
-        req.user!.id,
-      );
-      res.json(settings);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const settings = await getDefaultSettings(
+      req.params.bookId as string,
+      req.user!.id,
+    );
+    ok(res, settings);
+  }),
 );
 
 /**
@@ -33,18 +30,14 @@ router.get(
 router.patch(
   '/',
   validate(updateDefaultSettingsSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const settings = await updateDefaultSettings(
-        req.params.bookId as string,
-        req.user!.id,
-        req.body,
-      );
-      res.json(settings);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const settings = await updateDefaultSettings(
+      req.params.bookId as string,
+      req.user!.id,
+      req.body,
+    );
+    ok(res, settings);
+  }),
 );
 
 export default router;

@@ -11,16 +11,16 @@ describe('Appearance API', () => {
   async function createBookWithAgent() {
     const { agent } = await createAuthenticatedAgent(app);
     const bookRes = await agent.post('/api/books').send({ title: 'Test Book', author: 'Author' }).expect(201);
-    return { agent, bookId: bookRes.body.id };
+    return { agent, bookId: bookRes.body.data.id };
   }
 
   it('should return appearance with defaults', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.get(`/api/books/${bookId}/appearance`).expect(200);
-    expect(res.body.fontMin).toBe(14);
-    expect(res.body.fontMax).toBe(22);
-    expect(res.body.light.coverBgStart).toBe('#3a2d1f');
-    expect(res.body.dark.coverBgStart).toBe('#111111');
+    expect(res.body.data.fontMin).toBe(14);
+    expect(res.body.data.fontMax).toBe(22);
+    expect(res.body.data.light.coverBgStart).toBe('#3a2d1f');
+    expect(res.body.data.dark.coverBgStart).toBe('#111111');
   });
 
   it('should require authentication', async () => {
@@ -30,22 +30,22 @@ describe('Appearance API', () => {
   it('should update fontMin and fontMax', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.patch(`/api/books/${bookId}/appearance`).send({ fontMin: 12, fontMax: 28 }).expect(200);
-    expect(res.body.fontMin).toBe(12);
-    expect(res.body.fontMax).toBe(28);
+    expect(res.body.data.fontMin).toBe(12);
+    expect(res.body.data.fontMax).toBe(28);
   });
 
   it('should update light theme only', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.patch(`/api/books/${bookId}/appearance/light`).send({ coverBgStart: '#ffffff' }).expect(200);
-    expect(res.body.light.coverBgStart).toBe('#ffffff');
-    expect(res.body.dark.coverBgStart).toBe('#111111');
+    expect(res.body.data.light.coverBgStart).toBe('#ffffff');
+    expect(res.body.data.dark.coverBgStart).toBe('#111111');
   });
 
   it('should update dark theme only', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.patch(`/api/books/${bookId}/appearance/dark`).send({ coverBgEnd: '#222222' }).expect(200);
-    expect(res.body.dark.coverBgEnd).toBe('#222222');
-    expect(res.body.light.coverBgEnd).toBe('#2a2016');
+    expect(res.body.data.dark.coverBgEnd).toBe('#222222');
+    expect(res.body.data.light.coverBgEnd).toBe('#2a2016');
   });
 
   it('should reject invalid theme name', async () => {

@@ -7,8 +7,9 @@ import { validate } from '../middleware/validate.js';
 import { createAuthRateLimiter } from '../middleware/rateLimit.js';
 import { generateCsrfToken } from '../middleware/csrf.js';
 import { getConfig } from '../config.js';
-import { AppError } from '../middleware/errorHandler.js';
 import { registerSchema, loginSchema } from '../schemas.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created } from '../utils/response.js';
 
 const router = Router();
 
@@ -21,36 +22,34 @@ router.post(
   '/register',
   authLimiter,
   validate(registerSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { email, password, displayName } = req.body;
-      const userResponse = await registerUser(email, password, displayName);
+  asyncHandler(async (req, res, next) => {
+    const { email, password, displayName } = req.body;
+    const userResponse = await registerUser(email, password, displayName);
 
-      // Auto-login after registration — only need id for serializeUser
-      const sessionUser: Express.User = {
-        id: userResponse.id,
-        email: userResponse.email,
-        displayName: userResponse.displayName,
-        avatarUrl: userResponse.avatarUrl,
-        googleId: null,
-        hasPassword: userResponse.hasPassword,
-      };
+    // Auto-login after registration — only need id for serializeUser
+    const sessionUser: Express.User = {
+      id: userResponse.id,
+      email: userResponse.email,
+      displayName: userResponse.displayName,
+      avatarUrl: userResponse.avatarUrl,
+      googleId: null,
+      hasPassword: userResponse.hasPassword,
+    };
 
-      req.login(sessionUser, (err) => {
-        if (err) {
-          next(err);
-          return;
-        }
-        res.status(201).json({ user: userResponse });
-      });
-    } catch (err) {
-      next(err);
-    }
-  },
+    req.login(sessionUser, (err) => {
+      if (err) {
+        next(err);
+        return;
+      }
+      created(res, { user: userResponse });
+    });
+  }),
 );
 
 /**
  * POST /api/auth/login — Login with email + password
+ *
+ * Uses Passport custom callback pattern — cannot use asyncHandler.
  */
 router.post(
   '/login',
@@ -78,7 +77,7 @@ router.post(
             next(loginErr);
             return;
           }
-          res.json({ user: formatUser(user) });
+          ok(res, { user: formatUser(user) });
         });
       },
     )(req, res, next);
@@ -100,7 +99,7 @@ router.post('/logout', (req: Request, res: Response, next: NextFunction) => {
         return;
       }
       res.clearCookie('connect.sid');
-      res.json({ message: 'Logged out successfully' });
+      ok(res, { message: 'Logged out successfully' });
     });
   });
 });
@@ -112,7 +111,7 @@ router.get(
   '/me',
   requireAuth,
   (req: Request, res: Response) => {
-    res.json({ user: formatUser(req.user!) });
+    ok(res, { user: formatUser(req.user!) });
   },
 );
 
@@ -121,7 +120,7 @@ router.get(
  */
 router.get('/csrf-token', (req: Request, res: Response) => {
   const token = generateCsrfToken(req, res);
-  res.json({ token });
+  ok(res, { token });
 });
 
 /**

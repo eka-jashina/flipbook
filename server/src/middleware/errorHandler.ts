@@ -7,6 +7,7 @@ export class AppError extends Error {
   constructor(
     public statusCode: number,
     message: string,
+    public code?: string,
     public details?: unknown,
   ) {
     super(message);
@@ -32,13 +33,16 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  const requestId = req.id as string | undefined;
+
   if (err instanceof AppError) {
     logClientError(req, err.statusCode, err.message);
     res.status(err.statusCode).json({
-      error: err.name,
+      error: err.code || err.name,
       message: err.message,
       statusCode: err.statusCode,
-      details: err.details,
+      ...(err.details !== undefined && { details: err.details }),
+      ...(requestId && { requestId }),
     });
     return;
   }
@@ -49,18 +53,19 @@ export function errorHandler(
       message: 'Invalid request data',
       statusCode: 400,
       details: err.errors,
+      ...(requestId && { requestId }),
     });
     return;
   }
 
   if (err instanceof multer.MulterError) {
     const statusCode = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
-    res.status(statusCode).json({ error: 'UploadError', message: err.message, statusCode });
-    return;
-  }
-
-  if (err.message?.startsWith('Invalid ') && err.message?.includes('file type')) {
-    res.status(400).json({ error: 'UploadError', message: err.message, statusCode: 400 });
+    res.status(statusCode).json({
+      error: 'UploadError',
+      message: err.message,
+      statusCode,
+      ...(requestId && { requestId }),
+    });
     return;
   }
 
@@ -72,6 +77,7 @@ export function errorHandler(
       error: err.name || 'ForbiddenError',
       message: err.message,
       statusCode,
+      ...(requestId && { requestId }),
     });
     return;
   }
@@ -82,5 +88,6 @@ export function errorHandler(
     error: 'InternalServerError',
     message: 'An unexpected error occurred',
     statusCode: 500,
+    ...(requestId && { requestId }),
   });
 }

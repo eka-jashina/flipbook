@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import express from 'express';
-import type { Request, Response, NextFunction } from 'express';
 import {
   getChapters,
   getChapterById,
@@ -13,6 +12,8 @@ import {
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createChapterSchema, updateChapterSchema, reorderChaptersSchema } from '../schemas.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created } from '../utils/response.js';
 
 const router = Router({ mergeParams: true });
 
@@ -24,14 +25,10 @@ router.use(requireAuth);
  */
 router.get(
   '/',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const chapters = await getChapters(req.params.bookId as string, req.user!.id);
-      res.json({ chapters });
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const chapters = await getChapters(req.params.bookId as string, req.user!.id);
+    ok(res, { chapters });
+  }),
 );
 
 // Chapters may contain large HTML content (up to 2 MB)
@@ -44,18 +41,14 @@ router.post(
   '/',
   largeJsonBody,
   validate(createChapterSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const chapter = await createChapter(
-        req.params.bookId as string,
-        req.user!.id,
-        req.body,
-      );
-      res.status(201).json(chapter);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const chapter = await createChapter(
+      req.params.bookId as string,
+      req.user!.id,
+      req.body,
+    );
+    created(res, chapter);
+  }),
 );
 
 /**
@@ -64,18 +57,14 @@ router.post(
 router.patch(
   '/reorder',
   validate(reorderChaptersSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await reorderChapters(
-        req.params.bookId as string,
-        req.user!.id,
-        req.body.chapterIds,
-      );
-      res.json({ message: 'Chapters reordered' });
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    await reorderChapters(
+      req.params.bookId as string,
+      req.user!.id,
+      req.body.chapterIds,
+    );
+    ok(res, { message: 'Chapters reordered' });
+  }),
 );
 
 /**
@@ -83,18 +72,14 @@ router.patch(
  */
 router.get(
   '/:chapterId',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const chapter = await getChapterById(
-        req.params.bookId as string,
-        req.params.chapterId as string,
-        req.user!.id,
-      );
-      res.json(chapter);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const chapter = await getChapterById(
+      req.params.bookId as string,
+      req.params.chapterId as string,
+      req.user!.id,
+    );
+    ok(res, chapter);
+  }),
 );
 
 /**
@@ -102,18 +87,14 @@ router.get(
  */
 router.get(
   '/:chapterId/content',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const html = await getChapterContent(
-        req.params.bookId as string,
-        req.params.chapterId as string,
-        req.user!.id,
-      );
-      res.json({ html });
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const html = await getChapterContent(
+      req.params.bookId as string,
+      req.params.chapterId as string,
+      req.user!.id,
+    );
+    ok(res, { html });
+  }),
 );
 
 /**
@@ -123,19 +104,15 @@ router.patch(
   '/:chapterId',
   largeJsonBody,
   validate(updateChapterSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const chapter = await updateChapter(
-        req.params.bookId as string,
-        req.params.chapterId as string,
-        req.user!.id,
-        req.body,
-      );
-      res.json(chapter);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const chapter = await updateChapter(
+      req.params.bookId as string,
+      req.params.chapterId as string,
+      req.user!.id,
+      req.body,
+    );
+    ok(res, chapter);
+  }),
 );
 
 /**
@@ -143,18 +120,14 @@ router.patch(
  */
 router.delete(
   '/:chapterId',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await deleteChapter(
-        req.params.bookId as string,
-        req.params.chapterId as string,
-        req.user!.id,
-      );
-      res.status(204).send();
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    await deleteChapter(
+      req.params.bookId as string,
+      req.params.chapterId as string,
+      req.user!.id,
+    );
+    res.status(204).send();
+  }),
 );
 
 export default router;

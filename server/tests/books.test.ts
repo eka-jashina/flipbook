@@ -15,7 +15,7 @@ describe('Books API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       const res = await agent.get('/api/books').expect(200);
-      expect(res.body.books).toEqual([]);
+      expect(res.body.data.books).toEqual([]);
     });
 
     it('should require authentication', async () => {
@@ -32,13 +32,13 @@ describe('Books API', () => {
         .send({ title: 'Test Book', author: 'Test Author' })
         .expect(201);
 
-      expect(res.body.id).toBeDefined();
-      expect(res.body.title).toBe('Test Book');
-      expect(res.body.author).toBe('Test Author');
-      expect(res.body.chapters).toEqual([]);
-      expect(res.body.appearance).toBeDefined();
-      expect(res.body.sounds).toBeDefined();
-      expect(res.body.defaultSettings).toBeDefined();
+      expect(res.body.data.id).toBeDefined();
+      expect(res.body.data.title).toBe('Test Book');
+      expect(res.body.data.author).toBe('Test Author');
+      expect(res.body.data.chapters).toEqual([]);
+      expect(res.body.data.appearance).toBeDefined();
+      expect(res.body.data.sounds).toBeDefined();
+      expect(res.body.data.defaultSettings).toBeDefined();
     });
 
     it('should require title', async () => {
@@ -61,9 +61,9 @@ describe('Books API', () => {
         .expect(201);
 
       const res = await agent.get('/api/books').expect(200);
-      expect(res.body.books).toHaveLength(2);
-      expect(res.body.books[0].position).toBe(0);
-      expect(res.body.books[1].position).toBe(1);
+      expect(res.body.data.books).toHaveLength(2);
+      expect(res.body.data.books[0].position).toBe(0);
+      expect(res.body.data.books[1].position).toBe(1);
     });
   });
 
@@ -77,12 +77,12 @@ describe('Books API', () => {
         .expect(201);
 
       const res = await agent
-        .get(`/api/books/${createRes.body.id}`)
+        .get(`/api/books/${createRes.body.data.id}`)
         .expect(200);
 
-      expect(res.body.title).toBe('Detail Book');
-      expect(res.body.cover).toBeDefined();
-      expect(res.body.appearance).toBeDefined();
+      expect(res.body.data.title).toBe('Detail Book');
+      expect(res.body.data.cover).toBeDefined();
+      expect(res.body.data.appearance).toBeDefined();
     });
 
     it('should return 404 for non-existent book', async () => {
@@ -106,7 +106,7 @@ describe('Books API', () => {
         .send({ title: 'Private Book' })
         .expect(201);
 
-      await agent2.get(`/api/books/${createRes.body.id}`).expect(403);
+      await agent2.get(`/api/books/${createRes.body.data.id}`).expect(403);
     });
   });
 
@@ -120,12 +120,12 @@ describe('Books API', () => {
         .expect(201);
 
       const res = await agent
-        .patch(`/api/books/${createRes.body.id}`)
+        .patch(`/api/books/${createRes.body.data.id}`)
         .send({ title: 'Updated Title', author: 'New Author' })
         .expect(200);
 
-      expect(res.body.title).toBe('Updated Title');
-      expect(res.body.author).toBe('New Author');
+      expect(res.body.data.title).toBe('Updated Title');
+      expect(res.body.data.author).toBe('New Author');
     });
   });
 
@@ -139,11 +139,11 @@ describe('Books API', () => {
         .expect(201);
 
       await agent
-        .delete(`/api/books/${createRes.body.id}`)
+        .delete(`/api/books/${createRes.body.data.id}`)
         .expect(204);
 
       const res = await agent.get('/api/books').expect(200);
-      expect(res.body.books).toHaveLength(0);
+      expect(res.body.data.books).toHaveLength(0);
     });
   });
 
@@ -163,12 +163,12 @@ describe('Books API', () => {
       // Reverse order
       await agent
         .patch('/api/books/reorder')
-        .send({ bookIds: [book2.body.id, book1.body.id] })
+        .send({ bookIds: [book2.body.data.id, book1.body.data.id] })
         .expect(200);
 
       const res = await agent.get('/api/books').expect(200);
-      expect(res.body.books[0].title).toBe('Book B');
-      expect(res.body.books[1].title).toBe('Book A');
+      expect(res.body.data.books[0].title).toBe('Book B');
+      expect(res.body.data.books[1].title).toBe('Book A');
     });
   });
 });

@@ -1,5 +1,6 @@
 import multer from 'multer';
 import os from 'node:os';
+import { AppError } from './errorHandler.js';
 
 // Use memory storage for small files (fonts, sounds, images)
 const memoryStorage = multer.memoryStorage();
@@ -31,7 +32,7 @@ export const fontUpload = multer({
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid font file type'));
+      cb(new AppError(400, 'Invalid font file type', 'INVALID_FILE_TYPE'));
     }
   },
 });
@@ -46,7 +47,7 @@ export const soundUpload = multer({
     if (file.mimetype.startsWith('audio/')) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid audio file type'));
+      cb(new AppError(400, 'Invalid audio file type', 'INVALID_FILE_TYPE'));
     }
   },
 });
@@ -61,7 +62,7 @@ export const imageUpload = multer({
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid image file type'));
+      cb(new AppError(400, 'Invalid image file type', 'INVALID_FILE_TYPE'));
     }
   },
 });
@@ -85,7 +86,7 @@ export const bookUpload = multer({
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid book file type'));
+      cb(new AppError(400, 'Invalid book file type', 'INVALID_FILE_TYPE'));
     }
   },
 });

@@ -23,13 +23,13 @@ describe('Auth API', () => {
         })
         .expect(201);
 
-      expect(res.body.user).toBeDefined();
-      expect(res.body.user.email).toBe('new@example.com');
-      expect(res.body.user.displayName).toBe('New User');
-      expect(res.body.user.hasPassword).toBe(true);
-      expect(res.body.user.hasGoogle).toBe(false);
+      expect(res.body.data.user).toBeDefined();
+      expect(res.body.data.user.email).toBe('new@example.com');
+      expect(res.body.data.user.displayName).toBe('New User');
+      expect(res.body.data.user.hasPassword).toBe(true);
+      expect(res.body.data.user.hasGoogle).toBe(false);
       // Should not expose password hash
-      expect(res.body.user.passwordHash).toBeUndefined();
+      expect(res.body.data.user.passwordHash).toBeUndefined();
     });
 
     it('should reject duplicate emails', async () => {
@@ -86,7 +86,7 @@ describe('Auth API', () => {
         .send({ email: 'login@example.com', password: 'Password123!' })
         .expect(200);
 
-      expect(res.body.user.email).toBe('login@example.com');
+      expect(res.body.data.user.email).toBe('login@example.com');
     });
 
     it('should reject invalid password', async () => {
@@ -119,7 +119,7 @@ describe('Auth API', () => {
       const { agent, email } = await createAuthenticatedAgent(app);
 
       const res = await agent.get('/api/auth/me').expect(200);
-      expect(res.body.user.email).toBe(email);
+      expect(res.body.data.user.email).toBe(email);
     });
 
     it('should return 401 when not authenticated', async () => {
@@ -152,7 +152,7 @@ describe('Auth API', () => {
 
     it('should allow GET without CSRF token', async () => {
       const res = await request(app).get('/api/auth/csrf-token').expect(200);
-      expect(res.body.token).toBeDefined();
+      expect(res.body.data.token).toBeDefined();
     });
   });
 });

@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
 import {
   getAppearance,
   updateAppearance,
@@ -8,6 +7,9 @@ import {
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { updateAppearanceSchema, updateThemeSchema } from '../schemas.js';
+import { AppError } from '../middleware/errorHandler.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok } from '../utils/response.js';
 
 const router = Router({ mergeParams: true });
 
@@ -18,17 +20,13 @@ router.use(requireAuth);
  */
 router.get(
   '/',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const appearance = await getAppearance(
-        req.params.bookId as string,
-        req.user!.id,
-      );
-      res.json(appearance);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const appearance = await getAppearance(
+      req.params.bookId as string,
+      req.user!.id,
+    );
+    ok(res, appearance);
+  }),
 );
 
 /**
@@ -37,18 +35,14 @@ router.get(
 router.patch(
   '/',
   validate(updateAppearanceSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const appearance = await updateAppearance(
-        req.params.bookId as string,
-        req.user!.id,
-        req.body,
-      );
-      res.json(appearance);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const appearance = await updateAppearance(
+      req.params.bookId as string,
+      req.user!.id,
+      req.body,
+    );
+    ok(res, appearance);
+  }),
 );
 
 /**
@@ -57,24 +51,19 @@ router.patch(
 router.patch(
   '/:theme',
   validate(updateThemeSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const theme = req.params.theme as string;
-      if (theme !== 'light' && theme !== 'dark') {
-        res.status(400).json({ error: 'Theme must be "light" or "dark"' });
-        return;
-      }
-      const appearance = await updateThemeAppearance(
-        req.params.bookId as string,
-        req.user!.id,
-        theme,
-        req.body,
-      );
-      res.json(appearance);
-    } catch (err) {
-      next(err);
+  asyncHandler(async (req, res) => {
+    const theme = req.params.theme as string;
+    if (theme !== 'light' && theme !== 'dark') {
+      throw new AppError(400, 'Theme must be "light" or "dark"', 'INVALID_THEME');
     }
-  },
+    const appearance = await updateThemeAppearance(
+      req.params.bookId as string,
+      req.user!.id,
+      theme,
+      req.body,
+    );
+    ok(res, appearance);
+  }),
 );
 
 export default router;
