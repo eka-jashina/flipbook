@@ -7,6 +7,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
 
   SESSION_SECRET: z.string().min(32),
+  CSRF_SECRET: z.string().min(32).optional(),
   SESSION_MAX_AGE: z.coerce.number().default(604800000), // 7 days
   SESSION_SECURE: z
     .string()

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import {
   getChapters,
@@ -33,11 +34,15 @@ router.get(
   },
 );
 
+// Chapters may contain large HTML content (up to 2 MB)
+const largeJsonBody = express.json({ limit: '3mb' });
+
 /**
  * POST /api/books/:bookId/chapters — Create chapter
  */
 router.post(
   '/',
+  largeJsonBody,
   validate(createChapterSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -116,6 +121,7 @@ router.get(
  */
 router.patch(
   '/:chapterId',
+  largeJsonBody,
   validate(updateChapterSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
