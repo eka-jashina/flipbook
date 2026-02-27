@@ -30,6 +30,22 @@ export class AdminConfigStore {
     this._config = structuredClone(DEFAULT_CONFIG);
     this._savePromise = null;
     this._idb = new IdbStorage(IDB_NAME, IDB_STORE);
+
+    /** @type {number} Версия конфигурации для оптимистичной блокировки (CAS) */
+    this._version = 0;
+
+    /** @type {boolean} Идёт ли сейчас операция сохранения */
+    this._saving = false;
+
+    /** @type {boolean} Были ли изменения во время сохранения (нужно повторить) */
+    this._dirtyDuringSave = false;
+
+    /**
+     * Коллбэк ошибки — устанавливается извне (admin/index.js).
+     * Вызывается при критических ошибках сохранения.
+     * @type {((error: Error) => void)|null}
+     */
+    this.onError = null;
   }
 
   /**
@@ -198,15 +214,57 @@ export class AdminConfigStore {
     }
   }
 
-  /** Сохранить конфиг в IndexedDB и localStorage (для ридера) */
+  /**
+   * Сохранить конфиг в IndexedDB и localStorage (для ридера).
+   * Использует оптимистичную блокировку: если во время асинхронного сохранения
+   * произошли новые изменения, автоматически запускает повторное сохранение
+   * с актуальным снимком.
+   */
   _save() {
+    this._version++;
+
+    // Если сохранение уже идёт — помечаем, что нужно повторить
+    if (this._saving) {
+      this._dirtyDuringSave = true;
+      return;
+    }
+
+    this._performSave();
+  }
+
+  /** @private Непосредственное выполнение сохранения */
+  _performSave() {
+    this._saving = true;
+    this._dirtyDuringSave = false;
+
     const snapshot = structuredClone(this._config);
+    const savedVersion = this._version;
 
     // Синхронизируем в localStorage — ридер (config.js) читает оттуда.
     // Сохраняем облегчённую версию: без htmlContent (он может быть очень большим
     // из-за base64-изображений из EPUB/FB2, и не помещается в лимит localStorage,
     // особенно на мобильных устройствах — обычно 5 МБ).
     // Полная версия хранится в IndexedDB, ридер дозагрузит htmlContent оттуда.
+    this._saveToLocalStorage(snapshot);
+
+    this._savePromise = this._idb.put(STORAGE_KEY, snapshot)
+      .catch(err => {
+        console.error('AdminConfigStore: ошибка сохранения в IndexedDB', err);
+        if (this.onError) this.onError(err);
+        throw err;
+      })
+      .finally(() => {
+        this._saving = false;
+
+        // Если за время сохранения были новые изменения — повторить с актуальным снимком
+        if (this._dirtyDuringSave || this._version !== savedVersion) {
+          this._performSave();
+        }
+      });
+  }
+
+  /** @private Синхронное сохранение облегчённой версии в localStorage */
+  _saveToLocalStorage(snapshot) {
     try {
       const lsSnapshot = structuredClone(snapshot);
       for (const book of lsSnapshot.books) {
@@ -263,16 +321,11 @@ export class AdminConfigStore {
       }
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(lsSnapshot));
-    } catch {
+    } catch (err) {
       // localStorage переполнен — не критично, IndexedDB основной.
       // Ридер дозагрузит данные из IndexedDB через enrichConfigFromIDB().
+      console.warn('AdminConfigStore: localStorage сохранение не удалось', err.message);
     }
-
-    this._savePromise = this._idb.put(STORAGE_KEY, snapshot)
-      .catch(err => {
-        console.error('AdminConfigStore: ошибка сохранения в IndexedDB', err);
-        throw err;
-      });
   }
 
   /** Дождаться завершения последнего сохранения (для операций, где важен результат) */

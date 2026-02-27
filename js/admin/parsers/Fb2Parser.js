@@ -7,6 +7,9 @@
 
 import { escapeHtml, parseXml } from './parserUtils.js';
 
+/** Максимальная глубина рекурсии при парсинге вложенных секций */
+const MAX_SECTION_DEPTH = 100;
+
 /**
  * Парсинг FB2 файла
  * @param {File} file
@@ -140,8 +143,23 @@ function parseFb2Sections(bodyEl, imageMap) {
 
 /**
  * Парсить одну FB2 секцию (рекурсивно для вложенных секций)
+ * @param {Element} section
+ * @param {Map} imageMap
+ * @param {number} baseIndex
+ * @param {number} [depth=0] — текущая глубина рекурсии (защита от stack overflow)
  */
-function parseFb2Section(section, imageMap, baseIndex) {
+function parseFb2Section(section, imageMap, baseIndex, depth = 0) {
+  if (depth > MAX_SECTION_DEPTH) {
+    // Слишком глубокая вложенность — извлечь как плоский контент
+    const content = convertFb2Elements(section, imageMap);
+    if (!content.trim()) return [];
+    return [{
+      id: '',
+      title: `Глава ${baseIndex + 1}`,
+      html: `<article>\n<h2>${escapeHtml(`Глава ${baseIndex + 1}`)}</h2>\n${content}\n</article>`,
+    }];
+  }
+
   const subSections = section.querySelectorAll(':scope > section');
 
   // Заголовок секции
@@ -165,7 +183,7 @@ function parseFb2Section(section, imageMap, baseIndex) {
     }
 
     for (const sub of subSections) {
-      const subResults = parseFb2Section(sub, imageMap, idx);
+      const subResults = parseFb2Section(sub, imageMap, idx, depth + 1);
       results.push(...subResults);
       idx += subResults.length;
     }
@@ -371,15 +389,20 @@ function convertFb2Poem(poemEl, imageMap) {
 /**
  * Конвертировать всё содержимое FB2 body в HTML (включая вложенные секции)
  * Используется как fallback, когда не удалось разбить на главы
+ * @param {Element} bodyEl
+ * @param {Map} imageMap
+ * @param {number} [depth=0] — текущая глубина рекурсии (защита от stack overflow)
  */
-function convertFb2AllContent(bodyEl, imageMap) {
+function convertFb2AllContent(bodyEl, imageMap, depth = 0) {
+  if (depth > MAX_SECTION_DEPTH) return '';
+
   const parts = [];
 
   for (const child of bodyEl.children) {
     const tag = child.tagName.toLowerCase();
     if (tag === 'section') {
       // Рекурсивно извлечь содержимое секции
-      parts.push(convertFb2AllContent(child, imageMap));
+      parts.push(convertFb2AllContent(child, imageMap, depth + 1));
     } else if (tag === 'title') {
       parts.push(`<h2>${escapeHtml(child.textContent.trim())}</h2>`);
     } else {

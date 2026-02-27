@@ -7,6 +7,7 @@
  * - Безопасная работа с ошибками (QuotaExceeded, SecurityError)
  * - Патч-обновление данных (merge вместо полной перезаписи)
  * - Единый ключ для группировки настроек приложения
+ * - Возвращает результат save() (success/failure) для обработки вызывающим кодом
  */
 
 export class StorageManager {
@@ -15,6 +16,12 @@ export class StorageManager {
    */
   constructor(key) {
     this.key = key;
+
+    /**
+     * Коллбэк на ошибку квоты — позволяет UI показать предупреждение.
+     * @type {((key: string) => void)|null}
+     */
+    this.onQuotaExceeded = null;
   }
 
   /**
@@ -34,17 +41,23 @@ export class StorageManager {
   /**
    * Сохранить данные в localStorage (merge с существующими)
    * @param {Object} patch - Объект с новыми/изменёнными полями
+   * @returns {boolean} true если сохранение прошло успешно
    */
   save(patch) {
     try {
       const data = this.load();
       localStorage.setItem(this.key, JSON.stringify({ ...data, ...patch }));
+      return true;
     } catch (error) {
       if (error instanceof DOMException && error.name === 'QuotaExceededError') {
         console.warn("Storage quota exceeded. Unable to save data for key:", this.key);
+        if (this.onQuotaExceeded) {
+          this.onQuotaExceeded(this.key);
+        }
       } else {
         console.error("Storage save error:", error);
       }
+      return false;
     }
   }
 

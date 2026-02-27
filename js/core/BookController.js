@@ -373,15 +373,24 @@ export class BookController {
   }
 
   /**
-   * Уничтожить контроллер и очистить ресурсы
+   * Уничтожить контроллер и очистить ресурсы.
+   * Каждый компонент уничтожается в отдельном try-catch, чтобы
+   * ошибка в одном не блокировала очистку остальных.
    */
   destroy() {
     if (this.isDestroyed) return;
     this.isDestroyed = true;
 
+    const errors = [];
+
+    /** @param {Function} fn */
+    const safeDestroy = (fn) => {
+      try { fn(); } catch (err) { errors.push(err); }
+    };
+
     // Отписываемся от всех событий
-    this.subscriptions.unsubscribeAll();
-    this.resizeHandler.destroy();
+    safeDestroy(() => this.subscriptions?.unsubscribeAll());
+    safeDestroy(() => this.resizeHandler?.destroy());
 
     // Уничтожаем делегаты
     const delegates = [
@@ -392,17 +401,21 @@ export class BookController {
       this.dragDelegate,
       this.eventController,
     ];
-    delegates.forEach((d) => d?.destroy?.());
+    delegates.forEach((d) => safeDestroy(() => d?.destroy?.()));
 
     // Уничтожаем отдельные компоненты
-    this.stateMachine?.destroy?.();
-    this.settings?.destroy?.();
+    safeDestroy(() => this.stateMachine?.destroy?.());
+    safeDestroy(() => this.settings?.destroy?.());
 
     // Уничтожаем сервисные группы
-    this.audio?.destroy();
-    this.render?.destroy();
-    this.content?.destroy();
-    this.core?.destroy();
+    safeDestroy(() => this.audio?.destroy());
+    safeDestroy(() => this.render?.destroy());
+    safeDestroy(() => this.content?.destroy());
+    safeDestroy(() => this.core?.destroy());
+
+    if (errors.length > 0) {
+      console.error(`BookController.destroy: ${errors.length} ошибок при очистке:`, errors);
+    }
 
     // Зануляем ссылки
     this.state = null;
@@ -412,5 +425,13 @@ export class BookController {
     this.render = null;
     this.content = null;
     this.factory = null;
+    this.settings = null;
+    this.stateMachine = null;
+    this.eventController = null;
+    this.navigationDelegate = null;
+    this.settingsDelegate = null;
+    this.lifecycleDelegate = null;
+    this.chapterDelegate = null;
+    this.dragDelegate = null;
   }
 }

@@ -8,6 +8,32 @@
 import JSZip from 'jszip';
 import { escapeHtml, parseXml, parseHtml, getTextContent } from './parserUtils.js';
 
+/** Максимальный суммарный размер распакованных данных (100 MB) */
+const MAX_DECOMPRESSED_SIZE = 100 * 1024 * 1024;
+
+/**
+ * Проверить суммарный размер распакованных файлов в ZIP-архиве (защита от ZIP-бомб).
+ * @param {JSZip} zip
+ * @throws {Error} Если суммарный размер превышает лимит
+ */
+async function validateZipSize(zip) {
+  let totalSize = 0;
+  for (const [, entry] of Object.entries(zip.files)) {
+    if (entry.dir) continue;
+    // JSZip хранит _data.uncompressedSize для загруженных архивов
+    const entryData = entry._data;
+    if (entryData && entryData.uncompressedSize !== undefined && entryData.uncompressedSize !== null) {
+      totalSize += entryData.uncompressedSize;
+    }
+    if (totalSize > MAX_DECOMPRESSED_SIZE) {
+      throw new Error(
+        `Распакованный размер архива превышает лимит (${Math.round(MAX_DECOMPRESSED_SIZE / 1024 / 1024)} МБ). ` +
+        `Возможно, файл повреждён.`
+      );
+    }
+  }
+}
+
 /**
  * Парсинг EPUB файла
  * @param {File} file
@@ -15,6 +41,9 @@ import { escapeHtml, parseXml, parseHtml, getTextContent } from './parserUtils.j
  */
 export async function parseEpub(file) {
   const zip = await JSZip.loadAsync(file);
+
+  // Защита от ZIP-бомб
+  await validateZipSize(zip);
 
   // 1. Найти путь к content.opf через META-INF/container.xml
   const containerXml = await readZipFile(zip, 'META-INF/container.xml');
