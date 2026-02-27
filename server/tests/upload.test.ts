@@ -53,13 +53,13 @@ describe('Upload API', () => {
       .attach('file', Buffer.from(content, 'utf-8'), { filename: 'test-book.txt', contentType: 'text/plain' })
       .expect(200);
 
-    expect(res.body.title).toBe('test-book');
-    expect(res.body.author).toBe('');
-    expect(res.body.chapters).toHaveLength(1);
-    expect(res.body.chapters[0].id).toBe('chapter_1');
-    expect(res.body.chapters[0].html).toContain('<article>');
-    expect(res.body.chapters[0].html).toContain('Первый абзац текста.');
-    expect(res.body.chapters[0].html).toContain('Второй абзац текста.');
+    expect(res.body.data.title).toBe('test-book');
+    expect(res.body.data.author).toBe('');
+    expect(res.body.data.chapters).toHaveLength(1);
+    expect(res.body.data.chapters[0].id).toBe('chapter_1');
+    expect(res.body.data.chapters[0].html).toContain('<article>');
+    expect(res.body.data.chapters[0].html).toContain('Первый абзац текста.');
+    expect(res.body.data.chapters[0].html).toContain('Второй абзац текста.');
   });
 
   it('should reject empty TXT file', async () => {
@@ -100,13 +100,13 @@ describe('Upload API', () => {
       .attach('file', Buffer.from(fb2Content, 'utf-8'), { filename: 'test.fb2', contentType: 'application/xml' })
       .expect(200);
 
-    expect(res.body.title).toBe('Тестовая книга');
-    expect(res.body.author).toBe('Иван Петров');
-    expect(res.body.chapters).toHaveLength(2);
-    expect(res.body.chapters[0].title).toBe('Глава первая');
-    expect(res.body.chapters[0].html).toContain('Текст первой главы.');
-    expect(res.body.chapters[1].title).toBe('Глава вторая');
-    expect(res.body.chapters[1].html).toContain('Текст второй главы.');
+    expect(res.body.data.title).toBe('Тестовая книга');
+    expect(res.body.data.author).toBe('Иван Петров');
+    expect(res.body.data.chapters).toHaveLength(2);
+    expect(res.body.data.chapters[0].title).toBe('Глава первая');
+    expect(res.body.data.chapters[0].html).toContain('Текст первой главы.');
+    expect(res.body.data.chapters[1].title).toBe('Глава вторая');
+    expect(res.body.data.chapters[1].html).toContain('Текст второй главы.');
   });
 
   it('should reject unsupported book format', async () => {
@@ -127,8 +127,8 @@ describe('Upload API', () => {
       .attach('file', Buffer.from(content, 'utf-8'), { filename: 'single.txt', contentType: 'text/plain' })
       .expect(200);
 
-    expect(res.body.chapters).toHaveLength(1);
-    expect(res.body.chapters[0].html).toContain('Одинокий абзац');
+    expect(res.body.data.chapters).toHaveLength(1);
+    expect(res.body.data.chapters[0].html).toContain('Одинокий абзац');
   });
 
   it('should handle FB2 with emphasis and strong formatting', async () => {
@@ -153,7 +153,7 @@ describe('Upload API', () => {
       .attach('file', Buffer.from(fb2Content, 'utf-8'), { filename: 'fmt.fb2', contentType: 'application/xml' })
       .expect(200);
 
-    expect(res.body.chapters[0].html).toContain('<em>курсивом</em>');
-    expect(res.body.chapters[0].html).toContain('<strong>жирным</strong>');
+    expect(res.body.data.chapters[0].html).toContain('<em>курсивом</em>');
+    expect(res.body.data.chapters[0].html).toContain('<strong>жирным</strong>');
   });
 });

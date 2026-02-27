@@ -16,7 +16,7 @@ describe('Chapters API', () => {
       .post('/api/books')
       .send({ title: 'Test Book', author: 'Author' })
       .expect(201);
-    return { agent, bookId: bookRes.body.id };
+    return { agent, bookId: bookRes.body.data.id };
   }
 
   describe('GET /api/books/:bookId/chapters', () => {
@@ -27,7 +27,7 @@ describe('Chapters API', () => {
         .get(`/api/books/${bookId}/chapters`)
         .expect(200);
 
-      expect(res.body.chapters).toEqual([]);
+      expect(res.body.data.chapters).toEqual([]);
     });
 
     it('should require authentication', async () => {
@@ -49,10 +49,10 @@ describe('Chapters API', () => {
         })
         .expect(201);
 
-      expect(res.body.id).toBeDefined();
-      expect(res.body.title).toBe('Chapter 1');
-      expect(res.body.hasHtmlContent).toBe(true);
-      expect(res.body.htmlContent).toBe('<p>Hello world</p>');
+      expect(res.body.data.id).toBeDefined();
+      expect(res.body.data.title).toBe('Chapter 1');
+      expect(res.body.data.hasHtmlContent).toBe(true);
+      expect(res.body.data.htmlContent).toBe('<p>Hello world</p>');
     });
 
     it('should auto-increment position', async () => {
@@ -68,7 +68,7 @@ describe('Chapters API', () => {
         .send({ title: 'Ch 2' })
         .expect(201);
 
-      expect(ch2.body.position).toBe(1);
+      expect(ch2.body.data.position).toBe(1);
     });
   });
 
@@ -82,11 +82,11 @@ describe('Chapters API', () => {
         .expect(201);
 
       const res = await agent
-        .get(`/api/books/${bookId}/chapters/${createRes.body.id}`)
+        .get(`/api/books/${bookId}/chapters/${createRes.body.data.id}`)
         .expect(200);
 
-      expect(res.body.title).toBe('Detail Chapter');
-      expect(res.body.htmlContent).toBe('<p>Content</p>');
+      expect(res.body.data.title).toBe('Detail Chapter');
+      expect(res.body.data.htmlContent).toBe('<p>Content</p>');
     });
 
     it('should return 404 for non-existent chapter', async () => {
@@ -114,11 +114,11 @@ describe('Chapters API', () => {
 
       const res = await agent
         .get(
-          `/api/books/${bookId}/chapters/${createRes.body.id}/content`,
+          `/api/books/${bookId}/chapters/${createRes.body.data.id}/content`,
         )
         .expect(200);
 
-      expect(res.body.html).toBe('<h1>Title</h1><p>Body text</p>');
+      expect(res.body.data.html).toBe('<h1>Title</h1><p>Body text</p>');
     });
   });
 
@@ -133,13 +133,13 @@ describe('Chapters API', () => {
 
       const res = await agent
         .patch(
-          `/api/books/${bookId}/chapters/${createRes.body.id}`,
+          `/api/books/${bookId}/chapters/${createRes.body.data.id}`,
         )
         .send({ title: 'Updated', htmlContent: '<p>New content</p>' })
         .expect(200);
 
-      expect(res.body.title).toBe('Updated');
-      expect(res.body.htmlContent).toBe('<p>New content</p>');
+      expect(res.body.data.title).toBe('Updated');
+      expect(res.body.data.htmlContent).toBe('<p>New content</p>');
     });
   });
 
@@ -154,7 +154,7 @@ describe('Chapters API', () => {
 
       await agent
         .delete(
-          `/api/books/${bookId}/chapters/${createRes.body.id}`,
+          `/api/books/${bookId}/chapters/${createRes.body.data.id}`,
         )
         .expect(204);
 
@@ -162,7 +162,7 @@ describe('Chapters API', () => {
         .get(`/api/books/${bookId}/chapters`)
         .expect(200);
 
-      expect(res.body.chapters).toHaveLength(0);
+      expect(res.body.data.chapters).toHaveLength(0);
     });
   });
 
@@ -182,15 +182,15 @@ describe('Chapters API', () => {
 
       await agent
         .patch(`/api/books/${bookId}/chapters/reorder`)
-        .send({ chapterIds: [ch2.body.id, ch1.body.id] })
+        .send({ chapterIds: [ch2.body.data.id, ch1.body.data.id] })
         .expect(200);
 
       const res = await agent
         .get(`/api/books/${bookId}/chapters`)
         .expect(200);
 
-      expect(res.body.chapters[0].title).toBe('Ch B');
-      expect(res.body.chapters[1].title).toBe('Ch A');
+      expect(res.body.data.chapters[0].title).toBe('Ch B');
+      expect(res.body.data.chapters[1].title).toBe('Ch A');
     });
   });
 });

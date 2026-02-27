@@ -11,13 +11,13 @@ describe('Ambients API', () => {
   async function createBookWithAgent() {
     const { agent } = await createAuthenticatedAgent(app);
     const bookRes = await agent.post('/api/books').send({ title: 'Test Book', author: 'Author' }).expect(201);
-    return { agent, bookId: bookRes.body.id };
+    return { agent, bookId: bookRes.body.data.id };
   }
 
   it('should return empty ambients list', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.get(`/api/books/${bookId}/ambients`).expect(200);
-    expect(res.body.ambients).toEqual([]);
+    expect(res.body.data.ambients).toEqual([]);
   });
 
   it('should require authentication', async () => {
@@ -27,40 +27,40 @@ describe('Ambients API', () => {
   it('should create an ambient', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.post(`/api/books/${bookId}/ambients`).send({ ambientKey: 'rain', label: 'Rain' }).expect(201);
-    expect(res.body.ambientKey).toBe('rain');
-    expect(res.body.position).toBe(0);
+    expect(res.body.data.ambientKey).toBe('rain');
+    expect(res.body.data.position).toBe(0);
   });
 
   it('should auto-increment position', async () => {
     const { agent, bookId } = await createBookWithAgent();
     await agent.post(`/api/books/${bookId}/ambients`).send({ ambientKey: 'rain', label: 'Rain' }).expect(201);
     const res = await agent.post(`/api/books/${bookId}/ambients`).send({ ambientKey: 'fire', label: 'Fire' }).expect(201);
-    expect(res.body.position).toBe(1);
+    expect(res.body.data.position).toBe(1);
   });
 
   it('should update ambient', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const cr = await agent.post(`/api/books/${bookId}/ambients`).send({ ambientKey: 'rain', label: 'Rain' }).expect(201);
-    const res = await agent.patch(`/api/books/${bookId}/ambients/${cr.body.id}`).send({ label: 'Heavy Rain', visible: false }).expect(200);
-    expect(res.body.label).toBe('Heavy Rain');
-    expect(res.body.visible).toBe(false);
+    const res = await agent.patch(`/api/books/${bookId}/ambients/${cr.body.data.id}`).send({ label: 'Heavy Rain', visible: false }).expect(200);
+    expect(res.body.data.label).toBe('Heavy Rain');
+    expect(res.body.data.visible).toBe(false);
   });
 
   it('should delete an ambient', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const cr = await agent.post(`/api/books/${bookId}/ambients`).send({ ambientKey: 'rain', label: 'Rain' }).expect(201);
-    await agent.delete(`/api/books/${bookId}/ambients/${cr.body.id}`).expect(204);
+    await agent.delete(`/api/books/${bookId}/ambients/${cr.body.data.id}`).expect(204);
     const res = await agent.get(`/api/books/${bookId}/ambients`).expect(200);
-    expect(res.body.ambients).toHaveLength(0);
+    expect(res.body.data.ambients).toHaveLength(0);
   });
 
   it('should reorder ambients', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const a1 = await agent.post(`/api/books/${bookId}/ambients`).send({ ambientKey: 'rain', label: 'Rain' }).expect(201);
     const a2 = await agent.post(`/api/books/${bookId}/ambients`).send({ ambientKey: 'fire', label: 'Fire' }).expect(201);
-    await agent.patch(`/api/books/${bookId}/ambients/reorder`).send({ ambientIds: [a2.body.id, a1.body.id] }).expect(200);
+    await agent.patch(`/api/books/${bookId}/ambients/reorder`).send({ ambientIds: [a2.body.data.id, a1.body.data.id] }).expect(200);
     const res = await agent.get(`/api/books/${bookId}/ambients`).expect(200);
-    expect(res.body.ambients[0].ambientKey).toBe('fire');
+    expect(res.body.data.ambients[0].ambientKey).toBe('fire');
   });
 
   it('should return 403 for another user', async () => {

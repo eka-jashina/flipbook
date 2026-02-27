@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
 import {
   getAmbients,
   createAmbient,
@@ -10,6 +9,8 @@ import {
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createAmbientSchema, updateAmbientSchema, reorderAmbientsSchema } from '../schemas.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created } from '../utils/response.js';
 
 const router = Router({ mergeParams: true });
 
@@ -20,17 +21,13 @@ router.use(requireAuth);
  */
 router.get(
   '/',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const ambients = await getAmbients(
-        req.params.bookId as string,
-        req.user!.id,
-      );
-      res.json({ ambients });
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const ambients = await getAmbients(
+      req.params.bookId as string,
+      req.user!.id,
+    );
+    ok(res, { ambients });
+  }),
 );
 
 /**
@@ -39,18 +36,14 @@ router.get(
 router.post(
   '/',
   validate(createAmbientSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const ambient = await createAmbient(
-        req.params.bookId as string,
-        req.user!.id,
-        req.body,
-      );
-      res.status(201).json(ambient);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const ambient = await createAmbient(
+      req.params.bookId as string,
+      req.user!.id,
+      req.body,
+    );
+    created(res, ambient);
+  }),
 );
 
 /**
@@ -59,18 +52,14 @@ router.post(
 router.patch(
   '/reorder',
   validate(reorderAmbientsSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await reorderAmbients(
-        req.params.bookId as string,
-        req.user!.id,
-        req.body.ambientIds,
-      );
-      res.json({ message: 'Ambients reordered' });
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    await reorderAmbients(
+      req.params.bookId as string,
+      req.user!.id,
+      req.body.ambientIds,
+    );
+    ok(res, { message: 'Ambients reordered' });
+  }),
 );
 
 /**
@@ -79,19 +68,15 @@ router.patch(
 router.patch(
   '/:ambientId',
   validate(updateAmbientSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const ambient = await updateAmbient(
-        req.params.bookId as string,
-        req.params.ambientId as string,
-        req.user!.id,
-        req.body,
-      );
-      res.json(ambient);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const ambient = await updateAmbient(
+      req.params.bookId as string,
+      req.params.ambientId as string,
+      req.user!.id,
+      req.body,
+    );
+    ok(res, ambient);
+  }),
 );
 
 /**
@@ -99,18 +84,14 @@ router.patch(
  */
 router.delete(
   '/:ambientId',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await deleteAmbient(
-        req.params.bookId as string,
-        req.params.ambientId as string,
-        req.user!.id,
-      );
-      res.status(204).send();
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    await deleteAmbient(
+      req.params.bookId as string,
+      req.params.ambientId as string,
+      req.user!.id,
+    );
+    res.status(204).send();
+  }),
 );
 
 export default router;

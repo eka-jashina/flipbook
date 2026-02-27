@@ -96,6 +96,11 @@ export class ApiClient {
       throw new ApiError(response.status, message, data?.details);
     }
 
+    // Unwrap standard { data } envelope from API responses
+    if (data && typeof data === 'object' && 'data' in data) {
+      return data.data;
+    }
+
     return data;
   }
 

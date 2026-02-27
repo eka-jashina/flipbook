@@ -12,13 +12,13 @@ describe('Reading Progress API', () => {
   async function createBookWithAgent() {
     const { agent } = await createAuthenticatedAgent(app);
     const bookRes = await agent.post('/api/books').send({ title: 'Test Book', author: 'Author' }).expect(201);
-    return { agent, bookId: bookRes.body.id };
+    return { agent, bookId: bookRes.body.data.id };
   }
 
   it('should return null progress for new book', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.get(`/api/books/${bookId}/progress`).expect(200);
-    expect(res.body.progress).toBeNull();
+    expect(res.body.data.progress).toBeNull();
   });
 
   it('should require authentication', async () => {
@@ -28,22 +28,22 @@ describe('Reading Progress API', () => {
   it('should save reading progress', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.put(`/api/books/${bookId}/progress`).send(progressData).expect(200);
-    expect(res.body.page).toBe(42);
-    expect(res.body.updatedAt).toBeDefined();
+    expect(res.body.data.page).toBe(42);
+    expect(res.body.data.updatedAt).toBeDefined();
   });
 
   it('should upsert progress', async () => {
     const { agent, bookId } = await createBookWithAgent();
     await agent.put(`/api/books/${bookId}/progress`).send(progressData).expect(200);
     const res = await agent.put(`/api/books/${bookId}/progress`).send({ ...progressData, page: 100 }).expect(200);
-    expect(res.body.page).toBe(100);
+    expect(res.body.data.page).toBe(100);
   });
 
   it('should be retrievable after save', async () => {
     const { agent, bookId } = await createBookWithAgent();
     await agent.put(`/api/books/${bookId}/progress`).send(progressData).expect(200);
     const res = await agent.get(`/api/books/${bookId}/progress`).expect(200);
-    expect(res.body.progress.page).toBe(42);
+    expect(res.body.data.progress.page).toBe(42);
   });
 
   it('should validate required fields', async () => {

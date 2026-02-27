@@ -11,19 +11,19 @@ describe('Default Settings API', () => {
   async function createBookWithAgent() {
     const { agent } = await createAuthenticatedAgent(app);
     const bookRes = await agent.post('/api/books').send({ title: 'Test Book', author: 'Author' }).expect(201);
-    return { agent, bookId: bookRes.body.id };
+    return { agent, bookId: bookRes.body.data.id };
   }
 
   it('should return default settings for a new book', async () => {
     const { agent, bookId } = await createBookWithAgent();
     const res = await agent.get(`/api/books/${bookId}/default-settings`).expect(200);
-    expect(res.body.font).toBe('georgia');
-    expect(res.body.fontSize).toBe(18);
-    expect(res.body.theme).toBe('light');
-    expect(res.body.soundEnabled).toBe(true);
-    expect(res.body.soundVolume).toBeCloseTo(0.3);
-    expect(res.body.ambientType).toBe('none');
-    expect(res.body.ambientVolume).toBeCloseTo(0.5);
+    expect(res.body.data.font).toBe('georgia');
+    expect(res.body.data.fontSize).toBe(18);
+    expect(res.body.data.theme).toBe('light');
+    expect(res.body.data.soundEnabled).toBe(true);
+    expect(res.body.data.soundVolume).toBeCloseTo(0.3);
+    expect(res.body.data.ambientType).toBe('none');
+    expect(res.body.data.ambientVolume).toBeCloseTo(0.5);
   });
 
   it('should update default settings', async () => {
@@ -32,11 +32,11 @@ describe('Default Settings API', () => {
       .patch(`/api/books/${bookId}/default-settings`)
       .send({ font: 'arial', fontSize: 20, theme: 'dark' })
       .expect(200);
-    expect(res.body.font).toBe('arial');
-    expect(res.body.fontSize).toBe(20);
-    expect(res.body.theme).toBe('dark');
+    expect(res.body.data.font).toBe('arial');
+    expect(res.body.data.fontSize).toBe(20);
+    expect(res.body.data.theme).toBe('dark');
     // Unchanged fields remain at defaults
-    expect(res.body.soundEnabled).toBe(true);
+    expect(res.body.data.soundEnabled).toBe(true);
   });
 
   it('should update sound settings', async () => {
@@ -45,10 +45,10 @@ describe('Default Settings API', () => {
       .patch(`/api/books/${bookId}/default-settings`)
       .send({ soundEnabled: false, soundVolume: 0.8, ambientType: 'rain', ambientVolume: 0.7 })
       .expect(200);
-    expect(res.body.soundEnabled).toBe(false);
-    expect(res.body.soundVolume).toBeCloseTo(0.8);
-    expect(res.body.ambientType).toBe('rain');
-    expect(res.body.ambientVolume).toBeCloseTo(0.7);
+    expect(res.body.data.soundEnabled).toBe(false);
+    expect(res.body.data.soundVolume).toBeCloseTo(0.8);
+    expect(res.body.data.ambientType).toBe('rain');
+    expect(res.body.data.ambientVolume).toBeCloseTo(0.7);
   });
 
   it('should require authentication', async () => {

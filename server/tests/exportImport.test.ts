@@ -13,10 +13,10 @@ describe('Export/Import API', () => {
   it('should export empty config', async () => {
     const { agent } = await createAuthenticatedAgent(app);
     const res = await agent.get('/api/export').expect(200);
-    expect(res.body.books).toEqual([]);
-    expect(res.body.readingFonts).toEqual([]);
+    expect(res.body.data.books).toEqual([]);
+    expect(res.body.data.readingFonts).toEqual([]);
     // Registration auto-creates default global settings
-    expect(res.body.globalSettings).toEqual({
+    expect(res.body.data.globalSettings).toEqual({
       fontMin: 14,
       fontMax: 22,
       settingsVisibility: {
@@ -35,16 +35,16 @@ describe('Export/Import API', () => {
   it('should export books with chapters', async () => {
     const { agent } = await createAuthenticatedAgent(app);
     const bookRes = await agent.post('/api/books').send({ title: 'My Book', author: 'Me' }).expect(201);
-    await agent.post(`/api/books/${bookRes.body.id}/chapters`).send({ title: 'Ch 1', htmlContent: '<p>Hi</p>' }).expect(201);
+    await agent.post(`/api/books/${bookRes.body.data.id}/chapters`).send({ title: 'Ch 1', htmlContent: '<p>Hi</p>' }).expect(201);
     const res = await agent.get('/api/export').expect(200);
-    expect(res.body.books).toHaveLength(1);
-    expect(res.body.books[0].chapters).toHaveLength(1);
+    expect(res.body.data.books).toHaveLength(1);
+    expect(res.body.data.books[0].chapters).toHaveLength(1);
   });
 
   it('should export book with appearance and sounds', async () => {
     const { agent } = await createAuthenticatedAgent(app);
     const bookRes = await agent.post('/api/books').send({ title: 'Styled' }).expect(201);
-    const bookId = bookRes.body.id;
+    const bookId = bookRes.body.data.id;
 
     // Update appearance
     await agent.patch(`/api/books/${bookId}/appearance/light`).send({ coverBgStart: '#ff0000' }).expect(200);
@@ -52,14 +52,14 @@ describe('Export/Import API', () => {
     await agent.patch(`/api/books/${bookId}/sounds`).send({ pageFlip: 'custom/flip.mp3' }).expect(200);
 
     const res = await agent.get('/api/export').expect(200);
-    expect(res.body.books[0].appearance.light.coverBgStart).toBe('#ff0000');
-    expect(res.body.books[0].sounds.pageFlip).toBe('custom/flip.mp3');
+    expect(res.body.data.books[0].appearance.light.coverBgStart).toBe('#ff0000');
+    expect(res.body.data.books[0].sounds.pageFlip).toBe('custom/flip.mp3');
   });
 
   it('should export book with ambients and decorative font', async () => {
     const { agent } = await createAuthenticatedAgent(app);
     const bookRes = await agent.post('/api/books').send({ title: 'Full' }).expect(201);
-    const bookId = bookRes.body.id;
+    const bookId = bookRes.body.data.id;
 
     // Add ambient
     await agent.post(`/api/books/${bookId}/ambients`).send({ ambientKey: 'rain', label: 'Rain' }).expect(201);
@@ -67,8 +67,8 @@ describe('Export/Import API', () => {
     await agent.put(`/api/books/${bookId}/decorative-font`).send({ name: 'Fancy', fileUrl: 'fonts/fancy.woff2' }).expect(200);
 
     const res = await agent.get('/api/export').expect(200);
-    expect(res.body.books[0].ambients.length).toBeGreaterThanOrEqual(1);
-    expect(res.body.books[0].decorativeFont).toEqual({ name: 'Fancy', fileUrl: 'fonts/fancy.woff2' });
+    expect(res.body.data.books[0].ambients.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.data.books[0].decorativeFont).toEqual({ name: 'Fancy', fileUrl: 'fonts/fancy.woff2' });
   });
 
   it('should export reading fonts', async () => {
@@ -76,8 +76,8 @@ describe('Export/Import API', () => {
     await agent.post('/api/fonts').send({ fontKey: 'custom', label: 'Custom Font', family: 'CustomFont' }).expect(201);
 
     const res = await agent.get('/api/export').expect(200);
-    expect(res.body.readingFonts).toHaveLength(1);
-    expect(res.body.readingFonts[0].fontKey).toBe('custom');
+    expect(res.body.data.readingFonts).toHaveLength(1);
+    expect(res.body.data.readingFonts[0].fontKey).toBe('custom');
   });
 
   it('should not leak data between users', async () => {
@@ -86,7 +86,7 @@ describe('Export/Import API', () => {
 
     const { agent: agent2 } = await createAuthenticatedAgent(app, { email: 'user2@test.com' });
     const res = await agent2.get('/api/export').expect(200);
-    expect(res.body.books).toHaveLength(0);
+    expect(res.body.data.books).toHaveLength(0);
   });
 
   // ─── Import ───────────────────────────────────────────────────────
@@ -99,13 +99,13 @@ describe('Export/Import API', () => {
       globalSettings: { fontMin: 12, fontMax: 28, settingsVisibility: { fontSize: true, theme: true, font: true, fullscreen: false, sound: true, ambient: false } },
     };
     const res = await agent.post('/api/import').send(importData).expect(200);
-    expect(res.body.imported.books).toBe(1);
-    expect(res.body.imported.fonts).toBe(1);
+    expect(res.body.data.imported.books).toBe(1);
+    expect(res.body.data.imported.fonts).toBe(1);
 
     const exp = await agent.get('/api/export').expect(200);
-    expect(exp.body.books).toHaveLength(1);
-    expect(exp.body.readingFonts).toHaveLength(1);
-    expect(exp.body.globalSettings?.fontMin).toBe(12);
+    expect(exp.body.data.books).toHaveLength(1);
+    expect(exp.body.data.readingFonts).toHaveLength(1);
+    expect(exp.body.data.globalSettings?.fontMin).toBe(12);
   });
 
   it('should import book with full appearance', async () => {
@@ -129,10 +129,10 @@ describe('Export/Import API', () => {
       globalSettings: null,
     };
     const res = await agent.post('/api/import').send(importData).expect(200);
-    expect(res.body.imported.books).toBe(1);
+    expect(res.body.data.imported.books).toBe(1);
 
     const exp = await agent.get('/api/export').expect(200);
-    const book = exp.body.books[0];
+    const book = exp.body.data.books[0];
     expect(book.appearance.fontMin).toBe(12);
     expect(book.appearance.light.coverBgStart).toBe('#aaa');
     expect(book.sounds.pageFlip).toBe('sounds/custom.mp3');
@@ -154,10 +154,10 @@ describe('Export/Import API', () => {
       globalSettings: null,
     };
     const res = await agent.post('/api/import').send(importData).expect(200);
-    expect(res.body.imported.books).toBe(3);
+    expect(res.body.data.imported.books).toBe(3);
 
     const exp = await agent.get('/api/export').expect(200);
-    expect(exp.body.books).toHaveLength(3);
+    expect(exp.body.data.books).toHaveLength(3);
   });
 
   it('should import global settings visibility flags', async () => {
@@ -173,10 +173,10 @@ describe('Export/Import API', () => {
     await agent.post('/api/import').send(importData).expect(200);
 
     const exp = await agent.get('/api/export').expect(200);
-    expect(exp.body.globalSettings.fontMin).toBe(10);
-    expect(exp.body.globalSettings.fontMax).toBe(30);
-    expect(exp.body.globalSettings.settingsVisibility.fontSize).toBe(false);
-    expect(exp.body.globalSettings.settingsVisibility.ambient).toBe(true);
+    expect(exp.body.data.globalSettings.fontMin).toBe(10);
+    expect(exp.body.data.globalSettings.fontMax).toBe(30);
+    expect(exp.body.data.globalSettings.settingsVisibility.fontSize).toBe(false);
+    expect(exp.body.data.globalSettings.settingsVisibility.ambient).toBe(true);
   });
 
   // ─── Validation ───────────────────────────────────────────────────

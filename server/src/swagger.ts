@@ -17,6 +17,7 @@ const schemas = {
       error: { type: 'string' },
       message: { type: 'string' },
       statusCode: { type: 'integer' },
+      requestId: { type: 'string', format: 'uuid' },
     },
   },
   HealthCheck: {
@@ -272,6 +273,7 @@ export const swaggerHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' cdn.jsdelivr.net; style-src 'self' cdn.jsdelivr.net 'unsafe-inline'">
   <title>Flipbook API — Swagger</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
 </head>

@@ -23,7 +23,7 @@ function wrapAgentWithCsrf(agent: TestAgent, csrfToken: string): TestAgent {
 export async function createCsrfAgent(app: Express) {
   const agent = request.agent(app);
   const csrfRes = await agent.get('/api/auth/csrf-token').expect(200);
-  const csrfToken: string = csrfRes.body.token;
+  const csrfToken: string = csrfRes.body.data.token;
   wrapAgentWithCsrf(agent, csrfToken);
   return { agent, csrfToken };
 }
@@ -44,7 +44,7 @@ export async function createAuthenticatedAgent(
 
   // Get CSRF token (sets the CSRF cookie on the agent)
   const csrfRes = await agent.get('/api/auth/csrf-token').expect(200);
-  const csrfToken: string = csrfRes.body.token;
+  const csrfToken: string = csrfRes.body.data.token;
 
   // Wrap agent to auto-include CSRF token on mutating requests
   wrapAgentWithCsrf(agent, csrfToken);
