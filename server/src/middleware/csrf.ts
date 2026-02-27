@@ -10,10 +10,8 @@ function getCsrf(): CsrfFunctions {
   const config = getConfig();
   _csrf = doubleCsrf({
     getSecret: () => config.SESSION_SECRET,
-    // Use a constant identifier — the double-submit cookie pattern
-    // provides CSRF protection via the HttpOnly cookie that attackers
-    // cannot read, not via session binding.
-    getSessionIdentifier: () => 'csrf',
+    // Bind CSRF token to user session for per-user isolation
+    getSessionIdentifier: (req) => (req as Request).sessionID || 'anonymous',
     cookieName: '__csrf',
     cookieOptions: {
       httpOnly: true,

@@ -1,5 +1,4 @@
 import { getPrisma } from '../utils/prisma.js';
-import { verifyBookOwnership } from '../utils/ownership.js';
 import { AppError } from '../middleware/errorHandler.js';
 import type { SoundsDetail } from '../types/api.js';
 
@@ -10,7 +9,6 @@ export async function getSounds(
   bookId: string,
   userId: string,
 ): Promise<SoundsDetail> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const sounds = await prisma.bookSounds.findUnique({
@@ -36,7 +34,6 @@ export async function updateSounds(
   userId: string,
   data: { pageFlip?: string; bookOpen?: string; bookClose?: string },
 ): Promise<SoundsDetail> {
-  await verifyBookOwnership(bookId, userId);
 
   const updateData: Record<string, string> = {};
   if (data.pageFlip !== undefined) updateData.pageFlipUrl = data.pageFlip;

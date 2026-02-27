@@ -1,6 +1,5 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { verifyBookOwnership } from '../utils/ownership.js';
 import { RESOURCE_LIMITS } from '../utils/limits.js';
 import { bulkUpdatePositions } from '../utils/reorder.js';
 import { withSerializableRetry } from '../utils/serializable.js';
@@ -14,7 +13,6 @@ export async function getChapters(
   bookId: string,
   userId: string,
 ): Promise<ChapterListItem[]> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const chapters = await prisma.chapter.findMany({
@@ -41,7 +39,6 @@ export async function getChapterById(
   chapterId: string,
   userId: string,
 ): Promise<ChapterDetail> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const chapter = await prisma.chapter.findUnique({
@@ -72,7 +69,6 @@ export async function getChapterContent(
   chapterId: string,
   userId: string,
 ): Promise<string | null> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const chapter = await prisma.chapter.findUnique({
@@ -101,7 +97,6 @@ export async function createChapter(
     bgMobile?: string;
   },
 ): Promise<ChapterDetail> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
 
@@ -159,7 +154,6 @@ export async function updateChapter(
     bgMobile?: string;
   },
 ): Promise<ChapterDetail> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
 
@@ -203,7 +197,6 @@ export async function deleteChapter(
   chapterId: string,
   userId: string,
 ): Promise<void> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
 
@@ -227,7 +220,6 @@ export async function reorderChapters(
   userId: string,
   chapterIds: string[],
 ): Promise<void> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
 

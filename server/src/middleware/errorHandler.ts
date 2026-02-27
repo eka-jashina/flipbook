@@ -14,13 +14,26 @@ export class AppError extends Error {
   }
 }
 
+/** Status codes worth logging at warn level for security monitoring */
+const WARN_STATUS_CODES = new Set([401, 403, 429]);
+
+function logClientError(req: Request, statusCode: number, message: string): void {
+  if (WARN_STATUS_CODES.has(statusCode)) {
+    logger.warn(
+      { statusCode, method: req.method, url: req.originalUrl, ip: req.ip },
+      `Client error: ${message}`,
+    );
+  }
+}
+
 export function errorHandler(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction,
 ): void {
   if (err instanceof AppError) {
+    logClientError(req, err.statusCode, err.message);
     res.status(err.statusCode).json({
       error: err.name,
       message: err.message,
@@ -54,6 +67,7 @@ export function errorHandler(
   // Handle CSRF and other http-errors (have statusCode property)
   if ('statusCode' in err && typeof (err as any).statusCode === 'number') {
     const statusCode = (err as any).statusCode as number;
+    logClientError(req, statusCode, err.message);
     res.status(statusCode).json({
       error: err.name || 'ForbiddenError',
       message: err.message,

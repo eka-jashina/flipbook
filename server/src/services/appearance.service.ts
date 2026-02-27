@@ -1,5 +1,4 @@
 import { getPrisma } from '../utils/prisma.js';
-import { verifyBookOwnership } from '../utils/ownership.js';
 import { AppError } from '../middleware/errorHandler.js';
 import type { AppearanceDetail, ThemeAppearance } from '../types/api.js';
 
@@ -10,7 +9,6 @@ export async function getAppearance(
   bookId: string,
   userId: string,
 ): Promise<AppearanceDetail> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const appearance = await prisma.bookAppearance.findUnique({
@@ -32,7 +30,6 @@ export async function updateAppearance(
   userId: string,
   data: { fontMin?: number; fontMax?: number },
 ): Promise<AppearanceDetail> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const appearance = await prisma.bookAppearance.upsert({
@@ -60,7 +57,6 @@ export async function updateThemeAppearance(
   theme: 'light' | 'dark',
   data: Partial<ThemeAppearance>,
 ): Promise<AppearanceDetail> {
-  await verifyBookOwnership(bookId, userId);
 
   const prefix = theme;
   const updateData: Record<string, unknown> = {};

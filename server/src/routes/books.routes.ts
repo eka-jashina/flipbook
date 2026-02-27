@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
 import {
   getUserBooks,
   getBookById,
@@ -10,39 +9,26 @@ import {
   reorderBooks,
 } from '../services/books.service.js';
 import { requireAuth } from '../middleware/auth.js';
-import { validate } from '../middleware/validate.js';
+import { requireBookOwnership } from '../middleware/bookOwnership.js';
+import { validate, validateQuery } from '../middleware/validate.js';
+import { createBookSchema, updateBookSchema, reorderBooksSchema, listBooksQuerySchema } from '../schemas.js';
 
 const router = Router();
 
 // All book routes require authentication
 router.use(requireAuth);
 
-// Validation schemas
-const createBookSchema = z.object({
-  title: z.string().min(1).max(500),
-  author: z.string().max(500).optional(),
-});
-
-const updateBookSchema = z.object({
-  title: z.string().min(1).max(500).optional(),
-  author: z.string().max(500).optional(),
-  coverBgMode: z.enum(['default', 'none', 'custom']).optional(),
-  coverBgCustomUrl: z.string().max(500).nullable().optional(),
-});
-
-const reorderSchema = z.object({
-  bookIds: z.array(z.string().uuid()),
-});
-
 /**
  * GET /api/books — List user's books
  */
 router.get(
   '/',
+  validateQuery(listBooksQuerySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const books = await getUserBooks(req.user!.id);
-      res.json({ books });
+      const { limit, offset } = req.query as { limit?: number; offset?: number };
+      const result = await getUserBooks(req.user!.id, { limit, offset });
+      res.json(result);
     } catch (err) {
       next(err);
     }
@@ -70,7 +56,7 @@ router.post(
  */
 router.patch(
   '/reorder',
-  validate(reorderSchema),
+  validate(reorderBooksSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await reorderBooks(req.user!.id, req.body.bookIds);
@@ -86,6 +72,7 @@ router.patch(
  */
 router.get(
   '/:bookId',
+  requireBookOwnership,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const book = await getBookById(req.params.bookId as string, req.user!.id);
@@ -101,6 +88,7 @@ router.get(
  */
 router.patch(
   '/:bookId',
+  requireBookOwnership,
   validate(updateBookSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -121,6 +109,7 @@ router.patch(
  */
 router.delete(
   '/:bookId',
+  requireBookOwnership,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await deleteBook(req.params.bookId as string, req.user!.id);

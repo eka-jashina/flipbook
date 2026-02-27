@@ -1,5 +1,4 @@
 import { getPrisma } from '../utils/prisma.js';
-import { verifyBookOwnership } from '../utils/ownership.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { RESOURCE_LIMITS } from '../utils/limits.js';
 import { bulkUpdatePositions } from '../utils/reorder.js';
@@ -14,7 +13,6 @@ export async function getAmbients(
   bookId: string,
   userId: string,
 ): Promise<AmbientItem[]> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const ambients = await prisma.ambient.findMany({
@@ -41,7 +39,6 @@ export async function createAmbient(
     builtin?: boolean;
   },
 ): Promise<AmbientItem> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
 
@@ -93,7 +90,6 @@ export async function updateAmbient(
     visible?: boolean;
   },
 ): Promise<AmbientItem> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const ambient = await prisma.ambient.findUnique({
@@ -128,7 +124,6 @@ export async function deleteAmbient(
   ambientId: string,
   userId: string,
 ): Promise<void> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const ambient = await prisma.ambient.findUnique({
@@ -156,7 +151,6 @@ export async function reorderAmbients(
   userId: string,
   ambientIds: string[],
 ): Promise<void> {
-  await verifyBookOwnership(bookId, userId);
 
   const prisma = getPrisma();
   const ambients = await prisma.ambient.findMany({

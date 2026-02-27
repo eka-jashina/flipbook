@@ -16,6 +16,8 @@ import { configurePassport } from './middleware/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { createRateLimiter } from './middleware/rateLimit.js';
 import { doubleCsrfProtection } from './middleware/csrf.js';
+import { requireBookOwnership } from './middleware/bookOwnership.js';
+import { requireAuth } from './middleware/auth.js';
 import { logger } from './utils/logger.js';
 import { getPrisma } from './utils/prisma.js';
 import { getS3Client } from './utils/storage.js';
@@ -59,8 +61,8 @@ export function createApp() {
   // Rate limiting
   app.use('/api/', createRateLimiter());
 
-  // Body & cookie parsing
-  app.use(express.json({ limit: '10mb' }));
+  // Body & cookie parsing (256kb default; import route overrides to 10mb)
+  app.use(express.json({ limit: '256kb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 
@@ -154,6 +156,9 @@ export function createApp() {
   // Routes
   app.use('/api/auth', authRoutes);
   app.use('/api/books', booksRoutes);
+
+  // Book sub-resource routes — unified ownership check via middleware
+  app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
   app.use('/api/books/:bookId/chapters', chaptersRoutes);
   app.use('/api/books/:bookId/appearance', appearanceRoutes);
   app.use('/api/books/:bookId/sounds', soundsRoutes);
@@ -161,6 +166,7 @@ export function createApp() {
   app.use('/api/books/:bookId/decorative-font', decorativeFontRoutes);
   app.use('/api/books/:bookId/progress', progressRoutes);
   app.use('/api/books/:bookId/default-settings', defaultSettingsRoutes);
+
   app.use('/api/fonts', fontsRoutes);
   app.use('/api/settings', settingsRoutes);
   app.use('/api/upload', uploadRoutes);

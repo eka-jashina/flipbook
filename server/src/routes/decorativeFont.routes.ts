@@ -1,17 +1,12 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
 import { getDecorativeFont, upsertDecorativeFont, deleteDecorativeFont } from '../services/decorativeFont.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { upsertDecorativeFontSchema } from '../schemas.js';
 
 const router = Router({ mergeParams: true });
 router.use(requireAuth);
-
-const upsertSchema = z.object({
-  name: z.string().min(1).max(200),
-  fileUrl: z.string().min(1).max(500),
-});
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -21,7 +16,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   } catch (err) { next(err); }
 });
 
-router.put('/', validate(upsertSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.put('/', validate(upsertDecorativeFontSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const font = await upsertDecorativeFont(req.params.bookId as string, req.user!.id, req.body);
     res.json(font);

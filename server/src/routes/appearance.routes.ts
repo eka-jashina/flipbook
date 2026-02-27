@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
 import {
   getAppearance,
   updateAppearance,
@@ -8,26 +7,11 @@ import {
 } from '../services/appearance.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { updateAppearanceSchema, updateThemeSchema } from '../schemas.js';
 
 const router = Router({ mergeParams: true });
 
 router.use(requireAuth);
-
-const updateAppearanceSchema = z.object({
-  fontMin: z.number().int().min(8).max(40).optional(),
-  fontMax: z.number().int().min(8).max(40).optional(),
-});
-
-const updateThemeSchema = z.object({
-  coverBgStart: z.string().max(20).optional(),
-  coverBgEnd: z.string().max(20).optional(),
-  coverText: z.string().max(20).optional(),
-  coverBgImageUrl: z.string().max(500).nullable().optional(),
-  pageTexture: z.string().max(20).optional(),
-  customTextureUrl: z.string().max(500).nullable().optional(),
-  bgPage: z.string().max(20).optional(),
-  bgApp: z.string().max(20).optional(),
-});
 
 /**
  * GET /api/books/:bookId/appearance

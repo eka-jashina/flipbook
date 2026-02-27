@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
 import {
   getAmbients,
   createAmbient,
@@ -10,33 +9,11 @@ import {
 } from '../services/ambients.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { createAmbientSchema, updateAmbientSchema, reorderAmbientsSchema } from '../schemas.js';
 
 const router = Router({ mergeParams: true });
 
 router.use(requireAuth);
-
-const createAmbientSchema = z.object({
-  ambientKey: z.string().min(1).max(100),
-  label: z.string().min(1).max(200),
-  shortLabel: z.string().max(50).optional(),
-  icon: z.string().max(20).optional(),
-  fileUrl: z.string().max(500).optional(),
-  visible: z.boolean().optional(),
-  builtin: z.boolean().optional(),
-});
-
-const updateAmbientSchema = z.object({
-  ambientKey: z.string().min(1).max(100).optional(),
-  label: z.string().min(1).max(200).optional(),
-  shortLabel: z.string().max(50).nullable().optional(),
-  icon: z.string().max(20).nullable().optional(),
-  fileUrl: z.string().max(500).nullable().optional(),
-  visible: z.boolean().optional(),
-});
-
-const reorderSchema = z.object({
-  ambientIds: z.array(z.string().uuid()),
-});
 
 /**
  * GET /api/books/:bookId/ambients
@@ -81,7 +58,7 @@ router.post(
  */
 router.patch(
   '/reorder',
-  validate(reorderSchema),
+  validate(reorderAmbientsSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await reorderAmbients(
