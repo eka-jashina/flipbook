@@ -23,6 +23,36 @@ export class CoreServices {
     this.eventManager = new EventListenerManager();
     this.timerManager = new TimerManager();
     this.storage = new StorageManager(CONFIG.STORAGE_KEY);
+
+    // Уведомить пользователя при переполнении localStorage
+    this.storage.onQuotaExceeded = (key) => {
+      console.warn(`Хранилище переполнено (${key}). Настройки могут не сохраниться.`);
+      this._showStorageWarning();
+    };
+  }
+
+  /**
+   * Показать визуальное предупреждение о переполнении хранилища.
+   * Создаёт временный элемент уведомления в DOM.
+   * @private
+   */
+  _showStorageWarning() {
+    // Избегаем дублирования уведомлений
+    if (document.getElementById('storage-quota-warning')) return;
+
+    const el = document.createElement('div');
+    el.id = 'storage-quota-warning';
+    el.setAttribute('role', 'alert');
+    el.textContent = 'Хранилище браузера переполнено. Настройки могут не сохраняться.';
+    Object.assign(el.style, {
+      position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
+      padding: '12px 24px', background: '#d32f2f', color: '#fff',
+      borderRadius: '8px', zIndex: '10000', fontSize: '14px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    });
+    document.body.appendChild(el);
+
+    setTimeout(() => el.remove(), 8000);
   }
 
   /**

@@ -19,6 +19,7 @@ import {
   DEFAULT_BOOK_SETTINGS,
   DEFAULT_BOOK,
   DEFAULT_CONFIG,
+  CONFIG_SCHEMA_VERSION,
 } from './AdminConfigDefaults.js';
 
 const STORAGE_KEY = 'flipbook-admin-config';
@@ -100,6 +101,10 @@ export class AdminConfigStore {
 
   /** Гарантируем наличие всех полей после загрузки */
   _mergeWithDefaults(saved) {
+    // --- Миграция схемы ---
+    const savedVersion = saved._schemaVersion || 1;
+    saved = this._migrateSchema(saved, savedVersion);
+
     // --- Миграция книг из старого формата ---
     let books;
     if (Array.isArray(saved.books) && saved.books.length > 0) {
@@ -145,6 +150,7 @@ export class AdminConfigStore {
     }
 
     return {
+      _schemaVersion: CONFIG_SCHEMA_VERSION,
       books,
       activeBookId,
       fontMin: fontMin ?? DEFAULT_CONFIG.fontMin,
@@ -157,6 +163,28 @@ export class AdminConfigStore {
         ...(saved.settingsVisibility || {}),
       },
     };
+  }
+
+  /**
+   * Миграция данных между версиями схемы.
+   * Каждая версия добавляет свои преобразования поверх предыдущих.
+   *
+   * @param {Object} data - Загруженные данные
+   * @param {number} fromVersion - Версия загруженных данных
+   * @returns {Object} Мигрированные данные
+   */
+  _migrateSchema(data, fromVersion) {
+    // v1 → v2: per-book настройки (appearance, sounds, ambients) перенесены из top-level в books[]
+    // Эта миграция уже реализована в _mergeWithDefaults через topLevel fallback,
+    // поэтому здесь просто логируем факт миграции.
+    if (fromVersion < 2) {
+      console.info(`AdminConfigStore: миграция схемы v${fromVersion} → v${CONFIG_SCHEMA_VERSION}`);
+    }
+
+    // Будущие миграции добавляются сюда:
+    // if (fromVersion < 3) { ... }
+
+    return data;
   }
 
   /** Обеспечить наличие per-book настроек в объекте книги */
