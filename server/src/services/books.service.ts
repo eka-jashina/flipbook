@@ -3,6 +3,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { RESOURCE_LIMITS } from '../utils/limits.js';
 import { bulkUpdatePositions } from '../utils/reorder.js';
 import { withSerializableRetry } from '../utils/serializable.js';
+import { logger } from '../utils/logger.js';
 import {
   mapAppearanceToDto,
   mapSoundsToDto,
@@ -260,7 +261,12 @@ export async function deleteBook(
   // Best-effort S3 cleanup after successful DB deletion
   if (urls.length > 0) {
     const { deleteFileByUrl } = await import('../utils/storage.js');
-    await Promise.allSettled(urls.map((u) => deleteFileByUrl(u)));
+    const results = await Promise.allSettled(urls.map((u) => deleteFileByUrl(u)));
+    results.forEach((result, i) => {
+      if (result.status === 'rejected') {
+        logger.warn({ bookId, url: urls[i], error: String(result.reason) }, 'Failed to delete S3 file during book cleanup');
+      }
+    });
   }
 }
 

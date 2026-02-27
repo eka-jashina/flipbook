@@ -9,7 +9,7 @@ function getCsrf(): CsrfFunctions {
   if (_csrf) return _csrf;
   const config = getConfig();
   _csrf = doubleCsrf({
-    getSecret: () => config.SESSION_SECRET,
+    getSecret: () => config.CSRF_SECRET || config.SESSION_SECRET,
     // Bind CSRF token to user session for per-user isolation
     getSessionIdentifier: (req) => (req as Request).sessionID || 'anonymous',
     cookieName: '__csrf',

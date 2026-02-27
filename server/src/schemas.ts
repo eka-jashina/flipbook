@@ -39,9 +39,12 @@ export const listBooksQuerySchema = z.object({
 });
 
 // ── Chapters ───────────────────────────────────────
+/** Max chapter HTML size: 2 MB */
+const MAX_HTML_CONTENT_LENGTH = 2 * 1024 * 1024;
+
 export const createChapterSchema = z.object({
   title: z.string().min(1).max(500),
-  htmlContent: z.string().optional(),
+  htmlContent: z.string().max(MAX_HTML_CONTENT_LENGTH).optional(),
   filePath: z.string().max(500).optional(),
   bg: z.string().max(500).optional(),
   bgMobile: z.string().max(500).optional(),
@@ -49,7 +52,7 @@ export const createChapterSchema = z.object({
 
 export const updateChapterSchema = z.object({
   title: z.string().min(1).max(500).optional(),
-  htmlContent: z.string().nullable().optional(),
+  htmlContent: z.string().max(MAX_HTML_CONTENT_LENGTH).nullable().optional(),
   filePath: z.string().max(500).nullable().optional(),
   bg: z.string().max(500).optional(),
   bgMobile: z.string().max(500).optional(),
