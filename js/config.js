@@ -577,15 +577,48 @@ export async function enrichConfigFromIDB(config) {
   }
 }
 
-// ─── Синглтон для production ─────────────────────────────────────────────────
+// ─── Управляемый синглтон ────────────────────────────────────────────────────
+
+/**
+ * Внутреннее хранилище конфигурации.
+ * Заменяемо через setConfig() для тестирования и runtime-обновлений.
+ * @type {Readonly<Object>}
+ */
+let _activeConfig = createConfig(loadAdminConfig());
 
 /**
  * Конфигурация приложения, вычисленная из данных в localStorage.
  *
- * Единственный side effect этого модуля: при первом импорте читает localStorage.
- * Для тестирования используйте createConfig(adminConfig) напрямую.
+ * Для простоты — экспортируется как статичная ссылка (обратная совместимость).
+ * Для тестирования и runtime-обновлений используйте getConfig() / setConfig().
  */
-export const CONFIG = createConfig(loadAdminConfig());
+export const CONFIG = _activeConfig;
+
+/**
+ * Получить текущую активную конфигурацию.
+ * В отличие от CONFIG (статичная ссылка), getConfig() всегда возвращает
+ * актуальный объект, даже после вызова setConfig().
+ *
+ * Рекомендуется для новых компонентов и тестов.
+ * @returns {Readonly<Object>}
+ */
+export function getConfig() {
+  return _activeConfig;
+}
+
+/**
+ * Заменить активную конфигурацию.
+ *
+ * Использование:
+ * - В тестах: setConfig(createConfig(mockAdminConfig))
+ * - При переключении книги (runtime): setConfig(createConfig(newAdminConfig))
+ * - При загрузке с сервера: setConfig(createConfigFromAPI(...))
+ *
+ * @param {Readonly<Object>} config - Новый объект конфигурации
+ */
+export function setConfig(config) {
+  _activeConfig = config;
+}
 
 // ─── Константы (без side effects) ────────────────────────────────────────────
 

@@ -682,7 +682,9 @@ describe('BookParser', () => {
     });
 
     it('should dispatch .doc files to parseDoc', async () => {
-      const file = new File(['data'], 'doc.doc');
+      // OLE2 magic bytes чтобы пройти валидацию сигнатуры
+      const ole2Sig = new Uint8Array([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]);
+      const file = new File([ole2Sig], 'doc.doc');
       file.arrayBuffer = () => Promise.resolve(new ArrayBuffer(10));
       // DOC parser должен упасть с ошибкой «Не удалось извлечь текст из DOC»
       await expect(BookParser.parse(file)).rejects.toThrow('Не удалось извлечь текст из DOC');

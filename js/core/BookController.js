@@ -29,13 +29,7 @@ import { AppInitializer } from './AppInitializer.js';
 import { SubscriptionManager } from './SubscriptionManager.js';
 import { ResizeHandler } from './ResizeHandler.js';
 import { DelegateMediator } from './DelegateMediator.js';
-import {
-  NavigationDelegate,
-  SettingsDelegate,
-  LifecycleDelegate,
-  ChapterDelegate,
-  DragDelegate,
-} from './delegates/index.js';
+import { createBookDelegates } from './BookDIConfig.js';
 
 export class BookController {
   /**
@@ -146,7 +140,9 @@ export class BookController {
   }
 
   /**
-   * Создать делегаты с зависимостями
+   * Создать делегаты с зависимостями.
+   * DI-конфигурация (какие зависимости получает каждый делегат) вынесена
+   * в BookDIConfig.js для разделения ответственности.
    * @private
    */
   _createDelegates() {
@@ -160,64 +156,22 @@ export class BookController {
       debugPanel: this.debugPanel,
     }, '_createDelegates');
 
-    const { dom, eventManager } = this.core;
-    const { soundManager, ambientManager } = this.audio;
-    const { renderer, animator, paginator, loadingIndicator } = this.render;
-    const { contentLoader, backgroundManager } = this.content;
-
-    this.chapterDelegate = new ChapterDelegate({
-      backgroundManager,
-      dom,
-      state: this.state,
-    });
-
-    this.navigationDelegate = new NavigationDelegate({
+    const delegates = createBookDelegates({
+      core: this.core,
+      audio: this.audio,
+      render: this.render,
+      content: this.content,
       stateMachine: this.stateMachine,
-      renderer,
-      animator,
       settings: this.settings,
-      soundManager,
-      mediaQueries,
-      state: this.state,
-    });
-
-    this.lifecycleDelegate = new LifecycleDelegate({
-      stateMachine: this.stateMachine,
-      backgroundManager,
-      contentLoader,
-      paginator,
-      renderer,
-      animator,
-      loadingIndicator,
-      soundManager,
-      ambientManager,
-      settings: this.settings,
-      dom,
-      mediaQueries,
-      state: this.state,
-    });
-
-    this.settingsDelegate = new SettingsDelegate({
-      dom,
-      settings: this.settings,
-      soundManager,
-      ambientManager,
       debugPanel: this.debugPanel,
-      stateMachine: this.stateMachine,
-      mediaQueries,
       state: this.state,
     });
 
-    this.dragDelegate = new DragDelegate({
-      stateMachine: this.stateMachine,
-      renderer,
-      animator,
-      soundManager,
-      dom,
-      eventManager,
-      mediaQueries,
-      state: this.state,
-    });
+    this.chapterDelegate = delegates.chapter;
+    this.navigationDelegate = delegates.navigation;
+    this.lifecycleDelegate = delegates.lifecycle;
+    this.settingsDelegate = delegates.settings;
+    this.dragDelegate = delegates.drag;
   }
 
   /**
@@ -340,6 +294,17 @@ export class BookController {
   // ПУБЛИЧНЫЙ API
   // ═══════════════════════════════════════════
 
+  /**
+   * Проверить, что контроллер не уничтожен (use-after-free guard).
+   * @private
+   * @throws {Error}
+   */
+  _assertAlive() {
+    if (this.isDestroyed) {
+      throw new Error('BookController: вызов после уничтожения (use-after-free)');
+    }
+  }
+
   async init() {
     if (this.isDestroyed) return;
 
@@ -373,15 +338,24 @@ export class BookController {
   }
 
   /**
-   * Уничтожить контроллер и очистить ресурсы
+   * Уничтожить контроллер и очистить ресурсы.
+   * Каждый компонент уничтожается в отдельном try-catch, чтобы
+   * ошибка в одном не блокировала очистку остальных.
    */
   destroy() {
     if (this.isDestroyed) return;
     this.isDestroyed = true;
 
+    const errors = [];
+
+    /** @param {Function} fn */
+    const safeDestroy = (fn) => {
+      try { fn(); } catch (err) { errors.push(err); }
+    };
+
     // Отписываемся от всех событий
-    this.subscriptions.unsubscribeAll();
-    this.resizeHandler.destroy();
+    safeDestroy(() => this.subscriptions?.unsubscribeAll());
+    safeDestroy(() => this.resizeHandler?.destroy());
 
     // Уничтожаем делегаты
     const delegates = [
@@ -392,17 +366,21 @@ export class BookController {
       this.dragDelegate,
       this.eventController,
     ];
-    delegates.forEach((d) => d?.destroy?.());
+    delegates.forEach((d) => safeDestroy(() => d?.destroy?.()));
 
     // Уничтожаем отдельные компоненты
-    this.stateMachine?.destroy?.();
-    this.settings?.destroy?.();
+    safeDestroy(() => this.stateMachine?.destroy?.());
+    safeDestroy(() => this.settings?.destroy?.());
 
     // Уничтожаем сервисные группы
-    this.audio?.destroy();
-    this.render?.destroy();
-    this.content?.destroy();
-    this.core?.destroy();
+    safeDestroy(() => this.audio?.destroy());
+    safeDestroy(() => this.render?.destroy());
+    safeDestroy(() => this.content?.destroy());
+    safeDestroy(() => this.core?.destroy());
+
+    if (errors.length > 0) {
+      console.error(`BookController.destroy: ${errors.length} ошибок при очистке:`, errors);
+    }
 
     // Зануляем ссылки
     this.state = null;
@@ -412,5 +390,13 @@ export class BookController {
     this.render = null;
     this.content = null;
     this.factory = null;
+    this.settings = null;
+    this.stateMachine = null;
+    this.eventController = null;
+    this.navigationDelegate = null;
+    this.settingsDelegate = null;
+    this.lifecycleDelegate = null;
+    this.chapterDelegate = null;
+    this.dragDelegate = null;
   }
 }

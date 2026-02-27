@@ -11,7 +11,7 @@
  * - navigator.sendBeacon() для финальной синхронизации при закрытии вкладки
  */
 
-import { sanitizeSettings, sanitizeSetting } from '../utils/SettingsValidator.js';
+import { sanitizeSettings, sanitizeSetting, validateSettingsSchema } from '../utils/SettingsValidator.js';
 
 /** Задержка перед отправкой на сервер (мс) */
 const SYNC_DEBOUNCE = 5000;
@@ -38,6 +38,12 @@ export class SettingsManager {
     // затем санитизируются для защиты от повреждённых данных в localStorage
     const merged = { ...defaults, ...storage.load() };
     this.settings = sanitizeSettings(merged, defaults);
+
+    // Проверка формальной схемы — предупреждение при расхождении
+    const schemaErrors = validateSettingsSchema(this.settings, defaults);
+    if (schemaErrors.length > 0) {
+      console.warn('SettingsManager: расхождение со схемой настроек:', schemaErrors);
+    }
 
     // Привязываем sendBeacon при закрытии вкладки
     if (this._api && this._bookId) {

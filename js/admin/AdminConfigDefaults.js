@@ -104,8 +104,16 @@ export const DEFAULT_BOOK = {
   ...structuredClone(DEFAULT_BOOK_SETTINGS),
 };
 
+/**
+ * Текущая версия схемы конфигурации.
+ * Увеличивается при несовместимых изменениях формата данных.
+ * Используется для автоматической миграции при загрузке.
+ */
+export const CONFIG_SCHEMA_VERSION = 2;
+
 // Дефолтная конфигурация верхнего уровня
 export const DEFAULT_CONFIG = {
+  _schemaVersion: CONFIG_SCHEMA_VERSION,
   books: [structuredClone(DEFAULT_BOOK)],
   activeBookId: 'default',
   // Global: диапазон размера шрифта

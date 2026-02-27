@@ -184,6 +184,65 @@ const SANITIZERS = {
   },
 };
 
+// ─── Формальная JSON-схема настроек ─────────────────────────────────────────
+
+/**
+ * Декларативная схема настроек ридера.
+ *
+ * Служит единым источником правды о типах и ограничениях.
+ * Если новое поле добавлено в defaults, но не описано в схеме и SANITIZERS —
+ * validateSettingsSchema() предупредит об этом.
+ */
+export const SETTINGS_SCHEMA = Object.freeze({
+  font:          { type: 'string' },
+  fontSize:      { type: 'number' },
+  theme:         { type: 'string' },
+  page:          { type: 'number' },
+  soundEnabled:  { type: 'boolean' },
+  soundVolume:   { type: 'number' },
+  ambientType:   { type: 'string' },
+  ambientVolume: { type: 'number' },
+});
+
+/**
+ * Валидировать объект настроек по формальной схеме.
+ *
+ * Проверяет:
+ * 1. Наличие всех ожидаемых ключей
+ * 2. Правильность типов значений
+ * 3. Наличие санитайзера для каждого ключа в defaults
+ *
+ * Возвращает массив строк-ошибок. Пустой массив = валидно.
+ *
+ * @param {Object} settings - Санитизированный объект настроек
+ * @param {Object} defaults - Значения по умолчанию
+ * @returns {string[]} Массив ошибок (пуст если всё валидно)
+ */
+export function validateSettingsSchema(settings, defaults) {
+  const errors = [];
+
+  // Проверить что для каждого ключа в defaults есть санитайзер
+  for (const key of Object.keys(defaults)) {
+    if (!SANITIZERS[key]) {
+      errors.push(`Нет санитайзера для ключа "${key}"`);
+    }
+  }
+
+  // Проверить типы по схеме
+  for (const [key, rule] of Object.entries(SETTINGS_SCHEMA)) {
+    if (!(key in settings)) {
+      errors.push(`Отсутствует ключ "${key}"`);
+      continue;
+    }
+    const value = settings[key];
+    if (typeof value !== rule.type) {
+      errors.push(`"${key}" должен быть ${rule.type}, получено ${typeof value}`);
+    }
+  }
+
+  return errors;
+}
+
 // ─── Набор именованных CSS-цветов ───────────────────────────────────────────
 
 const CSS_NAMED_COLORS = new Set([

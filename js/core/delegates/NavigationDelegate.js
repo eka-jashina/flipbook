@@ -47,6 +47,8 @@ export class NavigationDelegate extends BaseDelegate {
    * @param {'next'|'prev'} direction
    */
   async flip(direction) {
+    this._assertAlive();
+
     // Rate limiting: защита от автоматизации и быстрых повторных кликов (token bucket)
     if (!rateLimiters.navigation.tryAction()) {
       return;
