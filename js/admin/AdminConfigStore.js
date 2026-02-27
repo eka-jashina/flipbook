@@ -99,6 +99,45 @@ export class AdminConfigStore {
     return structuredClone(DEFAULT_CONFIG);
   }
 
+  /**
+   * Валидировать структуру конфигурации по формальной схеме.
+   * Возвращает массив ошибок. Пустой массив = валидно.
+   * @param {Object} config
+   * @returns {string[]}
+   */
+  static validateSchema(config) {
+    const errors = [];
+    if (!config || typeof config !== 'object') {
+      return ['Конфигурация должна быть объектом'];
+    }
+    if (!Array.isArray(config.books)) {
+      errors.push('books должен быть массивом');
+    } else {
+      for (let i = 0; i < config.books.length; i++) {
+        const book = config.books[i];
+        if (!book.id) errors.push(`books[${i}]: отсутствует id`);
+        if (!book.cover || typeof book.cover !== 'object') errors.push(`books[${i}]: отсутствует cover`);
+        if (!Array.isArray(book.chapters)) errors.push(`books[${i}]: chapters должен быть массивом`);
+      }
+    }
+    if (typeof config.activeBookId !== 'string') {
+      errors.push('activeBookId должен быть строкой');
+    }
+    if (typeof config.fontMin !== 'number' || !Number.isFinite(config.fontMin)) {
+      errors.push('fontMin должен быть конечным числом');
+    }
+    if (typeof config.fontMax !== 'number' || !Number.isFinite(config.fontMax)) {
+      errors.push('fontMax должен быть конечным числом');
+    }
+    if (!Array.isArray(config.readingFonts)) {
+      errors.push('readingFonts должен быть массивом');
+    }
+    if (!config.settingsVisibility || typeof config.settingsVisibility !== 'object') {
+      errors.push('settingsVisibility должен быть объектом');
+    }
+    return errors;
+  }
+
   /** Гарантируем наличие всех полей после загрузки */
   _mergeWithDefaults(saved) {
     // --- Миграция схемы ---
@@ -149,7 +188,7 @@ export class AdminConfigStore {
       fontMax = saved.appearance.fontMax;
     }
 
-    return {
+    const result = {
       _schemaVersion: CONFIG_SCHEMA_VERSION,
       books,
       activeBookId,
@@ -163,6 +202,14 @@ export class AdminConfigStore {
         ...(saved.settingsVisibility || {}),
       },
     };
+
+    // Валидация структуры — предупреждение при расхождении со схемой
+    const schemaErrors = AdminConfigStore.validateSchema(result);
+    if (schemaErrors.length > 0) {
+      console.warn('AdminConfigStore: расхождение со схемой конфигурации:', schemaErrors);
+    }
+
+    return result;
   }
 
   /**

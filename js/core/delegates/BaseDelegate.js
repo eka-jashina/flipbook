@@ -61,6 +61,21 @@ export class BaseDelegate extends EventEmitter {
     }
   }
 
+  /**
+   * Проверить, что делегат не уничтожен (use-after-free guard).
+   * Вызывается в начале публичных методов для раннего обнаружения ошибок.
+   *
+   * @protected
+   * @throws {Error} Если делегат уже уничтожен
+   */
+  _assertAlive() {
+    if (this._isDestroyed) {
+      throw new Error(
+        `${this.constructor.name}: вызов после уничтожения (use-after-free)`
+      );
+    }
+  }
+
   // ═══════════════════════════════════════════
   // ОБЩИЕ ГЕТТЕРЫ ДЛЯ ВСЕХ ДЕЛЕГАТОВ
   // ═══════════════════════════════════════════

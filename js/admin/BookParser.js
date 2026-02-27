@@ -18,6 +18,92 @@ import { parseDocx } from './parsers/DocxParser.js';
 import { parseDoc } from './parsers/DocParser.js';
 import { HTMLSanitizer } from '../utils/HTMLSanitizer.js';
 
+// ─── Magic bytes (сигнатуры файлов) ──────────────────────────────────────────
+
+/** Известные сигнатуры форматов */
+const SIGNATURES = {
+  /** ZIP-архив (EPUB, DOCX) */
+  zip: new Uint8Array([0x50, 0x4B, 0x03, 0x04]),
+  /** OLE2 Compound Document (DOC) */
+  ole2: new Uint8Array([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]),
+};
+
+/**
+ * Прочитать первые N байт файла.
+ * @param {File} file
+ * @param {number} n
+ * @returns {Promise<Uint8Array>}
+ */
+async function readFileHead(file, n) {
+  const blob = file.slice(0, n);
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+/**
+ * Проверить совпадение начальных байт с сигнатурой.
+ * @param {Uint8Array} bytes
+ * @param {Uint8Array} signature
+ * @returns {boolean}
+ */
+function matchesSignature(bytes, signature) {
+  if (bytes.length < signature.length) return false;
+  return signature.every((b, i) => bytes[i] === b);
+}
+
+/**
+ * Валидация magic bytes файла перед парсингом.
+ *
+ * Проверяет соответствие реального содержимого файла его расширению.
+ * Защищает от подмены формата (напр. переименованный .exe → .epub).
+ *
+ * При невозможности проверки (среда без File API) — пропускает валидацию.
+ *
+ * @param {File} file
+ * @param {string} ext - Расширение (lowercase, с точкой)
+ */
+async function validateMagicBytes(file, ext) {
+  try {
+    // TXT — текстовый формат, нет бинарной сигнатуры
+    if (ext === '.txt') return;
+
+    // FB2 — XML-формат, проверяем что начинается с '<'
+    if (ext === '.fb2') {
+      const head = await readFileHead(file, 256);
+      const text = new TextDecoder('utf-8', { fatal: false }).decode(head);
+      const trimmed = text.trimStart();
+      if (trimmed.length > 0 && !trimmed.startsWith('<')) {
+        throw new Error('Файл не является валидным FB2 (ожидается XML)');
+      }
+      return;
+    }
+
+    // EPUB / DOCX — ZIP-архивы
+    if (ext === '.epub' || ext === '.docx') {
+      const head = await readFileHead(file, 4);
+      if (!matchesSignature(head, SIGNATURES.zip)) {
+        throw new Error(
+          `Файл не является валидным ${ext.slice(1).toUpperCase()} (неверная сигнатура файла)`
+        );
+      }
+      return;
+    }
+
+    // DOC — OLE2 Compound Document
+    if (ext === '.doc') {
+      const head = await readFileHead(file, 8);
+      if (!matchesSignature(head, SIGNATURES.ole2)) {
+        throw new Error('Файл не является валидным DOC (неверная сигнатура файла)');
+      }
+    }
+  } catch (err) {
+    // Ошибки валидации сигнатуры — пробрасываем
+    if (err.message.includes('сигнатура') || err.message.includes('FB2')) {
+      throw err;
+    }
+    // Ошибки чтения файла (нет File API, etc.) — пропускаем валидацию
+  }
+}
+
 /** Ленивая инициализация санитайзера (один экземпляр на модуль) */
 let _sanitizer = null;
 function getSanitizer() {
@@ -66,6 +152,9 @@ export class BookParser {
    */
   static async parse(file) {
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+    // Валидация magic bytes перед парсингом (защита от подмены формата)
+    await validateMagicBytes(file, ext);
 
     let result;
     switch (ext) {

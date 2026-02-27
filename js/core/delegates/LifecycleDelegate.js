@@ -74,6 +74,8 @@ export class LifecycleDelegate extends BaseDelegate {
    * @param {number} startIndex - Индекс начальной страницы
    */
   async open(startIndex = 0) {
+    this._assertAlive();
+
     // ─── Этап 1: Проверка состояния ───
     if (this.isBusy || !this.stateMachine.isClosed) {
       return;
@@ -173,6 +175,8 @@ export class LifecycleDelegate extends BaseDelegate {
    * Закрыть книгу
    */
   async close() {
+    this._assertAlive();
+
     // ─── Этап 1: Проверка состояния ───
     if (this.isBusy || !this.isOpened) {
       return;
