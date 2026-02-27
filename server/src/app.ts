@@ -174,7 +174,9 @@ export function createApp() {
 
   // Serve pre-built client in production
   if (config.NODE_ENV === 'production') {
-    const clientDist = path.resolve(__dirname, '../../dist');
+    const clientDist = process.env.CLIENT_DIST_PATH
+      ? path.resolve(process.env.CLIENT_DIST_PATH)
+      : path.resolve(__dirname, '../../dist');
     app.use(express.static(clientDist));
 
     // SPA fallback — skip API routes (let them 404 via errorHandler)
