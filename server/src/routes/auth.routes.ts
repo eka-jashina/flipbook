@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import passport from 'passport';
-import { z } from 'zod';
 import { registerUser, formatUser } from '../services/auth.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -9,22 +8,11 @@ import { createAuthRateLimiter } from '../middleware/rateLimit.js';
 import { generateCsrfToken } from '../middleware/csrf.js';
 import { getConfig } from '../config.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { registerSchema, loginSchema } from '../schemas.js';
 
 const router = Router();
 
 const authLimiter = createAuthRateLimiter();
-
-// Validation schemas
-const registerSchema = z.object({
-  email: z.string().email().max(255),
-  password: z.string().min(8).max(128),
-  displayName: z.string().max(100).optional(),
-});
-
-const loginSchema = z.object({
-  email: z.string().email().max(255),
-  password: z.string().min(1).max(128),
-});
 
 /**
  * POST /api/auth/register — Register + auto-login

@@ -1,8 +1,78 @@
 /**
  * OpenAPI 3.0 specification for the Flipbook API.
  *
+ * Component schemas are auto-generated from Zod validation schemas
+ * to keep API docs in sync with the actual validation logic.
+ *
  * Served at /api/docs (Swagger UI) and /api/docs/spec.json (raw spec).
  */
+import { zodToOpenApi } from './utils/zodToOpenApi.js';
+import * as S from './schemas.js';
+
+// Auto-generate request body schemas from Zod definitions
+const schemas = {
+  Error: {
+    type: 'object',
+    properties: {
+      error: { type: 'string' },
+      message: { type: 'string' },
+      statusCode: { type: 'integer' },
+    },
+  },
+  HealthCheck: {
+    type: 'object',
+    properties: {
+      status: { type: 'string', enum: ['ok', 'degraded'] },
+      timestamp: { type: 'string', format: 'date-time' },
+      checks: {
+        type: 'object',
+        properties: {
+          database: { type: 'string', enum: ['ok', 'error'] },
+          storage: { type: 'string', enum: ['ok', 'error'] },
+        },
+      },
+    },
+  },
+  // Auth
+  Register: zodToOpenApi(S.registerSchema),
+  Login: zodToOpenApi(S.loginSchema),
+  // Books
+  CreateBook: zodToOpenApi(S.createBookSchema),
+  UpdateBook: zodToOpenApi(S.updateBookSchema),
+  ReorderBooks: zodToOpenApi(S.reorderBooksSchema),
+  // Chapters
+  CreateChapter: zodToOpenApi(S.createChapterSchema),
+  UpdateChapter: zodToOpenApi(S.updateChapterSchema),
+  ReorderChapters: zodToOpenApi(S.reorderChaptersSchema),
+  // Appearance
+  UpdateAppearance: zodToOpenApi(S.updateAppearanceSchema),
+  UpdateTheme: zodToOpenApi(S.updateThemeSchema),
+  // Sounds
+  UpdateSounds: zodToOpenApi(S.updateSoundsSchema),
+  // Ambients
+  CreateAmbient: zodToOpenApi(S.createAmbientSchema),
+  UpdateAmbient: zodToOpenApi(S.updateAmbientSchema),
+  ReorderAmbients: zodToOpenApi(S.reorderAmbientsSchema),
+  // Decorative Font
+  UpsertDecorativeFont: zodToOpenApi(S.upsertDecorativeFontSchema),
+  // Default Settings
+  UpdateDefaultSettings: zodToOpenApi(S.updateDefaultSettingsSchema),
+  // Fonts
+  CreateFont: zodToOpenApi(S.createFontSchema),
+  UpdateFont: zodToOpenApi(S.updateFontSchema),
+  ReorderFonts: zodToOpenApi(S.reorderFontsSchema),
+  // Settings
+  UpdateSettings: zodToOpenApi(S.updateSettingsSchema),
+  // Progress
+  UpsertProgress: zodToOpenApi(S.upsertProgressSchema),
+};
+
+const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+const jsonBody = (schemaName: string) => ({
+  required: true,
+  content: { 'application/json': { schema: ref(schemaName) } },
+});
+const bookIdParam = { name: 'bookId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } };
 
 export const swaggerSpec = {
   openapi: '3.0.3',
@@ -38,59 +108,7 @@ export const swaggerSpec = {
         description: 'Session cookie (set after login)',
       },
     },
-    schemas: {
-      Error: {
-        type: 'object',
-        properties: {
-          error: { type: 'string' },
-          message: { type: 'string' },
-          statusCode: { type: 'integer' },
-        },
-      },
-      User: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          email: { type: 'string', format: 'email' },
-          displayName: { type: 'string', nullable: true },
-          avatarUrl: { type: 'string', nullable: true },
-        },
-      },
-      Book: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          title: { type: 'string' },
-          author: { type: 'string', nullable: true },
-          coverBgMode: { type: 'string', enum: ['default', 'none', 'custom'] },
-          sortOrder: { type: 'integer' },
-        },
-      },
-      Chapter: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          title: { type: 'string' },
-          sortOrder: { type: 'integer' },
-          bg: { type: 'string', nullable: true },
-          bgMobile: { type: 'string', nullable: true },
-        },
-      },
-      HealthCheck: {
-        type: 'object',
-        properties: {
-          status: { type: 'string', enum: ['ok', 'degraded'] },
-          timestamp: { type: 'string', format: 'date-time' },
-          checks: {
-            type: 'object',
-            properties: {
-              database: { type: 'string', enum: ['ok', 'error'] },
-              storage: { type: 'string', enum: ['ok', 'error'] },
-            },
-          },
-        },
-      },
-    },
+    schemas,
   },
   security: [{ session: [] }],
   paths: {
@@ -101,7 +119,7 @@ export const swaggerSpec = {
         summary: 'Health check with DB & S3 status',
         security: [],
         responses: {
-          200: { description: 'All systems operational', content: { 'application/json': { schema: { $ref: '#/components/schemas/HealthCheck' } } } },
+          200: { description: 'All systems operational', content: { 'application/json': { schema: ref('HealthCheck') } } },
           503: { description: 'One or more subsystems degraded' },
         },
       },
@@ -109,19 +127,15 @@ export const swaggerSpec = {
     // ── Auth ────────────────────────────────────────
     '/auth/register': {
       post: {
-        tags: ['Auth'],
-        summary: 'Register a new user (email + password)',
-        security: [],
-        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['email', 'password'], properties: { email: { type: 'string', format: 'email' }, password: { type: 'string', minLength: 8 }, displayName: { type: 'string' } } } } } },
+        tags: ['Auth'], summary: 'Register a new user (email + password)', security: [],
+        requestBody: jsonBody('Register'),
         responses: { 201: { description: 'User created & logged in' }, 409: { description: 'Email already taken' } },
       },
     },
     '/auth/login': {
       post: {
-        tags: ['Auth'],
-        summary: 'Login with email + password',
-        security: [],
-        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['email', 'password'], properties: { email: { type: 'string' }, password: { type: 'string' } } } } } },
+        tags: ['Auth'], summary: 'Login with email + password', security: [],
+        requestBody: jsonBody('Login'),
         responses: { 200: { description: 'Login successful' }, 401: { description: 'Invalid credentials' } },
       },
     },
@@ -129,7 +143,7 @@ export const swaggerSpec = {
       post: { tags: ['Auth'], summary: 'Logout (destroy session)', responses: { 200: { description: 'Logged out' } } },
     },
     '/auth/me': {
-      get: { tags: ['Auth'], summary: 'Get current user', responses: { 200: { description: 'Authenticated user', content: { 'application/json': { schema: { type: 'object', properties: { user: { $ref: '#/components/schemas/User' } } } } } }, 401: { description: 'Not authenticated' } } },
+      get: { tags: ['Auth'], summary: 'Get current user', responses: { 200: { description: 'Authenticated user' }, 401: { description: 'Not authenticated' } } },
     },
     '/auth/google': {
       get: { tags: ['Auth'], summary: 'Redirect to Google OAuth', security: [], responses: { 302: { description: 'Redirect to Google' } } },
@@ -139,90 +153,97 @@ export const swaggerSpec = {
     },
     // ── Books ───────────────────────────────────────
     '/books': {
-      get: { tags: ['Books'], summary: 'List user books', responses: { 200: { description: 'Array of books' } } },
-      post: { tags: ['Books'], summary: 'Create a book', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['title'], properties: { title: { type: 'string' }, author: { type: 'string' } } } } } }, responses: { 201: { description: 'Book created' } } },
+      get: {
+        tags: ['Books'], summary: 'List user books (paginated)',
+        parameters: [
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100 }, description: 'Max books per page (default 50)' },
+          { name: 'offset', in: 'query', schema: { type: 'integer', minimum: 0 }, description: 'Number of books to skip' },
+        ],
+        responses: { 200: { description: 'Paginated list of books' } },
+      },
+      post: { tags: ['Books'], summary: 'Create a book', requestBody: jsonBody('CreateBook'), responses: { 201: { description: 'Book created' } } },
     },
     '/books/reorder': {
-      patch: { tags: ['Books'], summary: 'Reorder books', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['bookIds'], properties: { bookIds: { type: 'array', items: { type: 'string', format: 'uuid' } } } } } } }, responses: { 200: { description: 'Reordered' } } },
+      patch: { tags: ['Books'], summary: 'Reorder books', requestBody: jsonBody('ReorderBooks'), responses: { 200: { description: 'Reordered' } } },
     },
     '/books/{bookId}': {
-      get: { tags: ['Books'], summary: 'Get book by ID', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { 200: { description: 'Book details' }, 404: { description: 'Not found' } } },
-      patch: { tags: ['Books'], summary: 'Update book', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { 200: { description: 'Updated' } } },
-      delete: { tags: ['Books'], summary: 'Delete book', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { 204: { description: 'Deleted' } } },
+      get: { tags: ['Books'], summary: 'Get book by ID', parameters: [bookIdParam], responses: { 200: { description: 'Book details' }, 404: { description: 'Not found' } } },
+      patch: { tags: ['Books'], summary: 'Update book', parameters: [bookIdParam], requestBody: jsonBody('UpdateBook'), responses: { 200: { description: 'Updated' } } },
+      delete: { tags: ['Books'], summary: 'Delete book', parameters: [bookIdParam], responses: { 204: { description: 'Deleted' } } },
     },
     // ── Chapters ────────────────────────────────────
     '/books/{bookId}/chapters': {
-      get: { tags: ['Chapters'], summary: 'List chapters', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Array of chapters' } } },
-      post: { tags: ['Chapters'], summary: 'Create chapter', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 201: { description: 'Chapter created' } } },
+      get: { tags: ['Chapters'], summary: 'List chapters', parameters: [bookIdParam], responses: { 200: { description: 'Array of chapters' } } },
+      post: { tags: ['Chapters'], summary: 'Create chapter', parameters: [bookIdParam], requestBody: jsonBody('CreateChapter'), responses: { 201: { description: 'Chapter created' } } },
     },
     '/books/{bookId}/chapters/reorder': {
-      patch: { tags: ['Chapters'], summary: 'Reorder chapters', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Reordered' } } },
+      patch: { tags: ['Chapters'], summary: 'Reorder chapters', parameters: [bookIdParam], requestBody: jsonBody('ReorderChapters'), responses: { 200: { description: 'Reordered' } } },
     },
     '/books/{bookId}/chapters/{chapterId}': {
-      get: { tags: ['Chapters'], summary: 'Get chapter', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }, { name: 'chapterId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Chapter details' } } },
-      patch: { tags: ['Chapters'], summary: 'Update chapter', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }, { name: 'chapterId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Updated' } } },
-      delete: { tags: ['Chapters'], summary: 'Delete chapter', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }, { name: 'chapterId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 204: { description: 'Deleted' } } },
+      get: { tags: ['Chapters'], summary: 'Get chapter', parameters: [bookIdParam, { name: 'chapterId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { 200: { description: 'Chapter details' } } },
+      patch: { tags: ['Chapters'], summary: 'Update chapter', parameters: [bookIdParam, { name: 'chapterId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], requestBody: jsonBody('UpdateChapter'), responses: { 200: { description: 'Updated' } } },
+      delete: { tags: ['Chapters'], summary: 'Delete chapter', parameters: [bookIdParam, { name: 'chapterId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { 204: { description: 'Deleted' } } },
     },
     '/books/{bookId}/chapters/{chapterId}/content': {
-      get: { tags: ['Chapters'], summary: 'Get chapter HTML content', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }, { name: 'chapterId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Chapter HTML' } } },
+      get: { tags: ['Chapters'], summary: 'Get chapter HTML content', parameters: [bookIdParam, { name: 'chapterId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { 200: { description: 'Chapter HTML' } } },
     },
     // ── Appearance ──────────────────────────────────
     '/books/{bookId}/appearance': {
-      get: { tags: ['Appearance'], summary: 'Get book appearance', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Appearance settings' } } },
-      patch: { tags: ['Appearance'], summary: 'Update appearance (fontMin/fontMax)', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Updated' } } },
+      get: { tags: ['Appearance'], summary: 'Get book appearance', parameters: [bookIdParam], responses: { 200: { description: 'Appearance settings' } } },
+      patch: { tags: ['Appearance'], summary: 'Update appearance (fontMin/fontMax)', parameters: [bookIdParam], requestBody: jsonBody('UpdateAppearance'), responses: { 200: { description: 'Updated' } } },
     },
     '/books/{bookId}/appearance/{theme}': {
-      patch: { tags: ['Appearance'], summary: 'Update theme appearance (light/dark)', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }, { name: 'theme', in: 'path', required: true, schema: { type: 'string', enum: ['light', 'dark'] } }], responses: { 200: { description: 'Theme updated' } } },
+      patch: { tags: ['Appearance'], summary: 'Update theme appearance (light/dark)', parameters: [bookIdParam, { name: 'theme', in: 'path', required: true, schema: { type: 'string', enum: ['light', 'dark'] } }], requestBody: jsonBody('UpdateTheme'), responses: { 200: { description: 'Theme updated' } } },
     },
     // ── Sounds ──────────────────────────────────────
     '/books/{bookId}/sounds': {
-      get: { tags: ['Sounds'], summary: 'Get book sounds', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Sound config' } } },
-      patch: { tags: ['Sounds'], summary: 'Update book sounds', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Updated' } } },
+      get: { tags: ['Sounds'], summary: 'Get book sounds', parameters: [bookIdParam], responses: { 200: { description: 'Sound config' } } },
+      patch: { tags: ['Sounds'], summary: 'Update book sounds', parameters: [bookIdParam], requestBody: jsonBody('UpdateSounds'), responses: { 200: { description: 'Updated' } } },
     },
     // ── Ambients ────────────────────────────────────
     '/books/{bookId}/ambients': {
-      get: { tags: ['Ambients'], summary: 'List ambients', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Array of ambients' } } },
-      post: { tags: ['Ambients'], summary: 'Create ambient', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 201: { description: 'Created' } } },
+      get: { tags: ['Ambients'], summary: 'List ambients', parameters: [bookIdParam], responses: { 200: { description: 'Array of ambients' } } },
+      post: { tags: ['Ambients'], summary: 'Create ambient', parameters: [bookIdParam], requestBody: jsonBody('CreateAmbient'), responses: { 201: { description: 'Created' } } },
     },
     '/books/{bookId}/ambients/reorder': {
-      patch: { tags: ['Ambients'], summary: 'Reorder ambients', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Reordered' } } },
+      patch: { tags: ['Ambients'], summary: 'Reorder ambients', parameters: [bookIdParam], requestBody: jsonBody('ReorderAmbients'), responses: { 200: { description: 'Reordered' } } },
     },
     '/books/{bookId}/ambients/{ambientId}': {
-      patch: { tags: ['Ambients'], summary: 'Update ambient', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }, { name: 'ambientId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Updated' } } },
-      delete: { tags: ['Ambients'], summary: 'Delete ambient', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }, { name: 'ambientId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 204: { description: 'Deleted' } } },
+      patch: { tags: ['Ambients'], summary: 'Update ambient', parameters: [bookIdParam, { name: 'ambientId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], requestBody: jsonBody('UpdateAmbient'), responses: { 200: { description: 'Updated' } } },
+      delete: { tags: ['Ambients'], summary: 'Delete ambient', parameters: [bookIdParam, { name: 'ambientId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { 204: { description: 'Deleted' } } },
     },
     // ── Decorative Font ─────────────────────────────
     '/books/{bookId}/decorative-font': {
-      get: { tags: ['DecorativeFont'], summary: 'Get decorative font', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Font data' }, 204: { description: 'No font set' } } },
-      put: { tags: ['DecorativeFont'], summary: 'Upsert decorative font', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Font saved' } } },
-      delete: { tags: ['DecorativeFont'], summary: 'Delete decorative font', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 204: { description: 'Deleted' } } },
+      get: { tags: ['DecorativeFont'], summary: 'Get decorative font', parameters: [bookIdParam], responses: { 200: { description: 'Font data' }, 204: { description: 'No font set' } } },
+      put: { tags: ['DecorativeFont'], summary: 'Upsert decorative font', parameters: [bookIdParam], requestBody: jsonBody('UpsertDecorativeFont'), responses: { 200: { description: 'Font saved' } } },
+      delete: { tags: ['DecorativeFont'], summary: 'Delete decorative font', parameters: [bookIdParam], responses: { 204: { description: 'Deleted' } } },
     },
     // ── Progress ────────────────────────────────────
     '/books/{bookId}/progress': {
-      get: { tags: ['Progress'], summary: 'Get reading progress', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Reading progress' } } },
-      put: { tags: ['Progress'], summary: 'Save reading progress', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Progress saved' } } },
+      get: { tags: ['Progress'], summary: 'Get reading progress', parameters: [bookIdParam], responses: { 200: { description: 'Reading progress' } } },
+      put: { tags: ['Progress'], summary: 'Save reading progress', parameters: [bookIdParam], requestBody: jsonBody('UpsertProgress'), responses: { 200: { description: 'Progress saved' } } },
     },
     // ── Default Settings ────────────────────────────
     '/books/{bookId}/default-settings': {
-      get: { tags: ['DefaultSettings'], summary: 'Get default reader settings', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Default settings' } } },
-      patch: { tags: ['DefaultSettings'], summary: 'Update default reader settings', parameters: [{ name: 'bookId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Updated' } } },
+      get: { tags: ['DefaultSettings'], summary: 'Get default reader settings', parameters: [bookIdParam], responses: { 200: { description: 'Default settings' } } },
+      patch: { tags: ['DefaultSettings'], summary: 'Update default reader settings', parameters: [bookIdParam], requestBody: jsonBody('UpdateDefaultSettings'), responses: { 200: { description: 'Updated' } } },
     },
     // ── Fonts (global) ──────────────────────────────
     '/fonts': {
       get: { tags: ['Fonts'], summary: 'List reading fonts', responses: { 200: { description: 'Array of fonts' } } },
-      post: { tags: ['Fonts'], summary: 'Create reading font', responses: { 201: { description: 'Font created' } } },
+      post: { tags: ['Fonts'], summary: 'Create reading font', requestBody: jsonBody('CreateFont'), responses: { 201: { description: 'Font created' } } },
     },
     '/fonts/reorder': {
-      patch: { tags: ['Fonts'], summary: 'Reorder fonts', responses: { 200: { description: 'Reordered' } } },
+      patch: { tags: ['Fonts'], summary: 'Reorder fonts', requestBody: jsonBody('ReorderFonts'), responses: { 200: { description: 'Reordered' } } },
     },
     '/fonts/{fontId}': {
-      patch: { tags: ['Fonts'], summary: 'Update font', parameters: [{ name: 'fontId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Updated' } } },
-      delete: { tags: ['Fonts'], summary: 'Delete font', parameters: [{ name: 'fontId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 204: { description: 'Deleted' } } },
+      patch: { tags: ['Fonts'], summary: 'Update font', parameters: [{ name: 'fontId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], requestBody: jsonBody('UpdateFont'), responses: { 200: { description: 'Updated' } } },
+      delete: { tags: ['Fonts'], summary: 'Delete font', parameters: [{ name: 'fontId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { 204: { description: 'Deleted' } } },
     },
     // ── Settings (global) ───────────────────────────
     '/settings': {
       get: { tags: ['Settings'], summary: 'Get global settings', responses: { 200: { description: 'Settings' } } },
-      patch: { tags: ['Settings'], summary: 'Update global settings', responses: { 200: { description: 'Updated' } } },
+      patch: { tags: ['Settings'], summary: 'Update global settings', requestBody: jsonBody('UpdateSettings'), responses: { 200: { description: 'Updated' } } },
     },
     // ── Upload ──────────────────────────────────────
     '/upload/font': {

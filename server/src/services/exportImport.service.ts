@@ -3,6 +3,14 @@ import { AppError } from '../middleware/errorHandler.js';
 import { RESOURCE_LIMITS } from '../utils/limits.js';
 import { sanitizeHtml } from '../utils/sanitize.js';
 import {
+  READER_DEFAULTS,
+  FONT_LIMITS,
+  SETTINGS_VISIBILITY_DEFAULTS,
+  SOUND_DEFAULTS,
+  APPEARANCE_DEFAULTS,
+  COVER_BG_MODE_DEFAULT,
+} from '../utils/defaults.js';
+import {
   mapAppearanceToDto,
   mapSoundsToDto,
   mapDefaultSettingsToDto,
@@ -58,7 +66,7 @@ export async function importUserConfig(userId: string, data: ExportData): Promis
   await prisma.$transaction(async (tx) => {
     for (const bookData of data.books) {
       const book = await tx.book.create({
-        data: { userId, title: bookData.title || '', author: bookData.author || '', coverBg: bookData.cover?.bg || '', coverBgMobile: bookData.cover?.bgMobile || '', coverBgMode: bookData.cover?.bgMode || 'default', coverBgCustomUrl: bookData.cover?.bgCustomUrl || null },
+        data: { userId, title: bookData.title || '', author: bookData.author || '', coverBg: bookData.cover?.bg || '', coverBgMobile: bookData.cover?.bgMobile || '', coverBgMode: bookData.cover?.bgMode || COVER_BG_MODE_DEFAULT, coverBgCustomUrl: bookData.cover?.bgCustomUrl || null },
       });
       if (bookData.chapters?.length) {
         await tx.chapter.createMany({
@@ -76,10 +84,12 @@ export async function importUserConfig(userId: string, data: ExportData): Promis
       }
       if (bookData.appearance) {
         const a = bookData.appearance;
-        await tx.bookAppearance.create({ data: { bookId: book.id, fontMin: a.fontMin ?? 14, fontMax: a.fontMax ?? 22, lightCoverBgStart: a.light?.coverBgStart ?? '#3a2d1f', lightCoverBgEnd: a.light?.coverBgEnd ?? '#2a2016', lightCoverText: a.light?.coverText ?? '#f2e9d8', lightCoverBgImageUrl: a.light?.coverBgImageUrl ?? null, lightPageTexture: a.light?.pageTexture ?? 'default', lightCustomTextureUrl: a.light?.customTextureUrl ?? null, lightBgPage: a.light?.bgPage ?? '#fdfcf8', lightBgApp: a.light?.bgApp ?? '#e6e3dc', darkCoverBgStart: a.dark?.coverBgStart ?? '#111111', darkCoverBgEnd: a.dark?.coverBgEnd ?? '#000000', darkCoverText: a.dark?.coverText ?? '#eaeaea', darkCoverBgImageUrl: a.dark?.coverBgImageUrl ?? null, darkPageTexture: a.dark?.pageTexture ?? 'none', darkCustomTextureUrl: a.dark?.customTextureUrl ?? null, darkBgPage: a.dark?.bgPage ?? '#1e1e1e', darkBgApp: a.dark?.bgApp ?? '#121212' } });
+        const ld = APPEARANCE_DEFAULTS.light;
+        const dd = APPEARANCE_DEFAULTS.dark;
+        await tx.bookAppearance.create({ data: { bookId: book.id, fontMin: a.fontMin ?? FONT_LIMITS.fontMin, fontMax: a.fontMax ?? FONT_LIMITS.fontMax, lightCoverBgStart: a.light?.coverBgStart ?? ld.coverBgStart, lightCoverBgEnd: a.light?.coverBgEnd ?? ld.coverBgEnd, lightCoverText: a.light?.coverText ?? ld.coverText, lightCoverBgImageUrl: a.light?.coverBgImageUrl ?? null, lightPageTexture: a.light?.pageTexture ?? ld.pageTexture, lightCustomTextureUrl: a.light?.customTextureUrl ?? null, lightBgPage: a.light?.bgPage ?? ld.bgPage, lightBgApp: a.light?.bgApp ?? ld.bgApp, darkCoverBgStart: a.dark?.coverBgStart ?? dd.coverBgStart, darkCoverBgEnd: a.dark?.coverBgEnd ?? dd.coverBgEnd, darkCoverText: a.dark?.coverText ?? dd.coverText, darkCoverBgImageUrl: a.dark?.coverBgImageUrl ?? null, darkPageTexture: a.dark?.pageTexture ?? dd.pageTexture, darkCustomTextureUrl: a.dark?.customTextureUrl ?? null, darkBgPage: a.dark?.bgPage ?? dd.bgPage, darkBgApp: a.dark?.bgApp ?? dd.bgApp } });
       }
       if (bookData.sounds) {
-        await tx.bookSounds.create({ data: { bookId: book.id, pageFlipUrl: bookData.sounds.pageFlip || 'sounds/page-flip.mp3', bookOpenUrl: bookData.sounds.bookOpen || 'sounds/cover-flip.mp3', bookCloseUrl: bookData.sounds.bookClose || 'sounds/cover-flip.mp3' } });
+        await tx.bookSounds.create({ data: { bookId: book.id, pageFlipUrl: bookData.sounds.pageFlip || SOUND_DEFAULTS.pageFlip, bookOpenUrl: bookData.sounds.bookOpen || SOUND_DEFAULTS.bookOpen, bookCloseUrl: bookData.sounds.bookClose || SOUND_DEFAULTS.bookClose } });
       }
       if (bookData.ambients?.length) {
         await tx.ambient.createMany({
@@ -96,7 +106,7 @@ export async function importUserConfig(userId: string, data: ExportData): Promis
       }
       if (bookData.defaultSettings) {
         const ds = bookData.defaultSettings;
-        await tx.bookDefaultSettings.create({ data: { bookId: book.id, font: ds.font || 'georgia', fontSize: ds.fontSize ?? 18, theme: ds.theme || 'light', soundEnabled: ds.soundEnabled ?? true, soundVolume: ds.soundVolume ?? 0.3, ambientType: ds.ambientType || 'none', ambientVolume: ds.ambientVolume ?? 0.5 } });
+        await tx.bookDefaultSettings.create({ data: { bookId: book.id, font: ds.font || READER_DEFAULTS.font, fontSize: ds.fontSize ?? READER_DEFAULTS.fontSize, theme: ds.theme || READER_DEFAULTS.theme, soundEnabled: ds.soundEnabled ?? READER_DEFAULTS.soundEnabled, soundVolume: ds.soundVolume ?? READER_DEFAULTS.soundVolume, ambientType: ds.ambientType || READER_DEFAULTS.ambientType, ambientVolume: ds.ambientVolume ?? READER_DEFAULTS.ambientVolume } });
       }
     }
     if (data.readingFonts?.length) {
@@ -112,8 +122,8 @@ export async function importUserConfig(userId: string, data: ExportData): Promis
       const gs = data.globalSettings;
       await tx.globalSettings.upsert({
         where: { userId },
-        create: { userId, fontMin: gs.fontMin ?? 14, fontMax: gs.fontMax ?? 22, visFontSize: gs.settingsVisibility?.fontSize ?? true, visTheme: gs.settingsVisibility?.theme ?? true, visFont: gs.settingsVisibility?.font ?? true, visFullscreen: gs.settingsVisibility?.fullscreen ?? true, visSound: gs.settingsVisibility?.sound ?? true, visAmbient: gs.settingsVisibility?.ambient ?? true },
-        update: { fontMin: gs.fontMin ?? 14, fontMax: gs.fontMax ?? 22, visFontSize: gs.settingsVisibility?.fontSize ?? true, visTheme: gs.settingsVisibility?.theme ?? true, visFont: gs.settingsVisibility?.font ?? true, visFullscreen: gs.settingsVisibility?.fullscreen ?? true, visSound: gs.settingsVisibility?.sound ?? true, visAmbient: gs.settingsVisibility?.ambient ?? true },
+        create: { userId, fontMin: gs.fontMin ?? FONT_LIMITS.fontMin, fontMax: gs.fontMax ?? FONT_LIMITS.fontMax, visFontSize: gs.settingsVisibility?.fontSize ?? SETTINGS_VISIBILITY_DEFAULTS.fontSize, visTheme: gs.settingsVisibility?.theme ?? SETTINGS_VISIBILITY_DEFAULTS.theme, visFont: gs.settingsVisibility?.font ?? SETTINGS_VISIBILITY_DEFAULTS.font, visFullscreen: gs.settingsVisibility?.fullscreen ?? SETTINGS_VISIBILITY_DEFAULTS.fullscreen, visSound: gs.settingsVisibility?.sound ?? SETTINGS_VISIBILITY_DEFAULTS.sound, visAmbient: gs.settingsVisibility?.ambient ?? SETTINGS_VISIBILITY_DEFAULTS.ambient },
+        update: { fontMin: gs.fontMin ?? FONT_LIMITS.fontMin, fontMax: gs.fontMax ?? FONT_LIMITS.fontMax, visFontSize: gs.settingsVisibility?.fontSize ?? SETTINGS_VISIBILITY_DEFAULTS.fontSize, visTheme: gs.settingsVisibility?.theme ?? SETTINGS_VISIBILITY_DEFAULTS.theme, visFont: gs.settingsVisibility?.font ?? SETTINGS_VISIBILITY_DEFAULTS.font, visFullscreen: gs.settingsVisibility?.fullscreen ?? SETTINGS_VISIBILITY_DEFAULTS.fullscreen, visSound: gs.settingsVisibility?.sound ?? SETTINGS_VISIBILITY_DEFAULTS.sound, visAmbient: gs.settingsVisibility?.ambient ?? SETTINGS_VISIBILITY_DEFAULTS.ambient },
       });
     }
   });

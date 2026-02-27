@@ -1,7 +1,8 @@
 import { getPrisma } from '../utils/prisma.js';
+import { FONT_LIMITS, SETTINGS_VISIBILITY_DEFAULTS } from '../utils/defaults.js';
 import type { GlobalSettingsDetail, SettingsVisibility } from '../types/api.js';
 
-const DEFAULTS: GlobalSettingsDetail = { fontMin: 14, fontMax: 22, settingsVisibility: { fontSize: true, theme: true, font: true, fullscreen: true, sound: true, ambient: true } };
+const DEFAULTS: GlobalSettingsDetail = { ...FONT_LIMITS, settingsVisibility: { ...SETTINGS_VISIBILITY_DEFAULTS } };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapSettings(s: any): GlobalSettingsDetail {

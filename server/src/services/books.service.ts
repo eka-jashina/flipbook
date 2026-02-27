@@ -13,56 +13,78 @@ import {
 } from '../utils/mappers.js';
 import type { BookListItem, BookDetail } from '../types/api.js';
 
-/**
- * Get all books for a user (for bookshelf display).
- */
-export async function getUserBooks(userId: string): Promise<BookListItem[]> {
-  const prisma = getPrisma();
+export interface PaginatedBooks {
+  books: BookListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
 
-  const books = await prisma.book.findMany({
-    where: { userId },
-    orderBy: { position: 'asc' },
-    include: {
-      _count: { select: { chapters: true } },
-      appearance: {
-        select: {
-          lightCoverBgStart: true,
-          lightCoverBgEnd: true,
-          lightCoverText: true,
+/**
+ * Get books for a user with pagination (for bookshelf display).
+ */
+export async function getUserBooks(
+  userId: string,
+  options: { limit?: number; offset?: number } = {},
+): Promise<PaginatedBooks> {
+  const prisma = getPrisma();
+  const limit = Math.min(options.limit ?? 50, 100);
+  const offset = options.offset ?? 0;
+
+  const [books, total] = await Promise.all([
+    prisma.book.findMany({
+      where: { userId },
+      orderBy: { position: 'asc' },
+      skip: offset,
+      take: limit,
+      include: {
+        _count: { select: { chapters: true } },
+        appearance: {
+          select: {
+            lightCoverBgStart: true,
+            lightCoverBgEnd: true,
+            lightCoverText: true,
+          },
+        },
+        readingProgress: {
+          where: { userId },
+          select: { page: true, updatedAt: true },
+          take: 1,
         },
       },
-      readingProgress: {
-        where: { userId },
-        select: { page: true, updatedAt: true },
-        take: 1,
-      },
-    },
-  });
+    }),
+    prisma.book.count({ where: { userId } }),
+  ]);
 
-  return books.map((book) => ({
-    id: book.id,
-    title: book.title,
-    author: book.author,
-    position: book.position,
-    chaptersCount: book._count.chapters,
-    coverBgMode: book.coverBgMode,
-    appearance: book.appearance
-      ? {
-          light: {
-            coverBgStart: book.appearance.lightCoverBgStart,
-            coverBgEnd: book.appearance.lightCoverBgEnd,
-            coverText: book.appearance.lightCoverText,
-          },
-        }
-      : null,
-    readingProgress:
-      book.readingProgress.length > 0
+  return {
+    books: books.map((book) => ({
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      position: book.position,
+      chaptersCount: book._count.chapters,
+      coverBgMode: book.coverBgMode,
+      appearance: book.appearance
         ? {
-            page: book.readingProgress[0].page,
-            updatedAt: book.readingProgress[0].updatedAt.toISOString(),
+            light: {
+              coverBgStart: book.appearance.lightCoverBgStart,
+              coverBgEnd: book.appearance.lightCoverBgEnd,
+              coverText: book.appearance.lightCoverText,
+            },
           }
         : null,
-  }));
+      readingProgress:
+        book.readingProgress.length > 0
+          ? {
+              page: book.readingProgress[0].page,
+              updatedAt: book.readingProgress[0].updatedAt.toISOString(),
+            }
+          : null,
+    })),
+    total,
+    limit,
+    offset,
+  };
 }
 
 /**

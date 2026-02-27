@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
 import {
   getChapters,
   getChapterById,
@@ -12,32 +11,12 @@ import {
 } from '../services/chapters.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { createChapterSchema, updateChapterSchema, reorderChaptersSchema } from '../schemas.js';
 
 const router = Router({ mergeParams: true });
 
 // All chapter routes require authentication
 router.use(requireAuth);
-
-// Validation schemas
-const createChapterSchema = z.object({
-  title: z.string().min(1).max(500),
-  htmlContent: z.string().optional(),
-  filePath: z.string().max(500).optional(),
-  bg: z.string().max(500).optional(),
-  bgMobile: z.string().max(500).optional(),
-});
-
-const updateChapterSchema = z.object({
-  title: z.string().min(1).max(500).optional(),
-  htmlContent: z.string().nullable().optional(),
-  filePath: z.string().max(500).nullable().optional(),
-  bg: z.string().max(500).optional(),
-  bgMobile: z.string().max(500).optional(),
-});
-
-const reorderSchema = z.object({
-  chapterIds: z.array(z.string().uuid()),
-});
 
 /**
  * GET /api/books/:bookId/chapters — List chapters (meta only)
@@ -79,7 +58,7 @@ router.post(
  */
 router.patch(
   '/reorder',
-  validate(reorderSchema),
+  validate(reorderChaptersSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await reorderChapters(
