@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import multer from 'multer';
 import { logger } from '../utils/logger.js';
@@ -69,6 +70,50 @@ export function errorHandler(
     return;
   }
 
+  // Handle known Prisma errors with appropriate HTTP status codes
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    // P2002: Unique constraint violation (e.g., duplicate email)
+    if (err.code === 'P2002') {
+      const target = (err.meta?.target as string[])?.join(', ') || 'field';
+      res.status(409).json({
+        error: 'ConflictError',
+        message: `A record with this ${target} already exists`,
+        statusCode: 409,
+        ...(requestId && { requestId }),
+      });
+      return;
+    }
+    // P2025: Record not found (e.g., update/delete non-existent row)
+    if (err.code === 'P2025') {
+      res.status(404).json({
+        error: 'NotFoundError',
+        message: 'The requested resource was not found',
+        statusCode: 404,
+        ...(requestId && { requestId }),
+      });
+      return;
+    }
+    // P2003: Foreign key constraint violation
+    if (err.code === 'P2003') {
+      res.status(409).json({
+        error: 'ConflictError',
+        message: 'Operation conflicts with an existing relationship',
+        statusCode: 409,
+        ...(requestId && { requestId }),
+      });
+      return;
+    }
+    // Other Prisma errors — log and return 500
+    logger.error({ err, code: err.code, meta: err.meta }, 'Prisma error');
+    res.status(500).json({
+      error: 'DatabaseError',
+      message: 'A database error occurred',
+      statusCode: 500,
+      ...(requestId && { requestId }),
+    });
+    return;
+  }
+
   // Handle CSRF and other http-errors (have statusCode property)
   if ('statusCode' in err && typeof (err as any).statusCode === 'number') {
     const statusCode = (err as any).statusCode as number;
@@ -82,7 +127,10 @@ export function errorHandler(
     return;
   }
 
-  logger.error({ err }, 'Unhandled error');
+  logger.error(
+    { err, method: req.method, url: req.originalUrl, ip: req.ip, userId: req.user?.id },
+    'Unhandled error',
+  );
 
   res.status(500).json({
     error: 'InternalServerError',

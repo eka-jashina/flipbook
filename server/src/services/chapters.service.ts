@@ -8,10 +8,10 @@ import type { ChapterListItem, ChapterDetail } from '../types/api.js';
 
 /**
  * Get all chapters for a book (metadata, no content).
+ * Book ownership is verified by requireBookOwnership middleware.
  */
 export async function getChapters(
   bookId: string,
-  userId: string,
 ): Promise<ChapterListItem[]> {
 
   const prisma = getPrisma();
@@ -37,7 +37,6 @@ export async function getChapters(
 export async function getChapterById(
   bookId: string,
   chapterId: string,
-  userId: string,
 ): Promise<ChapterDetail> {
 
   const prisma = getPrisma();
@@ -67,7 +66,6 @@ export async function getChapterById(
 export async function getChapterContent(
   bookId: string,
   chapterId: string,
-  userId: string,
 ): Promise<string | null> {
 
   const prisma = getPrisma();
@@ -88,7 +86,6 @@ export async function getChapterContent(
  */
 export async function createChapter(
   bookId: string,
-  userId: string,
   data: {
     title: string;
     htmlContent?: string;
@@ -145,7 +142,6 @@ export async function createChapter(
 export async function updateChapter(
   bookId: string,
   chapterId: string,
-  userId: string,
   data: {
     title?: string;
     htmlContent?: string | null;
@@ -195,7 +191,6 @@ export async function updateChapter(
 export async function deleteChapter(
   bookId: string,
   chapterId: string,
-  userId: string,
 ): Promise<void> {
 
   const prisma = getPrisma();
@@ -217,7 +212,6 @@ export async function deleteChapter(
  */
 export async function reorderChapters(
   bookId: string,
-  userId: string,
   chapterIds: string[],
 ): Promise<void> {
 

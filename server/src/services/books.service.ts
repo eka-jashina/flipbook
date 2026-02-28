@@ -242,31 +242,44 @@ export async function deleteBook(
   if (!book) throw new AppError(404, 'Book not found');
   // Ownership verified by requireBookOwnership middleware
 
-  // Collect all S3 file URLs before deletion
-  const urls: string[] = [];
-  book.ambients?.forEach((a) => { if (a.fileUrl) urls.push(a.fileUrl); });
+  // Collect all S3 file URLs before deletion.
+  // Only include URLs that are actual S3 uploads (extractKeyFromUrl returns
+  // null for relative/built-in paths like "sounds/page-flip.mp3").
+  const { deleteFileByUrl, extractKeyFromUrl } = await import('../utils/storage.js');
+
+  const allUrls: (string | null | undefined)[] = [];
+  book.ambients?.forEach((a) => allUrls.push(a.fileUrl));
   if (book.sounds) {
-    [book.sounds.pageFlipUrl, book.sounds.bookOpenUrl, book.sounds.bookCloseUrl]
-      .forEach((u) => { if (u && !u.startsWith('sounds/')) urls.push(u); });
+    allUrls.push(book.sounds.pageFlipUrl, book.sounds.bookOpenUrl, book.sounds.bookCloseUrl);
   }
-  if (book.decorativeFont?.fileUrl) urls.push(book.decorativeFont.fileUrl);
+  if (book.decorativeFont) allUrls.push(book.decorativeFont.fileUrl);
   if (book.appearance) {
-    [book.appearance.lightCoverBgImageUrl, book.appearance.darkCoverBgImageUrl,
-     book.appearance.lightCustomTextureUrl, book.appearance.darkCustomTextureUrl]
-      .filter(Boolean).forEach((u) => urls.push(u!));
+    allUrls.push(
+      book.appearance.lightCoverBgImageUrl, book.appearance.darkCoverBgImageUrl,
+      book.appearance.lightCustomTextureUrl, book.appearance.darkCustomTextureUrl,
+    );
   }
+
+  const s3Urls = allUrls.filter((u): u is string => !!u && extractKeyFromUrl(u) !== null);
 
   await prisma.book.delete({ where: { id: bookId } });
 
-  // Best-effort S3 cleanup after successful DB deletion
-  if (urls.length > 0) {
-    const { deleteFileByUrl } = await import('../utils/storage.js');
-    const results = await Promise.allSettled(urls.map((u) => deleteFileByUrl(u)));
+  // Best-effort S3 cleanup after successful DB deletion.
+  // Failed deletions are logged as orphaned files for manual cleanup.
+  if (s3Urls.length > 0) {
+    const results = await Promise.allSettled(s3Urls.map((u) => deleteFileByUrl(u)));
+    const orphanedUrls: string[] = [];
     results.forEach((result, i) => {
       if (result.status === 'rejected') {
-        logger.warn({ bookId, url: urls[i], error: String(result.reason) }, 'Failed to delete S3 file during book cleanup');
+        orphanedUrls.push(s3Urls[i]);
       }
     });
+    if (orphanedUrls.length > 0) {
+      logger.warn(
+        { bookId, orphanedUrls, total: s3Urls.length, failed: orphanedUrls.length },
+        'Orphaned S3 files after book deletion — manual cleanup may be needed',
+      );
+    }
   }
 }
 

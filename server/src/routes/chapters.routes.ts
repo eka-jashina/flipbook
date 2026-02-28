@@ -26,7 +26,7 @@ router.use(requireAuth);
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const chapters = await getChapters(req.params.bookId as string, req.user!.id);
+    const chapters = await getChapters(req.params.bookId as string);
     ok(res, { chapters });
   }),
 );
@@ -44,7 +44,6 @@ router.post(
   asyncHandler(async (req, res) => {
     const chapter = await createChapter(
       req.params.bookId as string,
-      req.user!.id,
       req.body,
     );
     created(res, chapter);
@@ -60,7 +59,6 @@ router.patch(
   asyncHandler(async (req, res) => {
     await reorderChapters(
       req.params.bookId as string,
-      req.user!.id,
       req.body.chapterIds,
     );
     ok(res, { message: 'Chapters reordered' });
@@ -76,7 +74,6 @@ router.get(
     const chapter = await getChapterById(
       req.params.bookId as string,
       req.params.chapterId as string,
-      req.user!.id,
     );
     ok(res, chapter);
   }),
@@ -91,7 +88,6 @@ router.get(
     const html = await getChapterContent(
       req.params.bookId as string,
       req.params.chapterId as string,
-      req.user!.id,
     );
     ok(res, { html });
   }),
@@ -108,7 +104,6 @@ router.patch(
     const chapter = await updateChapter(
       req.params.bookId as string,
       req.params.chapterId as string,
-      req.user!.id,
       req.body,
     );
     ok(res, chapter);
@@ -124,7 +119,6 @@ router.delete(
     await deleteChapter(
       req.params.bookId as string,
       req.params.chapterId as string,
-      req.user!.id,
     );
     res.status(204).send();
   }),
