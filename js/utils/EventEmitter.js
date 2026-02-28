@@ -19,14 +19,19 @@
 export class EventEmitter {
   /**
    * Создаёт новый EventEmitter
+   * @param {Object} [options] - Опции
+   * @param {Function} [options.onError] - Коллбэк при ошибке в обработчике (error, eventName)
    */
-  constructor() {
+  constructor({ onError } = {}) {
     /**
      * Хранилище обработчиков событий
      * @type {Map<string, Set<Function>>}
      * @private
      */
     this._events = new Map();
+
+    /** @private */
+    this._onError = onError || null;
   }
 
   /**
@@ -78,6 +83,7 @@ export class EventEmitter {
           handler(...args);
         } catch (e) {
           console.error(`EventEmitter error for "${event}":`, e);
+          if (this._onError) this._onError(e, event);
         }
       }
     }

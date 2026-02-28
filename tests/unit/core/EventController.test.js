@@ -52,6 +52,7 @@ vi.mock('../../../js/config.js', () => ({
 
 // Import after mocks
 const { EventController } = await import('../../../js/core/EventController.js');
+const { bindSettingsControls } = await import('../../../js/core/SettingsBindings.js');
 
 describe('EventController', () => {
   let controller;
@@ -170,7 +171,6 @@ describe('EventController', () => {
     it('should call all binding methods', () => {
       const spyNav = vi.spyOn(controller, '_bindNavigationButtons');
       const spyBook = vi.spyOn(controller, '_bindBookInteractions');
-      const spySettings = vi.spyOn(controller, '_bindSettingsControls');
       const spyKeyboard = vi.spyOn(controller, '_bindKeyboard');
       const spyTouch = vi.spyOn(controller, '_bindTouch');
 
@@ -178,7 +178,6 @@ describe('EventController', () => {
 
       expect(spyNav).toHaveBeenCalledWith(elements);
       expect(spyBook).toHaveBeenCalled();
-      expect(spySettings).toHaveBeenCalledWith(elements);
       expect(spyKeyboard).toHaveBeenCalled();
       expect(spyTouch).toHaveBeenCalled();
     });
@@ -589,7 +588,7 @@ describe('EventController', () => {
     });
   });
 
-  describe('_bindSettingsControls', () => {
+  describe('bindSettingsControls', () => {
     let elements;
 
     beforeEach(() => {
@@ -626,7 +625,7 @@ describe('EventController', () => {
     });
 
     it('should bind click handler to increaseBtn', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const call = registeredListeners.find(
         (l) => l.element === elements.increaseBtn && l.event === 'click'
@@ -635,7 +634,7 @@ describe('EventController', () => {
     });
 
     it('should call onSettings with fontSize increase when increaseBtn clicked', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.increaseBtn
@@ -655,7 +654,7 @@ describe('EventController', () => {
         }
       });
 
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.increaseBtn
@@ -675,7 +674,7 @@ describe('EventController', () => {
         }
       });
 
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.increaseBtn
@@ -686,7 +685,7 @@ describe('EventController', () => {
     });
 
     it('should call onSettings with fontSize decrease when decreaseBtn clicked', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.decreaseBtn
@@ -706,7 +705,7 @@ describe('EventController', () => {
         }
       });
 
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.decreaseBtn
@@ -717,7 +716,7 @@ describe('EventController', () => {
     });
 
     it('should bind change handler to fontSelect', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const call = registeredListeners.find(
         (l) => l.element === elements.fontSelect && l.event === 'change'
@@ -726,7 +725,7 @@ describe('EventController', () => {
     });
 
     it('should call onSettings with font value when fontSelect changed', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.fontSelect
@@ -738,7 +737,7 @@ describe('EventController', () => {
     });
 
     it('should bind click handler to themeSegmented', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const call = registeredListeners.find(
         (l) => l.element === elements.themeSegmented && l.event === 'click'
@@ -753,7 +752,7 @@ describe('EventController', () => {
       segment.dataset.theme = 'dark';
       elements.themeSegmented.appendChild(segment);
 
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.themeSegmented
@@ -776,7 +775,7 @@ describe('EventController', () => {
       elements.themeSegmented.appendChild(segment1);
       elements.themeSegmented.appendChild(segment2);
 
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.themeSegmented
@@ -791,7 +790,7 @@ describe('EventController', () => {
     });
 
     it('should bind click handler to debugToggle', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const call = registeredListeners.find(
         (l) => l.element === elements.debugToggle && l.event === 'click'
@@ -800,7 +799,7 @@ describe('EventController', () => {
     });
 
     it('should call onSettings with debug toggle when debugToggle clicked', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.debugToggle
@@ -811,7 +810,7 @@ describe('EventController', () => {
     });
 
     it('should bind change handler to soundToggle', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const call = registeredListeners.find(
         (l) => l.element === elements.soundToggle && l.event === 'change'
@@ -820,7 +819,7 @@ describe('EventController', () => {
     });
 
     it('should call onSettings with soundEnabled when soundToggle changed', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.soundToggle
@@ -835,7 +834,7 @@ describe('EventController', () => {
     // JS больше не переключает .disabled класс на pageVolumeControl
 
     it('should bind input handler to volumeSlider', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const call = registeredListeners.find(
         (l) => l.element === elements.volumeSlider && l.event === 'input'
@@ -844,7 +843,7 @@ describe('EventController', () => {
     });
 
     it('should call onSettings with normalized volume value', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.volumeSlider
@@ -856,7 +855,7 @@ describe('EventController', () => {
     });
 
     it('should bind click handler to ambientPills', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const call = registeredListeners.find(
         (l) => l.element === elements.ambientPills && l.event === 'click'
@@ -870,7 +869,7 @@ describe('EventController', () => {
       pill.dataset.type = 'rain';
       elements.ambientPills.appendChild(pill);
 
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.ambientPills
@@ -887,7 +886,7 @@ describe('EventController', () => {
       pill.dataset.type = 'fireplace';
       elements.ambientPills.appendChild(pill);
 
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.ambientPills
@@ -905,7 +904,7 @@ describe('EventController', () => {
       elements.ambientPills.appendChild(pill);
       elements.ambientVolumeWrapper.classList.add('visible');
 
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.ambientPills
@@ -917,7 +916,7 @@ describe('EventController', () => {
     });
 
     it('should bind input handler to ambientVolume', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const call = registeredListeners.find(
         (l) => l.element === elements.ambientVolume && l.event === 'input'
@@ -926,7 +925,7 @@ describe('EventController', () => {
     });
 
     it('should call onSettings with normalized ambient volume', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.ambientVolume
@@ -938,7 +937,7 @@ describe('EventController', () => {
     });
 
     it('should bind click handler to fullscreenBtn', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const call = registeredListeners.find(
         (l) => l.element === elements.fullscreenBtn && l.event === 'click'
@@ -947,7 +946,7 @@ describe('EventController', () => {
     });
 
     it('should call onSettings with fullscreen toggle when fullscreenBtn clicked', () => {
-      controller._bindSettingsControls(elements);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
       const handler = registeredListeners.find(
         (l) => l.element === elements.fullscreenBtn
@@ -961,7 +960,7 @@ describe('EventController', () => {
     // JS больше не устанавливает data-settings-open атрибут
 
     it('should handle missing elements gracefully', () => {
-      expect(() => controller._bindSettingsControls({})).not.toThrow();
+      expect(() => bindSettingsControls({}, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize)).not.toThrow();
     });
   });
 
@@ -1321,29 +1320,55 @@ describe('EventController', () => {
     });
   });
 
-  describe('_updateFontSizeDisplay', () => {
+  describe('updateFontSizeDisplay (via bindSettingsControls)', () => {
     it('должен обновлять текст элемента текущим значением из настроек', () => {
-      const element = document.createElement('span');
+      const elements = {
+        increaseBtn: document.createElement('button'),
+        fontSizeValue: document.createElement('span'),
+      };
+      elements.fontSizeValue.textContent = '18';
       mockCallbacks.getFontSize.mockReturnValue(19);
 
-      controller._updateFontSizeDisplay(element);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
-      expect(element.textContent).toBe('19');
+      const handler = registeredListeners.find(
+        (l) => l.element === elements.increaseBtn
+      ).handler;
+      handler();
+
+      expect(elements.fontSizeValue.textContent).toBe('19');
     });
 
-    it('должен корректно обрабатывать null элемент', () => {
-      expect(() => controller._updateFontSizeDisplay(null)).not.toThrow();
+    it('должен корректно обрабатывать null fontSizeValue', () => {
+      const elements = {
+        increaseBtn: document.createElement('button'),
+        fontSizeValue: null,
+      };
+
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
+
+      const handler = registeredListeners.find(
+        (l) => l.element === elements.increaseBtn
+      ).handler;
+      expect(() => handler()).not.toThrow();
     });
 
     it('должен использовать getFontSize как источник правды', () => {
-      const element = document.createElement('span');
-      element.textContent = '20'; // Это значение должно быть перезаписано
-      mockCallbacks.getFontSize.mockReturnValue(18); // Это реальное значение
+      const elements = {
+        increaseBtn: document.createElement('button'),
+        fontSizeValue: document.createElement('span'),
+      };
+      elements.fontSizeValue.textContent = '20';
+      mockCallbacks.getFontSize.mockReturnValue(18);
 
-      controller._updateFontSizeDisplay(element);
+      bindSettingsControls(elements, mockEventManager, mockCallbacks.onSettings, mockCallbacks.getFontSize);
 
-      // Должен использовать значение getFontSize() (18), не DOM значение (20)
-      expect(element.textContent).toBe('18');
+      const handler = registeredListeners.find(
+        (l) => l.element === elements.increaseBtn
+      ).handler;
+      handler();
+
+      expect(elements.fontSizeValue.textContent).toBe('18');
     });
   });
 

@@ -19,6 +19,25 @@ import { ComponentFactory } from './ComponentFactory.js';
 import { createBookDelegates } from './BookDIConfig.js';
 
 /**
+ * Создать read-only Proxy для объекта состояния.
+ * Делегаты получают эту обёртку и могут только читать state.index / state.chapterStarts.
+ * Попытка записи бросает ошибку — запись допускается только в DelegateMediator.
+ *
+ * @param {Object} state - Оригинальное состояние { index, chapterStarts }
+ * @returns {Proxy} Read-only view состояния
+ */
+export function createReadOnlyState(state) {
+  return new Proxy(state, {
+    set(_, prop) {
+      throw new Error(`State is read-only for delegates. Cannot set "${prop}".`);
+    },
+    deleteProperty(_, prop) {
+      throw new Error(`State is read-only for delegates. Cannot delete "${prop}".`);
+    },
+  });
+}
+
+/**
  * Проверить наличие обязательных зависимостей для фазы.
  * @param {Object<string, *>} deps - Объект { имя: значение } зависимостей
  * @param {string} phase - Имя фазы для сообщения об ошибке
@@ -83,8 +102,12 @@ export function buildBookComponents({ state, apiClient = null, bookId = null, se
     core, audio, render, content, stateMachine, settings, debugPanel,
   }, 'buildDelegates');
 
+  // Делегаты получают read-only view состояния.
+  // DelegateMediator использует оригинальный state для записи.
+  const readOnlyState = createReadOnlyState(state);
+
   const delegates = createBookDelegates({
-    core, audio, render, content, stateMachine, settings, debugPanel, state,
+    core, audio, render, content, stateMachine, settings, debugPanel, state: readOnlyState,
   });
 
   return {
