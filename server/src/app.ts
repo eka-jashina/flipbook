@@ -172,6 +172,15 @@ export function createApp() {
   app.use('/api/upload', uploadRoutes);
   app.use('/api', exportImportRoutes);
 
+  // 404 handler for unmatched API routes — prevents leaking SPA HTML for API paths
+  app.all('/api/*', (_req: Request, res: Response) => {
+    res.status(404).json({
+      error: 'NotFound',
+      message: 'API endpoint not found',
+      statusCode: 404,
+    });
+  });
+
   // Serve pre-built client in production
   if (config.NODE_ENV === 'production') {
     const clientDist = process.env.CLIENT_DIST_PATH

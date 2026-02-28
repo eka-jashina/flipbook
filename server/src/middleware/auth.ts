@@ -21,6 +21,25 @@ declare global {
   }
 }
 
+/** Convert a Prisma User row to Express.User (strips DB-only fields) */
+function toSessionUser(dbUser: {
+  id: string;
+  email: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  googleId: string | null;
+  passwordHash: string | null;
+}): Express.User {
+  return {
+    id: dbUser.id,
+    email: dbUser.email,
+    displayName: dbUser.displayName,
+    avatarUrl: dbUser.avatarUrl,
+    googleId: dbUser.googleId,
+    hasPassword: dbUser.passwordHash !== null,
+  };
+}
+
 export function configurePassport(): void {
   const config = getConfig();
   const prisma = getPrisma();
@@ -76,7 +95,7 @@ export function configurePassport(): void {
             return;
           }
 
-          done(null, user);
+          done(null, toSessionUser(user));
         } catch (err) {
           done(err);
         }
@@ -111,16 +130,30 @@ export function configurePassport(): void {
             });
 
             if (user) {
-              done(null, user);
+              done(null, toSessionUser(user));
               return;
             }
 
-            // Check if user exists by email — link Google account
+            // Check if user exists by email
             user = await prisma.user.findUnique({
               where: { email: email.toLowerCase() },
             });
 
             if (user) {
+              // Only auto-link Google to accounts that have NO password set
+              // (i.e., they were created via Google OAuth previously).
+              // Accounts with a password require the user to link Google
+              // explicitly from their profile — prevents account pre-hijacking
+              // where an attacker registers with victim's email and then
+              // victim's Google login silently merges into the attacker's account.
+              if (user.passwordHash) {
+                logger.warn(
+                  { userId: user.id, email: email.toLowerCase(), googleId: profile.id },
+                  'Google OAuth login rejected: email already registered with password',
+                );
+                done(null, false, { message: 'An account with this email already exists. Please log in with your password.' } as any);
+                return;
+              }
               user = await prisma.user.update({
                 where: { id: user.id },
                 data: {
@@ -129,7 +162,7 @@ export function configurePassport(): void {
                   displayName: user.displayName || profile.displayName,
                 },
               });
-              done(null, user);
+              done(null, toSessionUser(user));
               return;
             }
 
@@ -144,7 +177,7 @@ export function configurePassport(): void {
             });
 
             logger.info({ userId: user.id, email }, 'New user via Google OAuth');
-            done(null, user);
+            done(null, toSessionUser(user));
           } catch (err) {
             done(err);
           }

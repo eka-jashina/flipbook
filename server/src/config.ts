@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -9,10 +11,11 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(32),
   CSRF_SECRET: z.string().min(32).optional(),
   SESSION_MAX_AGE: z.coerce.number().default(604800000), // 7 days
+  // In production, default to secure cookies (HTTPS only)
   SESSION_SECURE: z
     .string()
     .transform((v) => v === 'true')
-    .default('false'),
+    .default(isProduction ? 'true' : 'false'),
 
   GOOGLE_CLIENT_ID: z.string().default('placeholder'),
   GOOGLE_CLIENT_SECRET: z.string().default('placeholder'),
@@ -23,15 +26,20 @@ const envSchema = z.object({
   S3_ENDPOINT: z.string().optional(),
   S3_BUCKET: z.string().default('flipbook-uploads'),
   S3_REGION: z.string().default('us-east-1'),
-  S3_ACCESS_KEY: z.string().default('minioadmin'),
-  S3_SECRET_KEY: z.string().default('minioadmin'),
+  // S3 credentials: required in production, default to MinIO dev creds otherwise
+  S3_ACCESS_KEY: isProduction
+    ? z.string().min(1, 'S3_ACCESS_KEY is required in production')
+    : z.string().default('minioadmin'),
+  S3_SECRET_KEY: isProduction
+    ? z.string().min(1, 'S3_SECRET_KEY is required in production')
+    : z.string().default('minioadmin'),
   S3_FORCE_PATH_STYLE: z
     .string()
     .transform((v) => v === 'true')
-    .default('true'),
-  S3_PUBLIC_URL: z
-    .string()
-    .default('http://localhost:9000/flipbook-uploads'),
+    .default(isProduction ? 'false' : 'true'),
+  S3_PUBLIC_URL: isProduction
+    ? z.string().min(1, 'S3_PUBLIC_URL is required in production')
+    : z.string().default('http://localhost:9000/flipbook-uploads'),
 
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
   APP_URL: z.string().default('http://localhost:3000'),
