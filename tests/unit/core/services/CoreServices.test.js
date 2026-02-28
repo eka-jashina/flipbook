@@ -111,4 +111,51 @@ describe('CoreServices', () => {
       expect(services.storage).toBeNull();
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // QUOTA EXCEEDED
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('onQuotaExceeded', () => {
+    it('should set onQuotaExceeded callback on storage', () => {
+      expect(services.storage.onQuotaExceeded).toBeDefined();
+    });
+
+    it('should show storage warning when quota exceeded', () => {
+      vi.useFakeTimers();
+
+      services.storage.onQuotaExceeded('test-key');
+
+      const warning = document.getElementById('storage-quota-warning');
+      expect(warning).toBeTruthy();
+      expect(warning.getAttribute('role')).toBe('alert');
+      expect(warning.textContent).toContain('переполнено');
+
+      vi.advanceTimersByTime(8000);
+      vi.useRealTimers();
+    });
+
+    it('should not duplicate warning if already shown', () => {
+      const existingEl = document.createElement('div');
+      existingEl.id = 'storage-quota-warning';
+      document.body.appendChild(existingEl);
+
+      services.storage.onQuotaExceeded('test-key');
+
+      const warnings = document.querySelectorAll('#storage-quota-warning');
+      expect(warnings).toHaveLength(1);
+    });
+
+    it('should auto-remove warning after 8 seconds', () => {
+      vi.useFakeTimers();
+
+      services.storage.onQuotaExceeded('test-key');
+      expect(document.getElementById('storage-quota-warning')).toBeTruthy();
+
+      vi.advanceTimersByTime(8000);
+      expect(document.getElementById('storage-quota-warning')).toBeNull();
+
+      vi.useRealTimers();
+    });
+  });
 });

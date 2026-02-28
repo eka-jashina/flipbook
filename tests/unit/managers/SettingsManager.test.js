@@ -184,6 +184,273 @@ describe('SettingsManager', () => {
     });
   });
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // applyServerProgress
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('applyServerProgress', () => {
+    it('should merge server progress with defaults', () => {
+      manager.applyServerProgress({ page: 42, theme: 'dark' });
+
+      expect(manager.settings.page).toBe(42);
+      expect(manager.settings.theme).toBe('dark');
+      expect(manager.settings.font).toBe('georgia'); // from defaults
+    });
+
+    it('should save merged settings to localStorage', () => {
+      manager.applyServerProgress({ page: 10 });
+
+      expect(mockStorage.save).toHaveBeenCalledWith(expect.objectContaining({ page: 10 }));
+    });
+
+    it('should be no-op for null progress', () => {
+      const settingsBefore = { ...manager.settings };
+      manager.applyServerProgress(null);
+
+      expect(manager.settings).toEqual(settingsBefore);
+    });
+
+    it('should sanitize server progress values', () => {
+      manager.applyServerProgress({ fontSize: 1000, soundVolume: -5 });
+
+      expect(manager.settings.fontSize).toBe(72); // clamped to max
+      expect(manager.settings.soundVolume).toBe(0); // clamped to min
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Server sync (Фаза 3)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('server sync', () => {
+    let mockApi;
+    let syncManager;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      mockApi = {
+        saveProgress: vi.fn().mockResolvedValue({}),
+      };
+      syncManager = new SettingsManager(mockStorage, defaults, {
+        apiClient: mockApi,
+        bookId: 'book-1',
+      });
+    });
+
+    afterEach(() => {
+      syncManager.destroy();
+      vi.useRealTimers();
+    });
+
+    it('should schedule sync on set when api is configured', () => {
+      syncManager.set('page', 5);
+
+      expect(syncManager._dirty).toBe(true);
+    });
+
+    it('should call saveProgress after debounce delay', async () => {
+      syncManager.set('page', 5);
+
+      // Advance past SYNC_DEBOUNCE (5000ms)
+      vi.advanceTimersByTime(5000);
+      await vi.waitFor(() => {
+        expect(mockApi.saveProgress).toHaveBeenCalledWith('book-1', expect.objectContaining({
+          page: 5,
+        }));
+      });
+    });
+
+    it('should clear dirty flag after successful sync', async () => {
+      syncManager.set('page', 5);
+
+      vi.advanceTimersByTime(5000);
+      await vi.waitFor(() => {
+        expect(syncManager._dirty).toBe(false);
+      });
+    });
+
+    it('should debounce multiple rapid changes', async () => {
+      syncManager.set('page', 1);
+      syncManager.set('page', 2);
+      syncManager.set('page', 3);
+
+      vi.advanceTimersByTime(5000);
+      await vi.waitFor(() => {
+        expect(mockApi.saveProgress).toHaveBeenCalledTimes(1);
+        expect(mockApi.saveProgress).toHaveBeenCalledWith('book-1', expect.objectContaining({
+          page: 3,
+        }));
+      });
+    });
+
+    it('should notify sync state changes', async () => {
+      const stateChanges = [];
+      syncManager.onSyncStateChange = (state) => stateChanges.push(state);
+
+      syncManager.set('page', 5);
+      expect(stateChanges).toContain('syncing');
+
+      vi.advanceTimersByTime(5000);
+      await vi.waitFor(() => {
+        expect(stateChanges).toContain('synced');
+      });
+    });
+
+    it('should notify error state on sync failure', async () => {
+      mockApi.saveProgress.mockRejectedValue(new Error('Network'));
+      const stateChanges = [];
+      syncManager.onSyncStateChange = (state) => stateChanges.push(state);
+
+      syncManager.set('page', 5);
+
+      vi.advanceTimersByTime(5000);
+      await vi.waitFor(() => {
+        expect(stateChanges).toContain('error');
+      });
+    });
+
+    it('should keep dirty flag on sync failure', async () => {
+      mockApi.saveProgress.mockRejectedValue(new Error('Network'));
+
+      syncManager.set('page', 5);
+
+      vi.advanceTimersByTime(5000);
+      await vi.waitFor(() => {
+        expect(syncManager._dirty).toBe(true);
+      });
+    });
+
+    it('should not sync if not dirty', async () => {
+      await syncManager._syncToServer();
+
+      expect(mockApi.saveProgress).not.toHaveBeenCalled();
+    });
+
+    it('should not sync without api', async () => {
+      const noApiManager = new SettingsManager(mockStorage, defaults);
+      noApiManager.set('page', 5);
+
+      // Should not have _dirty since no api
+      expect(noApiManager._dirty).toBe(false);
+      noApiManager.destroy();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // beforeunload (sendBeacon)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('beforeunload sync', () => {
+    let mockApi;
+    let syncManager;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      mockApi = {
+        saveProgress: vi.fn().mockResolvedValue({}),
+      };
+      // Мок navigator.sendBeacon
+      navigator.sendBeacon = vi.fn().mockReturnValue(true);
+      syncManager = new SettingsManager(mockStorage, defaults, {
+        apiClient: mockApi,
+        bookId: 'book-1',
+      });
+    });
+
+    afterEach(() => {
+      syncManager.destroy();
+      vi.useRealTimers();
+    });
+
+    it('should add beforeunload listener when api configured', () => {
+      const spy = vi.spyOn(window, 'addEventListener');
+      const mgr = new SettingsManager(mockStorage, defaults, {
+        apiClient: mockApi,
+        bookId: 'book-2',
+      });
+
+      expect(spy).toHaveBeenCalledWith('beforeunload', expect.any(Function));
+      mgr.destroy();
+    });
+
+    it('should send beacon on beforeunload if dirty', () => {
+      syncManager._dirty = true;
+
+      syncManager._onBeforeUnload();
+
+      expect(navigator.sendBeacon).toHaveBeenCalledWith(
+        '/api/books/book-1/progress',
+        expect.any(Blob)
+      );
+    });
+
+    it('should not send beacon if not dirty', () => {
+      syncManager._dirty = false;
+
+      syncManager._onBeforeUnload();
+
+      expect(navigator.sendBeacon).not.toHaveBeenCalled();
+    });
+
+    it('should clear dirty flag after sendBeacon', () => {
+      syncManager._dirty = true;
+
+      syncManager._onBeforeUnload();
+
+      expect(syncManager._dirty).toBe(false);
+    });
+
+    it('should handle sendBeacon failure gracefully', () => {
+      syncManager._dirty = true;
+      navigator.sendBeacon = vi.fn(() => { throw new Error('Not supported'); });
+
+      expect(() => syncManager._onBeforeUnload()).not.toThrow();
+    });
+
+    it('should remove beforeunload listener on destroy', () => {
+      const spy = vi.spyOn(window, 'removeEventListener');
+      syncManager.destroy();
+
+      expect(spy).toHaveBeenCalledWith('beforeunload', expect.any(Function));
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // destroy with server sync
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('destroy with sync', () => {
+    it('should attempt final sync when dirty on destroy', () => {
+      vi.useFakeTimers();
+      const mockApi = { saveProgress: vi.fn().mockResolvedValue({}) };
+      const mgr = new SettingsManager(mockStorage, defaults, {
+        apiClient: mockApi,
+        bookId: 'book-1',
+      });
+      mgr._dirty = true;
+
+      mgr.destroy();
+
+      expect(mockApi.saveProgress).toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it('should clear sync timer on destroy', () => {
+      vi.useFakeTimers();
+      const mockApi = { saveProgress: vi.fn().mockResolvedValue({}) };
+      const mgr = new SettingsManager(mockStorage, defaults, {
+        apiClient: mockApi,
+        bookId: 'book-1',
+      });
+      mgr.set('page', 5); // creates timer
+
+      mgr.destroy();
+
+      expect(mgr._syncTimer).toBeNull();
+      vi.useRealTimers();
+    });
+  });
+
   describe('integration', () => {
     it('should persist and retrieve values correctly', () => {
       manager.set('theme', 'dark');
