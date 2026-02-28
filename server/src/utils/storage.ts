@@ -121,15 +121,15 @@ export async function fileExists(key: string): Promise<boolean> {
 
 /**
  * Generate a unique file key for S3 storage.
+ * Uses full UUID to avoid collisions under concurrent uploads.
  */
 export function generateFileKey(
   folder: string,
   originalName: string,
 ): string {
-  const timestamp = Date.now();
-  const random = randomUUID().split('-')[0];
+  const uuid = randomUUID();
   const ext = originalName.split('.').pop() || '';
-  return `${folder}/${timestamp}-${random}.${ext}`;
+  return `${folder}/${uuid}.${ext}`;
 }
 
 /**
@@ -143,12 +143,27 @@ export function getPublicUrl(key: string): string {
 /**
  * Extract the S3 key from a public URL.
  * Returns null if the URL doesn't match the configured S3_PUBLIC_URL prefix.
+ * Uses URL parsing to correctly handle query parameters and fragments.
  */
 export function extractKeyFromUrl(url: string): string | null {
   const config = getConfig();
   const prefix = config.S3_PUBLIC_URL + '/';
   if (!url.startsWith(prefix)) return null;
-  return url.slice(prefix.length);
+
+  try {
+    const parsed = new URL(url);
+    const prefixParsed = new URL(config.S3_PUBLIC_URL);
+    // Ensure same origin
+    if (parsed.origin !== prefixParsed.origin) return null;
+    // Extract key: pathname after the prefix pathname
+    const prefixPath = prefixParsed.pathname.replace(/\/$/, '');
+    const fullPath = parsed.pathname;
+    if (!fullPath.startsWith(prefixPath + '/')) return null;
+    return fullPath.slice(prefixPath.length + 1);
+  } catch {
+    // Fallback for non-URL strings (e.g., relative paths)
+    return null;
+  }
 }
 
 /**

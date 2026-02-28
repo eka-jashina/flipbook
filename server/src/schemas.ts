@@ -4,6 +4,11 @@
  */
 import { z } from 'zod';
 
+// ── Shared constants ──────────────────────────────────────────
+/** Absolute min/max bounds for font size across the entire app */
+const FONT_SIZE_MIN = 8;
+const FONT_SIZE_MAX = 72;
+
 // ── Auth ───────────────────────────────────────────
 export const registerSchema = z.object({
   email: z.string().email().max(255),
@@ -64,9 +69,17 @@ export const reorderChaptersSchema = z.object({
 
 // ── Appearance ─────────────────────────────────────
 export const updateAppearanceSchema = z.object({
-  fontMin: z.number().int().min(8).max(40).optional(),
-  fontMax: z.number().int().min(8).max(40).optional(),
-});
+  fontMin: z.number().int().min(FONT_SIZE_MIN).max(FONT_SIZE_MAX).optional(),
+  fontMax: z.number().int().min(FONT_SIZE_MIN).max(FONT_SIZE_MAX).optional(),
+}).refine(
+  (data) => {
+    if (data.fontMin !== undefined && data.fontMax !== undefined) {
+      return data.fontMin <= data.fontMax;
+    }
+    return true;
+  },
+  { message: 'fontMin must be less than or equal to fontMax', path: ['fontMin'] },
+);
 
 export const updateThemeSchema = z.object({
   coverBgStart: z.string().max(20).optional(),
@@ -119,7 +132,7 @@ export const upsertDecorativeFontSchema = z.object({
 // ── Default Settings ───────────────────────────────
 export const updateDefaultSettingsSchema = z.object({
   font: z.string().max(100).optional(),
-  fontSize: z.number().int().min(8).max(72).optional(),
+  fontSize: z.number().int().min(FONT_SIZE_MIN).max(FONT_SIZE_MAX).optional(),
   theme: z.string().max(20).optional(),
   soundEnabled: z.boolean().optional(),
   soundVolume: z.number().min(0).max(1).optional(),
@@ -150,8 +163,8 @@ export const reorderFontsSchema = z.object({
 
 // ── Settings (global) ──────────────────────────────
 export const updateSettingsSchema = z.object({
-  fontMin: z.number().int().min(8).max(40).optional(),
-  fontMax: z.number().int().min(8).max(40).optional(),
+  fontMin: z.number().int().min(FONT_SIZE_MIN).max(FONT_SIZE_MAX).optional(),
+  fontMax: z.number().int().min(FONT_SIZE_MIN).max(FONT_SIZE_MAX).optional(),
   settingsVisibility: z.object({
     fontSize: z.boolean().optional(),
     theme: z.boolean().optional(),
@@ -160,13 +173,21 @@ export const updateSettingsSchema = z.object({
     sound: z.boolean().optional(),
     ambient: z.boolean().optional(),
   }).optional(),
-});
+}).refine(
+  (data) => {
+    if (data.fontMin !== undefined && data.fontMax !== undefined) {
+      return data.fontMin <= data.fontMax;
+    }
+    return true;
+  },
+  { message: 'fontMin must be less than or equal to fontMax', path: ['fontMin'] },
+);
 
 // ── Progress ───────────────────────────────────────
 export const upsertProgressSchema = z.object({
   page: z.number().int().min(0),
   font: z.string().max(100),
-  fontSize: z.number().int().min(8).max(40),
+  fontSize: z.number().int().min(FONT_SIZE_MIN).max(FONT_SIZE_MAX),
   theme: z.string().max(20),
   soundEnabled: z.boolean(),
   soundVolume: z.number().min(0).max(1),
