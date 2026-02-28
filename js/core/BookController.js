@@ -3,33 +3,28 @@
  * DI-контейнер и жизненный цикл приложения.
  *
  * Ответственность:
- * - Создание и связывание сервисов, компонентов, делегатов
+ * - Оркестрация графа зависимостей (через BookControllerBuilder)
+ * - Создание медиатора и менеджеров (фазы 4-5)
  * - Управление жизненным циклом (init / destroy)
  *
  * Координация событий между делегатами вынесена в DelegateMediator.
+ * Чистая конструкция сервисов/компонентов/делегатов — в BookControllerBuilder.
  *
  * Граф зависимостей инициализации:
  *
- *   _createServices()     — корневая фаза, без зависимостей
+ *   buildBookComponents()  — фазы 1-3, чистая конструкция (BookControllerBuilder)
  *        ↓
- *   _createComponents()   — зависит от factory
+ *   _createMediator()      — фаза 4, зависит от delegates + services + components
  *        ↓
- *   _createDelegates()    — зависит от services + components
- *        ↓
- *   _createMediator()     — зависит от delegates + services + components
- *        ↓
- *   _setupManagers()      — зависит от core + mediator + stateMachine
- *
- * Каждая фаза валидирует свои зависимости через _assertDependencies().
+ *   _setupManagers()       — фаза 5, зависит от core + mediator + stateMachine
  */
 
 import { mediaQueries, ErrorHandler, getAnnouncer } from '../utils/index.js';
-import { ComponentFactory } from './ComponentFactory.js';
 import { AppInitializer } from './AppInitializer.js';
 import { SubscriptionManager } from './SubscriptionManager.js';
 import { ResizeHandler } from './ResizeHandler.js';
 import { DelegateMediator } from './DelegateMediator.js';
-import { createBookDelegates } from './BookDIConfig.js';
+import { buildBookComponents } from './BookControllerBuilder.js';
 
 export class BookController {
   /**
@@ -43,7 +38,6 @@ export class BookController {
     this.isDestroyed = false;
     this._apiClient = options.apiClient || null;
     this._bookId = options.bookId || null;
-    this._serverProgress = options.serverProgress || null;
 
     // Централизованное состояние (модифицируется только контроллером/медиатором)
     this.state = {
@@ -54,9 +48,37 @@ export class BookController {
     // Screen reader announcer (singleton)
     this.announcer = getAnnouncer();
 
-    this._createServices();
-    this._createComponents();
-    this._createDelegates();
+    // Фазы 1-3: чистая конструкция графа зависимостей
+    const {
+      core, factory, settings, audio, render, content,
+      stateMachine, debugPanel, delegates,
+    } = buildBookComponents({
+      state: this.state,
+      apiClient: this._apiClient,
+      bookId: this._bookId,
+      serverProgress: options.serverProgress,
+    });
+
+    this.core = core;
+    this.factory = factory;
+    this.settings = settings;
+    this.audio = audio;
+    this.render = render;
+    this.content = content;
+    this.stateMachine = stateMachine;
+    this.debugPanel = debugPanel;
+    this.chapterDelegate = delegates.chapter;
+    this.navigationDelegate = delegates.navigation;
+    this.lifecycleDelegate = delegates.lifecycle;
+    this.settingsDelegate = delegates.settings;
+    this.dragDelegate = delegates.drag;
+
+    // Подключить sync-индикатор (серверный режим)
+    if (this._apiClient && this._bookId) {
+      this._setupSyncIndicator();
+    }
+
+    // Фазы 4-5: медиатор и менеджеры (требуют доступа к this)
     this._createMediator();
     this._setupManagers();
   }
@@ -77,7 +99,7 @@ export class BookController {
   set chapterStarts(value) { this.state.chapterStarts = value; }
 
   // ═══════════════════════════════════════════
-  // ИНИЦИАЛИЗАЦИЯ
+  // ИНИЦИАЛИЗАЦИЯ (фазы 4-5)
   // ═══════════════════════════════════════════
 
   /**
@@ -101,77 +123,35 @@ export class BookController {
   }
 
   /**
-   * Создать сервисные группы (корневая фаза, без зависимостей)
+   * Подключить индикатор синхронизации к SettingsManager
    * @private
    */
-  _createServices() {
-    this.core = ComponentFactory.createCoreServices();
-    this.factory = new ComponentFactory(this.core);
-    this.settings = this.factory.createSettingsManager({
-      apiClient: this._apiClient,
-      bookId: this._bookId,
-    });
+  _setupSyncIndicator() {
+    const el = document.getElementById('sync-indicator');
+    const textEl = document.getElementById('sync-indicator-text');
+    if (!el || !textEl) return;
 
-    // Применить серверный прогресс и подключить sync-индикатор
-    if (this._serverProgress) {
-      this.settings.applyServerProgress(this._serverProgress);
-    }
-    if (this._apiClient && this._bookId) {
-      this._setupSyncIndicator();
-    }
+    this.settings.onSyncStateChange = (state) => {
+      el.hidden = false;
+      el.className = 'sync-indicator';
 
-    this.audio = this.factory.createAudioServices(this.settings);
-    this.render = this.factory.createRenderServices();
-    this.content = this.factory.createContentServices();
-
-    // Настройка ambient loading callbacks
-    this.audio.setupAmbientLoadingCallbacks(this.core.dom.get('ambientPills'));
-  }
-
-  /**
-   * Создать отдельные компоненты (не входящие в сервисные группы)
-   * @private
-   */
-  _createComponents() {
-    this._assertDependencies({ factory: this.factory }, '_createComponents');
-
-    this.stateMachine = this.factory.createStateMachine();
-    this.debugPanel = this.factory.createDebugPanel();
-  }
-
-  /**
-   * Создать делегаты с зависимостями.
-   * DI-конфигурация (какие зависимости получает каждый делегат) вынесена
-   * в BookDIConfig.js для разделения ответственности.
-   * @private
-   */
-  _createDelegates() {
-    this._assertDependencies({
-      core: this.core,
-      audio: this.audio,
-      render: this.render,
-      content: this.content,
-      stateMachine: this.stateMachine,
-      settings: this.settings,
-      debugPanel: this.debugPanel,
-    }, '_createDelegates');
-
-    const delegates = createBookDelegates({
-      core: this.core,
-      audio: this.audio,
-      render: this.render,
-      content: this.content,
-      stateMachine: this.stateMachine,
-      settings: this.settings,
-      debugPanel: this.debugPanel,
-      state: this.state,
-    });
-
-    this.chapterDelegate = delegates.chapter;
-    this.navigationDelegate = delegates.navigation;
-    this.lifecycleDelegate = delegates.lifecycle;
-    this.settingsDelegate = delegates.settings;
-    this.dragDelegate = delegates.drag;
+      switch (state) {
+        case 'syncing':
+          el.classList.add('sync-indicator--syncing');
+          textEl.textContent = 'Сохранение...';
+          break;
+        case 'synced':
+          el.classList.add('sync-indicator--synced');
+          textEl.textContent = 'Сохранено';
+          // Скрыть через 2 секунды
+          setTimeout(() => { el.hidden = true; }, 2000);
+          break;
+        case 'error':
+          el.classList.add('sync-indicator--error');
+          textEl.textContent = 'Не сохранено';
+          break;
+      }
+    };
   }
 
   /**
@@ -235,38 +215,6 @@ export class BookController {
       dragDelegate: this.dragDelegate,
       lifecycleDelegate: this.lifecycleDelegate,
     });
-  }
-
-  /**
-   * Подключить индикатор синхронизации к SettingsManager
-   * @private
-   */
-  _setupSyncIndicator() {
-    const el = document.getElementById('sync-indicator');
-    const textEl = document.getElementById('sync-indicator-text');
-    if (!el || !textEl) return;
-
-    this.settings.onSyncStateChange = (state) => {
-      el.hidden = false;
-      el.className = 'sync-indicator';
-
-      switch (state) {
-        case 'syncing':
-          el.classList.add('sync-indicator--syncing');
-          textEl.textContent = 'Сохранение...';
-          break;
-        case 'synced':
-          el.classList.add('sync-indicator--synced');
-          textEl.textContent = 'Сохранено';
-          // Скрыть через 2 секунды
-          setTimeout(() => { el.hidden = true; }, 2000);
-          break;
-        case 'error':
-          el.classList.add('sync-indicator--error');
-          textEl.textContent = 'Не сохранено';
-          break;
-      }
-    };
   }
 
   /**

@@ -338,7 +338,7 @@ export class ChaptersModule extends BaseModule {
 
   // --- Модальное окно главы ---
 
-  _openModal(editIndex = null) {
+  async _openModal(editIndex = null) {
     this._editingIndex = editIndex;
     this._pendingHtmlContent = null;
     this.chapterFileInput.value = '';
@@ -360,20 +360,20 @@ export class ChaptersModule extends BaseModule {
         // Встроенный контент — открыть в редакторе
         this._pendingHtmlContent = ch.htmlContent;
         this._resetChapterFileUI();
-        this._switchInputMode('editor');
+        await this._switchInputMode('editor');
         this._editor.setHTML(ch.htmlContent);
       } else if (ch.file) {
         // URL-путь — показать имя файла в режиме загрузки
-        this._switchInputMode('upload');
+        await this._switchInputMode('upload');
         this._showChapterFileInfo(ch.file);
       } else {
-        this._switchInputMode('upload');
+        await this._switchInputMode('upload');
         this._resetChapterFileUI();
       }
     } else {
       this.modalTitle.textContent = 'Добавить главу';
       this.chapterForm.reset();
-      this._switchInputMode('upload');
+      await this._switchInputMode('upload');
       this._resetChapterFileUI();
     }
 
@@ -381,10 +381,11 @@ export class ChaptersModule extends BaseModule {
   }
 
   /**
-   * Переключить режим ввода контента: 'upload' или 'editor'
+   * Переключить режим ввода контента: 'upload' или 'editor'.
+   * Асинхронный — Quill загружается лениво при первом переключении в режим редактора.
    * @param {'upload'|'editor'} mode
    */
-  _switchInputMode(mode) {
+  async _switchInputMode(mode) {
     if (mode === this._inputMode && mode === 'upload') {
       // Уже в режиме загрузки — ничего не делать
       return;
@@ -407,7 +408,7 @@ export class ChaptersModule extends BaseModule {
 
     // Ленивая инициализация Quill при первом переключении в режим редактора
     if (mode === 'editor' && !this._editor.isInitialized) {
-      this._editor.init(this.chapterEditorContainer);
+      await this._editor.init(this.chapterEditorContainer);
     }
 
     // Загрузить pending-контент в редактор при переключении

@@ -218,6 +218,51 @@ describe('EventEmitter', () => {
 
       consoleSpy.mockRestore();
     });
+
+    it('should call onError callback when handler throws', () => {
+      const onError = vi.fn();
+      const emitterWithCallback = new EventEmitter({ onError });
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const error = new Error('handler failed');
+      emitterWithCallback.on('test', () => { throw error; });
+      emitterWithCallback.emit('test');
+
+      expect(onError).toHaveBeenCalledWith(error, 'test');
+      consoleSpy.mockRestore();
+    });
+
+    it('should pass event name to onError callback', () => {
+      const onError = vi.fn();
+      const emitterWithCallback = new EventEmitter({ onError });
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      emitterWithCallback.on('myEvent', () => { throw new Error('fail'); });
+      emitterWithCallback.emit('myEvent');
+
+      expect(onError).toHaveBeenCalledWith(expect.any(Error), 'myEvent');
+      consoleSpy.mockRestore();
+    });
+
+    it('should not call onError when no handler throws', () => {
+      const onError = vi.fn();
+      const emitterWithCallback = new EventEmitter({ onError });
+
+      emitterWithCallback.on('test', () => {});
+      emitterWithCallback.emit('test');
+
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('should work without onError option (backward compatibility)', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const plainEmitter = new EventEmitter();
+
+      plainEmitter.on('test', () => { throw new Error('fail'); });
+      expect(() => plainEmitter.emit('test')).not.toThrow();
+
+      consoleSpy.mockRestore();
+    });
   });
 
   // ═══════════════════════════════════════════════════════════════════════════

@@ -1,33 +1,47 @@
 /**
  * Обёртка Quill WYSIWYG редактора для модального окна главы
- * Инкапсулирует инициализацию, конфигурацию и lifecycle Quill
+ * Инкапсулирует инициализацию, конфигурацию и lifecycle Quill.
+ *
+ * Quill загружается лениво (dynamic import) при первом вызове init()
+ * для сокращения начальной загрузки админ-панели (~150 КБ).
  */
-import Quill from 'quill';
-import 'quill/dist/quill.snow.css';
 
 /** Максимальный размер изображения для вставки (5 МБ) */
 const IMAGE_MAX_SIZE = 5 * 1024 * 1024;
 
+/** Кешированный конструктор Quill (загружается один раз) */
+let _QuillCtor = null;
+
 export class QuillEditorWrapper {
   constructor() {
-    /** @type {Quill|null} */
+    /** @type {Object|null} Quill instance */
     this._quill = null;
     /** @type {HTMLElement|null} */
     this._container = null;
   }
 
   /**
-   * Инициализировать Quill в указанном контейнере
+   * Инициализировать Quill в указанном контейнере.
+   * При первом вызове загружает Quill через dynamic import.
    * @param {HTMLElement} container - DOM-элемент для редактора
    */
-  init(container) {
+  async init(container) {
     this._container = container;
 
     if (this._quill) {
       this.destroy();
     }
 
-    this._quill = new Quill(container, {
+    // Ленивая загрузка Quill (один раз, далее из кеша)
+    if (!_QuillCtor) {
+      const [{ default: Quill }] = await Promise.all([
+        import('quill'),
+        import('quill/dist/quill.snow.css'),
+      ]);
+      _QuillCtor = Quill;
+    }
+
+    this._quill = new _QuillCtor(container, {
       theme: 'snow',
       placeholder: 'Начните писать текст главы...',
       modules: {

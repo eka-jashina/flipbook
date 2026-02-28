@@ -13,140 +13,20 @@
  *   Единственный side effect этого модуля: читает localStorage через loadAdminConfig().
  */
 
-// Vite подставляет base URL для production
-const BASE_URL = import.meta.env.BASE_URL || '/';
+import {
+  BASE_URL,
+  loadAdminConfig,
+  deepFreeze,
+  resolveAssetPath,
+  resolveCoverBgFromCover,
+  resolveSound,
+  getActiveBook,
+  buildAmbientConfig,
+  buildFontsConfig,
+  buildCommonConfig,
+} from './config/configHelpers.js';
 
-/**
- * Загрузка конфига админки из localStorage (если есть)
- * @returns {Object|null}
- */
-function loadAdminConfig() {
-  try {
-    const raw = localStorage.getItem('flipbook-admin-config');
-    if (raw) return JSON.parse(raw);
-  } catch { /* повреждённые данные — игнорируем */ }
-  return null;
-}
-
-// ─── Чистые вспомогательные функции ─────────────────────────────────────────
-
-// Резолвить путь к ресурсу (data: / http / относительный)
-function resolveAssetPath(value) {
-  if (!value) return '';
-  if (value.startsWith('data:') || value.startsWith('http')) return value;
-  return `${BASE_URL}${value}`;
-}
-
-// Получить активную книгу из конфига админки
-function getActiveBook(config) {
-  if (!config) return null;
-
-  // Новый формат: books[] + activeBookId
-  if (Array.isArray(config.books) && config.books.length > 0) {
-    const active = config.books.find(b => b.id === config.activeBookId);
-    return active || config.books[0];
-  }
-
-  // Старый формат: cover + chapters на верхнем уровне
-  if (config.chapters?.length) {
-    return { cover: config.cover || {}, chapters: config.chapters };
-  }
-
-  return null;
-}
-
-// Фон обложки: из админки (с добавлением BASE_URL) или дефолтный
-function resolveCoverBg(value, fallback) {
-  if (!value) return `${BASE_URL}${fallback}`;
-  return value.startsWith('http') ? value : `${BASE_URL}${value}`;
-}
-
-// Фон-подложка под книгу: поддержка режимов default/none/custom
-function resolveCoverBgFromCover(cover, fallback) {
-  if (cover.bgMode === 'none') return null;
-  if (cover.bgMode === 'custom' && cover.bgCustomData) return cover.bgCustomData;
-  // Для обратной совместимости (старый формат: текстовый путь)
-  const legacyPath = fallback.includes('mobile') ? cover.bgMobile : cover.bg;
-  return resolveCoverBg(legacyPath, fallback);
-}
-
-// Звук: из админки (data URL / http / путь) или дефолтный
-function resolveSound(value, fallback) {
-  if (!value) return `${BASE_URL}${fallback}`;
-  if (value.startsWith('data:') || value.startsWith('http')) return value;
-  return `${BASE_URL}${value}`;
-}
-
-// Амбиенты: из админки (с фильтрацией по visible) или дефолтные
-function buildAmbientConfig(adminAmbients) {
-  const defaultAmbients = {
-    none: { label: "Без звука", shortLabel: "Нет", icon: "✕", file: null },
-    rain: { label: "Дождь", shortLabel: "Дождь", icon: "🌧️", file: `${BASE_URL}sounds/ambient/rain.mp3` },
-    fireplace: { label: "Камин", shortLabel: "Камин", icon: "🔥", file: `${BASE_URL}sounds/ambient/fireplace.mp3` },
-    cafe: { label: "Кафе", shortLabel: "Кафе", icon: "☕", file: `${BASE_URL}sounds/ambient/cafe.mp3` },
-  };
-
-  if (!Array.isArray(adminAmbients) || adminAmbients.length === 0) {
-    return defaultAmbients;
-  }
-
-  const result = {};
-  for (const a of adminAmbients) {
-    if (!a.visible) continue;
-    const file = a.file
-      ? (a.file.startsWith('data:') || a.file.startsWith('http') ? a.file : `${BASE_URL}${a.file}`)
-      : null;
-    result[a.id] = {
-      label: a.label,
-      shortLabel: a.shortLabel || a.label,
-      icon: a.icon,
-      file,
-      _idb: a._idb || false,
-    };
-  }
-  return result;
-}
-
-// Шрифты для чтения: из админки (только enabled) или дефолтные
-function buildFontsConfig(adminReadingFonts) {
-  const defaultFonts = {
-    georgia: "Georgia, serif",
-    merriweather: '"Merriweather", serif',
-    "libre-baskerville": '"Libre Baskerville", serif',
-    inter: "Inter, sans-serif",
-    roboto: "Roboto, sans-serif",
-    "open-sans": '"Open Sans", sans-serif',
-  };
-
-  if (!Array.isArray(adminReadingFonts) || adminReadingFonts.length === 0) {
-    return { fonts: defaultFonts, fontsList: null };
-  }
-
-  const fonts = {};
-  const customFonts = [];
-  for (const f of adminReadingFonts) {
-    if (!f.enabled) continue;
-    fonts[f.id] = f.family;
-    if (!f.builtin && (f.dataUrl || f._idb)) {
-      customFonts.push({ id: f.id, label: f.label, family: f.family, dataUrl: f.dataUrl || null, _idb: f._idb || false });
-    }
-  }
-  return { fonts, fontsList: adminReadingFonts.filter(f => f.enabled), customFonts };
-}
-
-// ─── Общие настройки (timing, layout, UI и т.д.) ────────────────────────────
-
-function buildCommonConfig() {
-  return {
-    VIRTUALIZATION: { cacheLimit: 50 },
-    LAYOUT: { MIN_PAGE_WIDTH_RATIO: 0.4, SETTLE_DELAY: 100 },
-    TIMING_SAFETY_MARGIN: 100,
-    TIMING: { FLIP_THROTTLE: 100 },
-    UI: { ERROR_HIDE_TIMEOUT: 5000 },
-    NETWORK: { MAX_RETRIES: 3, INITIAL_RETRY_DELAY: 1000, FETCH_TIMEOUT: 10000 },
-    AUDIO: { VISIBILITY_RESUME_DELAY: 100 },
-  };
-}
+export { enrichConfigFromIDB } from './config/enrichConfigFromIDB.js';
 
 // ─── Фабричная функция (из localStorage / admin config) ─────────────────────
 
@@ -212,7 +92,7 @@ export function createConfig(adminConfig = null) {
   const adminSounds = activeBook?.sounds || {};
   const fontsResult = buildFontsConfig(adminConfig?.readingFonts);
 
-  return Object.freeze({
+  return deepFreeze({
     STORAGE_KEY: activeBook?.id ? `reader-settings:${activeBook.id}` : "reader-settings",
     COVER_BG: resolveCoverBgFromCover(adminCover, 'images/backgrounds/bg-cover.webp'),
     COVER_BG_MOBILE: resolveCoverBgFromCover(adminCover, 'images/backgrounds/bg-cover-mobile.webp'),
@@ -401,7 +281,7 @@ export function createConfigFromAPI(bookDetail, globalSettings, readingFonts) {
   // Видимость настроек
   const vis = globalSettings?.settingsVisibility || {};
 
-  return Object.freeze({
+  return deepFreeze({
     STORAGE_KEY: `reader-settings:${bookDetail.id}`,
     BOOK_ID: bookDetail.id,
     COVER_BG: coverBg,
@@ -488,93 +368,6 @@ export async function loadConfigFromAPI(apiClient, bookId) {
   ]);
 
   return createConfigFromAPI(bookDetail, globalSettings, readingFonts);
-}
-
-// ─── Дозагрузка data URL из IndexedDB ────────────────────────────────────────
-
-/**
- * Обогатить CONFIG данными из IndexedDB.
- *
- * При сохранении в localStorage крупные data URL (шрифты, амбиенты)
- * вырезаются и заменяются маркером `_idb: true` — аналогично htmlContent глав.
- * Эта функция дозагружает полные данные из IndexedDB и подставляет их в CONFIG.
- *
- * Вызывается один раз при старте ридера, до создания BookController.
- *
- * @param {Object} config - Объект CONFIG (top-level заморожен, вложенные — нет)
- */
-export async function enrichConfigFromIDB(config) {
-  const appearanceNeedsIdb = ['light', 'dark'].some(theme => {
-    const t = config.APPEARANCE?.[theme];
-    return t?._idbCoverBgImage || t?._idbCustomTexture;
-  });
-
-  const needsIdb =
-    config.DECORATIVE_FONT?._idb ||
-    config.CUSTOM_FONTS?.some(f => f._idb) ||
-    Object.values(config.AMBIENT).some(a => a._idb) ||
-    appearanceNeedsIdb;
-
-  if (!needsIdb) return;
-
-  let adminConfig;
-  try {
-    const { IdbStorage } = await import('./utils/IdbStorage.js');
-    const idb = new IdbStorage('flipbook-admin', 'config');
-    adminConfig = await idb.get('flipbook-admin-config');
-  } catch {
-    return;
-  }
-  if (!adminConfig) return;
-
-  const activeBook = getActiveBook(adminConfig);
-
-  // Декоративный шрифт
-  if (config.DECORATIVE_FONT?._idb && activeBook?.decorativeFont?.dataUrl) {
-    config.DECORATIVE_FONT.dataUrl = activeBook.decorativeFont.dataUrl;
-  }
-
-  // Амбиенты
-  if (activeBook?.ambients) {
-    const ambientMap = new Map(activeBook.ambients.map(a => [a.id, a]));
-    for (const [type, cfg] of Object.entries(config.AMBIENT)) {
-      if (cfg._idb) {
-        const src = ambientMap.get(type);
-        if (src?.file) {
-          cfg.file = src.file;
-        }
-      }
-    }
-  }
-
-  // Пользовательские шрифты для чтения
-  if (config.CUSTOM_FONTS?.length && adminConfig.readingFonts) {
-    const fontMap = new Map(adminConfig.readingFonts.map(f => [f.id, f]));
-    for (const font of config.CUSTOM_FONTS) {
-      if (font._idb) {
-        const src = fontMap.get(font.id);
-        if (src?.dataUrl) {
-          font.dataUrl = src.dataUrl;
-        }
-      }
-    }
-  }
-
-  // Оформление: coverBgImage и customTextureData
-  if (appearanceNeedsIdb && activeBook?.appearance) {
-    for (const theme of ['light', 'dark']) {
-      const target = config.APPEARANCE?.[theme];
-      const src = activeBook.appearance[theme];
-      if (!target || !src) continue;
-
-      if (target._idbCoverBgImage && src.coverBgImage) {
-        target.coverBgImage = src.coverBgImage;
-      }
-      if (target._idbCustomTexture && src.customTextureData) {
-        target.customTextureData = src.customTextureData;
-      }
-    }
-  }
 }
 
 // ─── Управляемый синглтон ────────────────────────────────────────────────────

@@ -101,13 +101,20 @@ export class DelegateMediator {
   // ═══════════════════════════════════════════
 
   /**
-   * Обработать изменение индекса
+   * Обработать изменение индекса.
+   *
+   * state.index — единственный источник истины для текущей позиции в runtime.
+   * settings.page — персистентная копия (localStorage / сервер) для восстановления
+   * позиции при следующем открытии книги. Обновляются атомарно здесь.
+   *
    * @param {number} newIndex
    */
   handleIndexChange(newIndex) {
     const oldChapter = this._delegates.chapter.getCurrentChapter(this._state.index);
 
+    // Runtime source of truth
     this._state.index = newIndex;
+    // Персистентная копия для «Продолжить чтение»
     this._settings.set("page", newIndex);
     this.updateChapterBackground();
     this.updateDebug();

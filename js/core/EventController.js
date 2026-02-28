@@ -12,6 +12,7 @@
 import { cssVars } from "../utils/CSSVariables.js";
 import { mediaQueries } from "../utils/MediaQueryManager.js";
 import { Direction } from "../config.js";
+import { bindSettingsControls } from "./SettingsBindings.js";
 
 export class EventController {
   /**
@@ -58,7 +59,7 @@ export class EventController {
   bind(elements) {
     this._bindNavigationButtons(elements);
     this._bindBookInteractions();
-    this._bindSettingsControls(elements);
+    bindSettingsControls(elements, this.eventManager, this.onSettings, () => this.getFontSize());
     this._bindKeyboard();
     this._bindTouch();
   }
@@ -160,128 +161,6 @@ export class EventController {
   }
 
   /**
-   * Привязать элементы управления настройками
-   * @private
-   * @param {Object} elements - DOM-элементы настроек
-   */
-  _bindSettingsControls(elements) {
-    const {
-      increaseBtn,
-      decreaseBtn,
-      fontSizeValue,
-      fontSelect,
-      themeSegmented,
-      debugToggle,
-      soundToggle,
-      volumeSlider,
-      ambientPills,
-      ambientVolume,
-      ambientVolumeWrapper,
-      fullscreenBtn
-    } = elements;
-
-    // Font size stepper - с обновлением отображаемого значения
-    if (increaseBtn) {
-      this.eventManager.add(increaseBtn, "click", () => {
-        this.onSettings("fontSize", "increase");
-        this._updateFontSizeDisplay(fontSizeValue);
-      });
-    }
-
-    if (decreaseBtn) {
-      this.eventManager.add(decreaseBtn, "click", () => {
-        this.onSettings("fontSize", "decrease");
-        this._updateFontSizeDisplay(fontSizeValue);
-      });
-    }
-
-    if (fontSelect) {
-      this.eventManager.add(fontSelect, "change", (e) => {
-        this.onSettings("font", e.target.value);
-      });
-    }
-
-    // Theme segmented control - клик по сегментам
-    if (themeSegmented) {
-      this.eventManager.add(themeSegmented, "click", (e) => {
-        const segment = e.target.closest('.theme-segment');
-        if (!segment) return;
-
-        const theme = segment.dataset.theme;
-        this.onSettings("theme", theme);
-
-        // Обновить состояние всех сегментов
-        const allSegments = themeSegmented.querySelectorAll('.theme-segment');
-        allSegments.forEach(s => {
-          const isActive = s.dataset.theme === theme;
-          s.dataset.active = isActive;
-          s.setAttribute('aria-checked', isActive);
-        });
-      });
-    }
-
-    if (debugToggle) {
-      this.eventManager.add(debugToggle, "click", () => {
-        this.onSettings("debug", "toggle");
-      });
-    }
-
-    // Sound toggle - также обновляет состояние volume control
-    if (soundToggle) {
-      this.eventManager.add(soundToggle, "change", (e) => {
-        const enabled = e.target.checked;
-        this.onSettings("soundEnabled", enabled);
-
-      });
-    }
-
-    if (volumeSlider) {
-      this.eventManager.add(volumeSlider, "input", (e) => {
-        const volume = parseFloat(e.target.value) / 100;
-        this.onSettings("soundVolume", volume);
-      });
-    }
-
-    // Ambient pills - делегирование клика по контейнеру
-    if (ambientPills) {
-      this.eventManager.add(ambientPills, "click", (e) => {
-        const pill = e.target.closest('.ambient-pill');
-        if (!pill) return;
-
-        const type = pill.dataset.type;
-        this.onSettings("ambientType", type);
-
-        // Обновить состояние всех pills
-        const allPills = ambientPills.querySelectorAll('.ambient-pill');
-        allPills.forEach(p => {
-          const isActive = p.dataset.type === type;
-          p.dataset.active = isActive;
-          p.setAttribute('aria-checked', isActive);
-        });
-
-        // Показать/скрыть слайдер громкости
-        if (ambientVolumeWrapper) {
-          ambientVolumeWrapper.classList.toggle('visible', type !== 'none');
-        }
-      });
-    }
-
-    if (ambientVolume) {
-      this.eventManager.add(ambientVolume, "input", (e) => {
-        const volume = parseFloat(e.target.value) / 100;
-        this.onSettings("ambientVolume", volume);
-      });
-    }
-
-    // Переключение полноэкранного режима
-    if (fullscreenBtn) {
-      this.eventManager.add(fullscreenBtn, "click", () => {
-        this.onSettings("fullscreen", "toggle");
-      });
-    }
-  }
-
-  /**
    * Привязать клавиатурные сокращения
    * Arrows: навигация, Home/End: начало/конец, Ctrl+D: debug
    * @private
@@ -368,23 +247,6 @@ export class EventController {
       { passive: true },
     );
     this.eventManager.add(this.book, "touchend", this._boundHandlers.touchend);
-  }
-
-  /**
-   * Обновить отображение размера шрифта
-   *
-   * Использует getFontSize() как source of truth вместо DOM,
-   * чтобы избежать рассинхронизации при программном изменении настроек.
-   *
-   * @private
-   * @param {HTMLElement} element - Элемент отображения значения
-   */
-  _updateFontSizeDisplay(element) {
-    if (!element) return;
-
-    // Source of truth — настройки, не DOM
-    // Значение уже обновлено в SettingsDelegate._handleFontSize()
-    element.textContent = this.getFontSize();
   }
 
   /**
