@@ -66,13 +66,14 @@ function assertDependencies(deps, phase) {
  * @param {import('../utils/ApiClient.js').ApiClient|null} [options.apiClient]
  * @param {string|null} [options.bookId]
  * @param {Object|null} [options.serverProgress]
+ * @param {'owner'|'guest'|'embed'} [options.readerMode='owner'] - Режим ридера (Phase 6)
  * @returns {{
  *   core: Object, factory: ComponentFactory, settings: Object,
  *   audio: Object, render: Object, content: Object,
  *   stateMachine: Object, debugPanel: Object, delegates: Object
  * }}
  */
-export function buildBookComponents({ state, apiClient = null, bookId = null, serverProgress = null }) {
+export function buildBookComponents({ state, apiClient = null, bookId = null, serverProgress = null, readerMode = 'owner' }) {
   // ── Фаза 1: Сервисные группы (корневая, без зависимостей) ──
 
   const core = ComponentFactory.createCoreServices();
@@ -85,7 +86,8 @@ export function buildBookComponents({ state, apiClient = null, bookId = null, se
 
   const audio = factory.createAudioServices(settings);
   const render = factory.createRenderServices();
-  const content = factory.createContentServices();
+  const publicMode = readerMode === 'guest' || readerMode === 'embed';
+  const content = factory.createContentServices({ apiClient, bookId, publicMode });
 
   audio.setupAmbientLoadingCallbacks(core.dom.get('ambientPills'));
 

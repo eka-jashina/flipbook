@@ -1,13 +1,18 @@
 /**
  * APP INITIALIZER
  * Управляет процессом инициализации приложения.
- * 
+ *
  * Последовательность инициализации:
  * 1. Применение настроек к DOM
- * 2. Настройка UI (фон, кнопки)
+ * 2. Настройка UI (фон, кнопки, режим ридера)
  * 3. Привязка событий
  * 4. Ожидание загрузки шрифтов
  * 5. Предзагрузка обложки
+ *
+ * Режимы ридера (Phase 6):
+ * - owner: полный доступ (текущее поведение + кнопка «Редактировать»)
+ * - guest: только чтение (имя автора + ссылка на полку, скрыта кнопка редактирования)
+ * - embed: минимальный UI (только книга + перелистывание, ссылка «Открыть на Flipbook»)
  */
 
 import { CONFIG } from '../config.js';
@@ -17,6 +22,9 @@ import { AmbientManager } from '../managers/AmbientManager.js';
 export class AppInitializer {
   /**
    * @param {Object} context
+   * @param {'owner'|'guest'|'embed'} [context.readerMode='owner']
+   * @param {Object} [context.bookOwner] - { username, displayName, avatarUrl, bio }
+   * @param {string} [context.bookId]
    */
   constructor(context) {
     this.dom = context.dom;
@@ -26,6 +34,9 @@ export class AppInitializer {
     this.eventController = context.eventController;
     this.dragDelegate = context.dragDelegate;
     this.lifecycleDelegate = context.lifecycleDelegate;
+    this.readerMode = context.readerMode || 'owner';
+    this.bookOwner = context.bookOwner || null;
+    this.bookId = context.bookId || null;
   }
 
   /**
@@ -36,8 +47,9 @@ export class AppInitializer {
     try {
       this._applySettings();
       this._setupUI();
+      this._applyReaderMode();
       this._bindEvents();
-      
+
       await document.fonts.ready;
       await this.lifecycleDelegate.init();
     } catch (error) {
@@ -62,14 +74,14 @@ export class AppInitializer {
     // Установить фон обложки
     this.backgroundManager.setBackground(CONFIG.COVER_BG);
     this.dom.get('body').dataset.chapter = "cover";
-    
+
     // Показать кнопку "Продолжить" если есть сохраненная позиция
     const savedPage = this.settings.get("page");
     if (savedPage > 0) {
       const continueBtn = this.dom.get('continueBtn');
       if (continueBtn) continueBtn.hidden = false;
     }
-    
+
     // Синхронизировать настройки шрифта
     const fontSelect = this.dom.get('fontSelect');
     const fontSizeValue = this.dom.get('fontSizeValue');
@@ -93,11 +105,11 @@ export class AppInitializer {
     // Синхронизировать контролы звука
     const soundToggle = this.dom.get('soundToggle');
     const volumeSlider = this.dom.get('volumeSlider');
-    
+
     if (soundToggle) {
       soundToggle.checked = this.settings.get("soundEnabled");
     }
-    
+
     if (volumeSlider) {
       volumeSlider.value = this.settings.get("soundVolume") * 100;
     }
@@ -126,6 +138,101 @@ export class AppInitializer {
     }
 
     // Состояние volume control для перелистывания управляется через CSS :has()
+  }
+
+  /**
+   * Применить режим ридера к UI (Phase 6)
+   * @private
+   */
+  _applyReaderMode() {
+    const body = document.body;
+    body.dataset.readerMode = this.readerMode;
+
+    if (this.readerMode === 'embed') {
+      this._setupEmbedMode();
+    } else if (this.readerMode === 'guest') {
+      this._setupGuestMode();
+    } else {
+      this._setupOwnerMode();
+    }
+  }
+
+  /**
+   * Настроить embed-режим: минимальный UI
+   * @private
+   */
+  _setupEmbedMode() {
+    document.body.classList.add('embed-mode');
+
+    // Скрыть панель управления (настройки, аудио, кнопки навигации к полке)
+    const controls = document.querySelector('.controls');
+    if (controls) controls.hidden = true;
+
+    // Скрыть кнопку "назад к полке"
+    const backBtn = document.getElementById('backToShelfBtn');
+    if (backBtn) backBtn.hidden = true;
+
+    // Показать ссылку «Открыть на Flipbook»
+    const embedLink = document.getElementById('embed-open-link');
+    if (embedLink && this.bookId) {
+      const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+      embedLink.href = `${base}/book/${this.bookId}`;
+      embedLink.hidden = false;
+    }
+  }
+
+  /**
+   * Настроить гостевой режим: чтение без редактирования
+   * @private
+   */
+  _setupGuestMode() {
+    // Скрыть кнопку «Редактировать» (для owner mode)
+    const editBtn = document.getElementById('reader-edit-btn');
+    if (editBtn) editBtn.hidden = true;
+
+    // Показать информацию об авторе
+    this._showAuthorInfo();
+  }
+
+  /**
+   * Настроить режим владельца: полный доступ
+   * @private
+   */
+  _setupOwnerMode() {
+    // Показать кнопку «Редактировать»
+    const editBtn = document.getElementById('reader-edit-btn');
+    if (editBtn && this.bookId) {
+      editBtn.hidden = false;
+      editBtn.addEventListener('click', () => {
+        // Навигация через History API
+        const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+        window.history.pushState(null, '', `${base}/account?edit=${this.bookId}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      });
+    }
+  }
+
+  /**
+   * Показать имя автора и ссылку на полку (гостевой режим)
+   * @private
+   */
+  _showAuthorInfo() {
+    const authorEl = document.getElementById('reader-author-info');
+    if (!authorEl || !this.bookOwner) return;
+
+    const name = this.bookOwner.displayName || this.bookOwner.username || '';
+    const username = this.bookOwner.username;
+
+    const nameSpan = authorEl.querySelector('.reader-author-name');
+    if (nameSpan) nameSpan.textContent = name;
+
+    if (username) {
+      const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+      authorEl.href = `${base}/${username}`;
+      authorEl.dataset.route = '';
+    }
+
+    authorEl.hidden = false;
   }
 
   /**

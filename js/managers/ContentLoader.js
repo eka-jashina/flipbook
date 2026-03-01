@@ -24,8 +24,9 @@ export class ContentLoader {
    * @param {Object} [options]
    * @param {import('../utils/ApiClient.js').ApiClient} [options.apiClient] - API клиент (Фаза 3)
    * @param {string} [options.bookId] - ID книги для загрузки через API
+   * @param {boolean} [options.publicMode] - Использовать публичные API эндпоинты (Phase 6: guest/embed)
    */
-  constructor({ apiClient, bookId } = {}) {
+  constructor({ apiClient, bookId, publicMode } = {}) {
     /** @type {Map<string, string>} Кэш URL → HTML */
     this.cache = new Map();
     /** @type {AbortController|null} Контроллер текущей загрузки */
@@ -34,6 +35,8 @@ export class ContentLoader {
     this._api = apiClient || null;
     /** @type {string|null} */
     this._bookId = bookId || null;
+    /** @type {boolean} */
+    this._publicMode = publicMode || false;
   }
 
   /**
@@ -120,7 +123,9 @@ export class ContentLoader {
    * @returns {Promise<string>} HTML-контент
    */
   async _fetchChapterFromAPI(chapterId) {
-    const data = await this._api.getChapterContent(this._bookId, chapterId);
+    const data = this._publicMode
+      ? await this._api.getPublicChapterContent(this._bookId, chapterId)
+      : await this._api.getChapterContent(this._bookId, chapterId);
     // API может вернуть объект { htmlContent: "..." } или строку напрямую
     if (typeof data === 'string') return data;
     return data?.htmlContent || data?.content || '';

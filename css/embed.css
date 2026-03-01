@@ -1,0 +1,124 @@
+/**
+ * EMBED MODE STYLES (Phase 6)
+ *
+ * Минимальный UI для встраиваемого ридера.
+ * Активируется через body.embed-mode
+ */
+
+/* ═══════════════════════════════════════════
+   Embed: скрыть лишнее
+   ═══════════════════════════════════════════ */
+
+body.embed-mode {
+  background: transparent;
+  overflow: hidden;
+}
+
+body.embed-mode .controls {
+  display: none !important;
+}
+
+body.embed-mode .back-to-shelf-btn,
+body.embed-mode .navigation-pod .nav-actions {
+  display: none !important;
+}
+
+/* Книга занимает всю площадь */
+body.embed-mode .scene {
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  height: 100dvh;
+}
+
+body.embed-mode .book-wrap {
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+}
+
+/* ═══════════════════════════════════════════
+   Embed: ссылка «Открыть на Flipbook»
+   ═══════════════════════════════════════════ */
+
+.embed-open-link {
+  display: block;
+  text-align: center;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.embed-open-link:hover {
+  opacity: 1;
+  color: var(--text-primary, #333);
+}
+
+/* ═══════════════════════════════════════════
+   Reader mode: author info (guest mode)
+   ═══════════════════════════════════════════ */
+
+.reader-author-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background-color 0.15s, color 0.15s;
+  cursor: pointer;
+}
+
+.reader-author-info:hover {
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  color: var(--text-primary, #333);
+}
+
+.reader-author-info svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.reader-author-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+/* ═══════════════════════════════════════════
+   Reader mode: edit button (owner mode)
+   ═══════════════════════════════════════════ */
+
+.reader-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.reader-edit-btn:hover {
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  color: var(--text-primary, #333);
+}
+
+.reader-edit-btn svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}

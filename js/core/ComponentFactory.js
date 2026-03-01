@@ -60,10 +60,14 @@ export class ComponentFactory {
 
   /**
    * Создать ContentServices (контент)
+   * @param {Object} [options]
+   * @param {import('../utils/ApiClient.js').ApiClient} [options.apiClient]
+   * @param {string} [options.bookId]
+   * @param {boolean} [options.publicMode]
    * @returns {ContentServices}
    */
-  createContentServices() {
-    return new ContentServices();
+  createContentServices(options = {}) {
+    return new ContentServices(options);
   }
 
   // ═══════════════════════════════════════════

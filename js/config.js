@@ -370,6 +370,22 @@ export async function loadConfigFromAPI(apiClient, bookId) {
   return createConfigFromAPI(bookDetail, globalSettings, readingFonts);
 }
 
+/**
+ * Загрузить конфигурацию из публичного API (для гостевого/embed режима).
+ *
+ * Использует публичные эндпоинты (не требуют авторизации).
+ * Возвращает конфиг + данные автора для отображения в ридере.
+ *
+ * @param {import('./utils/ApiClient.js').ApiClient} apiClient
+ * @param {string} bookId - ID книги
+ * @returns {Promise<{ config: Readonly<Object>, owner: Object }>}
+ */
+export async function loadPublicConfigFromAPI(apiClient, bookId) {
+  const bookDetail = await apiClient.getPublicBook(bookId);
+  const config = createConfigFromAPI(bookDetail, null, []);
+  return { config, owner: bookDetail.owner || null };
+}
+
 // ─── Управляемый синглтон ────────────────────────────────────────────────────
 
 /**

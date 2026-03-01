@@ -6,17 +6,14 @@
  * Роутинг (SPA, History API):
  *   /              → лендинг (гости) | redirect на /:username (авторизованные) | fallback (localStorage)
  *   /:username     → публичная полка автора (гость = витрина, хозяин = управление)
- *   /book/:bookId  → ридер
+ *   /book/:bookId  → ридер (owner/guest режим)
+ *   /embed/:bookId → встраиваемый ридер (минимальный UI)
  *   /account       → личный кабинет (книги, профиль, настройки, экспорт)
  *
- * Поток:
- * 1. GET /api/health → проверка доступности сервера
- * 2. GET /api/auth/me → определяем, гость или авторизован
- * 3. Роутер резолвит URL:
- *    - гость на / → LandingScreen (CTA → AuthModal)
- *    - авторизованный на / → redirect на /:username (своя полка)
- *    - /:username → BookshelfScreen (owner или guest mode)
- *    - /book/:id → ридер (авторизованный) или redirect на / (гость)
+ * Режимы ридера (Phase 6):
+ *   owner  — авторизованный автор книги (полный доступ + кнопка «Редактировать»)
+ *   guest  — все остальные (только чтение, имя автора + ссылка на полку)
+ *   embed  — встраиваемый режим (минимальный UI, ссылка «Открыть на Flipbook»)
  *
  * Fallback: если сервер недоступен — работа через localStorage.
  */
@@ -24,7 +21,7 @@
 import { BookController } from './core/BookController.js';
 import { BookshelfScreen, loadBooksFromAPI, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
 import { LandingScreen } from './core/LandingScreen.js';
-import { CONFIG, enrichConfigFromIDB, loadConfigFromAPI, setConfig } from './config.js';
+import { CONFIG, enrichConfigFromIDB, loadConfigFromAPI, loadPublicConfigFromAPI, setConfig } from './config.js';
 import { ApiClient } from './utils/ApiClient.js';
 import { ErrorHandler } from './utils/ErrorHandler.js';
 import { AuthModal } from './core/AuthModal.js';
@@ -128,6 +125,10 @@ function cleanupReader() {
     app = null;
   }
   photoLightbox.destroy();
+
+  // Убрать режим ридера (Phase 6)
+  document.body.classList.remove('embed-mode');
+  delete document.body.dataset.readerMode;
 }
 
 /**
@@ -226,15 +227,15 @@ async function handlePublicShelf({ username }) {
 }
 
 /**
- * Маршрут: /book/:bookId → Показать ридер
+ * Маршрут: /book/:bookId → Показать ридер (Phase 6: owner/guest режим)
+ *
+ * Определение режима:
+ * - owner: currentUser && book.userId === currentUser.id (приватный API)
+ * - guest: все остальные (публичный API)
+ * - Неавторизованный гость: прогресс в localStorage
+ * - Авторизованный не-автор: прогресс на сервер
  */
 async function handleReader({ bookId }) {
-  // Гость не может открыть ридер через API (пока нет публичного чтения — Phase 6)
-  if (useAPI && !currentUser) {
-    router.navigate('/', { replace: true });
-    return;
-  }
-
   cleanupLanding();
   cleanupBookshelf();
   cleanupReader();
@@ -245,9 +246,39 @@ async function handleReader({ bookId }) {
   setupBackToShelfButton();
 
   if (useAPI) {
-    await initReaderFromAPI(bookId);
+    await initReaderWithMode(bookId, 'reader');
   } else {
     // Для localStorage fallback — устанавливаем activeBookId
+    try {
+      const raw = localStorage.getItem('flipbook-admin-config');
+      const config = raw ? JSON.parse(raw) : { books: [] };
+      config.activeBookId = bookId;
+      localStorage.setItem('flipbook-admin-config', JSON.stringify(config));
+    } catch { /* ignore */ }
+
+    await initReaderFallback();
+  }
+}
+
+/**
+ * Маршрут: /embed/:bookId → Встраиваемый ридер (Phase 6)
+ *
+ * Минимальный UI: только книга + перелистывание.
+ * Всегда использует публичный API (без авторизации).
+ * Звуки отключены по умолчанию.
+ */
+async function handleEmbed({ bookId }) {
+  cleanupLanding();
+  cleanupBookshelf();
+  cleanupReader();
+  hideAccount();
+
+  document.body.dataset.screen = 'reader';
+
+  if (useAPI) {
+    await initReaderWithMode(bookId, 'embed');
+  } else {
+    // Embed без сервера — fallback на localStorage
     try {
       const raw = localStorage.getItem('flipbook-admin-config');
       const config = raw ? JSON.parse(raw) : { books: [] };
@@ -358,23 +389,88 @@ function showBookshelf(books, { mode = 'owner', profileUser } = {}) {
 // ═══════════════════════════════════════════════════
 
 /**
- * Инициализация ридера через API
+ * Инициализация ридера через API с определением режима (Phase 6).
+ *
+ * @param {string} bookId
+ * @param {'reader'|'embed'} route - Тип маршрута
  */
-async function initReaderFromAPI(bookId) {
-  const config = await loadConfigFromAPI(apiClient, bookId);
+async function initReaderWithMode(bookId, route) {
+  let readerMode = 'guest';
+  let config;
+  let bookOwner = null;
+  let progress = null;
 
-  // Загрузить прогресс чтения с сервера
-  const progress = await apiClient.getProgress(bookId).catch(() => null);
+  if (route === 'embed') {
+    // Embed — всегда публичный API, без прогресса
+    readerMode = 'embed';
+    try {
+      const result = await loadPublicConfigFromAPI(apiClient, bookId);
+      config = result.config;
+      bookOwner = result.owner;
+    } catch (err) {
+      console.error('Ошибка загрузки книги (embed):', err);
+      return; // Не редиректим — embed работает в iframe
+    }
+  } else if (currentUser) {
+    // Авторизованный пользователь — пробуем приватный API (owner)
+    try {
+      config = await loadConfigFromAPI(apiClient, bookId);
+      readerMode = 'owner';
+      progress = await apiClient.getProgress(bookId).catch(() => null);
+    } catch (err) {
+      // Не владелец или книга не найдена в приватном API → пробуем публичный
+      if (err.status === 403 || err.status === 404) {
+        try {
+          const result = await loadPublicConfigFromAPI(apiClient, bookId);
+          config = result.config;
+          bookOwner = result.owner;
+          readerMode = 'guest';
+          // Авторизованный не-автор: прогресс на сервер
+          progress = await apiClient.getProgress(bookId).catch(() => null);
+        } catch (pubErr) {
+          console.error('Ошибка загрузки публичной книги:', pubErr);
+          router.navigate('/', { replace: true });
+          return;
+        }
+      } else {
+        console.error('Ошибка загрузки книги:', err);
+        router.navigate('/', { replace: true });
+        return;
+      }
+    }
+  } else {
+    // Неавторизованный гость — публичный API
+    readerMode = 'guest';
+    try {
+      const result = await loadPublicConfigFromAPI(apiClient, bookId);
+      config = result.config;
+      bookOwner = result.owner;
+    } catch (err) {
+      console.error('Ошибка загрузки публичной книги:', err);
+      router.navigate('/', { replace: true });
+      return;
+    }
+  }
 
-  app = new BookController(config, { apiClient, bookId, serverProgress: progress });
+  setConfig(config);
+
+  app = new BookController(config, {
+    apiClient,
+    bookId,
+    serverProgress: progress,
+    readerMode,
+    bookOwner,
+  });
   await app.init();
 
   const bookEl = document.querySelector('.book');
-  if (bookEl) {
+  if (bookEl && readerMode !== 'embed') {
     photoLightbox.attach(bookEl);
   }
 
-  setupInstallButton();
+  if (readerMode !== 'embed') {
+    setupInstallButton();
+  }
 
   if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
     window.bookApp = app;
@@ -471,9 +567,8 @@ async function init() {
     router = new Router([
       { name: 'home', path: '/', handler: handleHome },
       { name: 'reader', path: '/book/:bookId', handler: handleReader },
+      { name: 'embed', path: '/embed/:bookId', handler: handleEmbed },
       { name: 'account', path: '/account', handler: handleAccount },
-      // Будущие маршруты:
-      // { name: 'embed', path: '/embed/:bookId', handler: handleEmbed },
       { name: 'shelf', path: '/:username', handler: handlePublicShelf },
     ]);
 
