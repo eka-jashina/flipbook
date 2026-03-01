@@ -34,11 +34,12 @@ export async function createCsrfAgent(app: Express) {
  */
 export async function createAuthenticatedAgent(
   app: Express,
-  userData?: { email?: string; password?: string; displayName?: string },
+  userData?: { email?: string; password?: string; displayName?: string; username?: string },
 ) {
   const email = userData?.email || `test-${Date.now()}@example.com`;
   const password = userData?.password || 'TestPassword123!';
   const displayName = userData?.displayName || 'Test User';
+  const username = userData?.username || `user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   const agent = request.agent(app);
 
@@ -52,10 +53,10 @@ export async function createAuthenticatedAgent(
   // Register the user (CSRF header auto-injected)
   await agent
     .post('/api/auth/register')
-    .send({ email, password, displayName })
+    .send({ email, password, displayName, username })
     .expect(201);
 
-  return { agent, email, password, displayName, csrfToken };
+  return { agent, email, password, displayName, username, csrfToken };
 }
 
 /**

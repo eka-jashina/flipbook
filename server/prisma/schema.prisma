@@ -13,6 +13,8 @@ model User {
   passwordHash       String?   @map("password_hash") @db.VarChar(255)
   displayName        String?   @map("display_name") @db.VarChar(100)
   avatarUrl          String?   @map("avatar_url") @db.VarChar(500)
+  username           String?   @unique @db.VarChar(40)
+  bio                String?   @db.VarChar(500)
   googleId           String?   @unique @map("google_id") @db.VarChar(255)
   resetToken         String?   @unique @map("reset_token") @db.VarChar(255)
   resetTokenExpiresAt DateTime? @map("reset_token_expires_at") @db.Timestamptz()
@@ -28,17 +30,20 @@ model User {
 }
 
 model Book {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId          String   @map("user_id") @db.Uuid
-  title           String   @default("") @db.VarChar(500)
-  author          String   @default("") @db.VarChar(500)
-  position        Int      @default(0)
-  coverBg         String   @default("") @map("cover_bg") @db.VarChar(500)
-  coverBgMobile   String   @default("") @map("cover_bg_mobile") @db.VarChar(500)
-  coverBgMode     String   @default("default") @map("cover_bg_mode") @db.VarChar(20)
-  coverBgCustomUrl String? @map("cover_bg_custom_url") @db.VarChar(500)
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  title           String    @default("") @db.VarChar(500)
+  author          String    @default("") @db.VarChar(500)
+  position        Int       @default(0)
+  visibility      String    @default("draft") @db.VarChar(20)
+  description     String?   @db.VarChar(2000)
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz()
+  coverBg         String    @default("") @map("cover_bg") @db.VarChar(500)
+  coverBgMobile   String    @default("") @map("cover_bg_mobile") @db.VarChar(500)
+  coverBgMode     String    @default("default") @map("cover_bg_mode") @db.VarChar(20)
+  coverBgCustomUrl String?  @map("cover_bg_custom_url") @db.VarChar(500)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   chapters        Chapter[]
@@ -51,6 +56,7 @@ model Book {
 
   @@index([userId])
   @@index([userId, position])
+  @@index([visibility, publishedAt])
   @@map("books")
 }
 

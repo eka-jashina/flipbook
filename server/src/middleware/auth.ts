@@ -15,6 +15,7 @@ declare global {
       email: string;
       displayName: string | null;
       avatarUrl: string | null;
+      username: string | null;
       googleId: string | null;
       hasPassword: boolean;
     }
@@ -27,6 +28,7 @@ function toSessionUser(dbUser: {
   email: string;
   displayName: string | null;
   avatarUrl: string | null;
+  username: string | null;
   googleId: string | null;
   passwordHash: string | null;
 }): Express.User {
@@ -35,6 +37,7 @@ function toSessionUser(dbUser: {
     email: dbUser.email,
     displayName: dbUser.displayName,
     avatarUrl: dbUser.avatarUrl,
+    username: dbUser.username,
     googleId: dbUser.googleId,
     hasPassword: dbUser.passwordHash !== null,
   };
@@ -59,6 +62,7 @@ export function configurePassport(): void {
           email: true,
           displayName: true,
           avatarUrl: true,
+          username: true,
           googleId: true,
           passwordHash: true,
         },
@@ -68,7 +72,7 @@ export function configurePassport(): void {
         return;
       }
       const { passwordHash, ...safeUser } = user;
-      done(null, { ...safeUser, hasPassword: passwordHash !== null });
+      done(null, { ...safeUser, username: user.username, hasPassword: passwordHash !== null });
     } catch (err) {
       logger.error({ err, userId: id }, 'deserializeUser failed');
       done(err);

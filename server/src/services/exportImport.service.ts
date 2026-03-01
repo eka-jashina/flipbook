@@ -152,6 +152,9 @@ export async function exportUserConfig(userId: string): Promise<ExportData> {
     id: book.id,
     title: book.title,
     author: book.author,
+    visibility: book.visibility,
+    description: book.description,
+    publishedAt: book.publishedAt?.toISOString() ?? null,
     cover: {
       bg: book.coverBg,
       bgMobile: book.coverBgMobile,

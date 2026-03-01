@@ -63,6 +63,8 @@ export async function getUserBooks(
       title: book.title,
       author: book.author,
       position: book.position,
+      visibility: book.visibility,
+      description: book.description,
       chaptersCount: book._count.chapters,
       coverBgMode: book.coverBgMode,
       appearance: book.appearance
@@ -122,6 +124,9 @@ export async function getBookById(
     id: book.id,
     title: book.title,
     author: book.author,
+    visibility: book.visibility,
+    description: book.description,
+    publishedAt: book.publishedAt?.toISOString() ?? null,
     cover: {
       bg: book.coverBg,
       bgMobile: book.coverBgMobile,
@@ -198,11 +203,25 @@ export async function updateBook(
   data: {
     title?: string;
     author?: string;
+    visibility?: string;
+    description?: string | null;
     coverBgMode?: string;
     coverBgCustomUrl?: string | null;
   },
 ): Promise<BookDetail> {
   const prisma = getPrisma();
+
+  // If publishing for the first time, set publishedAt
+  let publishedAt: Date | undefined;
+  if (data.visibility === 'published') {
+    const current = await prisma.book.findUnique({
+      where: { id: bookId },
+      select: { publishedAt: true },
+    });
+    if (!current?.publishedAt) {
+      publishedAt = new Date();
+    }
+  }
 
   // Ownership verified by requireBookOwnership middleware
   await prisma.book.update({
@@ -210,6 +229,9 @@ export async function updateBook(
     data: {
       ...(data.title !== undefined && { title: data.title }),
       ...(data.author !== undefined && { author: data.author }),
+      ...(data.visibility !== undefined && { visibility: data.visibility }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(publishedAt !== undefined && { publishedAt }),
       ...(data.coverBgMode !== undefined && { coverBgMode: data.coverBgMode }),
       ...(data.coverBgCustomUrl !== undefined && {
         coverBgCustomUrl: data.coverBgCustomUrl,

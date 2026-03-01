@@ -50,8 +50,8 @@ router.post(
   authLimiter,
   validate(registerSchema),
   asyncHandler(async (req, res, next) => {
-    const { email, password, displayName } = req.body;
-    const userResponse = await registerUser(email, password, displayName);
+    const { email, password, displayName, username } = req.body;
+    const userResponse = await registerUser(email, password, displayName, username);
 
     // Auto-login after registration — only need id for serializeUser
     const sessionUser: Express.User = {
@@ -59,6 +59,7 @@ router.post(
       email: userResponse.email,
       displayName: userResponse.displayName,
       avatarUrl: userResponse.avatarUrl,
+      username: userResponse.username,
       googleId: null,
       hasPassword: userResponse.hasPassword,
     };
