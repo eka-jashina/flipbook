@@ -3,6 +3,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { RESOURCE_LIMITS } from '../utils/limits.js';
 import { bulkUpdatePositions } from '../utils/reorder.js';
 import { withSerializableRetry } from '../utils/serializable.js';
+import { logger } from '../utils/logger.js';
 import type { ReadingFontItem } from '../types/api.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,7 +53,9 @@ export async function deleteReadingFont(fontId: string, userId: string): Promise
   // Best-effort S3 cleanup
   if (font.fileUrl) {
     const { deleteFileByUrl } = await import('../utils/storage.js');
-    await deleteFileByUrl(font.fileUrl).catch(() => {});
+    await deleteFileByUrl(font.fileUrl).catch((err) => {
+      logger.warn({ err, fileUrl: font.fileUrl, fontId }, 'Failed to delete font file from S3');
+    });
   }
 }
 

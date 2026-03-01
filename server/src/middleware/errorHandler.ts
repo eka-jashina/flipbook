@@ -74,10 +74,15 @@ export function errorHandler(
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     // P2002: Unique constraint violation (e.g., duplicate email)
     if (err.code === 'P2002') {
+      // Don't expose field names — log them server-side only
       const target = (err.meta?.target as string[])?.join(', ') || 'field';
+      logger.warn(
+        { code: err.code, target, method: req.method, url: req.originalUrl },
+        'Unique constraint violation',
+      );
       res.status(409).json({
         error: 'ConflictError',
-        message: `A record with this ${target} already exists`,
+        message: 'A record with this value already exists',
         statusCode: 409,
         ...(requestId && { requestId }),
       });

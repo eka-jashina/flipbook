@@ -16,10 +16,7 @@ router.use(requireAuth);
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const sounds = await getSounds(
-      req.params.bookId as string,
-      req.user!.id,
-    );
+    const sounds = await getSounds(req.params.bookId as string);
     ok(res, sounds);
   }),
 );
@@ -31,11 +28,7 @@ router.patch(
   '/',
   validate(updateSoundsSchema),
   asyncHandler(async (req, res) => {
-    const sounds = await updateSounds(
-      req.params.bookId as string,
-      req.user!.id,
-      req.body,
-    );
+    const sounds = await updateSounds(req.params.bookId as string, req.body);
     ok(res, sounds);
   }),
 );

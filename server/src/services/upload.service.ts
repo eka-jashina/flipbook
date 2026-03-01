@@ -2,6 +2,7 @@ import { readFile, unlink } from 'node:fs/promises';
 import { uploadFile, generateFileKey } from '../utils/storage.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { parseBook } from '../parsers/BookParser.js';
+import { logger } from '../utils/logger.js';
 import type { UploadResponse } from '../types/api.js';
 
 /**
@@ -30,6 +31,8 @@ export async function uploadAndParseBook(
     const buffer = await readFile(file.path);
     return await parseBook(buffer, file.originalname);
   } finally {
-    if (file.path) await unlink(file.path).catch(() => {});
+    if (file.path) await unlink(file.path).catch((err) => {
+      logger.warn({ err, path: file.path }, 'Failed to delete temp upload file');
+    });
   }
 }

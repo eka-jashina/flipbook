@@ -121,7 +121,8 @@ export function createApp() {
     try {
       await getPrisma().$queryRaw`SELECT 1`;
       checks.database = 'ok';
-    } catch {
+    } catch (err) {
+      logger.warn({ err }, 'Health check: database unreachable');
       checks.database = 'error';
       status = 'degraded';
     }
@@ -132,7 +133,8 @@ export function createApp() {
         new HeadBucketCommand({ Bucket: config.S3_BUCKET }),
       );
       checks.storage = 'ok';
-    } catch {
+    } catch (err) {
+      logger.warn({ err, bucket: config.S3_BUCKET }, 'Health check: S3 unreachable');
       checks.storage = 'error';
       status = 'degraded';
     }
@@ -173,7 +175,7 @@ export function createApp() {
   app.use('/api', exportImportRoutes);
 
   // 404 handler for unmatched API routes — prevents leaking SPA HTML for API paths
-  app.all('/api/*', (_req: Request, res: Response) => {
+  app.use('/api', (_req: Request, res: Response) => {
     res.status(404).json({
       error: 'NotFound',
       message: 'API endpoint not found',

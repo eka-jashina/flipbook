@@ -10,6 +10,7 @@ import { getConfig } from '../config.js';
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../schemas.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/response.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Regenerate session and then log in — prevents session fixation attacks.
@@ -63,6 +64,7 @@ router.post(
     };
 
     regenerateAndLogin(req, sessionUser, next, () => {
+      logger.info({ userId: userResponse.id, email: userResponse.email, ip: req.ip }, 'User registered');
       created(res, { user: userResponse });
     });
   }),
@@ -95,6 +97,7 @@ router.post(
         }
 
         regenerateAndLogin(req, user, next, () => {
+          logger.info({ userId: user.id, email: user.email, ip: req.ip }, 'User logged in');
           ok(res, { user: formatUser(user) });
         });
       },
@@ -188,13 +191,30 @@ router.get(
 
 /**
  * GET /api/auth/google/callback — Google OAuth callback
+ *
+ * Uses session regeneration to prevent session fixation attacks.
+ * Passport's built-in `req.login()` inside `passport.authenticate()` doesn't
+ * regenerate the session, so we use `assignProperty` to delay login and handle
+ * it ourselves in the callback.
  */
 router.get(
   '/google/callback',
-  passport.authenticate('google', { failureRedirect: '/login?error=google' }),
-  (_req: Request, res: Response) => {
-    const config = getConfig();
-    res.redirect(config.APP_URL);
+  authLimiter,
+  passport.authenticate('google', {
+    failureRedirect: '/login?error=google',
+    assignProperty: 'authUser',
+  }),
+  (req: Request, res: Response, next: NextFunction) => {
+    const user = (req as any).authUser as Express.User;
+    if (!user) {
+      res.redirect('/login?error=google');
+      return;
+    }
+    regenerateAndLogin(req, user, next, () => {
+      logger.info({ userId: user.id, email: user.email }, 'Google OAuth login');
+      const config = getConfig();
+      res.redirect(config.APP_URL);
+    });
   },
 );
 

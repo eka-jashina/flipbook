@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AmbientManager } from '@utils/AmbientManager.js';
+import { AmbientManager } from '@managers/AmbientManager.js';
 import { CONFIG } from '../../../js/config.js';
 
 const VISIBILITY_RESUME_DELAY = CONFIG.AUDIO.VISIBILITY_RESUME_DELAY;

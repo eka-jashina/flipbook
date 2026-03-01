@@ -12,7 +12,7 @@ import {
 import { ContentLoader } from '../../../js/managers/ContentLoader.js';
 import { StorageManager } from '../../../js/utils/StorageManager.js';
 import { SettingsManager } from '../../../js/managers/SettingsManager.js';
-import { SoundManager } from '../../../js/utils/SoundManager.js';
+import { SoundManager } from '../../../js/managers/SoundManager.js';
 import { CONFIG } from '../../../js/config.js';
 
 describe('Service Integrations', () => {

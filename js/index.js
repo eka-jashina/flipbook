@@ -17,12 +17,18 @@ import { BookController } from './core/BookController.js';
 import { BookshelfScreen, loadBooksFromAPI, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
 import { CONFIG, enrichConfigFromIDB, loadConfigFromAPI, setConfig } from './config.js';
 import { ApiClient } from './utils/ApiClient.js';
+import { ErrorHandler } from './utils/ErrorHandler.js';
 import { AuthModal } from './core/AuthModal.js';
 import { MigrationHelper } from './core/MigrationHelper.js';
 import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
 import { photoLightbox } from './utils/PhotoLightbox.js';
+
+// Catch unhandled promise rejections globally so they don't vanish silently
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+});
 
 // Глобальная ссылка на контроллер (для отладки)
 let app = null;
@@ -265,6 +271,7 @@ async function init() {
     }
   } catch (error) {
     console.error('Failed to initialize Book Reader:', error);
+    ErrorHandler.handle(error, 'Не удалось запустить приложение');
   }
 }
 

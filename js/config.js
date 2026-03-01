@@ -399,6 +399,12 @@ export function getConfig() {
   return _activeConfig;
 }
 
+/** Минимальный набор обязательных ключей конфигурации */
+const REQUIRED_CONFIG_KEYS = [
+  'CHAPTERS', 'FONTS', 'SOUNDS', 'DEFAULT_SETTINGS',
+  'APPEARANCE', 'STORAGE_KEY',
+];
+
 /**
  * Заменить активную конфигурацию.
  *
@@ -408,8 +414,16 @@ export function getConfig() {
  * - При загрузке с сервера: setConfig(createConfigFromAPI(...))
  *
  * @param {Readonly<Object>} config - Новый объект конфигурации
+ * @throws {Error} Если конфигурация не содержит обязательных ключей
  */
 export function setConfig(config) {
+  if (!config || typeof config !== 'object') {
+    throw new Error('setConfig: config must be a non-null object');
+  }
+  const missing = REQUIRED_CONFIG_KEYS.filter(key => !(key in config));
+  if (missing.length > 0) {
+    throw new Error(`setConfig: missing required keys: ${missing.join(', ')}`);
+  }
   _activeConfig = config;
 }
 

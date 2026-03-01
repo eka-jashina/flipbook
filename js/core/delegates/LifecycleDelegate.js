@@ -10,7 +10,7 @@
 
 import { CONFIG, BookState } from '../../config.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
-import { AmbientManager } from '../../utils/AmbientManager.js';
+import { AmbientManager } from '../../managers/AmbientManager.js';
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 
 export class LifecycleDelegate extends BaseDelegate {
@@ -353,21 +353,30 @@ export class LifecycleDelegate extends BaseDelegate {
   async _waitForLayout() {
     const book = this.dom.get('book');
     const rightA = this.dom.get('rightA');
-    
+
     if (!book || !rightA) return;
 
     const bookWidth = book.offsetWidth;
     const minPageWidth = bookWidth * CONFIG.LAYOUT.MIN_PAGE_WIDTH_RATIO;
     const settleDelay = CONFIG.LAYOUT.SETTLE_DELAY;
+    /** Max time to wait for layout to stabilize before proceeding anyway */
+    const LAYOUT_TIMEOUT = 3000;
 
     return new Promise((resolve) => {
       let settled = false;
+      const deadline = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          resolve();
+        }
+      }, LAYOUT_TIMEOUT);
 
       const checkLayout = () => {
         const pageWidth = rightA.offsetWidth;
 
         if (pageWidth >= minPageWidth && !settled) {
           settled = true;
+          clearTimeout(deadline);
           setTimeout(resolve, settleDelay);
         } else if (!settled) {
           requestAnimationFrame(checkLayout);

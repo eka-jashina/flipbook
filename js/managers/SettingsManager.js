@@ -31,6 +31,8 @@ export class SettingsManager {
     this._bookId = bookId || null;
     this._syncTimer = null;
     this._dirty = false;
+    /** @type {number} Incremented on each local set() — prevents server overwriting local changes */
+    this._localVersion = 0;
     this._onSyncStateChange = null;
     this._boundBeforeUnload = this._onBeforeUnload.bind(this);
 
@@ -59,6 +61,11 @@ export class SettingsManager {
    */
   applyServerProgress(serverProgress) {
     if (!serverProgress) return;
+
+    // Не перезаписывать, если пользователь уже менял настройки локально
+    // (это предотвращает гонку, когда серверные данные загружаются дольше,
+    // чем пользователь начинает взаимодействовать с UI)
+    if (this._localVersion > 0) return;
 
     // Серверный прогресс перезаписывает локальные настройки
     const merged = { ...this._defaults, ...serverProgress };
@@ -93,6 +100,7 @@ export class SettingsManager {
     if (oldValue === sanitized) return;
 
     this.settings[key] = sanitized;
+    this._localVersion++;
     this.storage.save({ [key]: sanitized });
 
     // Фаза 3: debounced sync на сервер

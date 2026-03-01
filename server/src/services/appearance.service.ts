@@ -1,5 +1,6 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { mapAppearanceToDto } from '../utils/mappers.js';
 import type { AppearanceDetail, ThemeAppearance } from '../types/api.js';
 
 /**
@@ -7,7 +8,6 @@ import type { AppearanceDetail, ThemeAppearance } from '../types/api.js';
  */
 export async function getAppearance(
   bookId: string,
-  userId: string,
 ): Promise<AppearanceDetail> {
 
   const prisma = getPrisma();
@@ -19,7 +19,7 @@ export async function getAppearance(
     throw new AppError(404, 'Appearance settings not found');
   }
 
-  return mapAppearance(appearance);
+  return mapAppearanceToDto(appearance);
 }
 
 /**
@@ -27,7 +27,6 @@ export async function getAppearance(
  */
 export async function updateAppearance(
   bookId: string,
-  userId: string,
   data: { fontMin?: number; fontMax?: number },
 ): Promise<AppearanceDetail> {
 
@@ -45,7 +44,7 @@ export async function updateAppearance(
     },
   });
 
-  return mapAppearance(appearance);
+  return mapAppearanceToDto(appearance);
 }
 
 /**
@@ -53,7 +52,6 @@ export async function updateAppearance(
  */
 export async function updateThemeAppearance(
   bookId: string,
-  userId: string,
   theme: 'light' | 'dark',
   data: Partial<ThemeAppearance>,
 ): Promise<AppearanceDetail> {
@@ -77,33 +75,5 @@ export async function updateThemeAppearance(
     update: updateData,
   });
 
-  return mapAppearance(appearance);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapAppearance(appearance: any): AppearanceDetail {
-  return {
-    fontMin: appearance.fontMin,
-    fontMax: appearance.fontMax,
-    light: {
-      coverBgStart: appearance.lightCoverBgStart,
-      coverBgEnd: appearance.lightCoverBgEnd,
-      coverText: appearance.lightCoverText,
-      coverBgImageUrl: appearance.lightCoverBgImageUrl,
-      pageTexture: appearance.lightPageTexture,
-      customTextureUrl: appearance.lightCustomTextureUrl,
-      bgPage: appearance.lightBgPage,
-      bgApp: appearance.lightBgApp,
-    },
-    dark: {
-      coverBgStart: appearance.darkCoverBgStart,
-      coverBgEnd: appearance.darkCoverBgEnd,
-      coverText: appearance.darkCoverText,
-      coverBgImageUrl: appearance.darkCoverBgImageUrl,
-      pageTexture: appearance.darkPageTexture,
-      customTextureUrl: appearance.darkCustomTextureUrl,
-      bgPage: appearance.darkBgPage,
-      bgApp: appearance.darkBgApp,
-    },
-  };
+  return mapAppearanceToDto(appearance);
 }

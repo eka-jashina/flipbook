@@ -10,18 +10,18 @@ const router = Router({ mergeParams: true });
 router.use(requireAuth);
 
 router.get('/', asyncHandler(async (req, res) => {
-  const font = await getDecorativeFont(req.params.bookId as string, req.user!.id);
+  const font = await getDecorativeFont(req.params.bookId as string);
   if (!font) { res.status(204).send(); return; }
   ok(res, font);
 }));
 
 router.put('/', validate(upsertDecorativeFontSchema), asyncHandler(async (req, res) => {
-  const font = await upsertDecorativeFont(req.params.bookId as string, req.user!.id, req.body);
+  const font = await upsertDecorativeFont(req.params.bookId as string, req.body);
   ok(res, font);
 }));
 
 router.delete('/', asyncHandler(async (req, res) => {
-  await deleteDecorativeFont(req.params.bookId as string, req.user!.id);
+  await deleteDecorativeFont(req.params.bookId as string);
   res.status(204).send();
 }));
 
