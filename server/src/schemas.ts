@@ -9,6 +9,23 @@ import { z } from 'zod';
 const FONT_SIZE_MIN = 8;
 const FONT_SIZE_MAX = 72;
 
+/**
+ * Refinement predicate: allows relative paths and http(s) URLs.
+ * Blocks javascript:, data: (except data:font/), and other dangerous schemes.
+ */
+function isSafeUrl(val: string): boolean {
+  const trimmed = val.trim().toLowerCase();
+  if (trimmed.startsWith('javascript:')) return false;
+  if (trimmed.startsWith('vbscript:')) return false;
+  // Allow data: URLs only for font files (data:font/...)
+  if (trimmed.startsWith('data:') && !trimmed.startsWith('data:font/')) return false;
+  return true;
+}
+const UNSAFE_URL_MSG = { message: 'URL contains a disallowed scheme' };
+
+/** URL/path string — max 500 chars, blocks dangerous URI schemes */
+const safeUrlOrPath = z.string().max(500).refine(isSafeUrl, UNSAFE_URL_MSG);
+
 // ── Auth ───────────────────────────────────────────
 export const registerSchema = z.object({
   email: z.string().email().max(255),
@@ -21,6 +38,15 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email().max(255),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1).max(255),
+  password: z.string().min(8).max(128),
+});
+
 // ── Books ──────────────────────────────────────────
 export const createBookSchema = z.object({
   title: z.string().min(1).max(500),
@@ -31,7 +57,7 @@ export const updateBookSchema = z.object({
   title: z.string().min(1).max(500).optional(),
   author: z.string().max(500).optional(),
   coverBgMode: z.enum(['default', 'none', 'custom']).optional(),
-  coverBgCustomUrl: z.string().max(500).nullable().optional(),
+  coverBgCustomUrl: safeUrlOrPath.nullable().optional(),
 });
 
 export const reorderBooksSchema = z.object({
@@ -50,17 +76,17 @@ const MAX_HTML_CONTENT_LENGTH = 2 * 1024 * 1024;
 export const createChapterSchema = z.object({
   title: z.string().min(1).max(500),
   htmlContent: z.string().max(MAX_HTML_CONTENT_LENGTH).optional(),
-  filePath: z.string().max(500).optional(),
-  bg: z.string().max(500).optional(),
-  bgMobile: z.string().max(500).optional(),
+  filePath: safeUrlOrPath.optional(),
+  bg: safeUrlOrPath.optional(),
+  bgMobile: safeUrlOrPath.optional(),
 });
 
 export const updateChapterSchema = z.object({
   title: z.string().min(1).max(500).optional(),
   htmlContent: z.string().max(MAX_HTML_CONTENT_LENGTH).nullable().optional(),
-  filePath: z.string().max(500).nullable().optional(),
-  bg: z.string().max(500).optional(),
-  bgMobile: z.string().max(500).optional(),
+  filePath: safeUrlOrPath.nullable().optional(),
+  bg: safeUrlOrPath.optional(),
+  bgMobile: safeUrlOrPath.optional(),
 });
 
 export const reorderChaptersSchema = z.object({
@@ -85,18 +111,18 @@ export const updateThemeSchema = z.object({
   coverBgStart: z.string().max(20).optional(),
   coverBgEnd: z.string().max(20).optional(),
   coverText: z.string().max(20).optional(),
-  coverBgImageUrl: z.string().max(500).nullable().optional(),
+  coverBgImageUrl: safeUrlOrPath.nullable().optional(),
   pageTexture: z.string().max(20).optional(),
-  customTextureUrl: z.string().max(500).nullable().optional(),
+  customTextureUrl: safeUrlOrPath.nullable().optional(),
   bgPage: z.string().max(20).optional(),
   bgApp: z.string().max(20).optional(),
 });
 
 // ── Sounds ─────────────────────────────────────────
 export const updateSoundsSchema = z.object({
-  pageFlip: z.string().max(500).optional(),
-  bookOpen: z.string().max(500).optional(),
-  bookClose: z.string().max(500).optional(),
+  pageFlip: safeUrlOrPath.optional(),
+  bookOpen: safeUrlOrPath.optional(),
+  bookClose: safeUrlOrPath.optional(),
 });
 
 // ── Ambients ───────────────────────────────────────
@@ -105,7 +131,7 @@ export const createAmbientSchema = z.object({
   label: z.string().min(1).max(200),
   shortLabel: z.string().max(50).optional(),
   icon: z.string().max(20).optional(),
-  fileUrl: z.string().max(500).optional(),
+  fileUrl: safeUrlOrPath.optional(),
   visible: z.boolean().optional(),
   builtin: z.boolean().optional(),
 });
@@ -115,7 +141,7 @@ export const updateAmbientSchema = z.object({
   label: z.string().min(1).max(200).optional(),
   shortLabel: z.string().max(50).nullable().optional(),
   icon: z.string().max(20).nullable().optional(),
-  fileUrl: z.string().max(500).nullable().optional(),
+  fileUrl: safeUrlOrPath.nullable().optional(),
   visible: z.boolean().optional(),
 });
 
@@ -126,7 +152,7 @@ export const reorderAmbientsSchema = z.object({
 // ── Decorative Font ────────────────────────────────
 export const upsertDecorativeFontSchema = z.object({
   name: z.string().min(1).max(200),
-  fileUrl: z.string().min(1).max(500),
+  fileUrl: z.string().min(1).max(500).refine(isSafeUrl, UNSAFE_URL_MSG),
 });
 
 // ── Default Settings ───────────────────────────────
@@ -147,14 +173,14 @@ export const createFontSchema = z.object({
   family: z.string().min(1).max(300),
   builtin: z.boolean().optional(),
   enabled: z.boolean().optional(),
-  fileUrl: z.string().max(500).optional(),
+  fileUrl: safeUrlOrPath.optional(),
 });
 
 export const updateFontSchema = z.object({
   label: z.string().min(1).max(200).optional(),
   family: z.string().min(1).max(300).optional(),
   enabled: z.boolean().optional(),
-  fileUrl: z.string().max(500).nullable().optional(),
+  fileUrl: safeUrlOrPath.nullable().optional(),
 });
 
 export const reorderFontsSchema = z.object({

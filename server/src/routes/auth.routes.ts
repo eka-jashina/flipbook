@@ -1,15 +1,41 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import passport from 'passport';
-import { registerUser, formatUser } from '../services/auth.service.js';
+import { registerUser, formatUser, createPasswordResetToken, resetPasswordWithToken } from '../services/auth.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createAuthRateLimiter } from '../middleware/rateLimit.js';
 import { generateCsrfToken } from '../middleware/csrf.js';
 import { getConfig } from '../config.js';
-import { registerSchema, loginSchema } from '../schemas.js';
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../schemas.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/response.js';
+
+/**
+ * Regenerate session and then log in — prevents session fixation attacks.
+ * Express session.regenerate() creates a new session ID while preserving
+ * passport serialization through the req.login() call.
+ */
+function regenerateAndLogin(
+  req: Request,
+  user: Express.User,
+  next: NextFunction,
+  callback: () => void,
+): void {
+  req.session.regenerate((regenErr) => {
+    if (regenErr) {
+      next(regenErr);
+      return;
+    }
+    req.login(user, (loginErr) => {
+      if (loginErr) {
+        next(loginErr);
+        return;
+      }
+      callback();
+    });
+  });
+}
 
 const router = Router();
 
@@ -36,11 +62,7 @@ router.post(
       hasPassword: userResponse.hasPassword,
     };
 
-    req.login(sessionUser, (err) => {
-      if (err) {
-        next(err);
-        return;
-      }
+    regenerateAndLogin(req, sessionUser, next, () => {
       created(res, { user: userResponse });
     });
   }),
@@ -72,11 +94,7 @@ router.post(
           return;
         }
 
-        req.login(user, (loginErr) => {
-          if (loginErr) {
-            next(loginErr);
-            return;
-          }
+        regenerateAndLogin(req, user, next, () => {
           ok(res, { user: formatUser(user) });
         });
       },
@@ -122,6 +140,42 @@ router.get('/csrf-token', (req: Request, res: Response) => {
   const token = generateCsrfToken(req, res);
   ok(res, { token });
 });
+
+/**
+ * POST /api/auth/forgot-password — Request password reset token.
+ * Always returns 200 to prevent email enumeration.
+ */
+router.post(
+  '/forgot-password',
+  authLimiter,
+  validate(forgotPasswordSchema),
+  asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    const token = await createPasswordResetToken(email);
+
+    // In production, send token via email. For now, log it.
+    // Token is only returned in development for testing convenience.
+    if (token && getConfig().NODE_ENV === 'development') {
+      ok(res, { message: 'If an account exists, a reset link has been sent', token });
+    } else {
+      ok(res, { message: 'If an account exists, a reset link has been sent' });
+    }
+  }),
+);
+
+/**
+ * POST /api/auth/reset-password — Reset password using token
+ */
+router.post(
+  '/reset-password',
+  authLimiter,
+  validate(resetPasswordSchema),
+  asyncHandler(async (req, res) => {
+    const { token, password } = req.body;
+    await resetPasswordWithToken(token, password);
+    ok(res, { message: 'Password has been reset successfully' });
+  }),
+);
 
 /**
  * GET /api/auth/google — Redirect to Google OAuth
