@@ -20,7 +20,6 @@
  * Динамические элементы (полки, карточки книг) клонируются из <template>.
  */
 
-import { renderModeCards } from '../admin/modeCardsData.js';
 import { ProfileHeader } from './ProfileHeader.js';
 
 const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
@@ -64,8 +63,9 @@ export class BookshelfScreen {
    * @param {'owner'|'guest'} [options.mode='owner'] - Режим отображения
    * @param {Object} [options.profileUser] - Данные профиля для шапки { username, displayName, bio }
    * @param {Function} [options.onEditProfile] - Колбэк при клике «Редактировать профиль»
+   * @param {import('../utils/Router.js').Router} [options.router] - SPA-роутер
    */
-  constructor({ container, books, onBookSelect, apiClient, mode = 'owner', profileUser, onEditProfile }) {
+  constructor({ container, books, onBookSelect, apiClient, mode = 'owner', profileUser, onEditProfile, router }) {
     this.container = container;
     this.books = books;
     this.onBookSelect = onBookSelect;
@@ -73,6 +73,7 @@ export class BookshelfScreen {
     this._mode = mode;
     this._profileUser = profileUser || null;
     this._onEditProfile = onEditProfile;
+    this._router = router || null;
     this._boundHandleClick = this._handleClick.bind(this);
     this._boundCloseMenu = this._closeBookMenu.bind(this);
     this._currentView = 'shelf';
@@ -86,33 +87,15 @@ export class BookshelfScreen {
       empty: container.querySelector('#bookshelf-empty'),
       subtitle: container.querySelector('#bookshelf-subtitle'),
       header: container.querySelector('.bookshelf-header'),
-      modeSelector: container.querySelector('#bookshelf-mode-selector'),
     };
-
-    // Генерация карточек режимов только для owner mode
-    if (this._mode === 'owner') {
-      const modeCardsContainer = container.querySelector('#bookshelf-mode-cards');
-      if (modeCardsContainer) {
-        renderModeCards(modeCardsContainer, {
-          cardClass: 'bookshelf-mode-card',
-          iconClass: 'bookshelf-mode-card-icon',
-          titleClass: 'bookshelf-mode-card-title',
-          descClass: 'bookshelf-mode-card-desc',
-        });
-      }
-    }
   }
 
   /**
    * Отрендерить книжный шкаф
    */
   render() {
-    const { shelves, actions, empty, subtitle, header, modeSelector } = this._els;
+    const { shelves, actions, empty, subtitle, header } = this._els;
     const isOwner = this._mode === 'owner';
-
-    // Сброс mode selector при рендере (важно при восстановлении из bfcache)
-    if (modeSelector) modeSelector.hidden = true;
-    this._currentView = 'shelf';
 
     // Профильная шапка (если задан profileUser)
     if (this._profileUser) {
@@ -120,7 +103,9 @@ export class BookshelfScreen {
       this._profileHeader = new ProfileHeader({
         user: this._profileUser,
         isOwner,
-        onEditProfile: this._onEditProfile,
+        onEditProfile: this._onEditProfile || (isOwner && this._router
+          ? () => this._router.navigate('/account?tab=profile')
+          : undefined),
       });
       this._profileHeader.render(this.container);
     }
@@ -129,7 +114,6 @@ export class BookshelfScreen {
     if (!isOwner) {
       if (actions) actions.hidden = true;
       if (empty) empty.hidden = true;
-      if (modeSelector) modeSelector.hidden = true;
     }
 
     if (!this.books.length) {
@@ -322,51 +306,17 @@ export class BookshelfScreen {
   // ═══════════════════════════════════════════
 
   /**
-   * Показать/скрыть экран выбора режима
-   * @private
-   */
-  _toggleModeSelector(show) {
-    this._currentView = show ? 'mode-selector' : 'shelf';
-    const { modeSelector, header, shelves, actions, empty } = this._els;
-
-    if (modeSelector) modeSelector.hidden = !show;
-    if (header) header.hidden = show;
-    if (shelves) shelves.hidden = show;
-    if (actions) actions.hidden = show;
-    if (empty) empty.hidden = show || this.books.length > 0;
-
-    // Скрыть/показать profile header при переключении
-    if (this._profileHeader?._el) {
-      this._profileHeader._el.hidden = show;
-    }
-  }
-
-  /**
    * Обработка кликов
    * @private
    */
   _handleClick(e) {
-    // Кнопка «Создать книгу» (только owner)
+    // Кнопка «Создать книгу» (только owner) → переход в /account
     const addBtn = e.target.closest('[data-action="add-book"]');
     if (addBtn && this._mode === 'owner') {
       e.preventDefault();
-      this._toggleModeSelector(true);
-      return;
-    }
-
-    // Кнопка «Назад» из mode selector
-    const backBtn = e.target.closest('[data-action="back-to-shelf"]');
-    if (backBtn) {
-      this._toggleModeSelector(false);
-      return;
-    }
-
-    // Карточка режима создания книги (только owner)
-    const modeCard = e.target.closest('[data-mode]');
-    if (modeCard && this._mode === 'owner') {
-      const mode = modeCard.dataset.mode;
-      sessionStorage.setItem('flipbook-admin-mode', mode);
-      window.location.href = `${import.meta.env.BASE_URL || '/'}admin.html`;
+      if (this._router) {
+        this._router.navigate('/account');
+      }
       return;
     }
 
@@ -457,9 +407,9 @@ export class BookshelfScreen {
         break;
 
       case 'edit':
-        sessionStorage.setItem('flipbook-admin-mode', 'edit');
-        sessionStorage.setItem('flipbook-admin-edit-book', bookId);
-        window.location.href = `${import.meta.env.BASE_URL || '/'}admin.html`;
+        if (this._router) {
+          this._router.navigate(`/account?edit=${bookId}`);
+        }
         break;
 
       case 'visibility':

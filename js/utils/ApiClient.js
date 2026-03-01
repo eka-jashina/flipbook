@@ -491,8 +491,18 @@ export class ApiClient {
   // Профиль
   // ═══════════════════════════════════════════
 
+  /** Получить профиль текущего пользователя */
+  async getProfile() {
+    return this._fetchWithRetry('/api/profile');
+  }
+
   /** Обновить профиль текущего пользователя */
   async updateProfile(data) {
     return this._fetchWithRetry('/api/profile', { method: 'PUT', body: data });
+  }
+
+  /** Проверить доступность username */
+  async checkUsername(username) {
+    return this._fetchWithRetry(`/api/profile/check-username/${encodeURIComponent(username)}`);
   }
 }
