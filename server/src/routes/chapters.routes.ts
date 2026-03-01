@@ -101,10 +101,11 @@ router.patch(
   largeJsonBody,
   validate(updateChapterSchema),
   asyncHandler(async (req, res) => {
+    const ifUnmodifiedSince = req.headers['if-unmodified-since'] as string | undefined;
     const chapter = await updateChapter(
       req.params.bookId as string,
       req.params.chapterId as string,
-      req.body,
+      { ...req.body, ...(ifUnmodifiedSince && { ifUnmodifiedSince }) },
     );
     ok(res, chapter);
   }),

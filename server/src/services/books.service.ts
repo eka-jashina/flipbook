@@ -21,6 +21,9 @@ export interface PaginatedBooks {
   offset: number;
 }
 
+/** Reusable filter: only non-deleted books for a given user */
+const activeBooks = (userId: string) => ({ userId, deletedAt: null });
+
 /**
  * Get books for a user with pagination (for bookshelf display).
  */
@@ -31,10 +34,11 @@ export async function getUserBooks(
   const prisma = getPrisma();
   const limit = Math.min(options.limit ?? 50, 100);
   const offset = options.offset ?? 0;
+  const where = activeBooks(userId);
 
   const [books, total] = await Promise.all([
     prisma.book.findMany({
-      where: { userId },
+      where,
       orderBy: { position: 'asc' },
       skip: offset,
       take: limit,
@@ -54,7 +58,7 @@ export async function getUserBooks(
         },
       },
     }),
-    prisma.book.count({ where: { userId } }),
+    prisma.book.count({ where }),
   ]);
 
   return {
@@ -97,8 +101,8 @@ export async function getBookById(
 ): Promise<BookDetail> {
   const prisma = getPrisma();
 
-  const book = await prisma.book.findUnique({
-    where: { id: bookId },
+  const book = await prisma.book.findFirst({
+    where: { id: bookId, deletedAt: null },
     include: {
       chapters: {
         orderBy: { position: 'asc' },
@@ -154,15 +158,15 @@ export async function createBook(
 ): Promise<BookDetail> {
   const prisma = getPrisma();
 
-  // Check resource limit (outside transaction for fast-fail)
-  const count = await prisma.book.count({ where: { userId } });
+  // Check resource limit — only count active books (outside transaction for fast-fail)
+  const count = await prisma.book.count({ where: activeBooks(userId) });
   if (count >= RESOURCE_LIMITS.MAX_BOOKS_PER_USER) {
     throw new AppError(403, `Book limit reached (max ${RESOURCE_LIMITS.MAX_BOOKS_PER_USER})`);
   }
 
   const bookId = await withSerializableRetry(prisma, async (tx) => {
     const lastBook = await tx.book.findFirst({
-      where: { userId },
+      where: activeBooks(userId),
       orderBy: { position: 'desc' },
       select: { position: true },
     });
@@ -191,6 +195,7 @@ export async function createBook(
 
 /**
  * Update a book's metadata.
+ * Supports optimistic locking via optional `ifUnmodifiedSince` timestamp.
  */
 export async function updateBook(
   bookId: string,
@@ -200,9 +205,24 @@ export async function updateBook(
     author?: string;
     coverBgMode?: string;
     coverBgCustomUrl?: string | null;
+    ifUnmodifiedSince?: string;
   },
 ): Promise<BookDetail> {
   const prisma = getPrisma();
+
+  // Optimistic locking: reject if resource was modified after the given timestamp
+  if (data.ifUnmodifiedSince) {
+    const book = await prisma.book.findFirst({
+      where: { id: bookId, deletedAt: null },
+      select: { updatedAt: true },
+    });
+    if (!book) throw new AppError(404, 'Book not found');
+
+    const clientDate = new Date(data.ifUnmodifiedSince);
+    if (book.updatedAt > clientDate) {
+      throw new AppError(409, 'Book was modified by another request', 'CONFLICT_DETECTED');
+    }
+  }
 
   // Ownership verified by requireBookOwnership middleware
   await prisma.book.update({
@@ -221,7 +241,8 @@ export async function updateBook(
 }
 
 /**
- * Delete a book and clean up associated S3 files (best-effort).
+ * Soft-delete a book and clean up associated S3 files (best-effort).
+ * The book is marked as deleted but retained in the database for potential recovery.
  */
 export async function deleteBook(
   bookId: string,
@@ -229,8 +250,8 @@ export async function deleteBook(
 ): Promise<void> {
   const prisma = getPrisma();
 
-  const book = await prisma.book.findUnique({
-    where: { id: bookId },
+  const book = await prisma.book.findFirst({
+    where: { id: bookId, deletedAt: null },
     include: {
       ambients: { select: { fileUrl: true } },
       sounds: { select: { pageFlipUrl: true, bookOpenUrl: true, bookCloseUrl: true } },
@@ -242,7 +263,13 @@ export async function deleteBook(
   if (!book) throw new AppError(404, 'Book not found');
   // Ownership verified by requireBookOwnership middleware
 
-  // Collect all S3 file URLs before deletion.
+  // Soft-delete: set deletedAt instead of removing the row
+  await prisma.book.update({
+    where: { id: bookId },
+    data: { deletedAt: new Date() },
+  });
+
+  // Best-effort S3 cleanup.
   // Only include URLs that are actual S3 uploads (extractKeyFromUrl returns
   // null for relative/built-in paths like "sounds/page-flip.mp3").
   const { deleteFileByUrl, extractKeyFromUrl } = await import('../utils/storage.js');
@@ -262,9 +289,7 @@ export async function deleteBook(
 
   const s3Urls = allUrls.filter((u): u is string => !!u && extractKeyFromUrl(u) !== null);
 
-  await prisma.book.delete({ where: { id: bookId } });
-
-  // Best-effort S3 cleanup after successful DB deletion.
+  // Best-effort S3 cleanup after successful soft-delete.
   // Failed deletions are logged as orphaned files for manual cleanup.
   if (s3Urls.length > 0) {
     const results = await Promise.allSettled(s3Urls.map((u) => deleteFileByUrl(u)));
@@ -292,9 +317,9 @@ export async function reorderBooks(
 ): Promise<void> {
   const prisma = getPrisma();
 
-  // Verify all books belong to the user
+  // Verify all books belong to the user and are not deleted
   const books = await prisma.book.findMany({
-    where: { userId, id: { in: bookIds } },
+    where: { ...activeBooks(userId), id: { in: bookIds } },
     select: { id: true },
   });
 

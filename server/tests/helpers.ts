@@ -65,6 +65,7 @@ export async function cleanDatabase() {
   const prisma = getPrisma();
 
   // Delete in order respecting foreign key constraints
+  await prisma.readingPreferences.deleteMany();
   await prisma.readingProgress.deleteMany();
   await prisma.ambient.deleteMany();
   await prisma.decorativeFont.deleteMany();

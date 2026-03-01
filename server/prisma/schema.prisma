@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Append ?connection_limit=N&pool_timeout=N to DATABASE_URL for pool tuning
   url      = env("DATABASE_URL")
 }
 
@@ -19,26 +20,28 @@ model User {
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
-  books           Book[]
-  readingFonts    ReadingFont[]
-  globalSettings  GlobalSettings?
-  readingProgress ReadingProgress[]
+  books              Book[]
+  readingFonts       ReadingFont[]
+  globalSettings     GlobalSettings?
+  readingProgress    ReadingProgress[]
+  readingPreferences ReadingPreferences[]
 
   @@map("users")
 }
 
 model Book {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId          String   @map("user_id") @db.Uuid
-  title           String   @default("") @db.VarChar(500)
-  author          String   @default("") @db.VarChar(500)
-  position        Int      @default(0)
-  coverBg         String   @default("") @map("cover_bg") @db.VarChar(500)
-  coverBgMobile   String   @default("") @map("cover_bg_mobile") @db.VarChar(500)
-  coverBgMode     String   @default("default") @map("cover_bg_mode") @db.VarChar(20)
-  coverBgCustomUrl String? @map("cover_bg_custom_url") @db.VarChar(500)
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  title            String    @default("") @db.VarChar(500)
+  author           String    @default("") @db.VarChar(500)
+  position         Int       @default(0)
+  coverBg          String    @default("") @map("cover_bg") @db.VarChar(500)
+  coverBgMobile    String    @default("") @map("cover_bg_mobile") @db.VarChar(500)
+  coverBgMode      String    @default("default") @map("cover_bg_mode") @db.VarChar(20)
+  coverBgCustomUrl String?   @map("cover_bg_custom_url") @db.VarChar(500)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   chapters        Chapter[]
@@ -46,11 +49,13 @@ model Book {
   appearance      BookAppearance?
   sounds          BookSounds?
   defaultSettings BookDefaultSettings?
-  decorativeFont  DecorativeFont?
-  readingProgress ReadingProgress[]
+  decorativeFont     DecorativeFont?
+  readingProgress    ReadingProgress[]
+  readingPreferences ReadingPreferences[]
 
   @@index([userId])
   @@index([userId, position])
+  @@index([userId, deletedAt])
   @@map("books")
 }
 
@@ -201,10 +206,24 @@ model GlobalSettings {
 }
 
 model ReadingProgress {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  bookId    String   @map("book_id") @db.Uuid
+  page      Int      @default(0)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId, bookId])
+  @@map("reading_progress")
+}
+
+model ReadingPreferences {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId        String   @map("user_id") @db.Uuid
   bookId        String   @map("book_id") @db.Uuid
-  page          Int      @default(0)
   font          String   @default("georgia") @db.VarChar(100)
   fontSize      Int      @default(18) @map("font_size")
   theme         String   @default("light") @db.VarChar(20)
@@ -219,5 +238,5 @@ model ReadingProgress {
 
   @@unique([userId, bookId])
   @@index([userId, bookId])
-  @@map("reading_progress")
+  @@map("reading_preferences")
 }

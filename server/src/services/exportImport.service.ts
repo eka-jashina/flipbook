@@ -136,7 +136,7 @@ export async function exportUserConfig(userId: string): Promise<ExportData> {
   const prisma = getPrisma();
 
   const books = await prisma.book.findMany({
-    where: { userId },
+    where: { userId, deletedAt: null },
     orderBy: { position: 'asc' },
     include: {
       chapters: { orderBy: { position: 'asc' } },
@@ -224,7 +224,7 @@ export async function importUserConfig(
   const validData = parsed.data;
 
   // Check resource limits before starting import
-  const existingBooks = await prisma.book.count({ where: { userId } });
+  const existingBooks = await prisma.book.count({ where: { userId, deletedAt: null } });
   if (existingBooks + validData.books.length > RESOURCE_LIMITS.MAX_BOOKS_PER_USER) {
     throw new AppError(
       403,

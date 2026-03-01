@@ -138,6 +138,7 @@ export async function createChapter(
 
 /**
  * Update a chapter.
+ * Supports optimistic locking via optional `ifUnmodifiedSince` timestamp.
  */
 export async function updateChapter(
   bookId: string,
@@ -148,6 +149,7 @@ export async function updateChapter(
     filePath?: string | null;
     bg?: string;
     bgMobile?: string;
+    ifUnmodifiedSince?: string;
   },
 ): Promise<ChapterDetail> {
 
@@ -155,11 +157,19 @@ export async function updateChapter(
 
   const chapter = await prisma.chapter.findUnique({
     where: { id: chapterId },
-    select: { bookId: true },
+    select: { bookId: true, updatedAt: true },
   });
 
   if (!chapter || chapter.bookId !== bookId) {
     throw new AppError(404, 'Chapter not found');
+  }
+
+  // Optimistic locking: reject if chapter was modified after the given timestamp
+  if (data.ifUnmodifiedSince) {
+    const clientDate = new Date(data.ifUnmodifiedSince);
+    if (chapter.updatedAt > clientDate) {
+      throw new AppError(409, 'Chapter was modified by another request', 'CONFLICT_DETECTED');
+    }
   }
 
   const updated = await prisma.chapter.update({

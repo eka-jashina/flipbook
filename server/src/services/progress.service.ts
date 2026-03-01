@@ -1,22 +1,86 @@
 import { getPrisma } from '../utils/prisma.js';
+import { AppError } from '../middleware/errorHandler.js';
 import type { ReadingProgressDetail } from '../types/api.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapProgress(p: any): ReadingProgressDetail {
-  return { page: p.page, font: p.font, fontSize: p.fontSize, theme: p.theme, soundEnabled: p.soundEnabled, soundVolume: p.soundVolume, ambientType: p.ambientType, ambientVolume: p.ambientVolume, updatedAt: p.updatedAt.toISOString() };
-}
-
 export async function getReadingProgress(bookId: string, userId: string): Promise<ReadingProgressDetail | null> {
-
   const prisma = getPrisma();
-  const progress = await prisma.readingProgress.findUnique({ where: { userId_bookId: { userId, bookId } } });
+
+  const [progress, preferences] = await Promise.all([
+    prisma.readingProgress.findUnique({ where: { userId_bookId: { userId, bookId } } }),
+    prisma.readingPreferences.findUnique({ where: { userId_bookId: { userId, bookId } } }),
+  ]);
+
   if (!progress) return null;
-  return mapProgress(progress);
+
+  return {
+    page: progress.page,
+    font: preferences?.font ?? 'georgia',
+    fontSize: preferences?.fontSize ?? 18,
+    theme: preferences?.theme ?? 'light',
+    soundEnabled: preferences?.soundEnabled ?? true,
+    soundVolume: preferences?.soundVolume ?? 0.3,
+    ambientType: preferences?.ambientType ?? 'none',
+    ambientVolume: preferences?.ambientVolume ?? 0.5,
+    updatedAt: progress.updatedAt.toISOString(),
+  };
 }
 
-export async function upsertReadingProgress(bookId: string, userId: string, data: { page: number; font: string; fontSize: number; theme: string; soundEnabled: boolean; soundVolume: number; ambientType: string; ambientVolume: number }): Promise<ReadingProgressDetail> {
-
+export async function upsertReadingProgress(
+  bookId: string,
+  userId: string,
+  data: {
+    page: number;
+    font: string;
+    fontSize: number;
+    theme: string;
+    soundEnabled: boolean;
+    soundVolume: number;
+    ambientType: string;
+    ambientVolume: number;
+    ifUnmodifiedSince?: string;
+  },
+): Promise<ReadingProgressDetail> {
   const prisma = getPrisma();
-  const progress = await prisma.readingProgress.upsert({ where: { userId_bookId: { userId, bookId } }, create: { userId, bookId, ...data }, update: data });
-  return mapProgress(progress);
+
+  // Optimistic locking: reject if progress was modified after the given timestamp
+  if (data.ifUnmodifiedSince) {
+    const existing = await prisma.readingProgress.findUnique({
+      where: { userId_bookId: { userId, bookId } },
+      select: { updatedAt: true },
+    });
+    if (existing) {
+      const clientDate = new Date(data.ifUnmodifiedSince);
+      if (existing.updatedAt > clientDate) {
+        throw new AppError(409, 'Reading progress was modified by another session', 'CONFLICT_DETECTED');
+      }
+    }
+  }
+
+  const { font, fontSize, theme, soundEnabled, soundVolume, ambientType, ambientVolume, page } = data;
+  const preferencesData = { font, fontSize, theme, soundEnabled, soundVolume, ambientType, ambientVolume };
+
+  const [progress] = await Promise.all([
+    prisma.readingProgress.upsert({
+      where: { userId_bookId: { userId, bookId } },
+      create: { userId, bookId, page },
+      update: { page },
+    }),
+    prisma.readingPreferences.upsert({
+      where: { userId_bookId: { userId, bookId } },
+      create: { userId, bookId, ...preferencesData },
+      update: preferencesData,
+    }),
+  ]);
+
+  return {
+    page: progress.page,
+    font,
+    fontSize,
+    theme,
+    soundEnabled,
+    soundVolume,
+    ambientType,
+    ambientVolume,
+    updatedAt: progress.updatedAt.toISOString(),
+  };
 }

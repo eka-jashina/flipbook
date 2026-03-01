@@ -14,7 +14,9 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 router.put('/', validate(upsertProgressSchema), asyncHandler(async (req, res) => {
-  ok(res, await upsertReadingProgress(req.params.bookId as string, req.user!.id, req.body));
+  const ifUnmodifiedSince = req.headers['if-unmodified-since'] as string | undefined;
+  const data = { ...req.body, ...(ifUnmodifiedSince && { ifUnmodifiedSince }) };
+  ok(res, await upsertReadingProgress(req.params.bookId as string, req.user!.id, data));
 }));
 
 export default router;

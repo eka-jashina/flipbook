@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { cleanDatabase, createAuthenticatedAgent } from './helpers.js';
+import { getPrisma } from '../src/utils/prisma.js';
 
 const app = createApp();
 
@@ -130,7 +131,7 @@ describe('Books API', () => {
   });
 
   describe('DELETE /api/books/:bookId', () => {
-    it('should delete a book', async () => {
+    it('should soft-delete a book (removed from list but retained in DB)', async () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       const createRes = await agent
@@ -138,12 +139,79 @@ describe('Books API', () => {
         .send({ title: 'To Delete' })
         .expect(201);
 
+      const bookId = createRes.body.data.id;
+
       await agent
-        .delete(`/api/books/${createRes.body.data.id}`)
+        .delete(`/api/books/${bookId}`)
         .expect(204);
 
+      // Book should not appear in the list
       const res = await agent.get('/api/books').expect(200);
       expect(res.body.data.books).toHaveLength(0);
+
+      // But the row still exists in the database with deletedAt set
+      const prisma = getPrisma();
+      const dbBook = await prisma.book.findUnique({ where: { id: bookId } });
+      expect(dbBook).not.toBeNull();
+      expect(dbBook!.deletedAt).not.toBeNull();
+    });
+
+    it('should return 404 when accessing a soft-deleted book', async () => {
+      const { agent } = await createAuthenticatedAgent(app);
+
+      const createRes = await agent
+        .post('/api/books')
+        .send({ title: 'To Delete' })
+        .expect(201);
+
+      await agent.delete(`/api/books/${createRes.body.data.id}`).expect(204);
+      await agent.get(`/api/books/${createRes.body.data.id}`).expect(404);
+    });
+  });
+
+  describe('Optimistic locking', () => {
+    it('should reject update with stale If-Unmodified-Since', async () => {
+      const { agent } = await createAuthenticatedAgent(app);
+
+      const createRes = await agent
+        .post('/api/books')
+        .send({ title: 'Locking Test' })
+        .expect(201);
+
+      const bookId = createRes.body.data.id;
+
+      // Record a timestamp before the update
+      const staleDate = new Date(Date.now() - 60000).toISOString();
+
+      // First update succeeds
+      await agent
+        .patch(`/api/books/${bookId}`)
+        .send({ title: 'Updated' })
+        .expect(200);
+
+      // Second update with stale timestamp should be rejected (409 Conflict)
+      await agent
+        .patch(`/api/books/${bookId}`)
+        .set('If-Unmodified-Since', staleDate)
+        .send({ title: 'Stale Update' })
+        .expect(409);
+    });
+
+    it('should accept update without If-Unmodified-Since (backwards compatible)', async () => {
+      const { agent } = await createAuthenticatedAgent(app);
+
+      const createRes = await agent
+        .post('/api/books')
+        .send({ title: 'No Lock Test' })
+        .expect(201);
+
+      // Update without header should always work
+      const res = await agent
+        .patch(`/api/books/${createRes.body.data.id}`)
+        .send({ title: 'Updated' })
+        .expect(200);
+
+      expect(res.body.data.title).toBe('Updated');
     });
   });
 
