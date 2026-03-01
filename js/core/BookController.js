@@ -280,6 +280,10 @@ export class BookController {
       this.resizeHandler.bind();
       this.mediator.updateDebug();
     } catch (error) {
+      // Очистить частично установленные подписки, чтобы не оставлять
+      // несогласованное состояние (часть подписок есть, часть — нет)
+      this.subscriptions?.unsubscribeAll();
+      this.resizeHandler?.destroy();
       ErrorHandler.handle(error, "Не удалось инициализировать приложение");
       throw error;
     }

@@ -55,7 +55,8 @@ export default defineConfig(({ command, mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      sourcemap: true,
+      // Source maps only in dev — don't ship to production (leaks source code)
+      sourcemap: mode !== 'production',
       
       minify: 'terser',
       terserOptions: {

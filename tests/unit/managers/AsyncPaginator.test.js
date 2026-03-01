@@ -436,7 +436,7 @@ describe('AsyncPaginator', () => {
       expect(abortHandler).toHaveBeenCalled();
     });
 
-    it('should emit error event on error', async () => {
+    it('should throw error on failure (no duplicate error event)', async () => {
       const errorHandler = vi.fn();
       paginator.on('error', errorHandler);
 
@@ -449,7 +449,9 @@ describe('AsyncPaginator', () => {
       await expect(paginator.paginate(html, mockMeasureElement))
         .rejects.toThrow('Sanitize error');
 
-      expect(errorHandler).toHaveBeenCalled();
+      // Error is only propagated via thrown promise rejection,
+      // not emitted as event (avoids double error handling)
+      expect(errorHandler).not.toHaveBeenCalled();
     });
 
     it('should cleanup container from DOM', async () => {

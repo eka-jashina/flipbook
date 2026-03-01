@@ -31,17 +31,23 @@ export class DragAnimator {
     const startTime = performance.now();
 
     const tick = (now) => {
-      const elapsed = now - startTime;
-      const t = Math.min(elapsed / duration, 1);
-      const eased = this._easeInOutQuad(t);
+      try {
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        const eased = this._easeInOutQuad(t);
 
-      const currentAngle = startAngle + (targetAngle - startAngle) * eased;
-      onFrame(currentAngle);
+        const currentAngle = startAngle + (targetAngle - startAngle) * eased;
+        onFrame(currentAngle);
 
-      if (t < 1) {
-        this._animationId = requestAnimationFrame(tick);
-      } else {
+        if (t < 1) {
+          this._animationId = requestAnimationFrame(tick);
+        } else {
+          this._animationId = null;
+          onComplete();
+        }
+      } catch (error) {
         this._animationId = null;
+        console.error("DragAnimator: animation frame error, forcing completion", error);
         onComplete();
       }
     };

@@ -27,7 +27,12 @@ const server = app.listen(config.PORT, () => {
 });
 
 // Graceful shutdown
+let isShuttingDown = false;
+
 async function shutdown(signal: string) {
+  if (isShuttingDown) return; // prevent double shutdown
+  isShuttingDown = true;
+
   logger.info({ signal }, 'Shutting down gracefully...');
 
   server.close(async () => {
@@ -36,11 +41,13 @@ async function shutdown(signal: string) {
     process.exit(0);
   });
 
-  // Force shutdown after 10 seconds
+  // Force shutdown after 10 seconds.
+  // .unref() ensures the timer doesn't keep the event loop alive
+  // if all connections drain before the timeout.
   setTimeout(() => {
     logger.error('Forced shutdown after timeout');
     process.exit(1);
-  }, 10000);
+  }, 10_000).unref();
 }
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
