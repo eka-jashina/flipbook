@@ -45,12 +45,8 @@ class AdminApp {
     this._render();
     this._handleUrlMode();
 
-    // Перехват сохранений store для показа индикатора
-    const originalSave = this.store._save.bind(this.store);
-    this.store._save = () => {
-      originalSave();
-      this._showSaveIndicator();
-    };
+    // Подписка на сохранения store для показа индикатора
+    this.store.onSave = () => this._showSaveIndicator();
 
     // Подписка на ошибки store (Фаза 4)
     if (this.store.onError !== undefined) {

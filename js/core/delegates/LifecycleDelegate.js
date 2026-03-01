@@ -10,7 +10,7 @@
 
 import { CONFIG, BookState } from '../../config.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
-import { AmbientManager } from '../../utils/AmbientManager.js';
+import { AmbientManager } from '../../managers/AmbientManager.js';
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 
 export class LifecycleDelegate extends BaseDelegate {

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SoundManager } from '@utils/SoundManager.js';
+import { SoundManager } from '@managers/SoundManager.js';
 
 // Фабрика для создания мок-аудио
 function createMockAudio() {

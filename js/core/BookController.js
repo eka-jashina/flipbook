@@ -301,11 +301,11 @@ export class BookController {
       try { fn(); } catch (err) { errors.push(err); }
     };
 
-    // Отписываемся от всех событий
+    // 1. Отписываемся от всех событий (не вызывает делегаты/сервисы)
     safeDestroy(() => this.subscriptions?.unsubscribeAll());
     safeDestroy(() => this.resizeHandler?.destroy());
 
-    // Уничтожаем делегаты
+    // 2. Уничтожаем делегаты (могут ещё обращаться к сервисам при cleanup)
     const delegates = [
       this.navigationDelegate,
       this.settingsDelegate,
@@ -316,14 +316,15 @@ export class BookController {
     ];
     delegates.forEach((d) => safeDestroy(() => d?.destroy?.()));
 
-    // Уничтожаем отдельные компоненты
+    // 3. Уничтожаем отдельные компоненты
     safeDestroy(() => this.stateMachine?.destroy?.());
     safeDestroy(() => this.settings?.destroy?.());
 
-    // Уничтожаем сервисные группы
-    safeDestroy(() => this.audio?.destroy());
-    safeDestroy(() => this.render?.destroy());
+    // 4. Уничтожаем сервисные группы в порядке обратном зависимостям:
+    //    content → render → audio → core (core — последним, от него зависят все)
     safeDestroy(() => this.content?.destroy());
+    safeDestroy(() => this.render?.destroy());
+    safeDestroy(() => this.audio?.destroy());
     safeDestroy(() => this.core?.destroy());
 
     if (errors.length > 0) {

@@ -11,7 +11,6 @@ import type { AmbientItem } from '../types/api.js';
  */
 export async function getAmbients(
   bookId: string,
-  userId: string,
 ): Promise<AmbientItem[]> {
 
   const prisma = getPrisma();
@@ -28,7 +27,6 @@ export async function getAmbients(
  */
 export async function createAmbient(
   bookId: string,
-  userId: string,
   data: {
     ambientKey: string;
     label: string;
@@ -80,7 +78,6 @@ export async function createAmbient(
 export async function updateAmbient(
   bookId: string,
   ambientId: string,
-  userId: string,
   data: {
     ambientKey?: string;
     label?: string;
@@ -122,7 +119,6 @@ export async function updateAmbient(
 export async function deleteAmbient(
   bookId: string,
   ambientId: string,
-  userId: string,
 ): Promise<void> {
 
   const prisma = getPrisma();
@@ -148,7 +144,6 @@ export async function deleteAmbient(
  */
 export async function reorderAmbients(
   bookId: string,
-  userId: string,
   ambientIds: string[],
 ): Promise<void> {
 

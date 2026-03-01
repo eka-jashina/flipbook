@@ -12,7 +12,7 @@
 
 import { CONFIG } from '../config.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
-import { AmbientManager } from '../utils/AmbientManager.js';
+import { AmbientManager } from '../managers/AmbientManager.js';
 
 export class AppInitializer {
   /**

@@ -7,7 +7,6 @@ import type { DefaultSettings } from '../types/api.js';
  */
 export async function getDefaultSettings(
   bookId: string,
-  userId: string,
 ): Promise<DefaultSettings> {
 
   const prisma = getPrisma();
@@ -35,7 +34,6 @@ export async function getDefaultSettings(
  */
 export async function updateDefaultSettings(
   bookId: string,
-  userId: string,
   data: {
     font?: string;
     fontSize?: number;

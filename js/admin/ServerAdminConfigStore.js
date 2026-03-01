@@ -22,6 +22,8 @@ export class ServerAdminConfigStore {
     this._savePromise = null;
     /** @type {Function|null} Колбэк для уведомления UI об ошибках: (message: string) => void */
     this._onError = null;
+    /** @type {Function|null} Колбэк успешного сохранения — для показа индикатора */
+    this._onSave = null;
   }
 
   /**
@@ -30,6 +32,10 @@ export class ServerAdminConfigStore {
    */
   set onError(callback) {
     this._onError = callback;
+  }
+
+  set onSave(callback) {
+    this._onSave = callback;
   }
 
   /**
@@ -63,10 +69,9 @@ export class ServerAdminConfigStore {
     }
   }
 
-  /** Нотификация о сохранении (для перехвата в AdminApp._showSaveIndicator) */
+  /** Нотификация о сохранении — вызывает onSave колбэк */
   _save() {
-    // В серверном адаптере _save() — no-op, используется для совместимости
-    // с перехватом в AdminApp: originalSave = this.store._save.bind(...)
+    if (this._onSave) this._onSave();
   }
 
   /** Дождаться завершения последнего запроса */

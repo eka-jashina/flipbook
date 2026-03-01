@@ -173,7 +173,7 @@ export function createApp() {
   app.use('/api', exportImportRoutes);
 
   // 404 handler for unmatched API routes — prevents leaking SPA HTML for API paths
-  app.all('/api/*', (_req: Request, res: Response) => {
+  app.use('/api', (_req: Request, res: Response) => {
     res.status(404).json({
       error: 'NotFound',
       message: 'API endpoint not found',

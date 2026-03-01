@@ -7,7 +7,6 @@ import type { SoundsDetail } from '../types/api.js';
  */
 export async function getSounds(
   bookId: string,
-  userId: string,
 ): Promise<SoundsDetail> {
 
   const prisma = getPrisma();
@@ -31,7 +30,6 @@ export async function getSounds(
  */
 export async function updateSounds(
   bookId: string,
-  userId: string,
   data: { pageFlip?: string; bookOpen?: string; bookClose?: string },
 ): Promise<SoundsDetail> {
 

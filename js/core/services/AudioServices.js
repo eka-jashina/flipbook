@@ -7,8 +7,8 @@
  * - AmbientManager - фоновые звуки (дождь, камин, кафе)
  */
 
-import { SoundManager } from '../../utils/SoundManager.js';
-import { AmbientManager } from '../../utils/AmbientManager.js';
+import { SoundManager } from '../../managers/SoundManager.js';
+import { AmbientManager } from '../../managers/AmbientManager.js';
 import { CONFIG } from '../../config.js';
 
 export class AudioServices {

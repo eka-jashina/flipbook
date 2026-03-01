@@ -16,10 +16,7 @@ router.use(requireAuth);
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const settings = await getDefaultSettings(
-      req.params.bookId as string,
-      req.user!.id,
-    );
+    const settings = await getDefaultSettings(req.params.bookId as string);
     ok(res, settings);
   }),
 );
@@ -31,11 +28,7 @@ router.patch(
   '/',
   validate(updateDefaultSettingsSchema),
   asyncHandler(async (req, res) => {
-    const settings = await updateDefaultSettings(
-      req.params.bookId as string,
-      req.user!.id,
-      req.body,
-    );
+    const settings = await updateDefaultSettings(req.params.bookId as string, req.body);
     ok(res, settings);
   }),
 );

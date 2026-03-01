@@ -30,8 +30,8 @@ const { MockSoundManager, MockAmbientManager } = vi.hoisted(() => {
   return { MockSoundManager, MockAmbientManager };
 });
 
-vi.mock('@utils/SoundManager.js', () => ({ SoundManager: MockSoundManager }));
-vi.mock('@utils/AmbientManager.js', () => ({ AmbientManager: MockAmbientManager }));
+vi.mock('@managers/SoundManager.js', () => ({ SoundManager: MockSoundManager }));
+vi.mock('@managers/AmbientManager.js', () => ({ AmbientManager: MockAmbientManager }));
 vi.mock('@/config.js', () => ({
   CONFIG: Object.freeze({
     SOUNDS: {

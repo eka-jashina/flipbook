@@ -21,10 +21,7 @@ router.use(requireAuth);
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const appearance = await getAppearance(
-      req.params.bookId as string,
-      req.user!.id,
-    );
+    const appearance = await getAppearance(req.params.bookId as string);
     ok(res, appearance);
   }),
 );
@@ -36,11 +33,7 @@ router.patch(
   '/',
   validate(updateAppearanceSchema),
   asyncHandler(async (req, res) => {
-    const appearance = await updateAppearance(
-      req.params.bookId as string,
-      req.user!.id,
-      req.body,
-    );
+    const appearance = await updateAppearance(req.params.bookId as string, req.body);
     ok(res, appearance);
   }),
 );
@@ -58,7 +51,6 @@ router.patch(
     }
     const appearance = await updateThemeAppearance(
       req.params.bookId as string,
-      req.user!.id,
       theme,
       req.body,
     );

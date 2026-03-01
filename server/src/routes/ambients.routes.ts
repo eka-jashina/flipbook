@@ -22,10 +22,7 @@ router.use(requireAuth);
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const ambients = await getAmbients(
-      req.params.bookId as string,
-      req.user!.id,
-    );
+    const ambients = await getAmbients(req.params.bookId as string);
     ok(res, { ambients });
   }),
 );
@@ -37,11 +34,7 @@ router.post(
   '/',
   validate(createAmbientSchema),
   asyncHandler(async (req, res) => {
-    const ambient = await createAmbient(
-      req.params.bookId as string,
-      req.user!.id,
-      req.body,
-    );
+    const ambient = await createAmbient(req.params.bookId as string, req.body);
     created(res, ambient);
   }),
 );
@@ -53,11 +46,7 @@ router.patch(
   '/reorder',
   validate(reorderAmbientsSchema),
   asyncHandler(async (req, res) => {
-    await reorderAmbients(
-      req.params.bookId as string,
-      req.user!.id,
-      req.body.ambientIds,
-    );
+    await reorderAmbients(req.params.bookId as string, req.body.ambientIds);
     ok(res, { message: 'Ambients reordered' });
   }),
 );
@@ -72,7 +61,6 @@ router.patch(
     const ambient = await updateAmbient(
       req.params.bookId as string,
       req.params.ambientId as string,
-      req.user!.id,
       req.body,
     );
     ok(res, ambient);
@@ -88,7 +76,6 @@ router.delete(
     await deleteAmbient(
       req.params.bookId as string,
       req.params.ambientId as string,
-      req.user!.id,
     );
     res.status(204).send();
   }),

@@ -47,6 +47,13 @@ export class AdminConfigStore {
      * @type {((error: Error) => void)|null}
      */
     this.onError = null;
+
+    /**
+     * Колбэк успешного сохранения — устанавливается извне (admin/index.js).
+     * Вызывается после каждого _save() для показа индикатора сохранения.
+     * @type {(() => void)|null}
+     */
+    this.onSave = null;
   }
 
   /**
@@ -305,6 +312,7 @@ export class AdminConfigStore {
     }
 
     this._performSave();
+    if (this.onSave) this.onSave();
   }
 
   /** @private Непосредственное выполнение сохранения */
