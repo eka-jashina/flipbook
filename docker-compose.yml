@@ -69,7 +69,7 @@ services:
     environment:
       PORT: 4000
       NODE_ENV: development
-      DATABASE_URL: postgresql://flipbook:flipbook_dev@postgres:5432/flipbook
+      DATABASE_URL: postgresql://flipbook:flipbook_dev@postgres:5432/flipbook?connection_limit=10&pool_timeout=10
       SESSION_SECRET: dev-session-secret-change-in-production-min32chars
       CSRF_SECRET: dev-csrf-secret-must-differ-from-session-secret
       SESSION_MAX_AGE: 604800000

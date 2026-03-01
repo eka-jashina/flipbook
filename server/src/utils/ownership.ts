@@ -10,8 +10,8 @@ export async function verifyBookOwnership(
   userId: string,
 ): Promise<void> {
   const prisma = getPrisma();
-  const book = await prisma.book.findUnique({
-    where: { id: bookId },
+  const book = await prisma.book.findFirst({
+    where: { id: bookId, deletedAt: null },
     select: { userId: true },
   });
 

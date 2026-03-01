@@ -76,10 +76,11 @@ router.patch(
   requireBookOwnership,
   validate(updateBookSchema),
   asyncHandler(async (req, res) => {
+    const ifUnmodifiedSince = req.headers['if-unmodified-since'] as string | undefined;
     const book = await updateBook(
       req.params.bookId as string,
       req.user!.id,
-      req.body,
+      { ...req.body, ...(ifUnmodifiedSince && { ifUnmodifiedSince }) },
     );
     ok(res, book);
   }),

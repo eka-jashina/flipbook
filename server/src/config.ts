@@ -6,10 +6,14 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
+  // Pool tuning via query params: ?connection_limit=20&pool_timeout=15
   DATABASE_URL: z.string().min(1).refine(
     (url) => url.startsWith('postgresql://') || url.startsWith('postgres://'),
     'DATABASE_URL must start with postgresql:// or postgres://',
   ),
+  // Recommended pool settings per environment (appended to DATABASE_URL):
+  //   Development: ?connection_limit=5&pool_timeout=10
+  //   Production:  ?connection_limit=20&pool_timeout=15
 
   SESSION_SECRET: z.string().min(32),
   CSRF_SECRET: isProduction
