@@ -147,16 +147,22 @@ export class ContentLoader {
     if (this._api && this._bookId) {
       const apiItems = items.filter(item => item._hasHtmlContent && item.id && !this.cache.has(`api:${item.id}`));
       if (apiItems.length > 0) {
+        const failed = [];
         await Promise.all(
           apiItems.map(async (item) => {
             try {
               const html = await this._fetchChapterFromAPI(item.id);
               this.cache.set(`api:${item.id}`, html);
             } catch (err) {
+              if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+              failed.push(item.id);
               console.warn(`ContentLoader: ошибка загрузки главы ${item.id} через API`, err);
             }
           })
         );
+        if (failed.length > 0) {
+          console.warn(`ContentLoader: не удалось загрузить ${failed.length} глав: ${failed.join(', ')}`);
+        }
       }
 
       // Для API-режима: собираем контент
@@ -168,7 +174,9 @@ export class ContentLoader {
             try {
               const html = await this._fetchChapterFromAPI(item.id);
               this.cache.set(item._cacheKey, html);
-            } catch { /* ignore */ }
+            } catch (err) {
+              console.warn(`ContentLoader: повторная загрузка главы ${item.id} не удалась`, err);
+            }
           }
         } else if (item.htmlContent) {
           const key = item.file || `__inline_${item.id || ''}`;

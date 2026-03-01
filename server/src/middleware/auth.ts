@@ -70,6 +70,7 @@ export function configurePassport(): void {
       const { passwordHash, ...safeUser } = user;
       done(null, { ...safeUser, hasPassword: passwordHash !== null });
     } catch (err) {
+      logger.error({ err, userId: id }, 'deserializeUser failed');
       done(err);
     }
   });
@@ -120,6 +121,7 @@ export function configurePassport(): void {
           try {
             const email = profile.emails?.[0]?.value;
             if (!email) {
+              logger.warn({ googleId: profile.id }, 'Google OAuth: profile has no email');
               done(new Error('No email from Google profile'));
               return;
             }

@@ -171,7 +171,6 @@ export class AsyncPaginator extends EventEmitter {
         this.emit("abort");
         return result;
       }
-      this.emit("error", error);
       throw error;
     }
   }

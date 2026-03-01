@@ -84,13 +84,17 @@ export class MigrationHelper {
     try {
       const config = await this._readFromIDB();
       if (config) return config;
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.warn('MigrationHelper: не удалось прочитать из IndexedDB', err);
+    }
 
     // Fallback: localStorage
     try {
       const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
       if (raw) return JSON.parse(raw);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.warn('MigrationHelper: не удалось прочитать из localStorage', err);
+    }
 
     return null;
   }
