@@ -7,8 +7,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanupIntegrationDOM } from '../../helpers/integrationUtils.js';
 
-import { SoundManager } from '../../../js/utils/SoundManager.js';
-import { AmbientManager } from '../../../js/utils/AmbientManager.js';
+import { SoundManager } from '../../../js/managers/SoundManager.js';
+import { AmbientManager } from '../../../js/managers/AmbientManager.js';
 import { AudioController } from '../../../js/core/delegates/AudioController.js';
 import { SettingsManager } from '../../../js/managers/SettingsManager.js';
 
