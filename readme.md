@@ -35,6 +35,9 @@
 - **Ambient-звуки** — фоновая атмосфера (дождь, камин, кафе) — настраиваемые через личный кабинет
 - **Фотоальбом** — поддержка фотоальбома с лайтбоксом
 - **Адаптивный дизайн** — корректная работа на десктопе и мобильных устройствах
+- **Бэкенд-сервер** — REST API, авторизация (email/пароль + Google OAuth), S3 файловое хранилище
+- **Двойная персистентность** — localStorage/IndexedDB (офлайн) или серверный API (авторизованные пользователи)
+- **Миграция данных** — автоматический перенос из localStorage на сервер при первом логине
 - **Сохранение прогресса** — автоматическое запоминание позиции чтения по каждой книге
 - **PWA** — установка как приложение, офлайн-доступ через Service Worker
 
@@ -49,11 +52,13 @@
 | **State Machine** | `BookStateMachine` | Гарантия валидных переходов между состояниями книги |
 | **Observer** | `EventEmitter` | Слабое связывание компонентов через события |
 | **Dependency Injection** | `BookController` | Тестируемость и модульность |
+| **Builder** | `BookControllerBuilder` | Пофазное конструирование графа зависимостей |
 | **Factory** | `ComponentFactory` | Централизованное создание компонентов |
 | **Delegate** | `delegates/` | Разделение ответственности по доменам |
 | **Mediator** | `DelegateMediator` | Коммуникация между делегатами |
 | **Double Buffering** | `BookRenderer` | Плавные переходы между страницами |
 | **LRU Cache** | `LRUCache` | Оптимизация производительности пагинации |
+| **Adapter** | `ServerAdminConfigStore` | Единый интерфейс, серверный бэкенд |
 | **Service Groups** | `services/` | Группировка связанных зависимостей для DI |
 
 ### Конечный автомат состояний
@@ -114,8 +119,12 @@ flipbook/
 ├── js/
 │   ├── index.js                    # Точка входа
 │   ├── config.js                   # Конфигурация (admin-aware, мультикнижная)
+│   ├── config/                     # Вспомогательные модули конфигурации
+│   │   ├── configHelpers.js        # Чистые хелперы: пути, шрифты, амбиенты
+│   │   └── enrichConfigFromIDB.js  # Дозагрузка данных из IndexedDB
 │   │
 │   ├── utils/                      # Низкоуровневые утилиты
+│   │   ├── ApiClient.js            # HTTP API клиент (связь с сервером)
 │   │   ├── EventEmitter.js         # Реализация паттерна Observer
 │   │   ├── EventListenerManager.js # Автоматическая очистка listeners
 │   │   ├── LRUCache.js             # Кэш с вытеснением
@@ -128,12 +137,11 @@ flipbook/
 │   │   ├── StorageManager.js       # Абстракция над localStorage
 │   │   ├── IdbStorage.js           # IndexedDB-обёртка для крупных данных
 │   │   ├── SettingsValidator.js    # Валидация и санитизация настроек
-│   │   ├── SoundManager.js         # Управление звуковыми эффектами
-│   │   ├── AmbientManager.js       # Фоновые ambient-звуки
 │   │   ├── RateLimiter.js          # Ограничение частоты вызовов
 │   │   ├── InstallPrompt.js        # PWA-промпт установки
 │   │   ├── OfflineIndicator.js     # Индикатор офлайн-режима
 │   │   ├── ScreenReaderAnnouncer.js # Анонсы для скринридеров
+│   │   ├── SwipeHint.js            # Подсказка жеста свайпа (мобильные)
 │   │   └── PhotoLightbox.js        # Лайтбокс фотоальбома
 │   │
 │   ├── managers/                   # Бизнес-логика и данные
@@ -141,18 +149,25 @@ flipbook/
 │   │   ├── SettingsManager.js      # Персистентные настройки (localStorage)
 │   │   ├── ContentLoader.js        # Загрузка HTML-контента глав
 │   │   ├── AsyncPaginator.js       # CSS multi-column пагинация
-│   │   └── BackgroundManager.js    # Кроссфейд фонов глав
+│   │   ├── BackgroundManager.js    # Кроссфейд фонов глав
+│   │   ├── SoundManager.js         # Управление звуковыми эффектами
+│   │   └── AmbientManager.js       # Фоновые ambient-звуки
 │   │
 │   ├── core/                       # Ядро приложения
 │   │   ├── BookController.js       # Главный координатор (DI-контейнер)
+│   │   ├── BookControllerBuilder.js # Конструирование графа зависимостей
+│   │   ├── BookDIConfig.js         # Конфигурация DI для делегатов
 │   │   ├── ComponentFactory.js     # Фабрика компонентов
 │   │   ├── DOMManager.js           # Централизованный доступ к DOM
 │   │   ├── BookRenderer.js         # Рендеринг страниц (double buffering)
 │   │   ├── BookAnimator.js         # Оркестрация CSS-анимаций
 │   │   ├── EventController.js      # Обработка пользовательского ввода
+│   │   ├── SettingsBindings.js     # Привязки UI настроек (шрифт, тема, звук)
 │   │   ├── LoadingIndicator.js     # UI индикатора загрузки
 │   │   ├── DebugPanel.js           # Панель отладки (dev)
 │   │   ├── AppInitializer.js       # Инициализация приложения
+│   │   ├── AuthModal.js            # Модалка логина/регистрации (email + Google OAuth)
+│   │   ├── MigrationHelper.js      # Миграция данных localStorage → сервер
 │   │   ├── SubscriptionManager.js  # Управление подписками на события
 │   │   ├── ResizeHandler.js        # Обработка изменения размера окна
 │   │   ├── DelegateMediator.js     # Коммуникация между делегатами
@@ -180,9 +195,11 @@ flipbook/
 │   │
 │   └── admin/                      # Админ-панель
 │       ├── index.js                # Точка входа админки
-│       ├── AdminConfigStore.js     # Персистентное хранилище конфига
+│       ├── AdminConfigStore.js     # Персистентное хранилище конфига (localStorage/IndexedDB)
+│       ├── ServerAdminConfigStore.js # Серверный конфиг (API-адаптер)
 │       ├── AdminConfigDefaults.js  # Константы дефолтных значений конфига
 │       ├── BookParser.js           # Диспетчер парсинга книг
+│       ├── modeCardsData.js        # Данные карточек режимов создания книг
 │       ├── modules/                # Функциональные модули админки
 │       │   ├── BaseModule.js           # Абстрактный базовый модуль
 │       │   ├── AlbumManager.js         # Управление фотоальбомом
@@ -192,6 +209,7 @@ flipbook/
 │       │   ├── ChaptersModule.js       # Управление главами
 │       │   ├── ExportModule.js         # Экспорт конфигурации
 │       │   ├── FontsModule.js          # Управление шрифтами
+│       │   ├── PhotoCropper.js         # Интерактивный инструмент обрезки фото
 │       │   ├── QuillEditorWrapper.js   # Обёртка WYSIWYG-редактора Quill
 │       │   ├── SettingsModule.js       # Глобальные настройки
 │       │   └── SoundsModule.js         # Управление звуковыми эффектами
@@ -220,10 +238,12 @@ flipbook/
 │   ├── animations.css              # Keyframe-анимации
 │   ├── drag.css                    # Стили drag-взаимодействия
 │   ├── accessibility.css           # Стили доступности (skip-link, focus)
+│   ├── auth.css                    # Модалка авторизации (логин/регистрация)
 │   ├── install-prompt.css          # PWA-промпт установки
 │   ├── offline.css                 # Индикатор офлайн-режима
 │   ├── bookshelf.css               # Экран книжной полки
 │   ├── photo-album.css             # Фотоальбом / лайтбокс
+│   ├── swipe-hint.css              # Подсказка свайпа (мобильные)
 │   ├── responsive.css              # Адаптивность
 │   ├── controls/                   # Стили UI-контролов
 │   │   ├── index.css               # Входная точка + общие стили
@@ -248,6 +268,7 @@ flipbook/
 │       ├── appearance.css          # Кастомизация оформления
 │       ├── settings.css            # Настройки
 │       ├── album.css               # Фотоальбом
+│       ├── cropper.css             # Оверлей обрезки фото
 │       ├── editor.css              # Стили WYSIWYG-редактора Quill
 │       ├── export.css              # Экспорт
 │       └── toast.css               # Toast-уведомления
@@ -265,13 +286,13 @@ flipbook/
     │   ├── testUtils.js            # Утилиты для юнит-тестов
     │   └── integrationUtils.js     # Утилиты для интеграционных тестов
     ├── unit/                       # Юнит-тесты (Vitest)
-    │   ├── utils/                  # Тесты утилит
-    │   ├── managers/               # Тесты менеджеров
-    │   ├── core/                   # Тесты ядра (core, delegates, services)
-    │   └── admin/                  # Тесты админ-модулей
+    │   ├── utils/                  # Тесты утилит (21 файл)
+    │   ├── managers/               # Тесты менеджеров (5 файлов)
+    │   ├── core/                   # Тесты ядра (17 + delegates + services)
+    │   └── admin/                  # Тесты админ-модулей (20 файлов)
     ├── integration/                # Интеграционные тесты (Vitest)
     │   ├── smoke.test.js           # Smoke-тесты
-    │   ├── flows/                  # Тесты пользовательских сценариев
+    │   ├── flows/                  # Тесты пользовательских сценариев (24 файла)
     │   │   ├── navigation.test.js      # Навигация по страницам
     │   │   ├── settings.test.js        # Работа с настройками
     │   │   ├── chapters.test.js        # Переключение глав
@@ -283,7 +304,19 @@ flipbook/
     │   │   ├── dragNavConflict.test.js # Конфликт drag/навигации
     │   │   ├── errorRecovery.test.js   # Восстановление при ошибках
     │   │   ├── fullReadingSession.test.js   # Полная сессия чтения
-    │   │   └── resizeFlow.test.js      # Обработка ресайза
+    │   │   ├── resizeFlow.test.js      # Обработка ресайза
+    │   │   ├── adminPanel.test.js      # Админ-панель
+    │   │   ├── audio.test.js           # Аудио
+    │   │   ├── authMigration.test.js   # Авторизация и миграция
+    │   │   ├── bookshelf.test.js       # Книжная полка
+    │   │   ├── theme.test.js           # Темы оформления
+    │   │   ├── ambientSoundLifecycle.test.js  # Жизненный цикл ambient-звуков
+    │   │   ├── bookSwitchingLifecycle.test.js # Переключение книг
+    │   │   ├── configExportImport.test.js     # Экспорт/импорт конфига
+    │   │   ├── delegateMediator.test.js       # Медиатор делегатов
+    │   │   ├── fontManagement.test.js         # Управление шрифтами
+    │   │   ├── multiBookSession.test.js       # Мультикнижная сессия
+    │   │   └── photoAlbumLifecycle.test.js     # Жизненный цикл фотоальбома
     │   ├── lifecycle/              # Тесты жизненного цикла
     │   │   ├── bookLifecycle.test.js   # Жизненный цикл книги
     │   │   └── stateMachine.test.js    # Конечный автомат
@@ -301,7 +334,8 @@ flipbook/
         │   ├── navigation.spec.js  # Навигация
         │   ├── settings.spec.js    # Настройки
         │   ├── responsive.spec.js  # Адаптивность
-        │   └── accessibility.spec.js # Доступность
+        │   ├── accessibility.spec.js # Доступность
+        │   └── offline.spec.js     # Офлайн-режим
         └── performance/            # Тесты производительности
             └── loading.spec.js     # Производительность загрузки
 ```
@@ -354,6 +388,14 @@ npm run dev
 | `npm run lint:css:fix` | Stylelint с автоисправлением |
 | `npm run docs` | Генерация API-документации в `docs/` |
 | `npm run docs:serve` | Генерация и сервер документации (порт 3001) |
+| **Бэкенд (из server/)** | |
+| `npm run dev` | Запуск dev-сервера (порт 4000, tsx watch) |
+| `npm run test` | Тесты API (Vitest + supertest) |
+| `npm run db:migrate` | Применить Prisma миграции |
+| `npm run db:seed` | Заполнить БД тестовыми данными |
+| `npm run db:studio` | Открыть Prisma Studio |
+| **Docker** | |
+| `docker compose up -d` | Запуск PostgreSQL + MinIO + сервер |
 
 ---
 
@@ -362,14 +404,19 @@ npm run dev
 | Компонент | Файл | Ответственность |
 |-----------|------|-----------------|
 | **BookController** | `core/BookController.js` | Главный координатор, DI-контейнер |
+| **BookControllerBuilder** | `core/BookControllerBuilder.js` | Конструирование графа зависимостей |
+| **BookDIConfig** | `core/BookDIConfig.js` | Конфигурация DI для делегатов |
 | **BookStateMachine** | `managers/BookStateMachine.js` | Валидация переходов состояний |
 | **BookRenderer** | `core/BookRenderer.js` | DOM-рендеринг, double buffering |
 | **BookAnimator** | `core/BookAnimator.js` | Оркестрация CSS 3D-анимаций |
 | **AsyncPaginator** | `managers/AsyncPaginator.js` | Разбивка контента на страницы |
 | **EventController** | `core/EventController.js` | Клики, свайпы, клавиатура |
+| **SettingsBindings** | `core/SettingsBindings.js` | Привязки UI настроек (шрифт, тема, звук) |
 | **NavigationDelegate** | `core/delegates/NavigationDelegate.js` | Логика навигации по страницам |
 | **DelegateMediator** | `core/DelegateMediator.js` | Коммуникация между делегатами |
 | **BookshelfScreen** | `core/BookshelfScreen.js` | Экран книжной полки (мультикнижность) |
+| **AuthModal** | `core/AuthModal.js` | Модалка логина/регистрации (email + Google OAuth) |
+| **MigrationHelper** | `core/MigrationHelper.js` | Миграция данных localStorage → сервер |
 | **DragDelegate** | `core/delegates/DragDelegate.js` | Touch-перетаскивание страниц |
 | **DragAnimator** | `core/delegates/DragAnimator.js` | Анимация угла поворота при drag |
 | **DragDOMPreparer** | `core/delegates/DragDOMPreparer.js` | Подготовка DOM для drag |
@@ -381,14 +428,18 @@ npm run dev
 | **AudioServices** | `core/services/AudioServices.js` | Группа: звуки и ambient |
 | **RenderServices** | `core/services/RenderServices.js` | Группа: рендеринг и анимации |
 | **ContentServices** | `core/services/ContentServices.js` | Группа: загрузка и пагинация |
+| **ApiClient** | `utils/ApiClient.js` | HTTP API клиент (связь с сервером) |
 | **PhotoLightbox** | `utils/PhotoLightbox.js` | Лайтбокс фотоальбома |
+| **SwipeHint** | `utils/SwipeHint.js` | Подсказка жеста свайпа (мобильные) |
 | **InstallPrompt** | `utils/InstallPrompt.js` | PWA-промпт установки приложения |
 | **OfflineIndicator** | `utils/OfflineIndicator.js` | Индикатор офлайн-режима |
 | **ScreenReaderAnnouncer** | `utils/ScreenReaderAnnouncer.js` | Анонсы для скринридеров (a11y) |
 | **RateLimiter** | `utils/RateLimiter.js` | Ограничение частоты вызовов |
-| **AdminConfigStore** | `admin/AdminConfigStore.js` | Персистентное хранилище конфига админки |
+| **AdminConfigStore** | `admin/AdminConfigStore.js` | Персистентное хранилище конфига (localStorage/IndexedDB) |
+| **ServerAdminConfigStore** | `admin/ServerAdminConfigStore.js` | Серверный конфиг (API-адаптер) |
 | **AdminConfigDefaults** | `admin/AdminConfigDefaults.js` | Константы дефолтных значений конфига |
 | **BookParser** | `admin/BookParser.js` | Диспетчер парсинга книг |
+| **PhotoCropper** | `admin/modules/PhotoCropper.js` | Интерактивный инструмент обрезки фото |
 | **QuillEditorWrapper** | `admin/modules/QuillEditorWrapper.js` | Обёртка WYSIWYG-редактора Quill |
 | **IdbStorage** | `utils/IdbStorage.js` | IndexedDB-обёртка для крупных данных |
 | **SettingsValidator** | `utils/SettingsValidator.js` | Валидация и санитизация настроек |
@@ -419,7 +470,80 @@ npm run dev
 
 - **Экспорт конфигурации** — сохранение всего конфига в файл
 
-Конфигурация сохраняется в localStorage (`flipbook-admin-config`), крупный контент (HTML глав) — в IndexedDB.
+Конфигурация сохраняется в localStorage (`flipbook-admin-config`), крупный контент (HTML глав) — в IndexedDB. При авторизации данные хранятся на сервере.
+
+---
+
+## Бэкенд (server/)
+
+Серверная часть на Express + Prisma + PostgreSQL. Обеспечивает авторизацию, хранение данных пользователей и файлов.
+
+### Стек технологий
+
+- **Express 5** — HTTP-фреймворк
+- **Prisma ORM** — работа с PostgreSQL
+- **Passport.js** — авторизация (email/пароль + Google OAuth)
+- **S3** — хранилище файлов (MinIO в dev, AWS S3 / совместимые в prod)
+- **Zod** — валидация запросов
+- **Vitest + supertest** — тестирование API
+
+### Быстрый старт (full-stack)
+
+```bash
+# Запуск инфраструктуры (PostgreSQL + MinIO)
+docker compose up -d
+
+# Настройка сервера
+cd server
+npm install
+npm run db:migrate     # Применить миграции
+npm run db:seed        # Заполнить тестовыми данными
+npm run dev            # Запуск с tsx watch (порт 4000)
+
+# Фронтенд (в корне проекта) — проксирует /api → :4000
+npm run dev            # Vite dev-сервер (порт 3000)
+```
+
+### Команды сервера
+
+| Команда | Описание |
+|---------|----------|
+| `npm run dev` | Запуск dev-сервера (порт 4000, tsx watch) |
+| `npm run build` | Сборка TypeScript |
+| `npm run start` | Запуск production-сервера |
+| `npm run db:migrate` | Применить Prisma миграции |
+| `npm run db:seed` | Заполнить БД тестовыми данными |
+| `npm run db:studio` | Открыть Prisma Studio (GUI) |
+| `npm run test` | Запуск тестов API (Vitest + supertest) |
+
+### API-маршруты
+
+| Маршрут | Методы | Описание |
+|---------|--------|----------|
+| `/api/auth/*` | POST | Регистрация, логин, логаут, Google OAuth |
+| `/api/books` | CRUD | Управление книгами |
+| `/api/books/:id/chapters` | CRUD | Управление главами |
+| `/api/books/:id/sounds` | PUT | Настройка звуков |
+| `/api/books/:id/ambients` | CRUD | Ambient-звуки |
+| `/api/books/:id/appearance` | PUT | Оформление тем |
+| `/api/books/:id/decorative-font` | PUT/DELETE | Декоративный шрифт |
+| `/api/books/:id/default-settings` | PUT | Настройки по умолчанию |
+| `/api/fonts` | CRUD | Шрифты пользователя |
+| `/api/settings` | GET/PUT | Глобальные настройки |
+| `/api/progress` | GET/PUT | Прогресс чтения |
+| `/api/upload` | POST | Загрузка файлов в S3 |
+| `/api/export`, `/api/import` | GET/POST | Экспорт/импорт конфигурации |
+
+### Деплой
+
+Проект поддерживает несколько вариантов деплоя:
+
+- **Docker** — root-level `Dockerfile` собирает фронтенд + сервер в единый образ
+- **Amvera Cloud** — конфигурация в `amvera.yml`
+- **Railway** — конфигурация в `railway.toml`
+- **GitHub Pages** — только фронтенд (автоматически через GitHub Actions)
+
+Подробная инструкция по деплою: [`DEPLOYMENT.md`](./DEPLOYMENT.md)
 
 ---
 
@@ -427,13 +551,14 @@ npm run dev
 
 ### Стратегия тестирования
 
-Проект использует трёхуровневую стратегию тестирования:
+Проект использует четырёхуровневую стратегию тестирования:
 
 | Уровень | Инструмент | Назначение |
 |---------|------------|------------|
 | **Unit** | Vitest | Изолированное тестирование модулей |
 | **Integration** | Vitest + jsdom | Тестирование взаимодействия компонентов |
 | **E2E** | Playwright | Сквозное тестирование в реальных браузерах |
+| **Server API** | Vitest + supertest | Тестирование бэкенд-эндпоинтов |
 
 ### E2E-тестирование (Playwright)
 
@@ -488,6 +613,10 @@ E2E-тесты используют Page Object модели для абстра
 - XSS-защита через `HTMLSanitizer` (на базе DOMPurify — защита от mXSS, namespace pollution)
 - Валидация настроек через `SettingsValidator` перед применением к DOM
 - Загрузка контента только с того же origin
+- Серверная сторона: Helmet, CSRF-защита, rate limiting
+- Авторизация: bcrypt для паролей, secure session cookies
+- Валидация входных данных: Zod-схемы на всех API-эндпоинтах
+- Загрузка файлов: ограничения типа/размера, хранение в S3
 
 ### Content Security Policy (CSP)
 
@@ -573,12 +702,12 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
 ## Зависимости
 
-### Runtime
+### Frontend Runtime
 - **dompurify** `^3.3.1` — XSS-защита (движок санитизации HTML)
 - **jszip** `^3.10.1` — ZIP-операции (экспорт конфига, парсинг docx/epub)
 - **quill** `^2.0.3` — WYSIWYG-редактор (редактирование глав в личном кабинете)
 
-### Dev Dependencies (ключевые)
+### Frontend Dev Dependencies (ключевые)
 - **vite** `^5.0.0` — Бандлер
 - **vitest** `^4.0.18` — Юнит/интеграционное тестирование
 - **@playwright/test** `^1.58.1` — E2E-тестирование
@@ -586,6 +715,19 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 - **stylelint** `^17.1.1` — Линтинг CSS
 - **sharp** `^0.34.5` — Обработка изображений (генерация иконок)
 - **vite-plugin-pwa** `^1.2.0` — PWA/Service Worker
+
+### Backend Runtime (server/)
+- **express** `^5.0.1` — HTTP-фреймворк
+- **@prisma/client** `^6.0.0` — ORM для PostgreSQL
+- **passport** `^0.7.0` — Авторизация (email/пароль + Google OAuth)
+- **@aws-sdk/client-s3** `^3.700.0` — S3-хранилище (MinIO в dev)
+- **zod** `^3.23.0` — Валидация запросов/ответов
+- **helmet** `^8.0.0` — Заголовки безопасности
+- **pino** `^9.0.0` — Структурированное логирование
+- **bcrypt** `^5.1.0` — Хеширование паролей
+- **csrf-csrf** `^4.0.3` — CSRF-защита
+- **express-rate-limit** `^7.0.0` — Ограничение запросов
+- **@sentry/node** `^9.47.1` — Мониторинг ошибок
 
 ---
 
@@ -605,6 +747,8 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 - Node.js >= 18.0.0
 - npm >= 9.0.0
 - Современный браузер (ES Modules, CSS 3D Transforms)
+- PostgreSQL 17+ (через Docker или локально) — для бэкенда
+- Docker & Docker Compose — для full-stack разработки
 - Для E2E-тестов: Playwright (устанавливается автоматически)
 
 ---
