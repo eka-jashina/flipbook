@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: flipbook
       POSTGRES_USER: flipbook
@@ -9,6 +10,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    tmpfs:
+      - /tmp
+      - /run
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U flipbook"]
       interval: 5s
@@ -17,6 +23,7 @@ services:
 
   minio:
     image: minio/minio
+    restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -26,6 +33,8 @@ services:
       - "9001:9001"
     volumes:
       - minio_data:/data
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
@@ -37,6 +46,7 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    restart: "no"
     entrypoint: >
       /bin/sh -c "
       mc alias set myminio http://minio:9000 minioadmin minioadmin;
@@ -46,6 +56,7 @@ services:
 
   server:
     build: ./server
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,6 +64,8 @@ services:
         condition: service_healthy
     ports:
       - "4000:4000"
+    security_opt:
+      - no-new-privileges:true
     environment:
       PORT: 4000
       NODE_ENV: development

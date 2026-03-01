@@ -7,7 +7,7 @@ on:
   # Запускается при push в main
   push:
     branches: ['main']
-  
+
   # Позволяет запустить вручную из вкладки Actions
   workflow_dispatch:
 
@@ -26,6 +26,7 @@ jobs:
   # Линтинг
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -34,7 +35,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
@@ -49,6 +50,7 @@ jobs:
   # Клиентские тесты
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -57,7 +59,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
@@ -69,6 +71,7 @@ jobs:
   # Серверные тесты
   server-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     services:
       postgres:
@@ -88,7 +91,9 @@ jobs:
     env:
       DATABASE_URL: postgresql://flipbook:flipbook_dev@localhost:5432/flipbook_test
       SESSION_SECRET: ci-test-session-secret-at-least-32-characters-long
+      CSRF_SECRET: ci-test-csrf-secret-at-least-32-characters-long!!
       SESSION_SECURE: 'false'
+      NODE_ENV: test
 
     steps:
       - name: Checkout
@@ -97,7 +102,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: server/package-lock.json
 
@@ -116,6 +121,7 @@ jobs:
   # Сборка
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [lint, test, server-test]
 
     steps:
@@ -125,7 +131,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
@@ -136,7 +142,7 @@ jobs:
         env:
           NODE_ENV: production
           VITE_BASE_URL: /flipbook/
-      
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -147,10 +153,11 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
+
     runs-on: ubuntu-latest
     needs: build
-    
+    timeout-minutes: 5
+
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

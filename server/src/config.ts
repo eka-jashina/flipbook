@@ -6,10 +6,15 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  DATABASE_URL: z.string().min(1),
+  DATABASE_URL: z.string().min(1).refine(
+    (url) => url.startsWith('postgresql://') || url.startsWith('postgres://'),
+    'DATABASE_URL must start with postgresql:// or postgres://',
+  ),
 
   SESSION_SECRET: z.string().min(32),
-  CSRF_SECRET: z.string().min(32).optional(),
+  CSRF_SECRET: isProduction
+    ? z.string().min(32, 'CSRF_SECRET is required in production (min 32 chars)')
+    : z.string().min(32).optional(),
   SESSION_MAX_AGE: z.coerce.number().default(604800000), // 7 days
   // In production, default to secure cookies (HTTPS only)
   SESSION_SECURE: z
@@ -41,8 +46,12 @@ const envSchema = z.object({
     ? z.string().min(1, 'S3_PUBLIC_URL is required in production')
     : z.string().default('http://localhost:9000/flipbook-uploads'),
 
-  CORS_ORIGIN: z.string().default('http://localhost:3000'),
-  APP_URL: z.string().default('http://localhost:3000'),
+  CORS_ORIGIN: isProduction
+    ? z.string().min(1, 'CORS_ORIGIN is required in production (no wildcard default)')
+    : z.string().default('http://localhost:3000'),
+  APP_URL: isProduction
+    ? z.string().min(1, 'APP_URL is required in production')
+    : z.string().default('http://localhost:3000'),
 
   RATE_LIMIT_WINDOW: z.coerce.number().default(60000),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
