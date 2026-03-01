@@ -144,6 +144,7 @@ describe('Auth + Migration Integration', () => {
       });
 
       // Fill register form
+      document.querySelector('#auth-username').value = 'testuser';
       document.querySelector('#auth-name').value = 'Test User';
       document.querySelector('#auth-email').value = 'new@test.com';
       document.querySelector('#auth-password').value = 'newpass123';
@@ -152,7 +153,7 @@ describe('Auth + Migration Integration', () => {
       document.querySelector('.auth-form').dispatchEvent(new Event('submit', { bubbles: true }));
 
       await vi.waitFor(() => {
-        expect(mockApi.register).toHaveBeenCalledWith('new@test.com', 'newpass123', 'Test User');
+        expect(mockApi.register).toHaveBeenCalledWith('new@test.com', 'newpass123', 'Test User', 'testuser');
       });
 
       await vi.waitFor(() => {

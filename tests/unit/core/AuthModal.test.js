@@ -233,6 +233,7 @@ describe('AuthModal', () => {
       modal.show();
       modal._el.querySelector('[data-action="switch"]').click();
 
+      modal._el.querySelector('#auth-username').value = 'testuser';
       modal._el.querySelector('#auth-name').value = 'Test User';
       modal._el.querySelector('#auth-email').value = 'new@test.com';
       modal._el.querySelector('#auth-password').value = 'password123';
@@ -241,7 +242,7 @@ describe('AuthModal', () => {
       form.dispatchEvent(new Event('submit', { cancelable: true }));
 
       await vi.waitFor(() => {
-        expect(mockApi.register).toHaveBeenCalledWith('new@test.com', 'password123', 'Test User');
+        expect(mockApi.register).toHaveBeenCalledWith('new@test.com', 'password123', 'Test User', 'testuser');
       });
     });
 
@@ -282,6 +283,7 @@ describe('AuthModal', () => {
       modal.show();
       modal._el.querySelector('[data-action="switch"]').click();
 
+      modal._el.querySelector('#auth-username').value = 'testuser';
       modal._el.querySelector('#auth-name').value = '';
       modal._el.querySelector('#auth-email').value = 'new@test.com';
       modal._el.querySelector('#auth-password').value = 'password123';
@@ -290,7 +292,7 @@ describe('AuthModal', () => {
       form.dispatchEvent(new Event('submit', { cancelable: true }));
 
       await vi.waitFor(() => {
-        expect(mockApi.register).toHaveBeenCalledWith('new@test.com', 'password123', null);
+        expect(mockApi.register).toHaveBeenCalledWith('new@test.com', 'password123', null, 'testuser');
       });
     });
   });

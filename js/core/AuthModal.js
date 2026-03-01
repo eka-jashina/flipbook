@@ -76,7 +76,13 @@ export class AuthModal {
         <form class="auth-form" novalidate>
           ${!isLogin ? `
           <div class="auth-field">
-            <label for="auth-name" class="auth-label">Имя</label>
+            <label for="auth-username" class="auth-label">Имя пользователя</label>
+            <input type="text" id="auth-username" class="auth-input" placeholder="my-name" autocomplete="username" required
+              pattern="^[a-z0-9][a-z0-9-]{2,39}$" minlength="3" maxlength="40">
+            <span class="auth-hint">Латиница, цифры, дефис. От 3 до 40 символов.</span>
+          </div>
+          <div class="auth-field">
+            <label for="auth-name" class="auth-label">Отображаемое имя</label>
             <input type="text" id="auth-name" class="auth-input" placeholder="Ваше имя" autocomplete="name">
           </div>` : ''}
           <div class="auth-field">
@@ -143,6 +149,13 @@ export class AuthModal {
       this._showError(errorEl, 'Пароль должен содержать минимум 8 символов');
       return;
     }
+    if (this._mode === 'register') {
+      const username = this._el.querySelector('#auth-username')?.value.trim();
+      if (!username || !/^[a-z0-9][a-z0-9-]{2,39}$/.test(username)) {
+        this._showError(errorEl, 'Имя пользователя: латиница, цифры, дефис, 3-40 символов');
+        return;
+      }
+    }
 
     // Блокируем кнопку
     submitBtn.disabled = true;
@@ -155,7 +168,8 @@ export class AuthModal {
         user = await this._api.login(email, password);
       } else {
         const name = this._el.querySelector('#auth-name')?.value.trim() || null;
-        user = await this._api.register(email, password, name);
+        const username = this._el.querySelector('#auth-username')?.value.trim();
+        user = await this._api.register(email, password, name, username);
       }
       this.hide();
       if (this._onAuth) this._onAuth(user);

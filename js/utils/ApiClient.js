@@ -165,10 +165,10 @@ export class ApiClient {
   }
 
   /** Регистрация + автоматический вход */
-  async register(email, password, displayName) {
+  async register(email, password, displayName, username) {
     const data = await this._fetch('/api/auth/register', {
       method: 'POST',
-      body: { email, password, displayName },
+      body: { email, password, displayName, username },
     });
     return data.user;
   }
@@ -471,5 +471,28 @@ export class ApiClient {
   /** Проверка здоровья сервера */
   async health() {
     return this._fetch('/api/health');
+  }
+
+  // ═══════════════════════════════════════════
+  // Публичное API (без авторизации)
+  // ═══════════════════════════════════════════
+
+  /** Публичная полка автора */
+  async getPublicShelf(username) {
+    return this._fetchWithRetry(`/api/public/shelves/${encodeURIComponent(username)}`);
+  }
+
+  /** Витрина публичных книг */
+  async getPublicDiscover(limit = 6) {
+    return this._fetchWithRetry(`/api/public/discover?limit=${limit}`);
+  }
+
+  // ═══════════════════════════════════════════
+  // Профиль
+  // ═══════════════════════════════════════════
+
+  /** Обновить профиль текущего пользователя */
+  async updateProfile(data) {
+    return this._fetchWithRetry('/api/profile', { method: 'PUT', body: data });
   }
 }
