@@ -26,11 +26,34 @@ const UNSAFE_URL_MSG = { message: 'URL contains a disallowed scheme' };
 /** URL/path string — max 500 chars, blocks dangerous URI schemes */
 const safeUrlOrPath = z.string().max(500).refine(isSafeUrl, UNSAFE_URL_MSG);
 
+// ── Username ──────────────────────────────────────────
+/** Username: lowercase latin, digits, hyphens. 3-40 chars, starts with alphanumeric. */
+const USERNAME_REGEX = /^[a-z0-9][a-z0-9-]{2,39}$/;
+const USERNAME_MSG = { message: 'Username must be 3-40 chars: lowercase letters, digits, hyphens. Must start with letter or digit.' };
+
+const RESERVED_USERNAMES = new Set([
+  'account', 'admin', 'api', 'auth', 'about', 'assets',
+  'book', 'books',
+  'embed', 'explore',
+  'help',
+  'login',
+  'new',
+  'public',
+  'register',
+  'search', 'settings', 'static',
+]);
+
+const usernameField = z.string()
+  .min(3).max(40)
+  .regex(USERNAME_REGEX, USERNAME_MSG)
+  .refine((val) => !RESERVED_USERNAMES.has(val), { message: 'This username is reserved' });
+
 // ── Auth ───────────────────────────────────────────
 export const registerSchema = z.object({
   email: z.string().email().max(255),
   password: z.string().min(8).max(128),
   displayName: z.string().max(100).optional(),
+  username: usernameField,
 });
 
 export const loginSchema = z.object({
@@ -56,6 +79,8 @@ export const createBookSchema = z.object({
 export const updateBookSchema = z.object({
   title: z.string().min(1).max(500).optional(),
   author: z.string().max(500).optional(),
+  visibility: z.enum(['draft', 'published', 'unlisted']).optional(),
+  description: z.string().max(2000).nullable().optional(),
   coverBgMode: z.enum(['default', 'none', 'custom']).optional(),
   coverBgCustomUrl: safeUrlOrPath.nullable().optional(),
 });
@@ -220,3 +245,24 @@ export const upsertProgressSchema = z.object({
   ambientType: z.string().max(100),
   ambientVolume: z.number().min(0).max(1),
 });
+
+// ── Profile ───────────────────────────────────────
+export const updateProfileSchema = z.object({
+  username: usernameField.optional(),
+  displayName: z.string().max(100).nullable().optional(),
+  bio: z.string().max(500).nullable().optional(),
+  avatarUrl: safeUrlOrPath.nullable().optional(),
+});
+
+export const usernameParamSchema = z.object({
+  username: z.string().min(3).max(40),
+});
+
+// ── Public ────────────────────────────────────────
+export const discoverQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+// Re-export for use in services
+export { RESERVED_USERNAMES };
