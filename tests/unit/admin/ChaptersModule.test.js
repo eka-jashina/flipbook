@@ -794,4 +794,164 @@ describe('ChaptersModule', () => {
       });
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FILE UI HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_showChapterFileInfo()', () => {
+    it('should show file info and hide dropzone', () => {
+      mod._showChapterFileInfo('my-chapter.html');
+
+      expect(mod.chapterFileDropzone.hidden).toBe(true);
+      expect(mod.chapterFileInfo.hidden).toBe(false);
+      expect(mod.chapterFileName.textContent).toBe('my-chapter.html');
+    });
+  });
+
+  describe('_resetChapterFileUI()', () => {
+    it('should hide file info and show dropzone', () => {
+      // Set initial state — file info visible
+      mod.chapterFileDropzone.hidden = true;
+      mod.chapterFileInfo.hidden = false;
+      mod.chapterFileName.textContent = 'some-file.html';
+
+      mod._resetChapterFileUI();
+
+      expect(mod.chapterFileDropzone.hidden).toBe(false);
+      expect(mod.chapterFileInfo.hidden).toBe(true);
+      expect(mod.chapterFileName.textContent).toBe('');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // _processChapterFile
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_processChapterFile()', () => {
+    it('should reject unsupported file extension', async () => {
+      const file = new File(['data'], 'book.pdf', { type: 'application/pdf' });
+
+      await mod._processChapterFile(file);
+
+      expect(app._showToast).toHaveBeenCalledWith(expect.stringContaining('Допустимые форматы'));
+    });
+
+    it('should reject file exceeding max size', async () => {
+      // Create a file mock with a large size
+      const file = { name: 'big.html', size: 20 * 1024 * 1024, text: vi.fn() };
+
+      await mod._processChapterFile(file);
+
+      expect(app._showToast).toHaveBeenCalledWith(expect.stringContaining('слишком большой'));
+    });
+
+    it('should process HTML file directly', async () => {
+      const file = new File(['<article><p>Hello</p></article>'], 'chapter.html', { type: 'text/html' });
+      if (!file.text) file.text = () => Promise.resolve('<article><p>Hello</p></article>');
+
+      await mod._processChapterFile(file);
+
+      expect(mod._pendingHtmlContent).toBe('<article><p>Hello</p></article>');
+      expect(app._showToast).toHaveBeenCalledWith('Файл загружен');
+    });
+
+    it('should show file info after successful processing', async () => {
+      const file = new File(['<p>Content</p>'], 'my-file.htm', { type: 'text/html' });
+      if (!file.text) file.text = () => Promise.resolve('<p>Content</p>');
+
+      await mod._processChapterFile(file);
+
+      expect(mod.chapterFileDropzone.hidden).toBe(true);
+      expect(mod.chapterFileName.textContent).toBe('my-file.htm');
+    });
+
+    it('should reject empty HTML file', async () => {
+      const file = new File(['   '], 'empty.html', { type: 'text/html' });
+      if (!file.text) file.text = () => Promise.resolve('   ');
+
+      await mod._processChapterFile(file);
+
+      expect(app._showToast).toHaveBeenCalledWith('Файл пуст или не удалось извлечь контент');
+    });
+
+    it('should remove loading class after processing', async () => {
+      const file = new File(['<p>text</p>'], 'f.html', { type: 'text/html' });
+      if (!file.text) file.text = () => Promise.resolve('<p>text</p>');
+
+      await mod._processChapterFile(file);
+
+      expect(mod.chapterFileDropzone.classList.contains('loading')).toBe(false);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BACKGROUND MODE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_renderBgModeSelector()', () => {
+    it('should set active class on matching button', () => {
+      mod._renderBgModeSelector('none', null);
+
+      const defaultBtn = document.querySelector('[data-bg-mode="default"]');
+      const noneBtn = document.querySelector('[data-bg-mode="none"]');
+      expect(defaultBtn.classList.contains('active')).toBe(false);
+      expect(noneBtn.classList.contains('active')).toBe(true);
+    });
+
+    it('should set hidden input value', () => {
+      mod._renderBgModeSelector('none', null);
+      expect(mod.bgCoverMode.value).toBe('none');
+    });
+
+    it('should show thumbnail when custom data provided', () => {
+      mod._renderBgModeSelector('custom', 'data:image/png;base64,abc');
+
+      expect(mod.bgCoverThumb.classList.contains('has-image')).toBe(true);
+      expect(mod.bgCoverCustomInfo.hidden).toBe(false);
+      expect(mod.bgCoverCustomName.textContent).toBe('Своё изображение');
+    });
+
+    it('should clear thumbnail when no custom data', () => {
+      // First set custom
+      mod._renderBgModeSelector('custom', 'data:image/png;base64,abc');
+      // Then clear
+      mod._renderBgModeSelector('default', null);
+
+      expect(mod.bgCoverThumb.classList.contains('has-image')).toBe(false);
+      expect(mod.bgCoverCustomInfo.hidden).toBe(true);
+    });
+  });
+
+  describe('_selectBgMode()', () => {
+    it('should update bg mode selector from store', () => {
+      app.store.getCover.mockReturnValue({
+        title: 'T', author: 'A', bgMode: 'custom', bgCustomData: 'data:img',
+      });
+
+      mod._selectBgMode('custom');
+
+      expect(mod.bgCoverMode.value).toBe('custom');
+    });
+  });
+
+  describe('_removeBgCustom()', () => {
+    it('should reset background to default', () => {
+      mod._removeBgCustom();
+
+      expect(app.store.updateCover).toHaveBeenCalledWith({
+        bgMode: 'default',
+        bgCustomData: null,
+      });
+      expect(mod.bgCoverMode.value).toBe('default');
+      expect(app._showToast).toHaveBeenCalledWith('Своё изображение удалено');
+    });
+  });
+
+  describe('_handleBgUpload()', () => {
+    it('should reject file without file', () => {
+      mod._handleBgUpload({ target: { files: [] } });
+      expect(app.store.updateCover).not.toHaveBeenCalled();
+    });
+  });
 });
