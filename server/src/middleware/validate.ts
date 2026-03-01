@@ -3,20 +3,30 @@ import type { ZodSchema } from 'zod';
 
 /**
  * Middleware factory that validates request body against a Zod schema.
+ * Passes validation errors to the error handler via next(err).
  */
 export function validate(schema: ZodSchema) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    req.body = schema.parse(req.body);
-    next();
+    try {
+      req.body = schema.parse(req.body);
+      next();
+    } catch (err) {
+      next(err);
+    }
   };
 }
 
 /**
  * Middleware factory that validates request query against a Zod schema.
+ * Passes validation errors to the error handler via next(err).
  */
 export function validateQuery(schema: ZodSchema) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    req.query = schema.parse(req.query);
-    next();
+    try {
+      req.query = schema.parse(req.query);
+      next();
+    } catch (err) {
+      next(err);
+    }
   };
 }

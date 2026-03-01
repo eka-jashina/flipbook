@@ -1,5 +1,6 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { logger } from '../utils/logger.js';
 import type { DecorativeFontDetail } from '../types/api.js';
 
 export async function getDecorativeFont(bookId: string): Promise<DecorativeFontDetail | null> {
@@ -30,6 +31,8 @@ export async function deleteDecorativeFont(bookId: string): Promise<void> {
   // Best-effort S3 cleanup
   if (font.fileUrl) {
     const { deleteFileByUrl } = await import('../utils/storage.js');
-    await deleteFileByUrl(font.fileUrl).catch(() => {});
+    await deleteFileByUrl(font.fileUrl).catch((err) => {
+      logger.warn({ err, fileUrl: font.fileUrl, bookId }, 'Failed to delete decorative font file from S3');
+    });
   }
 }
