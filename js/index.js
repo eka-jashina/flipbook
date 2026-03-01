@@ -4,7 +4,8 @@
  * Инициализация приложения после загрузки DOM.
  *
  * Роутинг (SPA, History API):
- *   /              → лендинг (гости) | книжная полка (авторизованные) | fallback (localStorage)
+ *   /              → лендинг (гости) | redirect на /:username (авторизованные) | fallback (localStorage)
+ *   /:username     → публичная полка автора (гость = витрина, хозяин = управление)
  *   /book/:bookId  → ридер
  *
  * Поток:
@@ -12,7 +13,8 @@
  * 2. GET /api/auth/me → определяем, гость или авторизован
  * 3. Роутер резолвит URL:
  *    - гость на / → LandingScreen (CTA → AuthModal)
- *    - авторизованный на / → BookshelfScreen
+ *    - авторизованный на / → redirect на /:username (своя полка)
+ *    - /:username → BookshelfScreen (owner или guest mode)
  *    - /book/:id → ридер (авторизованный) или redirect на / (гость)
  *
  * Fallback: если сервер недоступен — работа через localStorage.
@@ -151,24 +153,61 @@ function cleanupLanding() {
 // ═══════════════════════════════════════════════════
 
 /**
- * Маршрут: / → Лендинг (гости) или Книжная полка (авторизованные)
+ * Маршрут: / → Лендинг (гости) или redirect на /:username (авторизованные)
  */
 async function handleHome() {
   cleanupReader();
   cleanupLanding();
   cleanupBookshelf();
 
-  if (useAPI && !currentUser) {
+  if (useAPI && currentUser?.username) {
+    // Авторизован → redirect на свою полку
+    router.navigate(`/${currentUser.username}`, { replace: true });
+  } else if (useAPI && !currentUser) {
     // Гость → лендинг
     showLanding();
-  } else if (useAPI) {
-    // Авторизован → книжная полка
-    const books = await loadBooksFromAPI(apiClient);
-    showBookshelf(books);
   } else {
     // localStorage fallback — URL определяет состояние, на / всегда показываем полку
     const { books } = getBookshelfData();
     showBookshelf(books);
+  }
+}
+
+/**
+ * Маршрут: /:username → Публичная полка автора
+ * Хозяин видит все свои книги с управлением, гость — только published.
+ */
+async function handlePublicShelf({ username }) {
+  cleanupReader();
+  cleanupLanding();
+  cleanupBookshelf();
+
+  const isOwner = currentUser?.username === username;
+
+  if (isOwner) {
+    // Хозяин — показать все свои книги с управлением
+    const books = await loadBooksFromAPI(apiClient);
+    showBookshelf(books, {
+      mode: 'owner',
+      profileUser: currentUser,
+    });
+  } else {
+    // Гость (авторизованный или нет) — публичная полка
+    try {
+      const data = await apiClient.getPublicShelf(username);
+      showBookshelf(data.books || [], {
+        mode: 'guest',
+        profileUser: data.user || { username },
+      });
+    } catch (err) {
+      if (err.status === 404) {
+        // Пользователь не найден — на главную
+        router.navigate('/', { replace: true });
+      } else {
+        console.error('Ошибка загрузки публичной полки:', err);
+        router.navigate('/', { replace: true });
+      }
+    }
   }
 }
 
@@ -223,8 +262,9 @@ function showLanding() {
             currentUser = user;
             const migration = new MigrationHelper(apiClient);
             await migration.checkAndMigrate();
-            // Перенаправляем на главную — теперь покажется полка
-            router.navigate('/', { replace: true });
+            // Перенаправляем на свою полку
+            const target = user.username ? `/${user.username}` : '/';
+            router.navigate(target, { replace: true });
           },
         });
       }
@@ -237,8 +277,12 @@ function showLanding() {
 
 /**
  * Показать книжный шкаф.
+ * @param {Array} books
+ * @param {Object} [options]
+ * @param {'owner'|'guest'} [options.mode='owner']
+ * @param {Object} [options.profileUser] - Данные профиля для шапки
  */
-function showBookshelf(books) {
+function showBookshelf(books, { mode = 'owner', profileUser } = {}) {
   const container = document.getElementById('bookshelf-screen');
   if (!container) return;
 
@@ -248,6 +292,8 @@ function showBookshelf(books) {
     container,
     books,
     apiClient,
+    mode,
+    profileUser,
     onBookSelect: (bookId) => {
       if (router) {
         router.navigate(`/book/${bookId}`);
@@ -375,14 +421,14 @@ async function init() {
       currentUser = await checkAuth();
     }
 
-    // Создаём роутер
+    // Создаём роутер (порядок важен: конкретные маршруты первыми, /:username — последний)
     router = new Router([
       { name: 'home', path: '/', handler: handleHome },
       { name: 'reader', path: '/book/:bookId', handler: handleReader },
-      // Будущие маршруты (Фазы 4-8):
+      // Будущие маршруты:
       // { name: 'account', path: '/account', handler: handleAccount },
       // { name: 'embed', path: '/embed/:bookId', handler: handleEmbed },
-      // { name: 'shelf', path: '/:username', handler: handlePublicShelf },
+      { name: 'shelf', path: '/:username', handler: handlePublicShelf },
     ]);
 
     // Миграция: старый sessionStorage-флоу → URL-based навигация

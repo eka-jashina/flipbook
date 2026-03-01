@@ -472,4 +472,27 @@ export class ApiClient {
   async health() {
     return this._fetch('/api/health');
   }
+
+  // ═══════════════════════════════════════════
+  // Публичное API (без авторизации)
+  // ═══════════════════════════════════════════
+
+  /** Публичная полка автора */
+  async getPublicShelf(username) {
+    return this._fetchWithRetry(`/api/public/shelves/${encodeURIComponent(username)}`);
+  }
+
+  /** Витрина публичных книг */
+  async getPublicDiscover(limit = 6) {
+    return this._fetchWithRetry(`/api/public/discover?limit=${limit}`);
+  }
+
+  // ═══════════════════════════════════════════
+  // Профиль
+  // ═══════════════════════════════════════════
+
+  /** Обновить профиль текущего пользователя */
+  async updateProfile(data) {
+    return this._fetchWithRetry('/api/profile', { method: 'PUT', body: data });
+  }
 }

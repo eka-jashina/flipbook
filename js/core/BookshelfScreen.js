@@ -1,21 +1,44 @@
 /**
  * BOOKSHELF SCREEN
  *
- * Экран книжного шкафа — стартовая страница приложения.
- * Показывает все книги из API (или localStorage для fallback).
- * Пользователь выбирает книгу → она становится активной → ридер загружается.
+ * Экран книжного шкафа — стартовая страница для авторизованных пользователей
+ * и публичная витрина для гостей.
  *
- * Фаза 3: книги загружаются из GET /api/books, удаление через DELETE /api/books/:id.
- * localStorage используется только как fallback (когда apiClient не передан).
+ * Два режима:
+ *
+ * **owner** (хозяин, /:username = текущий юзер):
+ * - Все книги (draft/unlisted/published) с визуальными метками
+ * - Контекстное меню: Читать / Редактировать / Видимость / Удалить
+ * - Кнопка «Добавить книгу» и mode selector
+ *
+ * **guest** (гость, /:username ≠ текущий юзер):
+ * - Только published-книги
+ * - Клик → переход к ридеру (без контекстного меню)
+ * - Нет кнопок управления
  *
  * Статическая разметка (header, actions, empty, mode-selector) определена в index.html.
  * Динамические элементы (полки, карточки книг) клонируются из <template>.
  */
 
 import { renderModeCards } from '../admin/modeCardsData.js';
+import { ProfileHeader } from './ProfileHeader.js';
 
 const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
 const BOOKS_PER_SHELF = 5;
+
+/** Метки видимости книг */
+const VISIBILITY_LABELS = {
+  draft: 'Черновик',
+  unlisted: 'По ссылке',
+  published: 'Опубликована',
+};
+
+/** Циклическое переключение видимости */
+const VISIBILITY_NEXT = {
+  draft: 'published',
+  published: 'unlisted',
+  unlisted: 'draft',
+};
 
 // Дефолтная книга для полки (когда нет конфига)
 const DEFAULT_BOOKSHELF_BOOK = {
@@ -37,17 +60,24 @@ export class BookshelfScreen {
    * @param {HTMLElement} options.container - DOM-контейнер для шкафа
    * @param {Array} options.books - Массив книг (из API или localStorage)
    * @param {Function} options.onBookSelect - Колбэк при выборе книги (bookId)
-   * @param {import('../utils/ApiClient.js').ApiClient} [options.apiClient] - API клиент (Фаза 3)
+   * @param {import('../utils/ApiClient.js').ApiClient} [options.apiClient] - API клиент
+   * @param {'owner'|'guest'} [options.mode='owner'] - Режим отображения
+   * @param {Object} [options.profileUser] - Данные профиля для шапки { username, displayName, bio }
+   * @param {Function} [options.onEditProfile] - Колбэк при клике «Редактировать профиль»
    */
-  constructor({ container, books, onBookSelect, apiClient }) {
+  constructor({ container, books, onBookSelect, apiClient, mode = 'owner', profileUser, onEditProfile }) {
     this.container = container;
     this.books = books;
     this.onBookSelect = onBookSelect;
     this._api = apiClient || null;
+    this._mode = mode;
+    this._profileUser = profileUser || null;
+    this._onEditProfile = onEditProfile;
     this._boundHandleClick = this._handleClick.bind(this);
     this._boundCloseMenu = this._closeBookMenu.bind(this);
     this._currentView = 'shelf';
     this._openMenuBookId = null;
+    this._profileHeader = null;
 
     // Кэш ссылок на статические элементы из HTML
     this._els = {
@@ -59,15 +89,17 @@ export class BookshelfScreen {
       modeSelector: container.querySelector('#bookshelf-mode-selector'),
     };
 
-    // Генерация карточек режимов из общих данных
-    const modeCardsContainer = container.querySelector('#bookshelf-mode-cards');
-    if (modeCardsContainer) {
-      renderModeCards(modeCardsContainer, {
-        cardClass: 'bookshelf-mode-card',
-        iconClass: 'bookshelf-mode-card-icon',
-        titleClass: 'bookshelf-mode-card-title',
-        descClass: 'bookshelf-mode-card-desc',
-      });
+    // Генерация карточек режимов только для owner mode
+    if (this._mode === 'owner') {
+      const modeCardsContainer = container.querySelector('#bookshelf-mode-cards');
+      if (modeCardsContainer) {
+        renderModeCards(modeCardsContainer, {
+          cardClass: 'bookshelf-mode-card',
+          iconClass: 'bookshelf-mode-card-icon',
+          titleClass: 'bookshelf-mode-card-title',
+          descClass: 'bookshelf-mode-card-desc',
+        });
+      }
     }
   }
 
@@ -76,17 +108,42 @@ export class BookshelfScreen {
    */
   render() {
     const { shelves, actions, empty, subtitle, header, modeSelector } = this._els;
+    const isOwner = this._mode === 'owner';
 
     // Сброс mode selector при рендере (важно при восстановлении из bfcache)
     if (modeSelector) modeSelector.hidden = true;
     this._currentView = 'shelf';
 
-    if (!this.books.length) {
-      // Пустое состояние
-      if (shelves) shelves.hidden = true;
+    // Профильная шапка (если задан profileUser)
+    if (this._profileUser) {
+      if (this._profileHeader) this._profileHeader.destroy();
+      this._profileHeader = new ProfileHeader({
+        user: this._profileUser,
+        isOwner,
+        onEditProfile: this._onEditProfile,
+      });
+      this._profileHeader.render(this.container);
+    }
+
+    // В guest mode скрываем элементы управления
+    if (!isOwner) {
       if (actions) actions.hidden = true;
-      if (empty) empty.hidden = false;
-      if (subtitle) subtitle.textContent = '';
+      if (empty) empty.hidden = true;
+      if (modeSelector) modeSelector.hidden = true;
+    }
+
+    if (!this.books.length) {
+      if (isOwner) {
+        // Пустое состояние (только owner)
+        if (shelves) shelves.hidden = true;
+        if (actions) actions.hidden = true;
+        if (empty) empty.hidden = false;
+        if (subtitle) subtitle.textContent = '';
+      } else {
+        // Guest: пустая полка — показываем сообщение
+        if (shelves) shelves.hidden = true;
+        if (subtitle) subtitle.textContent = 'Книг пока нет';
+      }
     } else {
       // Есть книги — показать полки
       if (empty) empty.hidden = true;
@@ -100,7 +157,7 @@ export class BookshelfScreen {
           shelves.appendChild(this._createShelf(chunk));
         }
       }
-      if (actions) actions.hidden = false;
+      if (isOwner && actions) actions.hidden = false;
       if (header) header.hidden = false;
       if (subtitle) {
         subtitle.textContent = `${this.books.length} ${this._pluralize(this.books.length)}`;
@@ -150,6 +207,10 @@ export class BookshelfScreen {
     this.container.removeEventListener('click', this._boundHandleClick);
     // Очищаем только динамический контент (полки с книгами)
     if (this._els.shelves) this._els.shelves.innerHTML = '';
+    if (this._profileHeader) {
+      this._profileHeader.destroy();
+      this._profileHeader = null;
+    }
   }
 
   // ═══════════════════════════════════════════
@@ -184,6 +245,7 @@ export class BookshelfScreen {
   _createBook(book) {
     const tmpl = document.getElementById('tmpl-bookshelf-book');
     const frag = tmpl.content.cloneNode(true);
+    const isOwner = this._mode === 'owner';
 
     // Поддержка обоих форматов: API (title/author на верхнем уровне) и localStorage (cover.title/cover.author)
     const title = book.title || book.cover?.title || 'Без названия';
@@ -192,10 +254,16 @@ export class BookshelfScreen {
     const bgEnd = book.appearance?.light?.coverBgEnd || '#2a2016';
     const textColor = book.appearance?.light?.coverText || '#f2e9d8';
     const coverBgImage = book.appearance?.light?.coverBgImage || book.appearance?.light?.coverBgImageUrl;
+    const visibility = book.visibility || 'draft';
 
     // Wrapper
     const wrapper = frag.querySelector('.bookshelf-book-wrapper');
     wrapper.dataset.bookId = book.id;
+
+    // Visibility class (only in owner mode)
+    if (isOwner && visibility !== 'published') {
+      wrapper.classList.add(`bookshelf-book--${visibility}`);
+    }
 
     // Button
     const btn = frag.querySelector('.bookshelf-book');
@@ -211,6 +279,13 @@ export class BookshelfScreen {
     }
     cover.style.color = textColor;
 
+    // Visibility badge (only in owner mode for non-published)
+    const badge = frag.querySelector('.bookshelf-book-badge');
+    if (isOwner && visibility !== 'published' && badge) {
+      badge.textContent = VISIBILITY_LABELS[visibility] || visibility;
+      badge.hidden = false;
+    }
+
     // Title & author
     frag.querySelector('.bookshelf-book-title').textContent = title;
     const authorEl = frag.querySelector('.bookshelf-book-author');
@@ -220,11 +295,24 @@ export class BookshelfScreen {
       authorEl.remove();
     }
 
-    // Menu items — проставить data-book-id
-    const menuItems = frag.querySelectorAll('[data-book-action]');
-    menuItems.forEach(item => {
-      item.dataset.bookId = book.id;
-    });
+    // Menu items
+    if (isOwner) {
+      // Проставить data-book-id на все пункты меню
+      const menuItems = frag.querySelectorAll('[data-book-action]');
+      menuItems.forEach(item => {
+        item.dataset.bookId = book.id;
+      });
+      // Обновить label видимости
+      const visLabel = frag.querySelector('[data-visibility-label]');
+      if (visLabel) {
+        const nextVis = VISIBILITY_NEXT[visibility];
+        visLabel.textContent = VISIBILITY_LABELS[nextVis] ? `Сделать: ${VISIBILITY_LABELS[nextVis].toLowerCase()}` : 'Видимость';
+      }
+    } else {
+      // Guest mode: удалить контекстное меню
+      const menu = frag.querySelector('.bookshelf-book-menu');
+      if (menu) menu.remove();
+    }
 
     return frag;
   }
@@ -246,6 +334,11 @@ export class BookshelfScreen {
     if (shelves) shelves.hidden = show;
     if (actions) actions.hidden = show;
     if (empty) empty.hidden = show || this.books.length > 0;
+
+    // Скрыть/показать profile header при переключении
+    if (this._profileHeader?._el) {
+      this._profileHeader._el.hidden = show;
+    }
   }
 
   /**
@@ -253,9 +346,9 @@ export class BookshelfScreen {
    * @private
    */
   _handleClick(e) {
-    // Кнопка «Создать книгу»
+    // Кнопка «Создать книгу» (только owner)
     const addBtn = e.target.closest('[data-action="add-book"]');
-    if (addBtn) {
+    if (addBtn && this._mode === 'owner') {
       e.preventDefault();
       this._toggleModeSelector(true);
       return;
@@ -268,18 +361,18 @@ export class BookshelfScreen {
       return;
     }
 
-    // Карточка режима создания книги
+    // Карточка режима создания книги (только owner)
     const modeCard = e.target.closest('[data-mode]');
-    if (modeCard) {
+    if (modeCard && this._mode === 'owner') {
       const mode = modeCard.dataset.mode;
       sessionStorage.setItem('flipbook-admin-mode', mode);
       window.location.href = `${import.meta.env.BASE_URL || '/'}admin.html`;
       return;
     }
 
-    // Действие из контекстного меню книги
+    // Действие из контекстного меню книги (только owner)
     const menuItem = e.target.closest('[data-book-action]');
-    if (menuItem) {
+    if (menuItem && this._mode === 'owner') {
       const action = menuItem.dataset.bookAction;
       const bookId = menuItem.dataset.bookId;
       this._closeBookMenu();
@@ -287,11 +380,19 @@ export class BookshelfScreen {
       return;
     }
 
-    // Клик по книге — открыть контекстное меню
+    // Клик по книге
     const bookBtn = e.target.closest('.bookshelf-book');
     if (bookBtn) {
       const bookId = bookBtn.dataset.bookId;
-      if (bookId) this._openBookMenu(bookId);
+      if (!bookId) return;
+
+      if (this._mode === 'guest') {
+        // Guest mode: сразу переход к чтению
+        if (this.onBookSelect) this.onBookSelect(bookId);
+      } else {
+        // Owner mode: открыть контекстное меню
+        this._openBookMenu(bookId);
+      }
       return;
     }
 
@@ -361,9 +462,37 @@ export class BookshelfScreen {
         window.location.href = `${import.meta.env.BASE_URL || '/'}admin.html`;
         break;
 
+      case 'visibility':
+        this._toggleVisibility(bookId);
+        break;
+
       case 'delete':
         this._deleteBook(bookId);
         break;
+    }
+  }
+
+  /**
+   * Переключить видимость книги (draft → published → unlisted → draft)
+   * @private
+   */
+  async _toggleVisibility(bookId) {
+    const book = this.books.find(b => b.id === bookId);
+    if (!book) return;
+
+    const currentVis = book.visibility || 'draft';
+    const nextVis = VISIBILITY_NEXT[currentVis] || 'draft';
+
+    if (this._api) {
+      try {
+        await this._api.updateBook(bookId, { visibility: nextVis });
+        book.visibility = nextVis;
+        // Перерисовать полку
+        this.container.removeEventListener('click', this._boundHandleClick);
+        this.render();
+      } catch (err) {
+        console.error('Ошибка смены видимости:', err);
+      }
     }
   }
 
@@ -378,7 +507,6 @@ export class BookshelfScreen {
     if (!confirm(`Удалить «${title}»?`)) return;
 
     if (this._api) {
-      // Фаза 3: удаление через API
       try {
         await this._api.deleteBook(bookId);
       } catch (err) {
