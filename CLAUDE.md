@@ -171,6 +171,10 @@ flipbook/
 │   ├── index.js              # Reader application entry point
 │   ├── config.js             # Configuration (multi-source: localStorage / API)
 │   │
+│   ├── config/              # Configuration helpers (extracted from config.js)
+│   │   ├── configHelpers.js     # Pure helpers: path resolution, fonts, ambients
+│   │   └── enrichConfigFromIDB.js # IndexedDB data enrichment for config
+│   │
 │   ├── utils/                # Low-level utilities
 │   │   ├── ApiClient.js      # HTTP API client (server communication)
 │   │   ├── CSSVariables.js   # Read CSS custom properties
@@ -185,8 +189,6 @@ flipbook/
 │   │   ├── StorageManager.js # localStorage abstraction
 │   │   ├── IdbStorage.js     # IndexedDB wrapper for large data
 │   │   ├── SettingsValidator.js # Settings validation & sanitization
-│   │   ├── SoundManager.js   # Audio playback control
-│   │   ├── AmbientManager.js # Background music
 │   │   ├── RateLimiter.js    # Call rate limiting
 │   │   ├── InstallPrompt.js  # PWA install prompt
 │   │   ├── OfflineIndicator.js   # Offline status indicator
@@ -199,16 +201,20 @@ flipbook/
 │   │   ├── SettingsManager.js     # User preferences (persistent)
 │   │   ├── BackgroundManager.js   # Chapter background images
 │   │   ├── ContentLoader.js       # Fetch chapter HTML
-│   │   └── AsyncPaginator.js      # CSS multi-column pagination
+│   │   ├── AsyncPaginator.js      # CSS multi-column pagination
+│   │   ├── SoundManager.js        # Audio playback control
+│   │   └── AmbientManager.js      # Background ambient music
 │   │
 │   ├── core/                 # Application orchestration
 │   │   ├── BookController.js      # Main coordinator (DI container)
+│   │   ├── BookControllerBuilder.js # DI graph construction (services, components, delegates)
 │   │   ├── BookDIConfig.js        # DI wiring configuration for delegates
 │   │   ├── ComponentFactory.js    # Factory pattern
 │   │   ├── DOMManager.js          # DOM element references
 │   │   ├── BookRenderer.js        # Page rendering (double buffering)
 │   │   ├── BookAnimator.js        # CSS animation orchestration
 │   │   ├── EventController.js     # Input handling
+│   │   ├── SettingsBindings.js    # Settings UI bindings (font, theme, sound, fullscreen)
 │   │   ├── LoadingIndicator.js    # Loading UI
 │   │   ├── DebugPanel.js          # Development tools
 │   │   ├── AppInitializer.js      # Startup logic
@@ -304,10 +310,28 @@ flipbook/
 │   │   │   ├── progress.routes.ts    # GET/PUT /api/progress
 │   │   │   ├── upload.routes.ts      # POST /api/upload
 │   │   │   └── exportImport.routes.ts # GET/POST /api/export, /api/import
-│   │   ├── services/             # Business logic
-│   │   │   └── *.service.ts          # One per resource
+│   │   ├── services/             # Business logic (one per resource)
+│   │   │   ├── auth.service.ts       # Authentication
+│   │   │   ├── books.service.ts      # Book CRUD
+│   │   │   ├── chapters.service.ts   # Chapter CRUD
+│   │   │   ├── sounds.service.ts     # Sound configuration
+│   │   │   ├── ambients.service.ts   # Ambient sounds
+│   │   │   ├── appearance.service.ts # Theme appearance
+│   │   │   ├── decorativeFont.service.ts # Decorative fonts
+│   │   │   ├── defaultSettings.service.ts # Default settings
+│   │   │   ├── fonts.service.ts      # Reading fonts
+│   │   │   ├── settings.service.ts   # Global settings
+│   │   │   ├── progress.service.ts   # Reading progress
+│   │   │   ├── upload.service.ts     # File upload
+│   │   │   └── exportImport.service.ts # Export/import
 │   │   ├── parsers/              # Server-side book parsers
-│   │   │   └── *.ts                  # Txt, Doc, Docx, Epub, Fb2
+│   │   │   ├── BookParser.ts         # Parser dispatch
+│   │   │   ├── parserUtils.ts        # Shared parser utilities
+│   │   │   ├── TxtParser.ts          # Plain text (.txt)
+│   │   │   ├── DocParser.ts          # Word 97-2003 (.doc)
+│   │   │   ├── DocxParser.ts         # Word (.docx)
+│   │   │   ├── EpubParser.ts         # EPUB (.epub)
+│   │   │   └── Fb2Parser.ts          # FictionBook (.fb2)
 │   │   ├── utils/                # Server utilities
 │   │   │   ├── prisma.ts             # Prisma client singleton
 │   │   │   ├── storage.ts            # S3 storage operations
@@ -319,6 +343,8 @@ flipbook/
 │   │   │   ├── limits.ts             # Upload size limits
 │   │   │   ├── ownership.ts          # Ownership check helper
 │   │   │   ├── reorder.ts            # Position reordering
+│   │   │   ├── response.ts           # Standard JSON response helpers
+│   │   │   ├── asyncHandler.ts       # Async Express handler wrapper
 │   │   │   ├── serializable.ts       # JSON serialization
 │   │   │   └── zodToOpenApi.ts       # Zod→OpenAPI conversion
 │   │   └── types/
@@ -339,25 +365,29 @@ flipbook/
 │   ├── setup.js              # Test environment setup
 │   ├── helpers/              # Test utilities
 │   ├── unit/                 # Unit tests (Vitest)
-│   │   ├── utils/            # Utility tests
-│   │   ├── managers/         # Manager tests
-│   │   ├── core/             # Core + delegates + services tests
-│   │   └── admin/            # Admin module tests (14 files)
+│   │   ├── utils/            # Utility tests (21 files)
+│   │   ├── managers/         # Manager tests (5 files)
+│   │   ├── core/             # Core + delegates + services tests (17 + 8 + 4 files)
+│   │   └── admin/            # Admin module tests (20 files)
 │   ├── integration/          # Integration tests (Vitest + jsdom)
 │   │   ├── smoke.test.js
-│   │   ├── flows/            # User flow tests
+│   │   ├── flows/            # User flow tests (24 files)
 │   │   ├── lifecycle/        # Lifecycle tests
 │   │   └── services/         # Service tests
 │   └── e2e/                  # E2E tests (Playwright)
 │       ├── fixtures/         # Test fixtures
 │       ├── pages/            # Page Object models
-│       ├── flows/            # Test scenarios
+│       ├── flows/            # Test scenarios (6 files incl. offline)
 │       └── performance/      # Performance tests
 │
 ├── scripts/                   # Build scripts
 │   └── generate-icons.js     # PWA icon generation (sharp)
 │
+├── Dockerfile                # Full-stack Docker build (frontend + server)
 ├── docker-compose.yml        # Docker Compose (PostgreSQL + MinIO + server)
+├── amvera.yml                # Amvera Cloud deployment config
+├── railway.toml              # Railway deployment config
+├── DEPLOYMENT.md             # Deployment guide (Amvera + Cloud.ru S3)
 ├── vite.config.js            # Vite configuration
 ├── vite-plugin-mobile-backgrounds.js # Custom plugin for mobile backgrounds
 ├── vite-plugin-html-includes.js # Custom plugin for HTML partials
@@ -394,6 +424,7 @@ CLOSED → OPENING → OPENED ↔ FLIPPING
 | **State Machine** | `BookStateMachine.js` | Valid state transitions |
 | **Observer** | `EventEmitter.js` | Decoupled communication |
 | **Dependency Injection** | `BookController.js` | Testable, loose coupling |
+| **Builder** | `BookControllerBuilder.js` | Phased DI graph construction |
 | **Factory** | `ComponentFactory.js` | Centralized creation |
 | **Delegate** | `delegates/` folder | Separation of concerns |
 | **Mediator** | `DelegateMediator.js` | Delegate communication |
@@ -423,7 +454,9 @@ DOM + CSS Animations
 | Component | File | Responsibility |
 |-----------|------|----------------|
 | BookController | `core/BookController.js` | Main orchestrator, DI container |
+| BookControllerBuilder | `core/BookControllerBuilder.js` | DI graph construction (services → components → delegates) |
 | BookDIConfig | `core/BookDIConfig.js` | DI wiring configuration for delegates |
+| SettingsBindings | `core/SettingsBindings.js` | Settings UI bindings (font, theme, sound, fullscreen) |
 | BookStateMachine | `managers/BookStateMachine.js` | State transitions |
 | BookRenderer | `core/BookRenderer.js` | Page DOM rendering, buffer swapping |
 | BookAnimator | `core/BookAnimator.js` | CSS animation orchestration |
@@ -736,23 +769,27 @@ tests/
 │   ├── testUtils.js      # Unit test utilities
 │   └── integrationUtils.js # Integration test utilities
 ├── unit/                 # Unit tests
-│   ├── config.test.js
-│   ├── utils/            # All utility tests
-│   ├── managers/         # All manager tests
-│   ├── core/             # Core, delegates, services tests
-│   └── admin/            # Admin module tests (14 files)
+│   ├── utils/            # Utility tests (21 files)
+│   ├── managers/         # Manager tests (5 files)
+│   ├── core/             # Core tests (17 files)
+│   │   ├── delegates/    # Delegate tests (8 files)
+│   │   └── services/     # Service tests (4 files)
+│   └── admin/            # Admin module tests (20 files)
 ├── integration/          # Integration tests
 │   ├── smoke.test.js
-│   ├── flows/            # User flow tests (12 files)
-│   │   ├── navigation, settings, chapters, drag, events
-│   │   ├── accessibility, chapterRepagination, settingsRepagination
-│   │   ├── dragNavConflict, errorRecovery, fullReadingSession, resizeFlow
+│   ├── flows/            # User flow tests (24 files)
+│   │   ├── navigation, settings, chapters, drag, events, accessibility
+│   │   ├── chapterRepagination, settingsRepagination, dragNavConflict
+│   │   ├── errorRecovery, fullReadingSession, resizeFlow
+│   │   ├── adminPanel, audio, authMigration, bookshelf, theme
+│   │   ├── ambientSoundLifecycle, bookSwitchingLifecycle, configExportImport
+│   │   ├── delegateMediator, fontManagement, multiBookSession, photoAlbumLifecycle
 │   ├── lifecycle/        # Lifecycle tests
 │   └── services/         # Service tests
 └── e2e/                  # E2E tests (Playwright)
     ├── fixtures/         # Test fixtures
     ├── pages/            # Page Object models
-    ├── flows/            # Test scenarios (reading, navigation, settings, responsive, accessibility)
+    ├── flows/            # Test scenarios (reading, navigation, settings, responsive, accessibility, offline)
     └── performance/      # Performance tests
 ```
 
@@ -867,6 +904,13 @@ const base = process.env.VITE_BASE_URL || '/';
 // GitHub Pages: set VITE_BASE_URL=/flipbook/ in CI
 ```
 
+### Full-Stack Deployment
+
+A root-level `Dockerfile` builds both frontend and server into a single image:
+- Multi-stage build: frontend (Vite) → server (tsc) → production image
+- Configured for Amvera Cloud (`amvera.yml`) and Railway (`railway.toml`)
+- See `DEPLOYMENT.md` for step-by-step guide (Amvera + Cloud.ru S3)
+
 ## Dependencies
 
 ### Frontend Runtime
@@ -886,14 +930,26 @@ const base = process.env.VITE_BASE_URL || '/';
 ### Backend Runtime (server/)
 - **express** `^5.0.1` — HTTP framework
 - **@prisma/client** `^6.0.0` — Database ORM (PostgreSQL)
-- **passport** `^0.7.0` — Authentication (local + Google OAuth)
+- **passport** `^0.7.0` — Authentication framework
+- **passport-local** `^1.0.0` — Local auth strategy (email/password)
+- **passport-google-oauth20** `^2.0.0` — Google OAuth strategy
 - **@aws-sdk/client-s3** `^3.700.0` — S3-compatible file storage (MinIO in dev)
 - **zod** `^3.23.0` — Request/response validation
 - **helmet** `^8.0.0` — Security headers
 - **pino** `^9.0.0` — Structured logging
+- **pino-http** `^10.5.0` — HTTP request logging
 - **bcrypt** `^5.1.0` — Password hashing
 - **csrf-csrf** `^4.0.3` — CSRF protection
 - **express-rate-limit** `^7.0.0` — Rate limiting
+- **express-session** `^1.18.0` — Session management
+- **connect-pg-simple** `^10.0.0` — PostgreSQL session store
+- **cors** `^2.8.5` — CORS support
+- **cookie-parser** `^1.4.7` — Cookie parsing
+- **multer** `^1.4.5-lts.1` — File upload handling (multipart/form-data)
+- **dompurify** `^3.3.1` — Server-side HTML sanitization
+- **jsdom** `^28.1.0` — Server-side DOM for sanitization
+- **jszip** `^3.10.1` — ZIP operations (export/import)
+- **@sentry/node** `^9.47.1` — Error monitoring
 
 ## Important Considerations
 
