@@ -14,273 +14,167 @@
 
 ---
 
-## Фаза 1: База данных и API
+## Фаза 1: База данных и API ✅
 
-### 1.1 Миграция Prisma — User: добавить username и bio
+> **Коммит:** `feat: add username, visibility fields and public API endpoints`
 
-**Файл:** `server/prisma/schema.prisma` — модель `User`
+### Что сделано
 
-```prisma
-model User {
-  // Добавить:
-  username    String?   @unique @db.VarChar(40)
-  bio         String?   @db.VarChar(500)
-}
-```
+**Prisma-миграция** (`server/prisma/schema.prisma`):
+- `User`: добавлены `username` (unique, nullable) и `bio` (varchar 500)
+- `Book`: добавлены `visibility` (draft/published/unlisted, default draft), `description` (varchar 2000), `publishedAt` (timestamptz)
+- Составной индекс `@@index([visibility, publishedAt])`
+- Миграция: `add-username-visibility`
 
-- `username` — nullable на старте (существующие юзеры без него)
-- Валидация: `^[a-z0-9][a-z0-9-]{2,39}$` (латиница, цифры, дефис, 3-40 символов)
-- Резерв служебных слов: `account`, `book`, `embed`, `api`, `admin`, `about`, `help`, `settings`, `search`, `explore`, `login`, `register`, `auth`, `static`, `assets`, `public`, `new`
+**Решение:** `username` обязателен при регистрации (валидация `^[a-z0-9][a-z0-9-]{2,39}$`). Существующие юзеры без username — получат при следующем логине (Phase 5 — редактирование профиля). Резерв служебных слов: `account`, `book`, `embed`, `api`, `admin`, `about`, `help`, `settings`, `search`, `explore`, `login`, `register`, `auth`, `static`, `assets`, `public`, `new`.
 
-### 1.2 Миграция Prisma — Book: visibility и описание
+**Zod-схемы** (`server/src/schemas.ts`):
+- `updateProfileSchema`, `usernameParamSchema`, `discoverQuerySchema`
+- Расширен `registerSchema` — добавлено `username` (обязательно)
+- Расширен `updateBookSchema` — `visibility`, `description`
+- `publicBooksQuerySchema`
 
-**Файл:** `server/prisma/schema.prisma` — модель `Book`
+**Новые API-эндпоинты:**
 
-```prisma
-model Book {
-  // Добавить:
-  visibility  String    @default("draft") @db.VarChar(20)  // draft | published | unlisted
-  description String?   @db.VarChar(2000)
-  publishedAt DateTime? @db.Timestamptz()
+| Маршрут | Файл | Описание |
+|---------|------|----------|
+| `GET/PUT /api/profile` | `profile.routes.ts` | Профиль текущего юзера |
+| `GET /api/profile/check-username/:username` | `profile.routes.ts` | Проверка доступности username |
+| `GET /api/public/shelves/:username` | `public.routes.ts` | Шкаф автора (профиль + published книги) |
+| `GET /api/public/books/:bookId` | `public.routes.ts` | Детали публичной книги |
+| `GET /api/public/books/:bookId/chapters` | `public.routes.ts` | Главы публичной книги |
+| `GET /api/public/books/:bookId/chapters/:chapterId/content` | `public.routes.ts` | Контент главы |
+| `GET /api/public/discover` | `public.routes.ts` | Каталог новых публичных книг |
 
-  @@index([visibility, publishedAt])  // для каталога публичных книг
-}
-```
+**Сервисы:** `profile.service.ts`, `public.service.ts`
+**Маппер:** `toPublicAuthor()`, `toPublicBookCard()`, `toPublicBookDetail()` в `mappers.ts`
+**Rate limiting:** `publicRateLimiter` применён к `/api/public/*`
 
-### 1.3 Создать миграцию
-
-**Команда:** `cd server && npx prisma migrate dev --name add-username-visibility`
-
-### 1.4 Zod-схемы для новых полей
-
-**Файл:** `server/src/schemas.ts`
-
-Добавить:
-- `updateProfileSchema` — `{ username?, displayName?, bio?, avatarUrl? }` с валидацией username
-- `usernameParamSchema` — для парсинга `:username` из URL
-- Расширить `updateBookSchema` — добавить `visibility` и `description`
-- `publicBooksQuerySchema` — `{ limit?, offset?, sort? }`
-
-### 1.5 Новые API-эндпоинты
-
-**Новый файл:** `server/src/routes/profile.routes.ts`
-
-| Метод | Путь | Auth | Описание |
-|-------|------|------|----------|
-| `GET` | `/api/profile` | Да | Получить свой профиль (с username, bio) |
-| `PUT` | `/api/profile` | Да | Обновить профиль (username, displayName, bio, avatarUrl) |
-| `GET` | `/api/profile/check-username/:username` | Да | Проверить доступность username |
-
-**Новый файл:** `server/src/routes/public.routes.ts`
-
-| Метод | Путь | Auth | Описание |
-|-------|------|------|----------|
-| `GET` | `/api/public/shelves/:username` | Нет | Шкаф автора (профиль + published книги) |
-| `GET` | `/api/public/books/:bookId` | Нет | Детали публичной книги (published/unlisted) |
-| `GET` | `/api/public/books/:bookId/chapters` | Нет | Главы публичной книги |
-| `GET` | `/api/public/books/:bookId/chapters/:chapterId/content` | Нет | Контент главы |
-| `GET` | `/api/public/discover` | Нет | Каталог: новые публичные книги |
-
-**Новый файл:** `server/src/services/profile.service.ts`
-
-- `getProfile(userId)` — получить профиль
-- `updateProfile(userId, data)` — обновить (с проверкой уникальности username)
-- `isUsernameAvailable(username)` — проверка + резерв слов
-
-**Новый файл:** `server/src/services/public.service.ts`
-
-- `getShelf(username)` — профиль автора + его published книги
-- `getPublicBook(bookId)` — деталь книги (только published/unlisted)
-- `getPublicChapters(bookId)` — главы публичной книги
-- `getPublicChapterContent(bookId, chapterId)` — контент главы
-- `discoverBooks({ limit, offset, sort })` — каталог с пагинацией
-
-### 1.6 Расширить существующие эндпоинты
-
-**Файл:** `server/src/routes/books.routes.ts`
-
-- `PATCH /api/books/:bookId` — добавить обработку `visibility`, `description`
-- При установке `visibility: 'published'` — автоматически ставить `publishedAt = new Date()` (если ещё не установлено)
-- При установке `visibility: 'draft'` — НЕ сбрасывать `publishedAt` (дата первой публикации сохраняется)
-
-### 1.7 Rate limiting для публичных эндпоинтов
-
-**Файл:** `server/src/middleware/rateLimit.ts`
-
-- `createPublicRateLimiter()` уже существует (30 req/min) — использовать для `/api/public/*`
-
-### 1.8 Маппер для публичных данных
-
-**Файл:** `server/src/utils/mappers.ts`
-
-Добавить:
-- `toPublicAuthor(user)` — `{ username, displayName, avatarUrl, bio }` (без email!)
-- `toPublicBookCard(book)` — `{ id, title, author, description, visibility, publishedAt, chaptersCount, appearance.light.coverBg* }`
-- `toPublicBookDetail(book)` — полная деталь без приватных полей
+**Расширены существующие эндпоинты:**
+- `PATCH /api/books/:bookId` — обработка `visibility`, `description`
+- `publishedAt` ставится автоматически при первом `published`, не сбрасывается при `draft`
+- `POST /api/auth/register` — принимает `username` (обязательно)
 
 ---
 
-## Фаза 2: Фронтенд-роутер
+## Фаза 2: Фронтенд-роутер ✅
 
-### 2.1 Создать SPA-роутер
+> **Коммит:** `feat: add SPA router with history API, refactor entry point`
 
-**Новый файл:** `js/utils/Router.js`
+### Что сделано
 
-Лёгкий роутер на History API, без зависимостей:
+**SPA-роутер** (`js/utils/Router.js`):
+- History API, перехват `popstate` и кликов по `a[data-route]`
+- Компиляция path-шаблонов в RegExp (`:param` → capture groups)
+- `BASE_URL` поддержка (для GitHub Pages `/flipbook/`)
+- Методы: `start()`, `navigate()`, `getCurrentRoute()`, `destroy()`
+- Маршруты матчатся в порядке регистрации (первый match побеждает)
 
-```javascript
-class Router {
-  constructor(routes) { /* { pattern, handler } */ }
-  navigate(path, { replace } = {})
-  getCurrentRoute()
-  start()
-  destroy()
-}
-```
+**Рефакторинг entry point** (`js/index.js`):
+- Переход от `sessionStorage` + `location.reload()` к `router.navigate()`
+- Контейнеры экранов через `data-screen` + `hidden` атрибуты
+- View Transitions API для плавных переходов
+- Миграция старых `sessionStorage`-флагов при первом запуске
 
-Маршруты:
-- `/` → `LandingScreen` (гость) или редирект на `/:username` (авторизованный)
-- `/:username` → `BookshelfScreen` (публичный шкаф)
-- `/account` → `AccountScreen` (личный кабинет)
-- `/account/books` → `AccountScreen` (вкладка «Мои книги»)
-- `/book/:id` → Ридер
-- `/embed/:id` → Ридер в embed-режиме
-
-### 2.2 Рефакторинг точки входа
-
-**Файл:** `js/index.js`
-
-Сейчас: хардкожен флоу `bookshelf → reader` через `sessionStorage` + `location.reload()`.
-
-Переделать:
-1. Инициализация → проверка auth → запуск Router
-2. Router определяет текущий экран по URL
-3. Переходы через `router.navigate()` вместо `location.reload()`
-4. Убрать `sessionStorage` флаги (`flipbook-admin-mode`, `flipbook-admin-edit-book`)
-
-### 2.3 Контейнер экранов
-
-**Файл:** `index.html`
-
-Добавить секции-контейнеры для каждого экрана:
-
-```html
-<div id="screen-landing" class="screen" hidden></div>
-<div id="screen-bookshelf" class="screen" hidden></div>
-<div id="screen-account" class="screen" hidden></div>
-<div id="screen-reader" class="screen" hidden></div>
-```
-
-Роутер показывает/скрывает нужный контейнер. View Transitions API (уже используется в BookshelfScreen) — применить ко всем переходам.
-
-### 2.4 Объединить index.html и admin.html
-
-Сейчас — два отдельных HTML-файла с отдельными entry points. Нужно объединить в один SPA:
-
-- Контент из `admin.html` переносится в секцию `#screen-account` внутри `index.html`
-- `js/admin/index.js` становится модулем, подключаемым по требованию (dynamic import)
-- `admin.html` как отдельный файл — удалить (или оставить как редирект)
-- Vite entry point: остаётся один `index.html`
+**Решение:** `admin.html` остаётся как отдельный файл (не объединяем с `index.html`). Объединение перенесено в Phase 5, когда будет AccountScreen. Кнопка «Редактировать» в bookshelf навигирует в `admin.html` через `window.location.href` (а не SPA-роутинг).
 
 ---
 
-## Фаза 3: Лендинг
+## Фаза 3: Лендинг ✅
 
-### 3.1 Экран лендинга
+> **Коммит:** `feat: add landing page for guests, username field in registration`
 
-**Новый файл:** `js/core/LandingScreen.js`
+### Что сделано
 
-```javascript
-class LandingScreen {
-  constructor({ onAuth, apiClient })
-  show()    // Рендерит лендинг в #screen-landing
-  hide()
-  destroy()
-}
-```
+**LandingScreen** (`js/core/LandingScreen.js`):
+- Hero-секция: заголовок «Flipbook» + подзаголовок + CTA «Создать книгу»
+- Витрина: до 6 публичных книг из `GET /api/public/discover` (карточки с обложками)
+- «Как это работает»: 3 шага — загрузите / оформите / поделитесь (SVG-иконки)
+- Footer
+- Scroll-анимации через `IntersectionObserver`
 
-Содержание:
-- **Hero-секция:** заголовок + подзаголовок + CTA-кнопка «Создать книгу» → `AuthModal`
-- **Витрина:** 3-6 публичных книг из `GET /api/public/discover` (карточки с обложками)
-- **Как это работает:** 3 шага — загрузи / оформи / поделись (иконки + текст)
-- **Footer:** ссылки
+**Стили** (`css/landing.css`):
+- Тёмная тема (`#0f0f1a`), gradient hero, акцентный цвет `#5b6abf`
+- Mobile-first адаптивность
+- Импорт в `css/index.css` (секция 14)
 
-### 3.2 Стили лендинга
+**HTML** (`html/partials/reader/landing.html`):
+- Включён в `index.html` перед bookshelf
 
-**Новый файл:** `css/landing.css`
+**AuthModal** (`js/core/AuthModal.js`):
+- Добавлено поле `username` при регистрации (обязательное)
+- Клиентская валидация: `^[a-z0-9][a-z0-9-]{2,39}$`
+- Подсказка под полем
 
-- Импортировать в `css/index.css`
-- Адаптивность: mobile-first
-- Анимации при скролле — минимальные, через `IntersectionObserver`
+**ApiClient** (`js/utils/ApiClient.js`):
+- `register()` принимает 4-й параметр `username`
 
-### 3.3 Логика показа
+**Решение:** Отдельный шаг «Выберите username» после регистрации убран — username собирается сразу в форме регистрации (принято в Phase 1). Авторизованные на `/` видят текущую BookshelfScreen (redirect на `/:username` — Phase 4). Лендинг полный по плану (hero + витрина + шаги + footer).
 
-**Файл:** `js/index.js` (роутер)
-
-```
-GET / →
-  if (авторизован) → router.navigate('/' + user.username)
-  else → LandingScreen.show()
-```
-
-### 3.4 Интеграция AuthModal
-
-**Файл:** `js/core/AuthModal.js`
-
-Доработать:
-- После успешной регистрации → показать шаг «Выберите username» (inline в модалке)
-- Валидация username в реальном времени (`GET /api/profile/check-username/:username`)
-- После выбора username → `router.navigate('/' + username)`
+**Логика** (`js/index.js`):
+- `checkAuth()` — неблокирующая проверка (возвращает user или null, без модалки)
+- `handleHome()`: гости → лендинг, авторизованные → полка
+- `showLanding()`: CTA → AuthModal → после входа → redirect на полку
+- `onUnauthorized` → redirect на лендинг (сессия истекла)
+- Гость на `/book/:id` → redirect на `/` (публичное чтение — Phase 6)
 
 ---
 
-## Фаза 4: Публичный шкаф
+## Фаза 4: Публичный шкаф ✅
 
-### 4.1 Рефакторинг BookshelfScreen
+> **Коммит:** `feat: add public shelf (/:username) with owner/guest modes`
 
-**Файл:** `js/core/BookshelfScreen.js`
+### Что сделано
 
-Сейчас: показывает только свои книги, контекстное меню (read/edit/delete).
+**ProfileHeader** (`js/core/ProfileHeader.js`):
+- Аватар-инициалы (первая буква displayName/username, детерминированный hue из хэша)
+- Имя, @username, bio
+- Кнопка «Редактировать профиль» (только для хозяина)
 
-Переделать в два режима:
+**Решение:** Поля `avatar` нет в модели User — используем инициалы. Настоящий аватар (загрузка файла) будет в Phase 5 при редактировании профиля.
 
-**Режим «гость»** (`:username` ≠ текущий юзер):
-- Шапка: аватар, displayName, bio автора
-- Полки с published-книгами автора (данные из `GET /api/public/shelves/:username`)
-- Клик на книгу → `router.navigate('/book/' + bookId)`
-- Нет контекстного меню, нет кнопки «Добавить книгу»
+**BookshelfScreen** (`js/core/BookshelfScreen.js`) — рефакторинг в два режима:
 
-**Режим «хозяин»** (`:username` === текущий юзер):
-- Та же шапка (свой профиль), но с кнопкой «Редактировать профиль» → `/account`
-- Полки со ВСЕМИ своими книгами (данные из `GET /api/books`)
-- Визуальные метки на книгах: `draft` (серая), `unlisted` (полупрозрачная), `published` (нормальная)
+**Owner mode** (`mode: 'owner'`):
+- Все книги пользователя + визуальные метки видимости
 - Контекстное меню: Читать / Редактировать / Видимость / Удалить
-- Кнопка «Добавить книгу» → `/account/books` с открытым mode selector
-- Быстрое переключение видимости из контекстного меню
+- Переключение видимости: draft → published → unlisted → draft (циклическое)
+- Кнопка «Добавить книгу» → inline mode selector (как раньше)
+- Профильная шапка (ProfileHeader, isOwner=true)
 
-### 4.2 Компонент шапки профиля
+**Решение:** Кнопка «Добавить книгу» оставлена inline (mode selector в bookshelf). Redirect на `/account/books` будет в Phase 5 когда AccountScreen готов.
 
-**Новый файл:** `js/core/ProfileHeader.js`
+**Guest mode** (`mode: 'guest'`):
+- Только published-книги автора
+- Клик = сразу переход к чтению (без контекстного меню)
+- Нет кнопок управления, нет add/edit/delete
+- Профильная шапка (ProfileHeader, isOwner=false)
 
-```javascript
-class ProfileHeader {
-  constructor({ user, isOwner })
-  render(container)
-  destroy()
-}
-```
+**Решение:** `/:username` доступен всем, включая неавторизованных гостей. Это и есть смысл «опубликованных» книг.
 
-Рендерит: аватар, имя, bio. У хозяина — кнопка «Редактировать профиль».
-Переиспользуется и на шкафу, и в кабинете.
+**Шаблон** (`html/partials/reader/templates.html`):
+- Добавлен `.bookshelf-book-badge` (бейдж видимости)
+- Добавлен пункт «Видимость» (`data-book-action="visibility"`) с динамическим label
 
-### 4.3 Стили для меток видимости
+**CSS** (`css/bookshelf.css`):
+- `.bookshelf-book--draft` (opacity 0.55, бейдж «Черновик»)
+- `.bookshelf-book--unlisted` (opacity 0.75, бейдж «По ссылке»)
+- `.bookshelf-book-badge` (absolute, backdrop-filter)
+- `.profile-header` (аватар, info, кнопка редактирования)
 
-**Файл:** `css/bookshelf.css`
+**Роутинг** (`js/index.js`):
+- `/:username` — catch-all route (последний в списке маршрутов Router)
+- `handlePublicShelf({ username })`:
+  - Хозяин → `GET /api/books` (все свои)
+  - Гость → `GET /api/public/shelves/:username` (только published)
+  - 404 → redirect на `/`
+- `handleHome`: авторизованные → redirect на `/:username`, гости → лендинг
+- После аутентификации через CTA → redirect на `/:username`
 
-Добавить:
-- `.book-card--draft` — приглушённые цвета, бейдж «Черновик»
-- `.book-card--unlisted` — слегка прозрачная, бейдж «По ссылке»
-- `.book-card--published` — без изменений (по умолчанию)
+**ApiClient** (`js/utils/ApiClient.js`):
+- `getPublicShelf(username)`
+- `getPublicDiscover(limit)`
+- `updateProfile(data)`
 
 ---
 
@@ -313,12 +207,14 @@ class AccountScreen {
 - `AdminApp` (из `js/admin/index.js`) рефакторится → `AccountScreen` принимает DOM-контейнер вместо `document.body`
 - Навигация внутри кабинета — через методы `AccountScreen`, не через отдельные URL
 - Dynamic import: `const { AccountScreen } = await import('./core/AccountScreen.js')` — грузится только когда нужен
+- При успехе → `admin.html` удаляется (или оставляется как redirect на `/account`)
+- Вкладки в кабинете + контент из admin HTML-partial'ов переносятся в `html/partials/reader/account.html`
 
 ### 5.3 Вкладка «Профиль»
 
 **Новый файл:** `js/admin/modules/ProfileModule.js`
 
-- Форма: username (с live-валидацией), displayName, bio (textarea), аватар (загрузка)
+- Форма: username (с live-валидацией через `GET /api/profile/check-username/:username`), displayName, bio (textarea), аватар (загрузка)
 - Сохранение: `PUT /api/profile`
 - Превью: показывает как будет выглядеть шапка на шкафу
 
@@ -338,6 +234,25 @@ class AccountScreen {
 В основном переиспользуются as-is. Добавить:
 - Стили для вкладки «Профиль» — `css/admin/profile.css`
 - Импортировать в `css/admin/index.css`
+
+### 5.6 Обновить BookshelfScreen
+
+- Кнопка «Добавить книгу» → `router.navigate('/account')` вместо inline mode selector
+- Кнопка «Редактировать профиль» → `router.navigate('/account?tab=profile')`
+- Кнопка «Редактировать» в контекстном меню → `router.navigate('/account?edit=' + bookId)`
+
+### 5.7 Маршрут /account
+
+- Добавить `{ name: 'account', path: '/account', handler: handleAccount }` в Router (перед `/:username`)
+- `handleAccount`: динамический import `AccountScreen`, показ нужной вкладки
+
+### 5.8 Обновить Vite-конфиг
+
+**Файл:** `vite.config.js`
+
+- Убрать `admin.html` из entry points (теперь один SPA)
+- Добавить chunk `account.js` для динамического импорта кабинета
+- Обновить PWA: precache новых маршрутов, навигационный fallback
 
 ---
 
@@ -364,7 +279,7 @@ const isEmbed = router.getCurrentRoute().name === 'embed';
 ### 6.2 Режим владельца
 
 Без изменений (текущее поведение). Добавить:
-- Кнопка «Редактировать» → `router.navigate('/account/books?edit=' + bookId)`
+- Кнопка «Редактировать» → `router.navigate('/account?edit=' + bookId)`
 
 ### 6.3 Embed-режим
 
@@ -385,6 +300,11 @@ const isEmbed = router.getCurrentRoute().name === 'embed';
 - `body.embed-mode` — убирает всё лишнее
 - Минимальный padding, максимальная область книги
 
+### 6.5 Обновить index.js
+
+- Убрать redirect гостей с `/book/:id` на `/` (теперь гости могут читать published/unlisted книги)
+- Добавить маршрут `{ name: 'embed', path: '/embed/:bookId', handler: handleEmbed }` (перед `/:username`)
+
 ---
 
 ## Фаза 7: OG-метатеги
@@ -398,8 +318,7 @@ const isEmbed = router.getCurrentRoute().name === 'embed';
 ```typescript
 // Публичные маршруты с OG-тегами
 app.get('/book/:bookId', asyncHandler(async (req, res, next) => {
-  // Только для краулеров или если принудительно
-  if (!isBot(req)) return next(); // Для обычных юзеров — SPA fallback
+  if (!isBot(req)) return next();
 
   const book = await publicService.getPublicBook(req.params.bookId);
   if (!book) return next();
@@ -456,34 +375,7 @@ app.get('/:username', asyncHandler(async (req, res, next) => {
 
 ## Фаза 8: Финальная интеграция
 
-### 8.1 Обновить ApiClient
-
-**Файл:** `js/utils/ApiClient.js`
-
-Добавить методы:
-```javascript
-// Профиль
-getProfile()
-updateProfile(data)
-checkUsername(username)
-
-// Публичные
-getPublicShelf(username)
-getPublicBook(bookId)
-getPublicChapters(bookId)
-getPublicChapterContent(bookId, chapterId)
-discoverBooks({ limit, offset })
-```
-
-### 8.2 Обновить Vite-конфиг
-
-**Файл:** `vite.config.js`
-
-- Убрать `admin.html` из entry points (теперь один SPA)
-- Добавить chunk `account.js` для динамического импорта кабинета
-- Обновить PWA: precache новых маршрутов, навигационный fallback
-
-### 8.3 Обновить серверный SPA fallback
+### 8.1 Обновить серверный SPA fallback
 
 **Файл:** `server/src/app.ts`
 
@@ -493,29 +385,53 @@ discoverBooks({ limit, offset })
 - `/api/*` → API (уже работает)
 - Статика (`/assets/*`, `/images/*`, etc.) → `express.static` (уже работает)
 
-### 8.4 Обновить PWA Service Worker
+### 8.2 Обновить PWA Service Worker
 
 **Файл:** `vite.config.js` (секция VitePWA)
 
 - `navigateFallback: '/index.html'` — все маршруты → SPA
 - `navigateFallbackAllowlist: [/^(?!\/api\/).*/]` — кроме API
 
+### 8.3 Финальная проверка
+
+- Полный прогон тестов (unit + integration + e2e)
+- Проверка всех маршрутов: `/`, `/:username`, `/account`, `/book/:id`, `/embed/:id`
+- Проверка guest/owner/embed режимов ридера
+- Проверка OG-тегов с помощью Facebook Debugger / Twitter Card Validator
+- Проверка PWA: offline-доступ, навигация по маршрутам
+- Mobile responsive check
+
 ---
 
 ## Порядок реализации
 
-| Этап | Фазы | Что получаем |
-|------|-------|-------------|
-| **1** | 1.1–1.3 | DB: username, visibility, description — миграция |
-| **2** | 1.4–1.8 | API: профиль + публичные эндпоинты |
-| **3** | 2.1–2.2 | Фронтенд: SPA-роутер, рефакторинг entry point |
-| **4** | 2.3–2.4 | Объединение index.html + admin.html в один SPA |
-| **5** | 3.1–3.4 | Лендинг + онбординг username |
-| **6** | 4.1–4.3 | Публичный шкаф (два режима) |
-| **7** | 5.1–5.5 | Личный кабинет |
-| **8** | 6.1–6.4 | Ридер: guest / owner / embed |
-| **9** | 7.1–7.3 | OG-метатеги |
-| **10** | 8.1–8.4 | Интеграция, PWA, финализация |
+| Этап | Фаза | Статус | Что получили |
+|------|-------|--------|-------------|
+| **1** | 1 | ✅ | DB: username, visibility, description + API: профиль + публичные эндпоинты |
+| **2** | 2 | ✅ | SPA-роутер на History API, рефакторинг entry point |
+| **3** | 3 | ✅ | Лендинг для гостей, username в форме регистрации |
+| **4** | 4 | ✅ | Публичный шкаф `/:username` (owner/guest), ProfileHeader, метки видимости |
+| **5** | 5 | ⬜ | Личный кабинет `/account`, миграция admin.html, профиль, аватар |
+| **6** | 6 | ⬜ | Ридер: guest / owner / embed режимы |
+| **7** | 7 | ⬜ | OG-метатеги для шаринга |
+| **8** | 8 | ⬜ | Интеграция, PWA, финализация |
+
+---
+
+## Принятые решения (лог)
+
+| Фаза | Вопрос | Решение |
+|------|--------|---------|
+| 1 | Username nullable или required? | **Required** при регистрации. Существующие юзеры — nullable, получат username через профиль (Phase 5) |
+| 1 | Формат username | `^[a-z0-9][a-z0-9-]{2,39}$` — латиница, цифры, дефис, 3-40 символов |
+| 1 | Поведение publishedAt при смене visibility | Ставится при первом `published`, НЕ сбрасывается при возврате в `draft` |
+| 2 | Объединять admin.html с index.html? | **Нет**, отложено до Phase 5 (AccountScreen) |
+| 3 | Отдельный шаг «Выберите username» после регистрации? | **Убран** — username собирается в форме регистрации |
+| 3 | Redirect авторизованных на / | **На текущую полку** (BookshelfScreen), redirect на `/:username` — Phase 4 |
+| 3 | Насколько детальный лендинг? | **Полный** — hero + витрина + 3 шага + footer |
+| 4 | Кнопка «Добавить книгу» → куда? | **Inline mode selector** (как было). Redirect на `/account` — Phase 5 |
+| 4 | Аватар в ProfileHeader | **Инициалы** (цветной круг, hue из хэша). Настоящий аватар — Phase 5 |
+| 4 | `/:username` доступен гостям? | **Да**, публичные полки видны всем без авторизации |
 
 ---
 
