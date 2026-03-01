@@ -151,7 +151,7 @@ export function configurePassport(): void {
                   { userId: user.id, email: email.toLowerCase(), googleId: profile.id },
                   'Google OAuth login rejected: email already registered with password',
                 );
-                done(null, false, { message: 'An account with this email already exists. Please log in with your password.' } as any);
+                done(null, false, { message: 'Unable to sign in with Google for this account.' } as any);
                 return;
               }
               user = await prisma.user.update({

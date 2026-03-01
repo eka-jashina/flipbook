@@ -1,9 +1,18 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { getPrisma } from '../utils/prisma.js';
 import { hashPassword } from '../utils/password.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 import type { UserResponse } from '../types/api.js';
+
+/**
+ * Hash a reset token with SHA-256 for storage.
+ * Using SHA-256 (not bcrypt) because the token is already a 256-bit
+ * cryptographically random value — no need for slow hashing.
+ */
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 /** Password reset token validity period (1 hour) */
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000;
@@ -108,32 +117,37 @@ export async function createPasswordResetToken(
   if (!user.passwordHash) return null;
 
   const token = randomBytes(32).toString('hex');
+  const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + RESET_TOKEN_EXPIRY_MS);
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      resetToken: token,
+      resetToken: tokenHash,
       resetTokenExpiresAt: expiresAt,
     },
   });
 
   logger.info({ userId: user.id }, 'Password reset token created');
-  return token;
+  return token; // Return unhashed token — caller delivers it to the user
 }
 
 /**
  * Reset a user's password using a valid reset token.
  * Clears the token after successful reset and destroys all sessions.
+ *
+ * Uses a transaction with optimistic locking: the UPDATE ... WHERE includes
+ * the token hash so concurrent requests with the same token can't both succeed.
  */
 export async function resetPasswordWithToken(
   token: string,
   newPassword: string,
 ): Promise<void> {
   const prisma = getPrisma();
+  const tokenHash = hashToken(token);
 
   const user = await prisma.user.findUnique({
-    where: { resetToken: token },
+    where: { resetToken: tokenHash },
     select: { id: true, resetTokenExpiresAt: true },
   });
 
@@ -150,22 +164,29 @@ export async function resetPasswordWithToken(
     throw new AppError(400, 'Invalid or expired reset token');
   }
 
-  const passwordHash = await hashPassword(newPassword);
+  const newPasswordHash = await hashPassword(newPassword);
 
-  await prisma.user.update({
-    where: { id: user.id },
+  // Atomic update: only succeeds if the token hasn't been consumed yet
+  const result = await prisma.user.updateMany({
+    where: { id: user.id, resetToken: tokenHash },
     data: {
-      passwordHash,
+      passwordHash: newPasswordHash,
       resetToken: null,
       resetTokenExpiresAt: null,
     },
   });
 
+  if (result.count === 0) {
+    // Another concurrent request consumed the token first
+    throw new AppError(400, 'Invalid or expired reset token');
+  }
+
   // Invalidate all existing sessions for this user.
-  // The session table uses "sess" JSONB column with passport.user = user.id
+  // Use PostgreSQL JSON operator to match passport.user field reliably.
   try {
     await prisma.$executeRaw`
-      DELETE FROM "session" WHERE sess::text LIKE ${'%"' + user.id + '"%'}
+      DELETE FROM "session"
+      WHERE sess -> 'passport' ->> 'user' = ${user.id}
     `;
   } catch {
     // Non-critical: session cleanup failure is logged but doesn't block reset
