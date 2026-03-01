@@ -13,11 +13,6 @@ import {
   loadBooksFromAPI,
 } from '../../../js/core/BookshelfScreen.js';
 
-// Mock admin mode cards data
-vi.mock('../../../js/admin/modeCardsData.js', () => ({
-  renderModeCards: vi.fn(),
-}));
-
 describe('Bookshelf Screen Integration', () => {
   let container;
   let onBookSelect;
@@ -52,18 +47,6 @@ describe('Bookshelf Screen Integration', () => {
     empty.hidden = true;
     container.appendChild(empty);
 
-    const modeSelector = document.createElement('div');
-    modeSelector.id = 'bookshelf-mode-selector';
-    modeSelector.hidden = true;
-
-    const backBtn = document.createElement('button');
-    backBtn.dataset.action = 'back-to-shelf';
-    modeSelector.appendChild(backBtn);
-    container.appendChild(modeSelector);
-
-    const modeCards = document.createElement('div');
-    modeCards.id = 'bookshelf-mode-cards';
-    container.appendChild(modeCards);
 
     // Templates
     const shelfTemplate = document.createElement('template');
@@ -363,42 +346,28 @@ describe('Bookshelf Screen Integration', () => {
     });
   });
 
-  describe('Mode selector toggle', () => {
-    it('should show mode selector when add-book clicked', () => {
+  describe('Add book navigation', () => {
+    it('should navigate to /account when add-book clicked with router', () => {
+      const mockRouter = { navigate: vi.fn() };
       const books = createTestBooks(1);
-      const screen = new BookshelfScreen({ container, books, onBookSelect });
+      const screen = new BookshelfScreen({ container, books, onBookSelect, router: mockRouter });
       screen.render();
 
       const addBtn = container.querySelector('[data-action="add-book"]');
       addBtn.click();
 
-      const modeSelector = container.querySelector('#bookshelf-mode-selector');
-      expect(modeSelector.hidden).toBe(false);
-
-      const shelves = container.querySelector('#bookshelf-shelves');
-      expect(shelves.hidden).toBe(true);
+      expect(mockRouter.navigate).toHaveBeenCalledWith('/account');
 
       screen.destroy();
     });
 
-    it('should return to shelf view on back button', () => {
+    it('should not throw when add-book clicked without router', () => {
       const books = createTestBooks(1);
       const screen = new BookshelfScreen({ container, books, onBookSelect });
       screen.render();
 
-      // Show mode selector
       const addBtn = container.querySelector('[data-action="add-book"]');
-      addBtn.click();
-
-      // Click back
-      const backBtn = container.querySelector('[data-action="back-to-shelf"]');
-      backBtn.click();
-
-      const modeSelector = container.querySelector('#bookshelf-mode-selector');
-      expect(modeSelector.hidden).toBe(true);
-
-      const shelves = container.querySelector('#bookshelf-shelves');
-      expect(shelves.hidden).toBe(false);
+      expect(() => addBtn.click()).not.toThrow();
 
       screen.destroy();
     });

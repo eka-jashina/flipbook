@@ -7,6 +7,7 @@
  *   /              → лендинг (гости) | redirect на /:username (авторизованные) | fallback (localStorage)
  *   /:username     → публичная полка автора (гость = витрина, хозяин = управление)
  *   /book/:bookId  → ридер
+ *   /account       → личный кабинет (книги, профиль, настройки, экспорт)
  *
  * Поток:
  * 1. GET /api/health → проверка доступности сервера
@@ -43,6 +44,7 @@ window.addEventListener('unhandledrejection', (event) => {
 let app = null;
 let bookshelf = null;
 let landing = null;
+let accountScreen = null;
 let authModal = null;
 let apiClient = null;
 let router = null;
@@ -148,6 +150,16 @@ function cleanupLanding() {
   }
 }
 
+/**
+ * Скрыть экран кабинета перед показом другого экрана.
+ * Не уничтожаем — AccountScreen переиспользуется при повторных визитах.
+ */
+function hideAccount() {
+  if (accountScreen) {
+    accountScreen.hide();
+  }
+}
+
 // ═══════════════════════════════════════════════════
 // Обработчики маршрутов
 // ═══════════════════════════════════════════════════
@@ -159,6 +171,7 @@ async function handleHome() {
   cleanupReader();
   cleanupLanding();
   cleanupBookshelf();
+  hideAccount();
 
   if (useAPI && currentUser?.username) {
     // Авторизован → redirect на свою полку
@@ -181,6 +194,7 @@ async function handlePublicShelf({ username }) {
   cleanupReader();
   cleanupLanding();
   cleanupBookshelf();
+  hideAccount();
 
   const isOwner = currentUser?.username === username;
 
@@ -224,6 +238,7 @@ async function handleReader({ bookId }) {
   cleanupLanding();
   cleanupBookshelf();
   cleanupReader();
+  hideAccount();
 
   document.body.dataset.screen = 'reader';
   document.body.dataset.hasBookshelf = 'true';
@@ -242,6 +257,36 @@ async function handleReader({ bookId }) {
 
     await initReaderFallback();
   }
+}
+
+/**
+ * Маршрут: /account → Личный кабинет
+ */
+async function handleAccount() {
+  // Только для авторизованных
+  if (!currentUser) {
+    router.navigate('/', { replace: true });
+    return;
+  }
+
+  cleanupReader();
+  cleanupLanding();
+  cleanupBookshelf();
+
+  // Парсим query-параметры: ?tab=profile, ?edit=bookId
+  const params = new URLSearchParams(location.search);
+  const tab = params.get('tab') || 'books';
+  const editBookId = params.get('edit');
+  const mode = params.get('mode');
+
+  // Динамический импорт AccountScreen (грузится один раз)
+  if (!accountScreen) {
+    const { AccountScreen } = await import('./core/AccountScreen.js');
+    accountScreen = new AccountScreen({ apiClient, router, currentUser });
+    await accountScreen.init();
+  }
+
+  accountScreen.show(tab, { editBookId, mode });
 }
 
 /**
@@ -294,6 +339,7 @@ function showBookshelf(books, { mode = 'owner', profileUser } = {}) {
     apiClient,
     mode,
     profileUser,
+    router,
     onBookSelect: (bookId) => {
       if (router) {
         router.navigate(`/book/${bookId}`);
@@ -425,8 +471,8 @@ async function init() {
     router = new Router([
       { name: 'home', path: '/', handler: handleHome },
       { name: 'reader', path: '/book/:bookId', handler: handleReader },
+      { name: 'account', path: '/account', handler: handleAccount },
       // Будущие маршруты:
-      // { name: 'account', path: '/account', handler: handleAccount },
       // { name: 'embed', path: '/embed/:bookId', handler: handleEmbed },
       { name: 'shelf', path: '/:username', handler: handlePublicShelf },
     ]);
@@ -462,6 +508,10 @@ function cleanup() {
   cleanupLanding();
   cleanupBookshelf();
   cleanupReader();
+  if (accountScreen) {
+    accountScreen.destroy();
+    accountScreen = null;
+  }
   offlineIndicator.destroy();
   installPrompt.destroy();
 }

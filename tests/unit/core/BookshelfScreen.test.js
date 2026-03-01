@@ -57,7 +57,6 @@ function createContainer() {
     <div id="bookshelf-actions"></div>
     <div id="bookshelf-empty" hidden></div>
     <span id="bookshelf-subtitle"></span>
-    <div id="bookshelf-mode-selector" hidden></div>
   `;
   document.body.appendChild(container);
   return container;
@@ -133,12 +132,6 @@ describe('BookshelfScreen', () => {
       expect(screen._els.empty).not.toBeNull();
       expect(screen._els.subtitle).not.toBeNull();
       expect(screen._els.header).not.toBeNull();
-      expect(screen._els.modeSelector).not.toBeNull();
-    });
-
-    it('should initialize _currentView to "shelf"', () => {
-      screen = new BookshelfScreen({ container, books: [], onBookSelect });
-      expect(screen._currentView).toBe('shelf');
     });
 
     it('should initialize _openMenuBookId to null', () => {
@@ -413,13 +406,15 @@ describe('BookshelfScreen', () => {
       screen.render();
     });
 
-    it('should call _toggleModeSelector(true) when add-book button is clicked', () => {
+    it('should navigate to /account when add-book button is clicked with router', () => {
+      const mockRouter = { navigate: vi.fn() };
+      screen = new BookshelfScreen({ container, books: [makeBook('b1')], onBookSelect, router: mockRouter });
+      screen.render();
       const btn = document.createElement('button');
       btn.dataset.action = 'add-book';
       container.appendChild(btn);
-      const spy = vi.spyOn(screen, '_toggleModeSelector');
       click(btn);
-      expect(spy).toHaveBeenCalledWith(true);
+      expect(mockRouter.navigate).toHaveBeenCalledWith('/account');
     });
 
     it('should prevent default on add-book click', () => {
@@ -430,35 +425,6 @@ describe('BookshelfScreen', () => {
       const preventSpy = vi.spyOn(event, 'preventDefault');
       btn.dispatchEvent(event);
       expect(preventSpy).toHaveBeenCalled();
-    });
-
-    it('should call _toggleModeSelector(false) when back-to-shelf button is clicked', () => {
-      const btn = document.createElement('button');
-      btn.dataset.action = 'back-to-shelf';
-      container.appendChild(btn);
-      const spy = vi.spyOn(screen, '_toggleModeSelector');
-      click(btn);
-      expect(spy).toHaveBeenCalledWith(false);
-    });
-
-    it('should save mode to sessionStorage on mode card click', () => {
-      vi.stubGlobal('location', { href: '' });
-      const card = document.createElement('div');
-      card.dataset.mode = 'upload';
-      container.appendChild(card);
-      click(card);
-      expect(sessionStorage.getItem('flipbook-admin-mode')).toBe('upload');
-      vi.unstubAllGlobals();
-    });
-
-    it('should navigate to admin.html on mode card click', () => {
-      vi.stubGlobal('location', { href: '' });
-      const card = document.createElement('div');
-      card.dataset.mode = 'scratch';
-      container.appendChild(card);
-      click(card);
-      expect(window.location.href).toContain('admin.html');
-      vi.unstubAllGlobals();
     });
 
     it('should call _openBookMenu when a book button is clicked', () => {
@@ -600,61 +566,6 @@ describe('BookshelfScreen', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // _toggleModeSelector()
-  // ─────────────────────────────────────────────────────────────────────────
-
-  describe('_toggleModeSelector()', () => {
-    beforeEach(() => {
-      screen = new BookshelfScreen({ container, books: [makeBook()], onBookSelect });
-      screen.render();
-    });
-
-    it('should set _currentView to "mode-selector" when show=true', () => {
-      screen._toggleModeSelector(true);
-      expect(screen._currentView).toBe('mode-selector');
-    });
-
-    it('should set _currentView to "shelf" when show=false', () => {
-      screen._toggleModeSelector(true);
-      screen._toggleModeSelector(false);
-      expect(screen._currentView).toBe('shelf');
-    });
-
-    it('should show modeSelector when show=true', () => {
-      screen._toggleModeSelector(true);
-      expect(screen._els.modeSelector.hidden).toBe(false);
-    });
-
-    it('should hide modeSelector when show=false', () => {
-      screen._toggleModeSelector(true);
-      screen._toggleModeSelector(false);
-      expect(screen._els.modeSelector.hidden).toBe(true);
-    });
-
-    it('should hide header, shelves and actions when show=true', () => {
-      screen._toggleModeSelector(true);
-      expect(screen._els.header.hidden).toBe(true);
-      expect(screen._els.shelves.hidden).toBe(true);
-      expect(screen._els.actions.hidden).toBe(true);
-    });
-
-    it('should restore header, shelves and actions when show=false', () => {
-      screen._toggleModeSelector(true);
-      screen._toggleModeSelector(false);
-      expect(screen._els.header.hidden).toBe(false);
-      expect(screen._els.shelves.hidden).toBe(false);
-      expect(screen._els.actions.hidden).toBe(false);
-    });
-
-    it('should keep empty hidden when books exist and show=false', () => {
-      screen._toggleModeSelector(true);
-      screen._toggleModeSelector(false);
-      // books.length > 0 → empty должен быть скрыт
-      expect(screen._els.empty.hidden).toBe(true);
-    });
-  });
-
-  // ─────────────────────────────────────────────────────────────────────────
   // _handleBookAction()
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -662,11 +573,6 @@ describe('BookshelfScreen', () => {
     beforeEach(() => {
       screen = new BookshelfScreen({ container, books: [makeBook('b1')], onBookSelect });
       screen.render();
-      vi.stubGlobal('location', { href: '' });
-    });
-
-    afterEach(() => {
-      vi.unstubAllGlobals();
     });
 
     describe('action: read', () => {
@@ -682,19 +588,16 @@ describe('BookshelfScreen', () => {
     });
 
     describe('action: edit', () => {
-      it('should save "edit" mode to sessionStorage', () => {
+      it('should navigate to /account?edit=bookId via router', () => {
+        const mockRouter = { navigate: vi.fn() };
+        screen = new BookshelfScreen({ container, books: [makeBook('b1')], onBookSelect, router: mockRouter });
+        screen.render();
         screen._handleBookAction('edit', 'b1');
-        expect(sessionStorage.getItem('flipbook-admin-mode')).toBe('edit');
+        expect(mockRouter.navigate).toHaveBeenCalledWith('/account?edit=b1');
       });
 
-      it('should save bookId to sessionStorage for edit', () => {
-        screen._handleBookAction('edit', 'b1');
-        expect(sessionStorage.getItem('flipbook-admin-edit-book')).toBe('b1');
-      });
-
-      it('should navigate to admin.html', () => {
-        screen._handleBookAction('edit', 'b1');
-        expect(window.location.href).toContain('admin.html');
+      it('should not throw when router is not provided', () => {
+        expect(() => screen._handleBookAction('edit', 'b1')).not.toThrow();
       });
     });
 

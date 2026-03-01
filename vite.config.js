@@ -73,7 +73,6 @@ export default defineConfig(({ command, mode }) => {
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
-          admin: resolve(__dirname, 'admin.html'),
         },
         output: {
           manualChunks: {
@@ -157,6 +156,9 @@ export default defineConfig(({ command, mode }) => {
           'sounds/**/*.mp3',
         ],
         workbox: {
+          // SPA: все навигационные запросы → index.html (кроме /api/*)
+          navigateFallback: 'index.html',
+          navigateFallbackAllowlist: [/^(?!\/api\/).*/],
           // Предварительное кэширование статики
           globPatterns: [
             '**/*.{js,css,html,woff2}',

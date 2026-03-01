@@ -1,0 +1,203 @@
+/* ═══════════════════════════════════════════
+   ПРОФИЛЬ — Вкладка редактирования профиля
+   ═══════════════════════════════════════════ */
+
+/* Контейнер формы */
+.profile-edit-form {
+  max-width: 640px;
+}
+
+/* Превью профиля */
+.profile-edit-preview {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--admin-color-bg-card, #fff);
+  border: 1px solid var(--admin-color-border, #e0e0e0);
+  border-radius: var(--admin-radius, 8px);
+}
+
+.profile-header--preview {
+  pointer-events: none;
+}
+
+/* Username input с @-префиксом */
+.profile-username-input {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.profile-username-prefix {
+  padding: 8px 0 8px 12px;
+  font-size: 15px;
+  color: var(--admin-color-text-secondary, #666);
+  background: var(--admin-color-bg-input, #fff);
+  border: 1px solid var(--admin-color-border, #d0d0d0);
+  border-right: none;
+  border-radius: var(--admin-radius, 4px) 0 0 var(--admin-radius, 4px);
+  line-height: 1.4;
+}
+
+.profile-username-input .form-input {
+  border-radius: 0 var(--admin-radius, 4px) var(--admin-radius, 4px) 0;
+}
+
+/* Валидация username */
+.form-validation {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.form-validation--success {
+  color: var(--admin-color-success, #16a34a);
+}
+
+.form-validation--error {
+  color: var(--admin-color-danger, #dc2626);
+}
+
+.form-validation--neutral {
+  color: var(--admin-color-text-secondary, #666);
+}
+
+/* Счётчик символов */
+.char-counter {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--admin-color-text-secondary, #999);
+  text-align: right;
+}
+
+/* Textarea */
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+/* Аватар */
+.profile-avatar-upload {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.profile-avatar-current {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.profile-avatar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-avatar-actions .form-hint {
+  margin-top: 4px;
+}
+
+/* Публикация — видимость книги */
+.publish-visibility-selector {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.publish-visibility-option {
+  flex: 1;
+  min-width: 160px;
+  cursor: pointer;
+}
+
+.publish-visibility-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.publish-visibility-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border: 2px solid var(--admin-color-border, #e0e0e0);
+  border-radius: var(--admin-radius, 8px);
+  text-align: center;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.publish-visibility-card strong {
+  font-size: 14px;
+}
+
+.publish-visibility-card span {
+  font-size: 12px;
+  color: var(--admin-color-text-secondary, #666);
+}
+
+.publish-visibility-option input[type="radio"]:checked + .publish-visibility-card {
+  border-color: var(--admin-color-primary, #06c);
+  background: rgb(0, 102, 204, 0.05);
+}
+
+.publish-visibility-option input[type="radio"]:focus-visible + .publish-visibility-card {
+  outline: 2px solid var(--admin-color-primary, #06c);
+  outline-offset: 2px;
+}
+
+/* Ссылка для шаринга */
+.share-link-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.share-link-row .form-input {
+  flex: 1;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .publish-visibility-selector {
+    flex-direction: column;
+  }
+
+  .profile-avatar-upload {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .share-link-row {
+    flex-direction: column;
+  }
+
+  .share-link-row .form-input {
+    width: 100%;
+  }
+}
