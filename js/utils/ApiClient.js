@@ -165,10 +165,10 @@ export class ApiClient {
   }
 
   /** Регистрация + автоматический вход */
-  async register(email, password, displayName) {
+  async register(email, password, displayName, username) {
     const data = await this._fetch('/api/auth/register', {
       method: 'POST',
-      body: { email, password, displayName },
+      body: { email, password, displayName, username },
     });
     return data.user;
   }

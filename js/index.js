@@ -4,20 +4,23 @@
  * Инициализация приложения после загрузки DOM.
  *
  * Роутинг (SPA, History API):
- *   /              → книжная полка (авторизованные) или fallback (localStorage)
+ *   /              → лендинг (гости) | книжная полка (авторизованные) | fallback (localStorage)
  *   /book/:bookId  → ридер
  *
- * Поток аутентификации:
+ * Поток:
  * 1. GET /api/health → проверка доступности сервера
- * 2. GET /api/auth/me → если 401 → модалка логина/регистрации
- * 3. После авторизации → проверка миграции localStorage
- * 4. Роутер резолвит текущий URL → полка или ридер
+ * 2. GET /api/auth/me → определяем, гость или авторизован
+ * 3. Роутер резолвит URL:
+ *    - гость на / → LandingScreen (CTA → AuthModal)
+ *    - авторизованный на / → BookshelfScreen
+ *    - /book/:id → ридер (авторизованный) или redirect на / (гость)
  *
  * Fallback: если сервер недоступен — работа через localStorage.
  */
 
 import { BookController } from './core/BookController.js';
 import { BookshelfScreen, loadBooksFromAPI, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
+import { LandingScreen } from './core/LandingScreen.js';
 import { CONFIG, enrichConfigFromIDB, loadConfigFromAPI, setConfig } from './config.js';
 import { ApiClient } from './utils/ApiClient.js';
 import { ErrorHandler } from './utils/ErrorHandler.js';
@@ -37,9 +40,11 @@ window.addEventListener('unhandledrejection', (event) => {
 // Глобальное состояние
 let app = null;
 let bookshelf = null;
+let landing = null;
 let authModal = null;
 let apiClient = null;
 let router = null;
+let currentUser = null;
 let useAPI = false;
 
 // Регистрация Service Worker для PWA
@@ -131,18 +136,33 @@ function cleanupBookshelf() {
   }
 }
 
+/**
+ * Очистить лендинг перед показом другого экрана.
+ */
+function cleanupLanding() {
+  if (landing) {
+    landing.destroy();
+    landing = null;
+  }
+}
+
 // ═══════════════════════════════════════════════════
 // Обработчики маршрутов
 // ═══════════════════════════════════════════════════
 
 /**
- * Маршрут: / → Показать книжную полку
+ * Маршрут: / → Лендинг (гости) или Книжная полка (авторизованные)
  */
-async function handleBookshelf() {
-  // Очищаем ридер если был открыт
+async function handleHome() {
   cleanupReader();
+  cleanupLanding();
+  cleanupBookshelf();
 
-  if (useAPI) {
+  if (useAPI && !currentUser) {
+    // Гость → лендинг
+    showLanding();
+  } else if (useAPI) {
+    // Авторизован → книжная полка
     const books = await loadBooksFromAPI(apiClient);
     showBookshelf(books);
   } else {
@@ -156,7 +176,13 @@ async function handleBookshelf() {
  * Маршрут: /book/:bookId → Показать ридер
  */
 async function handleReader({ bookId }) {
-  // Очищаем полку и предыдущий ридер
+  // Гость не может открыть ридер через API (пока нет публичного чтения — Phase 6)
+  if (useAPI && !currentUser) {
+    router.navigate('/', { replace: true });
+    return;
+  }
+
+  cleanupLanding();
   cleanupBookshelf();
   cleanupReader();
 
@@ -180,6 +206,36 @@ async function handleReader({ bookId }) {
 }
 
 /**
+ * Показать лендинг для гостей.
+ */
+function showLanding() {
+  const container = document.getElementById('landing-screen');
+  if (!container) return;
+
+  landing = new LandingScreen({
+    container,
+    onAuth: () => {
+      // CTA нажата → показать модалку аутентификации
+      if (!authModal) {
+        authModal = new AuthModal({
+          apiClient,
+          onAuth: async (user) => {
+            currentUser = user;
+            const migration = new MigrationHelper(apiClient);
+            await migration.checkAndMigrate();
+            // Перенаправляем на главную — теперь покажется полка
+            router.navigate('/', { replace: true });
+          },
+        });
+      }
+      authModal.show();
+    },
+  });
+
+  landing.show();
+}
+
+/**
  * Показать книжный шкаф.
  */
 function showBookshelf(books) {
@@ -196,7 +252,6 @@ function showBookshelf(books) {
       if (router) {
         router.navigate(`/book/${bookId}`);
       } else {
-        // Fallback без роутера (не должен случаться)
         location.reload();
       }
     },
@@ -261,37 +316,27 @@ async function initReaderFallback() {
 // ═══════════════════════════════════════════════════
 
 /**
- * Инициализация с авторизацией
- * @returns {Promise<Object>} user
+ * Проверить аутентификацию (неблокирующая).
+ * Возвращает user или null (гость).
+ * @returns {Promise<Object|null>}
  */
-async function initWithAuth() {
+async function checkAuth() {
   apiClient = new ApiClient({
     onUnauthorized: () => {
-      if (authModal) authModal.show();
+      // Сессия истекла — сбрасываем пользователя и переходим на лендинг
+      currentUser = null;
+      if (router) router.navigate('/', { replace: true });
     },
   });
 
-  // Проверяем авторизацию
   const user = await apiClient.getMe();
 
-  if (!user) {
-    // Не авторизован — показываем модалку
-    return new Promise((resolve) => {
-      authModal = new AuthModal({
-        apiClient,
-        onAuth: async (loggedInUser) => {
-          const migration = new MigrationHelper(apiClient);
-          await migration.checkAndMigrate();
-          resolve(loggedInUser);
-        },
-      });
-      authModal.show();
-    });
+  if (user) {
+    // Авторизован — проверить миграцию при первом логине
+    const migration = new MigrationHelper(apiClient);
+    await migration.checkAndMigrate();
   }
 
-  // Авторизован — проверить миграцию при первом логине
-  const migration = new MigrationHelper(apiClient);
-  await migration.checkAndMigrate();
   return user;
 }
 
@@ -327,12 +372,12 @@ async function init() {
     }
 
     if (useAPI) {
-      await initWithAuth();
+      currentUser = await checkAuth();
     }
 
     // Создаём роутер
     router = new Router([
-      { name: 'home', path: '/', handler: handleBookshelf },
+      { name: 'home', path: '/', handler: handleHome },
       { name: 'reader', path: '/book/:bookId', handler: handleReader },
       // Будущие маршруты (Фазы 4-8):
       // { name: 'account', path: '/account', handler: handleAccount },
@@ -368,6 +413,7 @@ function cleanup() {
     authModal.destroy();
     authModal = null;
   }
+  cleanupLanding();
   cleanupBookshelf();
   cleanupReader();
   offlineIndicator.destroy();
