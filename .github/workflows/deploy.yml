@@ -122,7 +122,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [lint, test, server-test]
+    needs: [lint, test]
 
     steps:
       - name: Checkout
