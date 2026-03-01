@@ -10,6 +10,8 @@ export interface UserResponse {
   email: string;
   displayName: string | null;
   avatarUrl: string | null;
+  username: string | null;
+  bio: string | null;
   hasPassword: boolean;
   hasGoogle: boolean;
 }
@@ -23,6 +25,8 @@ export interface BookListItem {
   title: string;
   author: string;
   position: number;
+  visibility: string;
+  description: string | null;
   chaptersCount: number;
   coverBgMode: string;
   appearance: {
@@ -42,6 +46,9 @@ export interface BookDetail {
   id: string;
   title: string;
   author: string;
+  visibility: string;
+  description: string | null;
+  publishedAt: string | null;
   cover: {
     bg: string;
     bgMobile: string;
@@ -167,4 +174,62 @@ export interface ExportData {
   books: BookDetail[];
   readingFonts: ReadingFontItem[];
   globalSettings: GlobalSettingsDetail | null;
+}
+
+// ── Public API types ──────────────────────────────
+
+export interface PublicAuthor {
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+}
+
+export interface PublicBookCard {
+  id: string;
+  title: string;
+  author: string;
+  description: string | null;
+  publishedAt: string | null;
+  chaptersCount: number;
+  appearance: {
+    light: {
+      coverBgStart: string;
+      coverBgEnd: string;
+      coverText: string;
+    };
+  } | null;
+}
+
+export interface PublicShelf {
+  author: PublicAuthor;
+  books: PublicBookCard[];
+}
+
+export interface PublicBookDetail {
+  id: string;
+  title: string;
+  author: string;
+  description: string | null;
+  publishedAt: string | null;
+  cover: {
+    bg: string;
+    bgMobile: string;
+    bgMode: string;
+    bgCustomUrl: string | null;
+  };
+  chapters: ChapterListItem[];
+  defaultSettings: DefaultSettings | null;
+  appearance: AppearanceDetail | null;
+  sounds: SoundsDetail | null;
+  ambients: AmbientItem[];
+  decorativeFont: { name: string; fileUrl: string } | null;
+  owner: PublicAuthor;
+}
+
+export interface DiscoverResult {
+  books: (PublicBookCard & { owner: PublicAuthor })[];
+  total: number;
+  limit: number;
+  offset: number;
 }

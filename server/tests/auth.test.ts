@@ -20,12 +20,14 @@ describe('Auth API', () => {
           email: 'new@example.com',
           password: 'Password123!',
           displayName: 'New User',
+          username: 'newuser',
         })
         .expect(201);
 
       expect(res.body.data.user).toBeDefined();
       expect(res.body.data.user.email).toBe('new@example.com');
       expect(res.body.data.user.displayName).toBe('New User');
+      expect(res.body.data.user.username).toBe('newuser');
       expect(res.body.data.user.hasPassword).toBe(true);
       expect(res.body.data.user.hasGoogle).toBe(false);
       // Should not expose password hash
@@ -37,12 +39,12 @@ describe('Auth API', () => {
 
       await agent
         .post('/api/auth/register')
-        .send({ email: 'dup@example.com', password: 'Password123!' })
+        .send({ email: 'dup@example.com', password: 'Password123!', username: 'dup-user1' })
         .expect(201);
 
       const res = await agent
         .post('/api/auth/register')
-        .send({ email: 'dup@example.com', password: 'Password123!' })
+        .send({ email: 'dup@example.com', password: 'Password123!', username: 'dup-user2' })
         .expect(409);
 
       expect(res.body.error).toBe('AppError');
@@ -53,7 +55,7 @@ describe('Auth API', () => {
 
       const res = await agent
         .post('/api/auth/register')
-        .send({ email: 'weak@example.com', password: 'short' })
+        .send({ email: 'weak@example.com', password: 'short', username: 'weak-user' })
         .expect(400);
 
       expect(res.body.error).toBe('ValidationError');
@@ -64,7 +66,43 @@ describe('Auth API', () => {
 
       await agent
         .post('/api/auth/register')
-        .send({ email: 'not-an-email', password: 'Password123!' })
+        .send({ email: 'not-an-email', password: 'Password123!', username: 'invalid-email-user' })
+        .expect(400);
+    });
+
+    it('should reject duplicate usernames', async () => {
+      const { agent } = await createCsrfAgent(app);
+
+      await agent
+        .post('/api/auth/register')
+        .send({ email: 'user1@example.com', password: 'Password123!', username: 'same-name' })
+        .expect(201);
+
+      const res = await agent
+        .post('/api/auth/register')
+        .send({ email: 'user2@example.com', password: 'Password123!', username: 'same-name' })
+        .expect(409);
+
+      expect(res.body.message).toContain('Username');
+    });
+
+    it('should reject reserved usernames', async () => {
+      const { agent } = await createCsrfAgent(app);
+
+      const res = await agent
+        .post('/api/auth/register')
+        .send({ email: 'reserved@example.com', password: 'Password123!', username: 'admin' })
+        .expect(400);
+
+      expect(res.body.error).toBe('ValidationError');
+    });
+
+    it('should reject invalid username format', async () => {
+      const { agent } = await createCsrfAgent(app);
+
+      await agent
+        .post('/api/auth/register')
+        .send({ email: 'bad-user@example.com', password: 'Password123!', username: 'AB' })
         .expect(400);
     });
   });
@@ -76,7 +114,7 @@ describe('Auth API', () => {
       // Register first
       await agent
         .post('/api/auth/register')
-        .send({ email: 'login@example.com', password: 'Password123!' });
+        .send({ email: 'login@example.com', password: 'Password123!', username: 'login-user' });
 
       // Logout so we can test login
       await agent.post('/api/auth/logout');
@@ -94,7 +132,7 @@ describe('Auth API', () => {
 
       await agent
         .post('/api/auth/register')
-        .send({ email: 'wrong@example.com', password: 'Password123!' });
+        .send({ email: 'wrong@example.com', password: 'Password123!', username: 'wrong-user' });
 
       await agent.post('/api/auth/logout');
 

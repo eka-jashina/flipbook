@@ -26,6 +26,8 @@ export function formatUser(user: {
   email: string;
   displayName: string | null;
   avatarUrl: string | null;
+  username?: string | null;
+  bio?: string | null;
   googleId: string | null;
   passwordHash?: string | null;
   hasPassword?: boolean;
@@ -35,6 +37,8 @@ export function formatUser(user: {
     email: user.email,
     displayName: user.displayName,
     avatarUrl: user.avatarUrl,
+    username: user.username ?? null,
+    bio: user.bio ?? null,
     hasPassword: user.hasPassword ?? (user.passwordHash !== null),
     hasGoogle: user.googleId !== null,
   };
@@ -47,18 +51,29 @@ export async function registerUser(
   email: string,
   password: string,
   displayName?: string,
+  username?: string,
 ): Promise<UserResponse> {
   const prisma = getPrisma();
 
   const normalizedEmail = email.toLowerCase().trim();
 
-  // Check for existing user
+  // Check for existing user by email
   const existing = await prisma.user.findUnique({
     where: { email: normalizedEmail },
   });
 
   if (existing) {
     throw new AppError(409, 'User with this email already exists');
+  }
+
+  // Check for existing username
+  if (username) {
+    const existingUsername = await prisma.user.findUnique({
+      where: { username },
+    });
+    if (existingUsername) {
+      throw new AppError(409, 'Username is already taken');
+    }
   }
 
   const passwordHash = await hashPassword(password);
@@ -68,6 +83,7 @@ export async function registerUser(
       email: normalizedEmail,
       passwordHash,
       displayName: displayName || null,
+      username: username || null,
     },
   });
 

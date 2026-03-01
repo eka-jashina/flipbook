@@ -37,6 +37,8 @@ import settingsRoutes from './routes/settings.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import defaultSettingsRoutes from './routes/defaultSettings.routes.js';
 import exportImportRoutes from './routes/exportImport.routes.js';
+import profileRoutes from './routes/profile.routes.js';
+import publicRoutes from './routes/public.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -157,6 +159,8 @@ export function createApp() {
 
   // Routes
   app.use('/api/auth', authRoutes);
+  app.use('/api/profile', profileRoutes);
+  app.use('/api/public', publicRoutes);
   app.use('/api/books', booksRoutes);
 
   // Book sub-resource routes — unified ownership check via middleware
