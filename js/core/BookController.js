@@ -33,11 +33,15 @@ export class BookController {
    * @param {import('../utils/ApiClient.js').ApiClient} [options.apiClient] - API клиент
    * @param {string} [options.bookId] - ID книги
    * @param {Object} [options.serverProgress] - Прогресс чтения с сервера
+   * @param {'owner'|'guest'|'embed'} [options.readerMode='owner'] - Режим ридера (Phase 6)
+   * @param {Object} [options.bookOwner] - Данные автора книги (guest/embed режим)
    */
   constructor(_config, options = {}) {
     this.isDestroyed = false;
     this._apiClient = options.apiClient || null;
     this._bookId = options.bookId || null;
+    this._readerMode = options.readerMode || 'owner';
+    this._bookOwner = options.bookOwner || null;
 
     // Централизованное состояние (модифицируется только контроллером/медиатором)
     this.state = {
@@ -57,6 +61,7 @@ export class BookController {
       apiClient: this._apiClient,
       bookId: this._bookId,
       serverProgress: options.serverProgress,
+      readerMode: this._readerMode,
     });
 
     this.core = core;
@@ -214,6 +219,9 @@ export class BookController {
       eventController: this.eventController,
       dragDelegate: this.dragDelegate,
       lifecycleDelegate: this.lifecycleDelegate,
+      readerMode: this._readerMode,
+      bookOwner: this._bookOwner,
+      bookId: this._bookId,
     });
   }
 

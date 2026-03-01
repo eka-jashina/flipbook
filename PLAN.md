@@ -256,54 +256,60 @@ class AccountScreen {
 
 ---
 
-## Фаза 6: Ридер — режимы guest / owner / embed
+## Фаза 6: Ридер — режимы guest / owner / embed ✅
 
-### 6.1 Режим гостя
+> **Коммит:** `feat: add reader modes (guest/owner/embed) for public book reading`
 
-**Файл:** `js/core/BookController.js` + `js/core/AppInitializer.js`
+### Что сделано
 
-При загрузке книги определить режим:
-```javascript
-const isOwner = currentUser && book.userId === currentUser.id;
-const isEmbed = router.getCurrentRoute().name === 'embed';
-```
+**Определение режима** (`js/index.js`):
+- owner: авторизованный автор книги → приватный API (`GET /api/books/:id`)
+- guest: все остальные → публичный API (`GET /api/public/books/:id`)
+- embed: встраиваемый ридер → публичный API, минимальный UI
+- Авторизованный не-автор: гостевой режим, но прогресс на сервер
+- Неавторизованный гость: прогресс в localStorage
 
-**Гостевой режим:**
-- Данные из `GET /api/public/books/:id` (не `/api/books/:id`)
-- Контент глав из `GET /api/public/books/:id/chapters/:chapterId/content`
-- Скрыть: кнопку «Редактировать» из header/controls
-- Показать: имя автора + ссылку на шкаф (`/:username`)
-- Reading progress — сохранять в localStorage (гость не авторизован)
-- Если авторизован, но не автор — тоже гостевой режим, но progress на сервер
+**Решение:** Определение owner/guest через попытку приватного API → fallback на публичный (403/404). Это надёжнее, чем сравнение userId, т.к. не требует дополнительного запроса.
 
-### 6.2 Режим владельца
+**ApiClient** (`js/utils/ApiClient.js`):
+- `getPublicBook(bookId)` → `GET /api/public/books/:bookId`
+- `getPublicChapterContent(bookId, chapterId)` → `GET /api/public/books/:bookId/chapters/:chapterId/content`
 
-Без изменений (текущее поведение). Добавить:
-- Кнопка «Редактировать» → `router.navigate('/account?edit=' + bookId)`
+**Config** (`js/config.js`):
+- `loadPublicConfigFromAPI(apiClient, bookId)` — загружает конфиг через публичный API, возвращает `{ config, owner }`
 
-### 6.3 Embed-режим
+**ContentLoader** (`js/managers/ContentLoader.js`):
+- Добавлен `publicMode` — переключает на публичные API эндпоинты для загрузки контента глав
 
-**Файл:** `js/core/AppInitializer.js`
+**DI-цепочка**:
+- `ContentServices` → принимает `{ apiClient, bookId, publicMode }`
+- `ComponentFactory.createContentServices(options)` → прокидывает опции
+- `buildBookComponents({ ..., readerMode })` → вычисляет publicMode из readerMode
+- `BookController` → принимает `readerMode` и `bookOwner`, передаёт в AppInitializer
 
-При `isEmbed`:
-- Скрыть: header, footer, все панели управления
-- Скрыть: bookshelf navigation
-- Показать: только книгу + перелистывание
-- Внизу: дискретная ссылка «Открыть на Flipbook» → `/book/:id`
-- Звуки отключены по умолчанию (автоплей заблокирован в iframe)
-- `postMessage` API для внешнего управления (опционально, на будущее)
+**AppInitializer** (`js/core/AppInitializer.js`) — режимы:
+- `_setupOwnerMode()` — кнопка «Редактировать» → `/account?edit=bookId`
+- `_setupGuestMode()` — скрыть edit, показать имя автора + ссылка на полку
+- `_setupEmbedMode()` — `body.embed-mode`, скрыть controls, показать ссылку «Открыть на Flipbook»
 
-### 6.4 Стили embed
+**LifecycleDelegate** — исправлена передача `_hasHtmlContent` в chapters (для API-контента)
 
-**Новый файл:** `css/embed.css`
+**HTML** (`html/partials/reader/controls.html`):
+- Кнопка `#reader-edit-btn` (owner mode)
+- Ссылка `#reader-author-info` с `.reader-author-name` (guest mode)
+- Ссылка `#embed-open-link` (embed mode) — в `index.html`
 
-- `body.embed-mode` — убирает всё лишнее
-- Минимальный padding, максимальная область книги
+**CSS** (`css/embed.css`):
+- `body.embed-mode` — скрывает controls, максимизирует область книги
+- `.embed-open-link` — дискретная ссылка внизу
+- `.reader-author-info` — стилизация имени автора в nav-actions
+- `.reader-edit-btn` — стилизация кнопки редактирования
 
-### 6.5 Обновить index.js
-
-- Убрать redirect гостей с `/book/:id` на `/` (теперь гости могут читать published/unlisted книги)
-- Добавить маршрут `{ name: 'embed', path: '/embed/:bookId', handler: handleEmbed }` (перед `/:username`)
+**Роутинг** (`js/index.js`):
+- Убран redirect гостей с `/book/:id` на `/`
+- Добавлен маршрут `{ name: 'embed', path: '/embed/:bookId', handler: handleEmbed }`
+- `initReaderWithMode(bookId, route)` — единая функция инициализации с определением режима
+- `cleanupReader()` — очищает `embed-mode` и `data-reader-mode`
 
 ---
 
@@ -412,7 +418,7 @@ app.get('/:username', asyncHandler(async (req, res, next) => {
 | **3** | 3 | ✅ | Лендинг для гостей, username в форме регистрации |
 | **4** | 4 | ✅ | Публичный шкаф `/:username` (owner/guest), ProfileHeader, метки видимости |
 | **5** | 5 | ⬜ | Личный кабинет `/account`, миграция admin.html, профиль, аватар |
-| **6** | 6 | ⬜ | Ридер: guest / owner / embed режимы |
+| **6** | 6 | ✅ | Ридер: guest / owner / embed режимы |
 | **7** | 7 | ⬜ | OG-метатеги для шаринга |
 | **8** | 8 | ⬜ | Интеграция, PWA, финализация |
 
@@ -432,6 +438,11 @@ app.get('/:username', asyncHandler(async (req, res, next) => {
 | 4 | Кнопка «Добавить книгу» → куда? | **Inline mode selector** (как было). Redirect на `/account` — Phase 5 |
 | 4 | Аватар в ProfileHeader | **Инициалы** (цветной круг, hue из хэша). Настоящий аватар — Phase 5 |
 | 4 | `/:username` доступен гостям? | **Да**, публичные полки видны всем без авторизации |
+| 6 | Определение owner/guest | **Попытка приватного API → fallback на публичный** (403/404). Не требует отдельного запроса для проверки ownership |
+| 6 | Где показывать имя автора? | **nav-actions** (рядом с кнопкой «К полке»). Ссылка `@username` ведёт на полку |
+| 6 | Прогресс неавторизованного гостя | **localStorage** с ключом `reader-settings:{bookId}` |
+| 6 | Прогресс авторизованного не-автора | **Сервер** (API прогресса не проверяет ownership) |
+| 6 | postMessage API для embed | **Отложен** (опционально, на будущее) |
 
 ---
 

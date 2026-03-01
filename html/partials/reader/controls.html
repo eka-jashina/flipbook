@@ -51,6 +51,22 @@
               </svg>
               Продолжить
             </button>
+
+            <!-- Кнопка «Редактировать» (owner mode, Phase 6) -->
+            <button class="reader-edit-btn" type="button" id="reader-edit-btn" hidden aria-label="Редактировать книгу">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+              </svg>
+              Редактировать
+            </button>
+
+            <!-- Информация об авторе (guest mode, Phase 6) -->
+            <a class="reader-author-info" id="reader-author-info" hidden aria-label="Автор книги">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              <span class="reader-author-name"></span>
+            </a>
             <label class="settings-toggle">
               <input class="settings-checkbox" type="checkbox" id="settings-checkbox" aria-label="Открыть настройки">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">

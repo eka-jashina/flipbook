@@ -487,6 +487,18 @@ export class ApiClient {
     return this._fetchWithRetry(`/api/public/discover?limit=${limit}`);
   }
 
+  /** Публичная книга (детали для чтения) */
+  async getPublicBook(bookId) {
+    return this._fetchWithRetry(`/api/public/books/${encodeURIComponent(bookId)}`);
+  }
+
+  /** Контент главы публичной книги */
+  async getPublicChapterContent(bookId, chapterId) {
+    return this._fetchWithRetry(
+      `/api/public/books/${encodeURIComponent(bookId)}/chapters/${encodeURIComponent(chapterId)}/content`
+    );
+  }
+
   // ═══════════════════════════════════════════
   // Профиль
   // ═══════════════════════════════════════════
