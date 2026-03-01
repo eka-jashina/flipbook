@@ -1509,4 +1509,256 @@ describe('AlbumManager', () => {
       });
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // openForEdit()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('openForEdit()', () => {
+    it('should load album data from chapter', () => {
+      const chapters = [
+        {
+          id: 'album_1',
+          albumData: {
+            title: 'My Album',
+            hideTitle: false,
+            pages: [makePage('2', [makeImage(), makeImage()])],
+          },
+        },
+      ];
+      mockModule.store.getChapters = vi.fn(() => chapters);
+
+      manager.openForEdit(0);
+
+      expect(manager.albumTitleInput.value).toBe('My Album');
+      expect(manager.albumHideTitle.checked).toBe(false);
+      expect(manager._albumPages).toHaveLength(1);
+      expect(manager._albumPages[0].layout).toBe('2');
+      expect(manager._editingChapterIndex).toBe(0);
+    });
+
+    it('should not proceed if chapter has no albumData', () => {
+      mockModule.store.getChapters = vi.fn(() => [{ id: 'ch', file: 'f.html' }]);
+
+      manager.openForEdit(0);
+
+      expect(manager._albumPages).toEqual([]);
+    });
+
+    it('should deep clone album pages', () => {
+      const origPages = [makePage('1', [makeImage()])];
+      mockModule.store.getChapters = vi.fn(() => [{
+        id: 'album_1',
+        albumData: { title: 'A', hideTitle: true, pages: origPages },
+      }]);
+
+      manager.openForEdit(0);
+
+      manager._albumPages[0].layout = '4';
+      expect(origPages[0].layout).toBe('1');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _updateUI()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_updateUI()', () => {
+    it('should show "Добавить альбом" for new album', () => {
+      manager._editingChapterIndex = null;
+      manager._updateUI();
+
+      expect(manager.saveAlbumBtn.textContent).toBe('Добавить альбом');
+      expect(manager.albumHeading.textContent).toBe('Фотоальбом');
+    });
+
+    it('should show "Сохранить альбом" for existing album', () => {
+      manager._editingChapterIndex = 0;
+      manager._updateUI();
+
+      expect(manager.saveAlbumBtn.textContent).toBe('Сохранить альбом');
+      expect(manager.albumHeading.textContent).toBe('Редактирование альбома');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _cancelAlbum()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_cancelAlbum()', () => {
+    it('should go to editor when not dirty', async () => {
+      manager._isDirty = false;
+
+      await manager._cancelAlbum();
+
+      expect(mockModule.app._cleanupPendingBook).toHaveBeenCalled();
+      expect(mockModule.app._showView).toHaveBeenCalledWith('editor');
+    });
+
+    it('should ask confirmation when dirty', async () => {
+      manager._isDirty = true;
+      mockModule._confirm.mockResolvedValue(true);
+
+      await manager._cancelAlbum();
+
+      expect(mockModule._confirm).toHaveBeenCalled();
+      expect(mockModule.app._showView).toHaveBeenCalled();
+    });
+
+    it('should not exit when user cancels confirmation', async () => {
+      manager._isDirty = true;
+      mockModule._confirm.mockResolvedValue(false);
+
+      await manager._cancelAlbum();
+
+      expect(mockModule.app._showView).not.toHaveBeenCalled();
+    });
+
+    it('should go to bookshelf when pending book exists', async () => {
+      manager._isDirty = false;
+      mockModule.app._pendingBookId = 'book-123';
+
+      await manager._cancelAlbum();
+
+      expect(mockModule.app._showView).toHaveBeenCalledWith('bookshelf');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _movePageUp / _movePageDown
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_movePageUp()', () => {
+    it('should swap page with previous', () => {
+      manager._albumPages = [
+        makePage('1', [makeImage('a')]),
+        makePage('2', [makeImage('b'), makeImage('c')]),
+      ];
+
+      manager._movePageUp(1);
+
+      expect(manager._albumPages[0].layout).toBe('2');
+      expect(manager._albumPages[1].layout).toBe('1');
+      expect(manager._isDirty).toBe(true);
+    });
+
+    it('should do nothing for first page', () => {
+      manager._albumPages = [makePage('1'), makePage('2')];
+
+      manager._movePageUp(0);
+
+      expect(manager._albumPages[0].layout).toBe('1');
+      expect(manager._albumPages[1].layout).toBe('2');
+    });
+  });
+
+  describe('_movePageDown()', () => {
+    it('should swap page with next', () => {
+      manager._albumPages = [
+        makePage('1', [makeImage('a')]),
+        makePage('2', [makeImage('b')]),
+      ];
+
+      manager._movePageDown(0);
+
+      expect(manager._albumPages[0].layout).toBe('2');
+      expect(manager._albumPages[1].layout).toBe('1');
+      expect(manager._isDirty).toBe(true);
+    });
+
+    it('should do nothing for last page', () => {
+      manager._albumPages = [makePage('1'), makePage('2')];
+
+      manager._movePageDown(1);
+
+      expect(manager._albumPages[0].layout).toBe('1');
+      expect(manager._albumPages[1].layout).toBe('2');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _rotatePageImage()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_rotatePageImage()', () => {
+    it('should rotate image by 90 degrees', () => {
+      manager._albumPages = [makePage('1', [makeImage()])];
+      manager._albumPages[0].images[0].rotation = 0;
+
+      manager._rotatePageImage(0, 0);
+
+      expect(manager._albumPages[0].images[0].rotation).toBe(90);
+      expect(manager._isDirty).toBe(true);
+    });
+
+    it('should cycle through rotation values', () => {
+      manager._albumPages = [makePage('1', [makeImage()])];
+      manager._albumPages[0].images[0].rotation = 270;
+
+      manager._rotatePageImage(0, 0);
+
+      expect(manager._albumPages[0].images[0].rotation).toBe(0);
+    });
+
+    it('should do nothing for empty image slot', () => {
+      manager._albumPages = [makePage('1', [null])];
+
+      manager._rotatePageImage(0, 0);
+
+      expect(manager._albumPages[0].images[0]).toBeNull();
+    });
+
+    it('should do nothing for invalid page index', () => {
+      manager._albumPages = [makePage('1', [makeImage()])];
+
+      manager._rotatePageImage(5, 0);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // bindEvents()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('bindEvents()', () => {
+    it('should attach add page listener', () => {
+      manager.bindEvents();
+      manager._albumPages = [makePage('1')];
+
+      manager.albumAddPageBtn.click();
+
+      expect(manager._albumPages).toHaveLength(2);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _handleAlbumSubmit() — edit mode
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('_handleAlbumSubmit() — edit mode', () => {
+    it('should update existing chapter instead of adding', () => {
+      mockModule.store.updateChapter = vi.fn();
+      mockModule.store.getChapters = vi.fn(() => [{
+        id: 'album_1', file: '', htmlContent: '<old>', bg: 'bg.webp', bgMobile: 'bgm.webp',
+        albumData: { title: 'Old', pages: [] },
+      }]);
+
+      manager._editingChapterIndex = 0;
+      manager._albumPages = [makePage('1', [makeImage()])];
+      manager.albumTitleInput.value = 'Updated Album';
+
+      manager._handleAlbumSubmit();
+
+      expect(mockModule.store.updateChapter).toHaveBeenCalledWith(
+        0,
+        expect.objectContaining({
+          id: 'album_1',
+          bg: 'bg.webp',
+          bgMobile: 'bgm.webp',
+        })
+      );
+      const updated = mockModule.store.updateChapter.mock.calls[0][1];
+      expect(updated.albumData.title).toBe('Updated Album');
+      expect(mockModule._showToast).toHaveBeenCalledWith('Фотоальбом обновлён');
+    });
+  });
 });
