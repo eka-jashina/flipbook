@@ -675,14 +675,9 @@ describe('BookshelfScreen', () => {
         expect(onBookSelect).toHaveBeenCalledWith('b1');
       });
 
-      it('should set reading session in sessionStorage on read', () => {
+      it('should not set sessionStorage flags (router handles navigation)', () => {
         screen._handleBookAction('read', 'b1');
-        expect(sessionStorage.getItem('flipbook-reading-session')).toBe('1');
-      });
-
-      it('should set reading session flag in sessionStorage', () => {
-        screen._handleBookAction('read', 'b1');
-        expect(sessionStorage.getItem('flipbook-reading-session')).toBe('1');
+        expect(sessionStorage.getItem('flipbook-reading-session')).toBeNull();
       });
     });
 
@@ -815,9 +810,8 @@ describe('BookshelfScreen', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('getBookshelfData()', () => {
-  it('should return shouldShow:true and default book when localStorage is empty', () => {
+  it('should return default book when localStorage is empty', () => {
     const result = getBookshelfData();
-    expect(result.shouldShow).toBe(true);
     expect(result.books).toHaveLength(1);
     expect(result.books[0].id).toBe('default');
   });
@@ -831,33 +825,14 @@ describe('getBookshelfData()', () => {
     expect(result.books[0].id).toBe('my-book');
   });
 
-  it('should return shouldShow:false when activeBookId is set and reading session is active', () => {
+  it('should return books regardless of activeBookId (router determines screen)', () => {
     localStorage.setItem(
       'flipbook-admin-config',
       JSON.stringify({ books: [{ id: 'b1' }], activeBookId: 'b1' }),
     );
-    sessionStorage.setItem('flipbook-reading-session', '1');
     const result = getBookshelfData();
-    expect(result.shouldShow).toBe(false);
-  });
-
-  it('should return shouldShow:true when activeBookId is set but no reading session (returning user)', () => {
-    localStorage.setItem(
-      'flipbook-admin-config',
-      JSON.stringify({ books: [{ id: 'b1' }], activeBookId: 'b1' }),
-    );
-    // sessionStorage is empty — simulates returning after closing the browser
-    const result = getBookshelfData();
-    expect(result.shouldShow).toBe(true);
-  });
-
-  it('should return shouldShow:true when activeBookId is not set', () => {
-    localStorage.setItem(
-      'flipbook-admin-config',
-      JSON.stringify({ books: [{ id: 'b1' }] }),
-    );
-    const result = getBookshelfData();
-    expect(result.shouldShow).toBe(true);
+    expect(result.books).toHaveLength(1);
+    expect(result.books[0].id).toBe('b1');
   });
 
   it('should fall back to default book when books array is empty', () => {
@@ -875,7 +850,6 @@ describe('getBookshelfData()', () => {
   it('should return defaults on corrupt JSON', () => {
     localStorage.setItem('flipbook-admin-config', 'INVALID{{{JSON');
     const result = getBookshelfData();
-    expect(result.shouldShow).toBe(true);
     expect(result.books[0].id).toBe('default');
   });
 });
@@ -905,10 +879,9 @@ describe('clearActiveBook()', () => {
     expect(updated.books).toHaveLength(2);
   });
 
-  it('should clear the reading session flag from sessionStorage', () => {
+  it('should work even when sessionStorage has old reading-session flag', () => {
     sessionStorage.setItem('flipbook-reading-session', '1');
-    clearActiveBook();
-    expect(sessionStorage.getItem('flipbook-reading-session')).toBeNull();
+    expect(() => clearActiveBook()).not.toThrow();
   });
 
   it('should not throw when localStorage is empty', () => {

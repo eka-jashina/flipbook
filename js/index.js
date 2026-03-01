@@ -3,14 +3,17 @@
  *
  * Инициализация приложения после загрузки DOM.
  *
- * Фаза 3: поток аутентификации
+ * Роутинг (SPA, History API):
+ *   /              → книжная полка (авторизованные) или fallback (localStorage)
+ *   /book/:bookId  → ридер
+ *
+ * Поток аутентификации:
  * 1. GET /api/health → проверка доступности сервера
  * 2. GET /api/auth/me → если 401 → модалка логина/регистрации
  * 3. После авторизации → проверка миграции localStorage
- * 4. GET /api/books → книжная полка
- * 5. Выбор книги → loadConfigFromAPI() → ридер
+ * 4. Роутер резолвит текущий URL → полка или ридер
  *
- * Fallback: если сервер недоступен — работа через localStorage (как раньше).
+ * Fallback: если сервер недоступен — работа через localStorage.
  */
 
 import { BookController } from './core/BookController.js';
@@ -20,6 +23,7 @@ import { ApiClient } from './utils/ApiClient.js';
 import { ErrorHandler } from './utils/ErrorHandler.js';
 import { AuthModal } from './core/AuthModal.js';
 import { MigrationHelper } from './core/MigrationHelper.js';
+import { Router } from './utils/Router.js';
 import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
@@ -30,11 +34,13 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
 });
 
-// Глобальная ссылка на контроллер (для отладки)
+// Глобальное состояние
 let app = null;
 let bookshelf = null;
 let authModal = null;
 let apiClient = null;
+let router = null;
+let useAPI = false;
 
 // Регистрация Service Worker для PWA
 const updateSW = registerSW({
@@ -54,6 +60,10 @@ const updateSW = registerSW({
     console.error('Ошибка регистрации Service Worker:', error);
   },
 });
+
+// ═══════════════════════════════════════════════════
+// Утилиты экранов
+// ═══════════════════════════════════════════════════
 
 /**
  * Настройка кнопки установки PWA в настройках
@@ -91,15 +101,86 @@ function setupBackToShelfButton() {
   if (!btn) return;
 
   btn.addEventListener('click', () => {
-    // Очищаем и localStorage, и sessionStorage
     clearActiveBook();
-    sessionStorage.removeItem('flipbook-active-book-id');
-    location.reload();
+    if (router) {
+      router.navigate('/');
+    } else {
+      location.reload();
+    }
   });
 }
 
 /**
- * Показать книжный шкаф
+ * Очистить ридер перед показом другого экрана.
+ */
+function cleanupReader() {
+  if (app) {
+    app.destroy();
+    app = null;
+  }
+  photoLightbox.destroy();
+}
+
+/**
+ * Очистить полку перед показом другого экрана.
+ */
+function cleanupBookshelf() {
+  if (bookshelf) {
+    bookshelf.destroy();
+    bookshelf = null;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// Обработчики маршрутов
+// ═══════════════════════════════════════════════════
+
+/**
+ * Маршрут: / → Показать книжную полку
+ */
+async function handleBookshelf() {
+  // Очищаем ридер если был открыт
+  cleanupReader();
+
+  if (useAPI) {
+    const books = await loadBooksFromAPI(apiClient);
+    showBookshelf(books);
+  } else {
+    // localStorage fallback — URL определяет состояние, на / всегда показываем полку
+    const { books } = getBookshelfData();
+    showBookshelf(books);
+  }
+}
+
+/**
+ * Маршрут: /book/:bookId → Показать ридер
+ */
+async function handleReader({ bookId }) {
+  // Очищаем полку и предыдущий ридер
+  cleanupBookshelf();
+  cleanupReader();
+
+  document.body.dataset.screen = 'reader';
+  document.body.dataset.hasBookshelf = 'true';
+  setupBackToShelfButton();
+
+  if (useAPI) {
+    await initReaderFromAPI(bookId);
+  } else {
+    // Для localStorage fallback — устанавливаем activeBookId
+    try {
+      const raw = localStorage.getItem('flipbook-admin-config');
+      const config = raw ? JSON.parse(raw) : { books: [] };
+      config.activeBookId = bookId;
+      localStorage.setItem('flipbook-admin-config', JSON.stringify(config));
+    } catch { /* ignore */ }
+
+    await initReaderFallback();
+  }
+}
+
+/**
+ * Показать книжный шкаф.
  */
 function showBookshelf(books) {
   const container = document.getElementById('bookshelf-screen');
@@ -112,21 +193,12 @@ function showBookshelf(books) {
     books,
     apiClient,
     onBookSelect: (bookId) => {
-      // Запоминаем bookId в sessionStorage и перезагружаем
-      sessionStorage.setItem('flipbook-active-book-id', bookId);
-      sessionStorage.setItem('flipbook-reading-session', '1');
-
-      // Для localStorage fallback — также сохраняем activeBookId
-      if (!apiClient) {
-        try {
-          const raw = localStorage.getItem('flipbook-admin-config');
-          const config = raw ? JSON.parse(raw) : { books: [] };
-          config.activeBookId = bookId;
-          localStorage.setItem('flipbook-admin-config', JSON.stringify(config));
-        } catch { /* ignore */ }
+      if (router) {
+        router.navigate(`/book/${bookId}`);
+      } else {
+        // Fallback без роутера (не должен случаться)
+        location.reload();
       }
-
-      location.reload();
     },
   });
 
@@ -134,8 +206,12 @@ function showBookshelf(books) {
   bookshelf.show();
 }
 
+// ═══════════════════════════════════════════════════
+// Инициализация ридера
+// ═══════════════════════════════════════════════════
+
 /**
- * Инициализация ридера через API (Фаза 3)
+ * Инициализация ридера через API
  */
 async function initReaderFromAPI(bookId) {
   const config = await loadConfigFromAPI(apiClient, bookId);
@@ -180,8 +256,12 @@ async function initReaderFallback() {
   }
 }
 
+// ═══════════════════════════════════════════════════
+// Авторизация
+// ═══════════════════════════════════════════════════
+
 /**
- * Инициализация с авторизацией (Фаза 3)
+ * Инициализация с авторизацией
  * @returns {Promise<Object>} user
  */
 async function initWithAuth() {
@@ -215,13 +295,30 @@ async function initWithAuth() {
   return user;
 }
 
+// ═══════════════════════════════════════════════════
+// Инициализация приложения
+// ═══════════════════════════════════════════════════
+
 /**
- * Инициализация приложения
+ * Миграция: если URL — корень, но в sessionStorage есть bookId от старого флоу —
+ * редиректим на /book/:id для совместимости.
  */
+function migrateSessionStorageToRouter() {
+  const savedBookId = sessionStorage.getItem('flipbook-active-book-id');
+  const isReadingSession = !!sessionStorage.getItem('flipbook-reading-session');
+
+  if (savedBookId && isReadingSession) {
+    // Очищаем старые флаги
+    sessionStorage.removeItem('flipbook-active-book-id');
+    sessionStorage.removeItem('flipbook-reading-session');
+    return savedBookId;
+  }
+  return null;
+}
+
 async function init() {
   try {
     // Проверяем, доступен ли сервер
-    let useAPI = false;
     try {
       const resp = await fetch('/api/health', { method: 'GET' });
       useAPI = resp.ok;
@@ -230,45 +327,29 @@ async function init() {
     }
 
     if (useAPI) {
-      // ═══════════════════════════════════════
-      // Фаза 3: работа через API
-      // ═══════════════════════════════════════
       await initWithAuth();
-
-      // Проверяем, есть ли сохранённый bookId из предыдущего выбора
-      const savedBookId = sessionStorage.getItem('flipbook-active-book-id');
-      const isReadingSession = !!sessionStorage.getItem('flipbook-reading-session');
-
-      if (savedBookId && isReadingSession) {
-        // Показываем ридер для выбранной книги
-        document.body.dataset.screen = 'reader';
-        document.body.dataset.hasBookshelf = 'true';
-        setupBackToShelfButton();
-
-        await initReaderFromAPI(savedBookId);
-      } else {
-        // Показываем книжную полку
-        const books = await loadBooksFromAPI(apiClient);
-        showBookshelf(books);
-      }
-    } else {
-      // ═══════════════════════════════════════
-      // Fallback: localStorage-режим
-      // ═══════════════════════════════════════
-      const { shouldShow, books } = getBookshelfData();
-
-      if (shouldShow) {
-        showBookshelf(books);
-        return;
-      }
-
-      // Всегда показываем кнопку «К полке»
-      document.body.dataset.screen = 'reader';
-      document.body.dataset.hasBookshelf = 'true';
-      setupBackToShelfButton();
-
-      await initReaderFallback();
     }
+
+    // Создаём роутер
+    router = new Router([
+      { name: 'home', path: '/', handler: handleBookshelf },
+      { name: 'reader', path: '/book/:bookId', handler: handleReader },
+      // Будущие маршруты (Фазы 4-8):
+      // { name: 'account', path: '/account', handler: handleAccount },
+      // { name: 'embed', path: '/embed/:bookId', handler: handleEmbed },
+      // { name: 'shelf', path: '/:username', handler: handlePublicShelf },
+    ]);
+
+    // Миграция: старый sessionStorage-флоу → URL-based навигация
+    const migratedBookId = migrateSessionStorageToRouter();
+    if (migratedBookId && location.pathname === `/${(import.meta.env.BASE_URL || '').replace(/^\/|\/$/g, '')}`) {
+      // Подменяем URL перед стартом роутера
+      const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+      history.replaceState(null, '', `${base}/book/${migratedBookId}`);
+    }
+
+    // Запуск роутера — резолвит текущий URL
+    await router.start();
   } catch (error) {
     console.error('Failed to initialize Book Reader:', error);
     ErrorHandler.handle(error, 'Не удалось запустить приложение');
@@ -279,21 +360,18 @@ async function init() {
  * Очистка при выгрузке страницы
  */
 function cleanup() {
+  if (router) {
+    router.destroy();
+    router = null;
+  }
   if (authModal) {
     authModal.destroy();
     authModal = null;
   }
-  if (bookshelf) {
-    bookshelf.destroy();
-    bookshelf = null;
-  }
-  if (app) {
-    app.destroy();
-    app = null;
-  }
+  cleanupBookshelf();
+  cleanupReader();
   offlineIndicator.destroy();
   installPrompt.destroy();
-  photoLightbox.destroy();
 }
 
 // Запуск после загрузки DOM

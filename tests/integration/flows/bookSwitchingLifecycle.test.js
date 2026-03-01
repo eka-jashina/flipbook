@@ -357,7 +357,6 @@ describe('Book Switching Lifecycle Integration', () => {
       readBtn.click();
 
       expect(selectedBookId).toBe('book-a');
-      expect(sessionStorage.getItem('flipbook-reading-session')).toBe('1');
 
       // Load config for selected book
       const config = await loadConfigFromAPI(mockApi, selectedBookId);
