@@ -79,7 +79,7 @@ body.embed-mode .book-wrap {
 }
 
 .reader-author-info:hover {
-  background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  background-color: var(--bg-hover, rgb(0 0 0 / 0.05));
   color: var(--text-primary, #333);
 }
 
@@ -114,7 +114,7 @@ body.embed-mode .book-wrap {
 }
 
 .reader-edit-btn:hover {
-  background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  background-color: var(--bg-hover, rgb(0 0 0 / 0.05));
   color: var(--text-primary, #333);
 }
 
