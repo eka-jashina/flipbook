@@ -472,8 +472,7 @@ describe('AdminConfigStore — Advanced', () => {
       // Should not throw
       expect(() => store._saveToLocalStorage(snapshot)).not.toThrow();
       expect(spy).toHaveBeenCalledWith(
-        expect.stringContaining('localStorage'),
-        expect.any(String)
+        expect.stringContaining('localStorage')
       );
 
       spy.mockRestore();

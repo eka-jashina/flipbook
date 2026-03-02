@@ -13,6 +13,9 @@
  * Два источника правды не держать (ADR Фаза 3).
  */
 
+import { StorageManager } from '../utils/StorageManager.js';
+import { adminConfigStorage } from '../config/configHelpers.js';
+
 const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
 const IDB_NAME = 'flipbook-admin';
 const IDB_STORE = 'config';
@@ -89,12 +92,8 @@ export class MigrationHelper {
     }
 
     // Fallback: localStorage
-    try {
-      const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-      if (raw) return JSON.parse(raw);
-    } catch (err) {
-      console.warn('MigrationHelper: не удалось прочитать из localStorage', err);
-    }
+    const lsData = adminConfigStorage.load();
+    if (Object.keys(lsData).length > 0) return lsData;
 
     return null;
   }
@@ -249,22 +248,11 @@ export class MigrationHelper {
    * @private
    */
   _clearLocalData() {
-    // localStorage
-    try {
-      localStorage.removeItem(ADMIN_CONFIG_KEY);
-    } catch { /* ignore */ }
+    // localStorage: конфиг админки
+    adminConfigStorage.clear();
 
-    // Удалить все reader-settings:* ключи
-    try {
-      const keysToRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('reader-settings')) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-    } catch { /* ignore */ }
+    // localStorage: все reader-settings:* ключи
+    StorageManager.removeByPrefix('reader-settings');
 
     // IndexedDB
     try {

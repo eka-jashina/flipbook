@@ -28,6 +28,7 @@ import { ErrorHandler } from './utils/ErrorHandler.js';
 import { AuthModal } from './core/AuthModal.js';
 import { MigrationHelper } from './core/MigrationHelper.js';
 import { Router } from './utils/Router.js';
+import { adminConfigStorage } from './config/configHelpers.js';
 import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
@@ -250,12 +251,10 @@ async function handleReader({ bookId }) {
     await initReaderWithMode(bookId, 'reader');
   } else {
     // Для localStorage fallback — устанавливаем activeBookId
-    try {
-      const raw = localStorage.getItem('flipbook-admin-config');
-      const config = raw ? JSON.parse(raw) : { books: [] };
-      config.activeBookId = bookId;
-      localStorage.setItem('flipbook-admin-config', JSON.stringify(config));
-    } catch { /* ignore */ }
+    const config = adminConfigStorage.load();
+    config.activeBookId = bookId;
+    if (!config.books) config.books = [];
+    adminConfigStorage.setFull(config);
 
     await initReaderFallback();
   }
@@ -280,12 +279,10 @@ async function handleEmbed({ bookId }) {
     await initReaderWithMode(bookId, 'embed');
   } else {
     // Embed без сервера — fallback на localStorage
-    try {
-      const raw = localStorage.getItem('flipbook-admin-config');
-      const config = raw ? JSON.parse(raw) : { books: [] };
-      config.activeBookId = bookId;
-      localStorage.setItem('flipbook-admin-config', JSON.stringify(config));
-    } catch { /* ignore */ }
+    const config = adminConfigStorage.load();
+    config.activeBookId = bookId;
+    if (!config.books) config.books = [];
+    adminConfigStorage.setFull(config);
 
     await initReaderFallback();
   }

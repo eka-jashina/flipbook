@@ -264,6 +264,157 @@ describe('StorageManager', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // SET FULL
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('setFull()', () => {
+    it('should replace entire value without merge', () => {
+      storage.save({ a: 1, b: 2 });
+      storage.setFull({ c: 3 });
+
+      const stored = JSON.parse(localStorage.getItem(TEST_KEY));
+      expect(stored).toEqual({ c: 3 });
+      expect(stored.a).toBeUndefined();
+    });
+
+    it('should return true on success', () => {
+      expect(storage.setFull({ x: 1 })).toBe(true);
+    });
+
+    it('should handle arrays', () => {
+      storage.setFull([1, 2, 3]);
+      expect(JSON.parse(localStorage.getItem(TEST_KEY))).toEqual([1, 2, 3]);
+    });
+
+    it('should handle QuotaExceededError', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const setItemSpy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+        throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+      });
+
+      expect(storage.setFull({ data: 'test' })).toBe(false);
+      expect(warnSpy).toHaveBeenCalled();
+
+      setItemSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+
+    it('should handle other errors', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const setItemSpy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+
+      expect(storage.setFull({ data: 'test' })).toBe(false);
+      expect(errorSpy).toHaveBeenCalled();
+
+      setItemSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GET RAW / SET RAW
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('getRaw()', () => {
+    it('should return null when key not found', () => {
+      expect(storage.getRaw()).toBeNull();
+    });
+
+    it('should return raw string value', () => {
+      localStorage.setItem(TEST_KEY, 'true');
+      expect(storage.getRaw()).toBe('true');
+    });
+
+    it('should not parse JSON', () => {
+      localStorage.setItem(TEST_KEY, '{"a":1}');
+      expect(storage.getRaw()).toBe('{"a":1}');
+    });
+
+    it('should return null on error', () => {
+      const spy = vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+
+      expect(storage.getRaw()).toBeNull();
+
+      spy.mockRestore();
+    });
+  });
+
+  describe('setRaw()', () => {
+    it('should write raw string value', () => {
+      storage.setRaw('1');
+      expect(localStorage.getItem(TEST_KEY)).toBe('1');
+    });
+
+    it('should return true on success', () => {
+      expect(storage.setRaw('hello')).toBe(true);
+    });
+
+    it('should overwrite existing value', () => {
+      storage.setRaw('old');
+      storage.setRaw('new');
+      expect(localStorage.getItem(TEST_KEY)).toBe('new');
+    });
+
+    it('should return false on QuotaExceeded', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const setItemSpy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+        throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+      });
+
+      expect(storage.setRaw('data')).toBe(false);
+
+      setItemSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REMOVE BY PREFIX (static)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('StorageManager.removeByPrefix()', () => {
+    it('should remove all keys with prefix', () => {
+      localStorage.setItem('reader-settings', 'a');
+      localStorage.setItem('reader-settings:book1', 'b');
+      localStorage.setItem('reader-settings:book2', 'c');
+      localStorage.setItem('other-key', 'd');
+
+      StorageManager.removeByPrefix('reader-settings');
+
+      expect(localStorage.getItem('reader-settings')).toBeNull();
+      expect(localStorage.getItem('reader-settings:book1')).toBeNull();
+      expect(localStorage.getItem('reader-settings:book2')).toBeNull();
+      expect(localStorage.getItem('other-key')).toBe('d');
+    });
+
+    it('should handle empty localStorage', () => {
+      expect(() => StorageManager.removeByPrefix('any')).not.toThrow();
+    });
+
+    it('should handle no matching keys', () => {
+      localStorage.setItem('keep-this', 'value');
+
+      StorageManager.removeByPrefix('remove-');
+
+      expect(localStorage.getItem('keep-this')).toBe('value');
+    });
+
+    it('should handle localStorage errors gracefully', () => {
+      const spy = vi.spyOn(localStorage, 'length', 'get').mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+
+      expect(() => StorageManager.removeByPrefix('prefix')).not.toThrow();
+
+      spy.mockRestore();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // ISOLATION
   // ═══════════════════════════════════════════════════════════════════════════
 

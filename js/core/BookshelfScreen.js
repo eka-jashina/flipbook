@@ -21,8 +21,7 @@
  */
 
 import { ProfileHeader } from './ProfileHeader.js';
-
-const ADMIN_CONFIG_KEY = 'flipbook-admin-config';
+import { adminConfigStorage } from '../config/configHelpers.js';
 const BOOKS_PER_SHELF = 5;
 
 /** Метки видимости книг */
@@ -465,15 +464,12 @@ export class BookshelfScreen {
       }
     } else {
       // Fallback: localStorage
-      try {
-        const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-        if (raw) {
-          const config = JSON.parse(raw);
-          config.books = (config.books || []).filter(b => b.id !== bookId);
-          if (config.activeBookId === bookId) delete config.activeBookId;
-          localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
-        }
-      } catch { /* игнорируем */ }
+      const config = adminConfigStorage.load();
+      if (Object.keys(config).length > 0) {
+        config.books = (config.books || []).filter(b => b.id !== bookId);
+        if (config.activeBookId === bookId) delete config.activeBookId;
+        adminConfigStorage.setFull(config);
+      }
     }
 
     // Обновляем массив и перерисовываем
@@ -510,33 +506,23 @@ export async function loadBooksFromAPI(apiClient) {
  * @returns {{ shouldShow: boolean, books: Array }}
  */
 export function getBookshelfData() {
-  try {
-    const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-    if (!raw) return { books: [DEFAULT_BOOKSHELF_BOOK] };
+  const config = adminConfigStorage.load();
+  if (Object.keys(config).length === 0) return { books: [DEFAULT_BOOKSHELF_BOOK] };
 
-    const config = JSON.parse(raw);
-    const books = Array.isArray(config.books) && config.books.length
-      ? config.books
-      : [DEFAULT_BOOKSHELF_BOOK];
+  const books = Array.isArray(config.books) && config.books.length
+    ? config.books
+    : [DEFAULT_BOOKSHELF_BOOK];
 
-    return { books };
-  } catch {
-    return { books: [DEFAULT_BOOKSHELF_BOOK] };
-  }
+  return { books };
 }
 
 /**
  * Очистить выбор активной книги (вернуться к полке)
  */
 export function clearActiveBook() {
-  try {
-    const raw = localStorage.getItem(ADMIN_CONFIG_KEY);
-    if (raw) {
-      const config = JSON.parse(raw);
-      delete config.activeBookId;
-      localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
-    }
-  } catch {
-    /* повреждённые данные — игнорируем */
+  const config = adminConfigStorage.load();
+  if (Object.keys(config).length > 0) {
+    delete config.activeBookId;
+    adminConfigStorage.setFull(config);
   }
 }
