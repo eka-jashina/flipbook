@@ -133,9 +133,10 @@ S3_PUBLIC_URL=https://s3.cloud.ru/flipbook-uploads
 postgresql://flipbook:MyDbPass123!@amvera-ТВОЙЛОГИН-cnpg-flipbook-db-rw:5432/flipbook?sslmode=disable
 ```
 
-Формат: `postgresql://ПОЛЬЗОВАТЕЛЬ:ПАРОЛЬ@ХОСТ:5432/БАЗА?sslmode=disable`
+Формат: `postgresql://ПОЛЬЗОВАТЕЛЬ:ПАРОЛЬ@ХОСТ:5432/БАЗА?sslmode=disable&connection_limit=20&pool_timeout=15`
 
 > `sslmode=disable` — обязательно для подключения внутри Amvera (между проектами).
+> `connection_limit=20&pool_timeout=15` — рекомендуемые настройки пула соединений для production.
 
 ---
 
@@ -174,8 +175,9 @@ postgresql://flipbook:MyDbPass123!@amvera-ТВОЙЛОГИН-cnpg-flipbook-db-rw
 
 | Имя | Значение |
 |-----|----------|
-| `DATABASE_URL` | `postgresql://flipbook:MyDbPass123!@amvera-ТВОЙЛОГИН-cnpg-flipbook-db-rw:5432/flipbook?sslmode=disable` |
+| `DATABASE_URL` | `postgresql://flipbook:MyDbPass123!@amvera-ТВОЙЛОГИН-cnpg-flipbook-db-rw:5432/flipbook?sslmode=disable&connection_limit=20&pool_timeout=15` |
 | `SESSION_SECRET` | *(случайная строка, минимум 32 символа — сгенерируй командой ниже)* |
+| `CSRF_SECRET` | *(другая случайная строка, минимум 32 символа, должна отличаться от SESSION_SECRET)* |
 | `S3_ENDPOINT` | `https://s3.cloud.ru` |
 | `S3_ACCESS_KEY` | *(Key ID из шага 1.5)* |
 | `S3_SECRET_KEY` | *(Key Secret из шага 1.5)* |
@@ -249,15 +251,31 @@ git push amvera main
    ```
 5. **Скопируй этот URL**
 
-### Шаг 2.10. Добавь CORS_ORIGIN и APP_URL
+### Шаг 2.10. Добавь CORS_ORIGIN, APP_URL и GOOGLE_CALLBACK_URL
 
 Теперь, когда домен известен:
 
 1. Перейди на вкладку **«Переменные»**
-2. Добавь две новые переменные:
+2. Добавь переменные:
    - `CORS_ORIGIN` = `https://flipbook-ТВОЙЛОГИН.amvera.io`
+     - Для нескольких доменов через запятую: `https://flipbook-ТВОЙЛОГИН.amvera.io,https://mysite.com`
    - `APP_URL` = `https://flipbook-ТВОЙЛОГИН.amvera.io`
+   - `GOOGLE_CALLBACK_URL` = `https://flipbook-ТВОЙЛОГИН.amvera.io/api/auth/google/callback`
+     - Даже если Google OAuth не настроен сейчас — задай на будущее
 3. Amvera перезапустит контейнер автоматически (или перезапусти вручную)
+
+---
+
+### Опциональные переменные
+
+Эти переменные имеют разумные значения по умолчанию, но могут быть полезны:
+
+| Имя | Умолчание | Описание |
+|-----|-----------|----------|
+| `RATE_LIMIT_WINDOW` | `60000` | Окно ограничения запросов (мс) |
+| `RATE_LIMIT_MAX` | `100` | Макс. запросов на окно на IP |
+| `SESSION_MAX_AGE` | `604800000` | Время жизни сессии (мс, ~7 дней) |
+| `SENTRY_DSN` | *(не задан)* | DSN для мониторинга ошибок в Sentry |
 
 ---
 

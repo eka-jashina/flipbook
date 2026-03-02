@@ -7,7 +7,7 @@ import type { ZodTypeAny } from 'zod';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ZodDef = any;
 
-interface OpenApiSchema {
+export interface OpenApiSchema {
   type?: string;
   format?: string;
   properties?: Record<string, OpenApiSchema>;

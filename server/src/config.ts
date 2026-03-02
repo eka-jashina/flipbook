@@ -50,6 +50,7 @@ const envSchema = z.object({
     ? z.string().min(1, 'S3_PUBLIC_URL is required in production')
     : z.string().default('http://localhost:9000/flipbook-uploads'),
 
+  // Supports multiple origins separated by commas: "https://a.com,https://b.com"
   CORS_ORIGIN: isProduction
     ? z.string().min(1, 'CORS_ORIGIN is required in production (no wildcard default)')
     : z.string().default('http://localhost:3000'),
