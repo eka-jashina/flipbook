@@ -17,7 +17,7 @@ async function createUserWithBook(
 
   // Create book
   const bookRes = await agent
-    .post('/api/books')
+    .post('/api/v1/books')
     .send({ title: opts.bookTitle || 'Test Book', author: 'Test Author' })
     .expect(201);
 
@@ -95,7 +95,7 @@ describe('Public API', () => {
 
     it('should return 404 for non-existent username', async () => {
       await request(app)
-        .get('/api/public/shelves/no-such-user')
+        .get('/api/v1/public/shelves/no-such-user')
         .expect(404);
     });
   });
@@ -144,7 +144,7 @@ describe('Public API', () => {
 
     it('should return 404 for non-existent book', async () => {
       await request(app)
-        .get('/api/public/books/00000000-0000-0000-0000-000000000000')
+        .get('/api/v1/public/books/00000000-0000-0000-0000-000000000000')
         .expect(404);
     });
   });
@@ -203,7 +203,7 @@ describe('Public API', () => {
       });
 
       const res = await request(app)
-        .get('/api/public/discover')
+        .get('/api/v1/public/discover')
         .expect(200);
 
       expect(res.body.data.books.length).toBeGreaterThanOrEqual(2);
@@ -221,7 +221,7 @@ describe('Public API', () => {
       });
 
       const res = await request(app)
-        .get('/api/public/discover')
+        .get('/api/v1/public/discover')
         .expect(200);
 
       const titles = res.body.data.books.map((b: any) => b.title);
@@ -239,7 +239,7 @@ describe('Public API', () => {
       });
 
       const res = await request(app)
-        .get('/api/public/discover?limit=1')
+        .get('/api/v1/public/discover?limit=1')
         .expect(200);
 
       expect(res.body.data.books).toHaveLength(1);

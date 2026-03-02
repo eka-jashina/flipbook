@@ -10,7 +10,7 @@ describe('Default Settings API', () => {
 
   async function createBookWithAgent() {
     const { agent } = await createAuthenticatedAgent(app);
-    const bookRes = await agent.post('/api/books').send({ title: 'Test Book', author: 'Author' }).expect(201);
+    const bookRes = await agent.post('/api/v1/books').send({ title: 'Test Book', author: 'Author' }).expect(201);
     return { agent, bookId: bookRes.body.data.id };
   }
 
@@ -52,7 +52,7 @@ describe('Default Settings API', () => {
   });
 
   it('should require authentication', async () => {
-    await request(app).get('/api/books/00000000-0000-0000-0000-000000000000/default-settings').expect(401);
+    await request(app).get('/api/v1/books/00000000-0000-0000-0000-000000000000/default-settings').expect(401);
   });
 
   it('should return 403 for another user', async () => {
@@ -63,7 +63,7 @@ describe('Default Settings API', () => {
 
   it('should return 404 for non-existent book', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    await agent.get('/api/books/00000000-0000-0000-0000-000000000000/default-settings').expect(404);
+    await agent.get('/api/v1/books/00000000-0000-0000-0000-000000000000/default-settings').expect(404);
   });
 
   it('should validate fontSize bounds', async () => {

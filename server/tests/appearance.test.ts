@@ -10,7 +10,7 @@ describe('Appearance API', () => {
 
   async function createBookWithAgent() {
     const { agent } = await createAuthenticatedAgent(app);
-    const bookRes = await agent.post('/api/books').send({ title: 'Test Book', author: 'Author' }).expect(201);
+    const bookRes = await agent.post('/api/v1/books').send({ title: 'Test Book', author: 'Author' }).expect(201);
     return { agent, bookId: bookRes.body.data.id };
   }
 
@@ -24,7 +24,7 @@ describe('Appearance API', () => {
   });
 
   it('should require authentication', async () => {
-    await request(app).get('/api/books/00000000-0000-0000-0000-000000000000/appearance').expect(401);
+    await request(app).get('/api/v1/books/00000000-0000-0000-0000-000000000000/appearance').expect(401);
   });
 
   it('should update fontMin and fontMax', async () => {

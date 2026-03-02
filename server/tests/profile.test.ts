@@ -16,7 +16,7 @@ describe('Profile API', () => {
         displayName: 'Test Profile',
       });
 
-      const res = await agent.get('/api/profile').expect(200);
+      const res = await agent.get('/api/v1/profile').expect(200);
 
       expect(res.body.data.email).toBe(email);
       expect(res.body.data.username).toBe('testprofile');
@@ -26,7 +26,7 @@ describe('Profile API', () => {
 
     it('should return 401 for unauthenticated requests', async () => {
       const { default: request } = await import('supertest');
-      await request(app).get('/api/profile').expect(401);
+      await request(app).get('/api/v1/profile').expect(401);
     });
   });
 
@@ -35,7 +35,7 @@ describe('Profile API', () => {
       const { agent } = await createAuthenticatedAgent(app, { username: 'bio-test' });
 
       const res = await agent
-        .put('/api/profile')
+        .put('/api/v1/profile')
         .send({ bio: 'Hello, world!' })
         .expect(200);
 
@@ -46,7 +46,7 @@ describe('Profile API', () => {
       const { agent } = await createAuthenticatedAgent(app, { username: 'name-test' });
 
       const res = await agent
-        .put('/api/profile')
+        .put('/api/v1/profile')
         .send({ displayName: 'New Name' })
         .expect(200);
 
@@ -57,7 +57,7 @@ describe('Profile API', () => {
       const { agent } = await createAuthenticatedAgent(app, { username: 'old-name' });
 
       const res = await agent
-        .put('/api/profile')
+        .put('/api/v1/profile')
         .send({ username: 'new-name' })
         .expect(200);
 
@@ -69,7 +69,7 @@ describe('Profile API', () => {
       const { agent } = await createAuthenticatedAgent(app, { username: 'other-name' });
 
       const res = await agent
-        .put('/api/profile')
+        .put('/api/v1/profile')
         .send({ username: 'taken-name' })
         .expect(409);
 
@@ -80,7 +80,7 @@ describe('Profile API', () => {
       const { agent } = await createAuthenticatedAgent(app, { username: 'keep-me' });
 
       const res = await agent
-        .put('/api/profile')
+        .put('/api/v1/profile')
         .send({ username: 'keep-me' })
         .expect(200);
 
@@ -91,7 +91,7 @@ describe('Profile API', () => {
       const { agent } = await createAuthenticatedAgent(app, { username: 'valid-name' });
 
       await agent
-        .put('/api/profile')
+        .put('/api/v1/profile')
         .send({ username: 'AB' })
         .expect(400);
     });
@@ -100,7 +100,7 @@ describe('Profile API', () => {
       const { agent } = await createAuthenticatedAgent(app, { username: 'valid-name2' });
 
       await agent
-        .put('/api/profile')
+        .put('/api/v1/profile')
         .send({ username: 'admin' })
         .expect(400);
     });
@@ -111,7 +111,7 @@ describe('Profile API', () => {
       const { agent } = await createAuthenticatedAgent(app, { username: 'checker' });
 
       const res = await agent
-        .get('/api/profile/check-username/available-name')
+        .get('/api/v1/profile/check-username/available-name')
         .expect(200);
 
       expect(res.body.data.available).toBe(true);
@@ -122,7 +122,7 @@ describe('Profile API', () => {
       const { agent } = await createAuthenticatedAgent(app, { username: 'other-check' });
 
       const res = await agent
-        .get('/api/profile/check-username/taken-check')
+        .get('/api/v1/profile/check-username/taken-check')
         .expect(200);
 
       expect(res.body.data.available).toBe(false);
@@ -132,7 +132,7 @@ describe('Profile API', () => {
       const { agent } = await createAuthenticatedAgent(app, { username: 'reserve-check' });
 
       const res = await agent
-        .get('/api/profile/check-username/admin')
+        .get('/api/v1/profile/check-username/admin')
         .expect(200);
 
       expect(res.body.data.available).toBe(false);

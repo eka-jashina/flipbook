@@ -83,7 +83,7 @@ export const swaggerSpec = {
     description:
       'Backend API for the Flipbook interactive e-book reader. Supports multi-book management, chapters, appearance customization, sounds, fonts, reading progress, and more.',
   },
-  servers: [{ url: '/api', description: 'API root' }],
+  servers: [{ url: '/api/v1', description: 'API v1' }],
   tags: [
     { name: 'Auth', description: 'Authentication (email/password + Google OAuth)' },
     { name: 'Books', description: 'Book CRUD & reordering' },

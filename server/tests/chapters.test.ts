@@ -13,7 +13,7 @@ describe('Chapters API', () => {
   async function createBookWithAgent(app: ReturnType<typeof createApp>) {
     const { agent } = await createAuthenticatedAgent(app);
     const bookRes = await agent
-      .post('/api/books')
+      .post('/api/v1/books')
       .send({ title: 'Test Book', author: 'Author' })
       .expect(201);
     return { agent, bookId: bookRes.body.data.id };
@@ -32,7 +32,7 @@ describe('Chapters API', () => {
 
     it('should require authentication', async () => {
       await request(app)
-        .get('/api/books/00000000-0000-0000-0000-000000000000/chapters')
+        .get('/api/v1/books/00000000-0000-0000-0000-000000000000/chapters')
         .expect(401);
     });
   });

@@ -11,45 +11,45 @@ describe('Upload API', () => {
 
   it('should require authentication for all endpoints', async () => {
     const { agent } = await createCsrfAgent(app);
-    await agent.post('/api/upload/font').expect(401);
-    await agent.post('/api/upload/sound').expect(401);
-    await agent.post('/api/upload/image').expect(401);
-    await agent.post('/api/upload/book').expect(401);
+    await agent.post('/api/v1/upload/font').expect(401);
+    await agent.post('/api/v1/upload/sound').expect(401);
+    await agent.post('/api/v1/upload/image').expect(401);
+    await agent.post('/api/v1/upload/book').expect(401);
   });
 
   // ─── Font upload ─────────────────────────────────────────────────────
 
   it('should reject font upload without file', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    await agent.post('/api/upload/font').expect(400);
+    await agent.post('/api/v1/upload/font').expect(400);
   });
 
   // ─── Sound upload ────────────────────────────────────────────────────
 
   it('should reject sound upload without file', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    await agent.post('/api/upload/sound').expect(400);
+    await agent.post('/api/v1/upload/sound').expect(400);
   });
 
   // ─── Image upload ────────────────────────────────────────────────────
 
   it('should reject image upload without file', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    await agent.post('/api/upload/image').expect(400);
+    await agent.post('/api/v1/upload/image').expect(400);
   });
 
   // ─── Book upload / parse ─────────────────────────────────────────────
 
   it('should reject book upload without file', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    await agent.post('/api/upload/book').expect(400);
+    await agent.post('/api/v1/upload/book').expect(400);
   });
 
   it('should parse uploaded TXT file', async () => {
     const { agent } = await createAuthenticatedAgent(app);
     const content = 'Первый абзац текста.\n\nВторой абзац текста.\n\nТретий абзац.';
     const res = await agent
-      .post('/api/upload/book')
+      .post('/api/v1/upload/book')
       .attach('file', Buffer.from(content, 'utf-8'), { filename: 'test-book.txt', contentType: 'text/plain' })
       .expect(200);
 
@@ -65,7 +65,7 @@ describe('Upload API', () => {
   it('should reject empty TXT file', async () => {
     const { agent } = await createAuthenticatedAgent(app);
     const res = await agent
-      .post('/api/upload/book')
+      .post('/api/v1/upload/book')
       .attach('file', Buffer.from('', 'utf-8'), { filename: 'empty.txt', contentType: 'text/plain' })
       .expect(500);
 
@@ -96,7 +96,7 @@ describe('Upload API', () => {
 </FictionBook>`;
 
     const res = await agent
-      .post('/api/upload/book')
+      .post('/api/v1/upload/book')
       .attach('file', Buffer.from(fb2Content, 'utf-8'), { filename: 'test.fb2', contentType: 'application/xml' })
       .expect(200);
 
@@ -112,7 +112,7 @@ describe('Upload API', () => {
   it('should reject unsupported book format', async () => {
     const { agent } = await createAuthenticatedAgent(app);
     const res = await agent
-      .post('/api/upload/book')
+      .post('/api/v1/upload/book')
       .attach('file', Buffer.from('data'), { filename: 'test.pdf', contentType: 'application/octet-stream' })
       .expect(500);
 
@@ -123,7 +123,7 @@ describe('Upload API', () => {
     const { agent } = await createAuthenticatedAgent(app);
     const content = 'Одинокий абзац без разделителей.';
     const res = await agent
-      .post('/api/upload/book')
+      .post('/api/v1/upload/book')
       .attach('file', Buffer.from(content, 'utf-8'), { filename: 'single.txt', contentType: 'text/plain' })
       .expect(200);
 
@@ -149,7 +149,7 @@ describe('Upload API', () => {
 </FictionBook>`;
 
     const res = await agent
-      .post('/api/upload/book')
+      .post('/api/v1/upload/book')
       .attach('file', Buffer.from(fb2Content, 'utf-8'), { filename: 'fmt.fb2', contentType: 'application/xml' })
       .expect(200);
 
