@@ -60,4 +60,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 USER appuser
 
-CMD ["dumb-init", "sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+CMD ["dumb-init", "sh", "-c", "npx prisma migrate deploy && exec node dist/index.js"]

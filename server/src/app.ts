@@ -50,11 +50,27 @@ export function createApp() {
   app.set('trust proxy', 1);
 
   // Security headers (allow iframe embedding for /embed/* routes)
+  // CSP must allow S3_PUBLIC_URL for uploaded images/sounds,
+  // Google Fonts for custom typography, and blob:/data: for local processing
+  const s3Origin = config.S3_PUBLIC_URL
+    ? new URL(config.S3_PUBLIC_URL).origin
+    : null;
+  const imgSrc = ["'self'", 'data:', 'blob:'];
+  const mediaSrc = ["'self'", 'data:'];
+  if (s3Origin) {
+    imgSrc.push(s3Origin);
+    mediaSrc.push(s3Origin);
+  }
+
   app.use(helmet({
     frameguard: false,
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'img-src': imgSrc,
+        'media-src': mediaSrc,
+        'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
         'frame-ancestors': ["'self'", '*'],
       },
     },
