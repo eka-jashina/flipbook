@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AdminConfigStore } from '../../../js/admin/AdminConfigStore.js';
+import { mergeWithDefaults } from '../../../js/admin/AdminConfigMigration.js';
 
 // Мок IndexedDB — AdminConfigStore при инициализации обращается к IDB
 const createIDBMock = () => {
@@ -753,9 +754,9 @@ describe('AdminConfigStore', () => {
   // MERGE WITH DEFAULTS (миграция)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  describe('_mergeWithDefaults', () => {
+  describe('mergeWithDefaults', () => {
     it('should handle empty saved data', () => {
-      const result = store._mergeWithDefaults({});
+      const result = mergeWithDefaults({});
       expect(result.books).toBeDefined();
       expect(result.books.length).toBeGreaterThan(0);
       expect(result.fontMin).toBe(14);
@@ -767,7 +768,7 @@ describe('AdminConfigStore', () => {
         cover: { title: 'Old Book', author: 'Old Author' },
         chapters: [{ id: 'ch1', file: 'ch1.html' }],
       };
-      const result = store._mergeWithDefaults(oldFormat);
+      const result = mergeWithDefaults(oldFormat);
       expect(result.books.length).toBe(1);
       expect(result.books[0].cover.title).toBe('Old Book');
       expect(result.books[0].chapters[0].id).toBe('ch1');
@@ -778,7 +779,7 @@ describe('AdminConfigStore', () => {
         books: [{ id: 'test', cover: { title: 'Test' }, chapters: [] }],
         defaultSettings: { font: 'roboto', fontSize: 20 },
       };
-      const result = store._mergeWithDefaults(oldFormat);
+      const result = mergeWithDefaults(oldFormat);
       expect(result.books[0].defaultSettings.font).toBe('roboto');
       expect(result.books[0].defaultSettings.fontSize).toBe(20);
     });
@@ -788,7 +789,7 @@ describe('AdminConfigStore', () => {
         books: [{ id: 'test', cover: { title: 'Test' }, chapters: [] }],
         appearance: { fontMin: 12, fontMax: 26 },
       };
-      const result = store._mergeWithDefaults(oldFormat);
+      const result = mergeWithDefaults(oldFormat);
       expect(result.fontMin).toBe(12);
       expect(result.fontMax).toBe(26);
     });
@@ -797,7 +798,7 @@ describe('AdminConfigStore', () => {
       const data = {
         books: [{ id: 'mybook', cover: { title: 'Test' }, chapters: [] }],
       };
-      const result = store._mergeWithDefaults(data);
+      const result = mergeWithDefaults(data);
       expect(result.activeBookId).toBe('mybook');
     });
 
@@ -809,7 +810,7 @@ describe('AdminConfigStore', () => {
         ],
         activeBookId: 'book2',
       };
-      const result = store._mergeWithDefaults(data);
+      const result = mergeWithDefaults(data);
       expect(result.activeBookId).toBe('book2');
     });
   });

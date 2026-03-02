@@ -13,73 +13,16 @@
 
 import { IdbStorage } from '../utils/IdbStorage.js';
 import {
-  LIGHT_DEFAULTS,
-  DARK_DEFAULTS,
-  DEFAULT_READING_FONTS,
   DEFAULT_BOOK_SETTINGS,
   DEFAULT_BOOK,
   DEFAULT_CONFIG,
-  CONFIG_SCHEMA_VERSION,
 } from './AdminConfigDefaults.js';
+import { mergeWithDefaults, validateSchema } from './AdminConfigMigration.js';
+import { stripBookDataUrls } from './AdminConfigStrip.js';
 
 const STORAGE_KEY = 'flipbook-admin-config';
 const IDB_NAME = 'flipbook-admin';
 const IDB_STORE = 'config';
-
-// ─── Вспомогательные функции ──────────────────────────────────────────────────
-
-/**
- * Заменить data URL маркером _idb в объекте.
- * Мутирует объект, удаляя указанное поле и выставляя маркер.
- * @param {Object} obj - Объект для модификации
- * @param {string} field - Имя поля с data URL
- * @param {string} [markerField='_idb'] - Имя поля-маркера
- */
-function stripDataUrl(obj, field, markerField = '_idb') {
-  if (obj[field]?.startsWith?.('data:')) {
-    obj[markerField] = true;
-    delete obj[field];
-  }
-}
-
-/**
- * Подготовить снимок книги для localStorage — убрать тяжёлые data URL.
- * Мутирует переданный объект.
- * @param {Object} book
- */
-function stripBookDataUrls(book) {
-  // Главы: htmlContent
-  if (book.chapters) {
-    for (const ch of book.chapters) {
-      if (ch.htmlContent) {
-        ch._idb = true;
-        delete ch.htmlContent;
-      }
-    }
-  }
-
-  // Декоративный шрифт
-  if (book.decorativeFont?.dataUrl) {
-    book.decorativeFont = { name: book.decorativeFont.name, _idb: true };
-  }
-
-  // Амбиенты
-  if (book.ambients) {
-    for (const a of book.ambients) {
-      stripDataUrl(a, 'file');
-    }
-  }
-
-  // Оформление: coverBgImage, customTextureData
-  if (book.appearance) {
-    for (const theme of ['light', 'dark']) {
-      const t = book.appearance[theme];
-      if (!t) continue;
-      stripDataUrl(t, 'coverBgImage', '_idbCoverBgImage');
-      stripDataUrl(t, 'customTextureData', '_idbCustomTexture');
-    }
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -115,6 +58,16 @@ export class AdminConfigStore {
     return store;
   }
 
+  /**
+   * Валидировать структуру конфигурации по формальной схеме.
+   * Делегирует в AdminConfigMigration.validateSchema.
+   * @param {Object} config
+   * @returns {string[]}
+   */
+  static validateSchema(config) {
+    return validateSchema(config);
+  }
+
   /** Инициализация: загрузка из IndexedDB с миграцией из localStorage */
   async _init() {
     this._config = await this._load();
@@ -126,7 +79,7 @@ export class AdminConfigStore {
     try {
       const data = await this._idb.get(STORAGE_KEY);
       if (data) {
-        return this._mergeWithDefaults(data);
+        return mergeWithDefaults(data);
       }
     } catch {
       // IndexedDB недоступен — пробуем localStorage
@@ -137,7 +90,7 @@ export class AdminConfigStore {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        const config = this._mergeWithDefaults(parsed);
+        const config = mergeWithDefaults(parsed);
 
         // Мигрировать в IndexedDB (localStorage не удаляем — ридер читает оттуда)
         try {
@@ -153,176 +106,6 @@ export class AdminConfigStore {
     }
 
     return structuredClone(DEFAULT_CONFIG);
-  }
-
-  /**
-   * Валидировать структуру конфигурации по формальной схеме.
-   * Возвращает массив ошибок. Пустой массив = валидно.
-   * @param {Object} config
-   * @returns {string[]}
-   */
-  static validateSchema(config) {
-    const errors = [];
-    if (!config || typeof config !== 'object') {
-      return ['Конфигурация должна быть объектом'];
-    }
-    if (!Array.isArray(config.books)) {
-      errors.push('books должен быть массивом');
-    } else {
-      for (let i = 0; i < config.books.length; i++) {
-        const book = config.books[i];
-        if (!book.id) errors.push(`books[${i}]: отсутствует id`);
-        if (!book.cover || typeof book.cover !== 'object') errors.push(`books[${i}]: отсутствует cover`);
-        if (!Array.isArray(book.chapters)) errors.push(`books[${i}]: chapters должен быть массивом`);
-      }
-    }
-    if (typeof config.activeBookId !== 'string') {
-      errors.push('activeBookId должен быть строкой');
-    }
-    if (typeof config.fontMin !== 'number' || !Number.isFinite(config.fontMin)) {
-      errors.push('fontMin должен быть конечным числом');
-    }
-    if (typeof config.fontMax !== 'number' || !Number.isFinite(config.fontMax)) {
-      errors.push('fontMax должен быть конечным числом');
-    }
-    if (!Array.isArray(config.readingFonts)) {
-      errors.push('readingFonts должен быть массивом');
-    }
-    if (!config.settingsVisibility || typeof config.settingsVisibility !== 'object') {
-      errors.push('settingsVisibility должен быть объектом');
-    }
-    return errors;
-  }
-
-  // ─── Миграции и нормализация ──────────────────────────────────────────────
-
-  /** Гарантируем наличие всех полей после загрузки */
-  _mergeWithDefaults(saved) {
-    const savedVersion = saved._schemaVersion || 1;
-    saved = this._migrateSchema(saved, savedVersion);
-
-    const books = this._migrateBooks(saved);
-    const topLevel = this._extractTopLevelFallback(saved);
-
-    for (const book of books) {
-      this._ensureBookSettings(book, topLevel);
-    }
-
-    const activeBookId = saved.activeBookId || (books.length > 0 ? books[0].id : 'default');
-
-    // fontMin/fontMax: миграция из appearance (старый формат) на верхний уровень
-    const fontMin = saved.fontMin ?? saved.appearance?.fontMin ?? DEFAULT_CONFIG.fontMin;
-    const fontMax = saved.fontMax ?? saved.appearance?.fontMax ?? DEFAULT_CONFIG.fontMax;
-
-    const result = {
-      _schemaVersion: CONFIG_SCHEMA_VERSION,
-      books,
-      activeBookId,
-      fontMin,
-      fontMax,
-      readingFonts: Array.isArray(saved.readingFonts)
-        ? saved.readingFonts
-        : structuredClone(DEFAULT_READING_FONTS),
-      settingsVisibility: {
-        ...structuredClone(DEFAULT_CONFIG.settingsVisibility),
-        ...(saved.settingsVisibility || {}),
-      },
-    };
-
-    const schemaErrors = AdminConfigStore.validateSchema(result);
-    if (schemaErrors.length > 0) {
-      console.warn('AdminConfigStore: расхождение со схемой конфигурации:', schemaErrors);
-    }
-
-    return result;
-  }
-
-  /** Миграция формата books из старой схемы */
-  _migrateBooks(saved) {
-    if (Array.isArray(saved.books) && saved.books.length > 0) {
-      return saved.books;
-    }
-    if (saved.cover || saved.chapters) {
-      return [{
-        id: 'default',
-        cover: { ...structuredClone(DEFAULT_BOOK.cover), ...(saved.cover || {}) },
-        chapters: Array.isArray(saved.chapters) ? saved.chapters : structuredClone(DEFAULT_BOOK.chapters),
-      }];
-    }
-    return structuredClone(DEFAULT_CONFIG.books);
-  }
-
-  /** Извлечь per-book настройки из верхнего уровня (старый формат) как fallback */
-  _extractTopLevelFallback(saved) {
-    return {
-      defaultSettings: saved.defaultSettings || null,
-      appearance: saved.appearance || null,
-      sounds: saved.sounds || null,
-      ambients: saved.ambients || null,
-      decorativeFont: saved.decorativeFont !== undefined ? saved.decorativeFont : undefined,
-    };
-  }
-
-  /**
-   * Миграция данных между версиями схемы.
-   * @param {Object} data
-   * @param {number} fromVersion
-   * @returns {Object}
-   */
-  _migrateSchema(data, fromVersion) {
-    if (fromVersion < 2) {
-      console.info(`AdminConfigStore: миграция схемы v${fromVersion} → v${CONFIG_SCHEMA_VERSION}`);
-    }
-    // Будущие миграции: if (fromVersion < 3) { ... }
-    return data;
-  }
-
-  /** Обеспечить наличие per-book настроек в объекте книги */
-  _ensureBookSettings(book, fallback) {
-    if (!book.defaultSettings) {
-      book.defaultSettings = {
-        ...structuredClone(DEFAULT_BOOK_SETTINGS.defaultSettings),
-        ...(fallback.defaultSettings || {}),
-      };
-    }
-
-    if (!book.appearance) {
-      const src = fallback.appearance || {};
-      const hasPerTheme = src.light || src.dark;
-      if (hasPerTheme) {
-        book.appearance = {
-          light: { ...structuredClone(LIGHT_DEFAULTS), ...(src.light || {}) },
-          dark: { ...structuredClone(DARK_DEFAULTS), ...(src.dark || {}) },
-        };
-      } else {
-        const rest = { ...src };
-        delete rest.fontMin;
-        delete rest.fontMax;
-        book.appearance = {
-          light: { ...structuredClone(LIGHT_DEFAULTS), ...rest },
-          dark: structuredClone(DARK_DEFAULTS),
-        };
-      }
-    } else {
-      book.appearance.light = { ...structuredClone(LIGHT_DEFAULTS), ...(book.appearance.light || {}) };
-      book.appearance.dark = { ...structuredClone(DARK_DEFAULTS), ...(book.appearance.dark || {}) };
-    }
-
-    if (!book.sounds) {
-      book.sounds = { ...structuredClone(DEFAULT_BOOK_SETTINGS.sounds), ...(fallback.sounds || {}) };
-    }
-
-    if (!book.ambients) {
-      book.ambients = Array.isArray(fallback.ambients)
-        ? structuredClone(fallback.ambients)
-        : structuredClone(DEFAULT_BOOK_SETTINGS.ambients);
-    }
-
-    if (book.decorativeFont === undefined) {
-      book.decorativeFont = fallback.decorativeFont !== undefined
-        ? (fallback.decorativeFont ? structuredClone(fallback.decorativeFont) : null)
-        : null;
-    }
   }
 
   // ─── Персистенция ─────────────────────────────────────────────────────────
@@ -695,7 +478,7 @@ export class AdminConfigStore {
 
   importJSON(jsonString) {
     const parsed = JSON.parse(jsonString);
-    this._config = this._mergeWithDefaults(parsed);
+    this._config = mergeWithDefaults(parsed);
     this._save();
   }
 
