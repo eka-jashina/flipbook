@@ -49,8 +49,16 @@ export function createApp() {
   // Trust first proxy (Nginx / cloud LB)
   app.set('trust proxy', 1);
 
-  // Security headers
-  app.use(helmet());
+  // Security headers (allow iframe embedding for /embed/* routes)
+  app.use(helmet({
+    frameguard: false,
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'frame-ancestors': ["'self'", '*'],
+      },
+    },
+  }));
 
   // CORS
   app.use(
@@ -163,6 +171,9 @@ export function createApp() {
   app.use('/api/public', publicRoutes);
   app.use('/api/books', booksRoutes);
 
+  // Progress: any authenticated user can track reading progress (no ownership required)
+  app.use('/api/books/:bookId/progress', progressRoutes);
+
   // Book sub-resource routes — unified ownership check via middleware
   app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
   app.use('/api/books/:bookId/chapters', chaptersRoutes);
@@ -170,7 +181,6 @@ export function createApp() {
   app.use('/api/books/:bookId/sounds', soundsRoutes);
   app.use('/api/books/:bookId/ambients', ambientsRoutes);
   app.use('/api/books/:bookId/decorative-font', decorativeFontRoutes);
-  app.use('/api/books/:bookId/progress', progressRoutes);
   app.use('/api/books/:bookId/default-settings', defaultSettingsRoutes);
 
   app.use('/api/fonts', fontsRoutes);

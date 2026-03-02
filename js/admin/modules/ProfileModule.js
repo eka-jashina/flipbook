@@ -21,6 +21,8 @@ export class ProfileModule extends BaseModule {
     this._currentUser = app._currentUser;
     this._checkTimer = null;
     this._lastCheckedUsername = null;
+    /** Pending avatar URL (не сохранённый на сервер). null = удалить, undefined = без изменений */
+    this._pendingAvatarUrl = undefined;
   }
 
   cacheDOM() {
@@ -57,6 +59,7 @@ export class ProfileModule extends BaseModule {
 
   render() {
     if (!this._currentUser) return;
+    this._pendingAvatarUrl = undefined;
 
     const { username, displayName, bio, avatarUrl } = this._currentUser;
 
@@ -163,7 +166,7 @@ export class ProfileModule extends BaseModule {
 
     try {
       const result = await this._api.uploadImage(file);
-      this._currentUser.avatarUrl = result.url;
+      this._pendingAvatarUrl = result.url;
       this._renderAvatarPreview(result.url);
       this._renderProfilePreview();
     } catch {
@@ -174,7 +177,7 @@ export class ProfileModule extends BaseModule {
   }
 
   _removeAvatar() {
-    this._currentUser.avatarUrl = null;
+    this._pendingAvatarUrl = null;
     this._renderAvatarPreview(null);
     this._renderProfilePreview();
   }
@@ -205,7 +208,7 @@ export class ProfileModule extends BaseModule {
     const username = this._usernameInput?.value || this._currentUser?.username || '';
     const displayName = this._displayNameInput?.value || this._currentUser?.displayName || username;
     const bio = this._bioInput?.value || '';
-    const avatarUrl = this._currentUser?.avatarUrl;
+    const avatarUrl = this._pendingAvatarUrl !== undefined ? this._pendingAvatarUrl : this._currentUser?.avatarUrl;
     const name = displayName || username || '?';
     const initial = name.charAt(0).toUpperCase();
     const hue = this._hashToHue(username || name);
@@ -236,7 +239,9 @@ export class ProfileModule extends BaseModule {
     const username = this._usernameInput.value.trim().toLowerCase();
     const displayName = this._displayNameInput.value.trim() || null;
     const bio = this._bioInput.value.trim() || null;
-    const avatarUrl = this._currentUser.avatarUrl || null;
+    const avatarUrl = this._pendingAvatarUrl !== undefined
+      ? this._pendingAvatarUrl
+      : (this._currentUser.avatarUrl || null);
 
     // Валидация username
     if (username && !USERNAME_RE.test(username)) {
@@ -253,13 +258,16 @@ export class ProfileModule extends BaseModule {
     try {
       const updated = await this._api.updateProfile(data);
 
-      // Обновить локальное состояние
+      // Обновить локальное состояние только после успешного сохранения
       Object.assign(this._currentUser, {
         username: updated.username ?? this._currentUser.username,
         displayName: updated.displayName ?? null,
         bio: updated.bio ?? null,
         avatarUrl: updated.avatarUrl ?? null,
       });
+
+      // Сбросить pending — теперь _currentUser актуален
+      this._pendingAvatarUrl = undefined;
 
       this._showToast('Профиль сохранён', 'success');
       this._renderProfilePreview();

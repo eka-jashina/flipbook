@@ -106,6 +106,12 @@ export default defineConfig(({ command, mode }) => {
               './js/core/delegates/DragDelegate.js',
               './js/core/delegates/DragDOMPreparer.js',
             ],
+            'account': [
+              './js/core/AccountScreen.js',
+              './js/admin/ServerAdminConfigStore.js',
+              './js/admin/AdminConfigStore.js',
+              './js/admin/modules/ProfileModule.js',
+            ],
           },
           
           entryFileNames: 'assets/js/[name]-[hash].js',

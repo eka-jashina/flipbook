@@ -26,6 +26,7 @@ const BASE_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
  * @property {string} name   — имя маршрута
  * @property {Object} params — извлечённые параметры
  * @property {string} path   — полный путь (без base)
+ * @property {URLSearchParams} query — query-параметры
  */
 
 export class Router {
@@ -122,19 +123,24 @@ export class Router {
     window.addEventListener('popstate', this._onPopState);
     document.addEventListener('click', this._onClick);
 
-    await this._resolve(this._stripBase(location.pathname));
+    await this._resolve(this._stripBase(location.pathname), location.search);
   }
 
   /**
-   * Навигация к новому пути.
-   * @param {string} path — путь без base (напр. '/book/123')
+   * Навигация к новому пути (может содержать query string).
+   * @param {string} pathWithQuery — путь без base (напр. '/book/123' или '/account?tab=profile')
    * @param {Object} [options]
    * @param {boolean} [options.replace=false] — заменить текущую запись
    */
-  async navigate(path, { replace = false } = {}) {
+  async navigate(pathWithQuery, { replace = false } = {}) {
     if (!this._started) return;
 
-    const fullPath = this._addBase(path);
+    // Отделяем path от query string
+    const qIdx = pathWithQuery.indexOf('?');
+    const path = qIdx >= 0 ? pathWithQuery.slice(0, qIdx) : pathWithQuery;
+    const search = qIdx >= 0 ? pathWithQuery.slice(qIdx) : '';
+
+    const fullPath = this._addBase(path) + search;
 
     if (replace) {
       history.replaceState(null, '', fullPath);
@@ -142,7 +148,7 @@ export class Router {
       history.pushState(null, '', fullPath);
     }
 
-    await this._resolve(path);
+    await this._resolve(path, search);
   }
 
   /**
@@ -155,8 +161,10 @@ export class Router {
 
   /**
    * Резолв пути: найти маршрут и вызвать обработчик.
+   * @param {string} path — путь без base и query string
+   * @param {string} [search=''] — query string (напр. '?tab=profile')
    */
-  async _resolve(path) {
+  async _resolve(path, search = '') {
     // Нормализация: убрать trailing slash (кроме /)
     const normalizedPath = path === '/' ? '/' : path.replace(/\/$/, '');
 
@@ -169,6 +177,8 @@ export class Router {
       return;
     }
 
+    // Сохраняем query params в match для доступа из обработчиков
+    match.query = new URLSearchParams(search);
     this._current = match;
 
     // Найти маршрут и вызвать handler
@@ -184,7 +194,7 @@ export class Router {
 
   /** @private */
   _onPopState() {
-    this._resolve(this._stripBase(location.pathname));
+    this._resolve(this._stripBase(location.pathname), location.search);
   }
 
   /**

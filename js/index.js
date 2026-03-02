@@ -305,10 +305,10 @@ async function handleAccount() {
   cleanupBookshelf();
 
   // Парсим query-параметры: ?tab=profile, ?edit=bookId
-  const params = new URLSearchParams(location.search);
-  const tab = params.get('tab') || 'books';
-  const editBookId = params.get('edit');
-  const mode = params.get('mode');
+  const query = router.getCurrentRoute()?.query || new URLSearchParams(location.search);
+  const tab = query.get('tab') || 'books';
+  const editBookId = query.get('edit');
+  const mode = query.get('mode');
 
   // Динамический импорт AccountScreen (грузится один раз)
   if (!accountScreen) {
@@ -452,10 +452,18 @@ async function initReaderWithMode(bookId, route) {
     }
   }
 
+  // Embed: звуки отключены по умолчанию
+  if (readerMode === 'embed') {
+    config = {
+      ...config,
+      DEFAULT_SETTINGS: { ...config.DEFAULT_SETTINGS, soundEnabled: false },
+    };
+  }
+
   setConfig(config);
 
   app = new BookController(config, {
-    apiClient,
+    apiClient: readerMode === 'embed' ? null : apiClient,
     bookId,
     serverProgress: progress,
     readerMode,

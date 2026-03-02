@@ -329,6 +329,7 @@ export class BookController {
     delegates.forEach((d) => safeDestroy(() => d?.destroy?.()));
 
     // 3. Уничтожаем отдельные компоненты
+    safeDestroy(() => this.initializer?.destroy());
     safeDestroy(() => this.stateMachine?.destroy?.());
     safeDestroy(() => this.settings?.destroy?.());
 
