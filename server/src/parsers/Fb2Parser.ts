@@ -12,6 +12,9 @@ const { Node: NodeType } = new JSDOM('').window;
 const TEXT_NODE = NodeType.TEXT_NODE;
 const ELEMENT_NODE = NodeType.ELEMENT_NODE;
 
+/** Max nesting depth for recursive section/content parsing (prevents stack overflow). */
+const MAX_DEPTH = 50;
+
 export function parseFb2(buffer: Buffer, filename: string): ParsedBook {
   const text = readBufferWithEncoding(buffer);
   const doc = parseXml(text);
@@ -124,7 +127,9 @@ function parseFb2Sections(bodyEl: Element, imageMap: Map<string, string>): Parse
   return chapters;
 }
 
-function parseFb2Section(section: Element, imageMap: Map<string, string>, baseIndex: number): ParsedChapter[] {
+function parseFb2Section(section: Element, imageMap: Map<string, string>, baseIndex: number, depth = 0): ParsedChapter[] {
+  if (depth > MAX_DEPTH) return [];
+
   const subSections = section.querySelectorAll(':scope > section');
 
   const titleEl = section.querySelector(':scope > title');
@@ -145,7 +150,7 @@ function parseFb2Section(section: Element, imageMap: Map<string, string>, baseIn
     }
 
     for (const sub of subSections) {
-      const subResults = parseFb2Section(sub, imageMap, idx);
+      const subResults = parseFb2Section(sub, imageMap, idx, depth + 1);
       results.push(...subResults);
       idx += subResults.length;
     }
@@ -313,13 +318,15 @@ function convertFb2Poem(poemEl: Element, imageMap: Map<string, string>): string 
   return lines.filter(Boolean).join('\n');
 }
 
-function convertFb2AllContent(bodyEl: Element, imageMap: Map<string, string>): string {
+function convertFb2AllContent(bodyEl: Element, imageMap: Map<string, string>, depth = 0): string {
+  if (depth > MAX_DEPTH) return '';
+
   const parts: string[] = [];
 
   for (const child of bodyEl.children) {
     const tag = child.tagName.toLowerCase();
     if (tag === 'section') {
-      parts.push(convertFb2AllContent(child, imageMap));
+      parts.push(convertFb2AllContent(child, imageMap, depth + 1));
     } else if (tag === 'title') {
       parts.push(`<h2>${escapeHtml(child.textContent?.trim() || '')}</h2>`);
     } else {
