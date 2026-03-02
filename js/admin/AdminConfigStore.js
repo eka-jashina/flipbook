@@ -26,6 +26,63 @@ const STORAGE_KEY = 'flipbook-admin-config';
 const IDB_NAME = 'flipbook-admin';
 const IDB_STORE = 'config';
 
+// ─── Вспомогательные функции ──────────────────────────────────────────────────
+
+/**
+ * Заменить data URL маркером _idb в объекте.
+ * Мутирует объект, удаляя указанное поле и выставляя маркер.
+ * @param {Object} obj - Объект для модификации
+ * @param {string} field - Имя поля с data URL
+ * @param {string} [markerField='_idb'] - Имя поля-маркера
+ */
+function stripDataUrl(obj, field, markerField = '_idb') {
+  if (obj[field]?.startsWith?.('data:')) {
+    obj[markerField] = true;
+    delete obj[field];
+  }
+}
+
+/**
+ * Подготовить снимок книги для localStorage — убрать тяжёлые data URL.
+ * Мутирует переданный объект.
+ * @param {Object} book
+ */
+function stripBookDataUrls(book) {
+  // Главы: htmlContent
+  if (book.chapters) {
+    for (const ch of book.chapters) {
+      if (ch.htmlContent) {
+        ch._idb = true;
+        delete ch.htmlContent;
+      }
+    }
+  }
+
+  // Декоративный шрифт
+  if (book.decorativeFont?.dataUrl) {
+    book.decorativeFont = { name: book.decorativeFont.name, _idb: true };
+  }
+
+  // Амбиенты
+  if (book.ambients) {
+    for (const a of book.ambients) {
+      stripDataUrl(a, 'file');
+    }
+  }
+
+  // Оформление: coverBgImage, customTextureData
+  if (book.appearance) {
+    for (const theme of ['light', 'dark']) {
+      const t = book.appearance[theme];
+      if (!t) continue;
+      stripDataUrl(t, 'coverBgImage', '_idbCoverBgImage');
+      stripDataUrl(t, 'customTextureData', '_idbCustomTexture');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export class AdminConfigStore {
   constructor() {
     this._config = structuredClone(DEFAULT_CONFIG);
@@ -41,18 +98,10 @@ export class AdminConfigStore {
     /** @type {boolean} Были ли изменения во время сохранения (нужно повторить) */
     this._dirtyDuringSave = false;
 
-    /**
-     * Коллбэк ошибки — устанавливается извне (admin/index.js).
-     * Вызывается при критических ошибках сохранения.
-     * @type {((error: Error) => void)|null}
-     */
+    /** @type {((error: Error) => void)|null} Колбэк ошибки */
     this.onError = null;
 
-    /**
-     * Колбэк успешного сохранения — устанавливается извне (admin/index.js).
-     * Вызывается после каждого _save() для показа индикатора сохранения.
-     * @type {(() => void)|null}
-     */
+    /** @type {(() => void)|null} Колбэк успешного сохранения */
     this.onSave = null;
   }
 
@@ -145,38 +194,15 @@ export class AdminConfigStore {
     return errors;
   }
 
+  // ─── Миграции и нормализация ──────────────────────────────────────────────
+
   /** Гарантируем наличие всех полей после загрузки */
   _mergeWithDefaults(saved) {
-    // --- Миграция схемы ---
     const savedVersion = saved._schemaVersion || 1;
     saved = this._migrateSchema(saved, savedVersion);
 
-    // --- Миграция книг из старого формата ---
-    let books;
-    if (Array.isArray(saved.books) && saved.books.length > 0) {
-      books = saved.books;
-    } else if (saved.cover || saved.chapters) {
-      books = [{
-        id: 'default',
-        cover: {
-          ...structuredClone(DEFAULT_BOOK.cover),
-          ...(saved.cover || {}),
-        },
-        chapters: Array.isArray(saved.chapters) ? saved.chapters : structuredClone(DEFAULT_BOOK.chapters),
-      }];
-    } else {
-      books = structuredClone(DEFAULT_CONFIG.books);
-    }
-
-    // --- Миграция per-book настроек из top-level (старый формат) ---
-    // Если настройки были на верхнем уровне, копируем их в каждую книгу
-    const topLevel = {
-      defaultSettings: saved.defaultSettings || null,
-      appearance: saved.appearance || null,
-      sounds: saved.sounds || null,
-      ambients: saved.ambients || null,
-      decorativeFont: saved.decorativeFont !== undefined ? saved.decorativeFont : undefined,
-    };
+    const books = this._migrateBooks(saved);
+    const topLevel = this._extractTopLevelFallback(saved);
 
     for (const book of books) {
       this._ensureBookSettings(book, topLevel);
@@ -184,23 +210,16 @@ export class AdminConfigStore {
 
     const activeBookId = saved.activeBookId || (books.length > 0 ? books[0].id : 'default');
 
-    // --- Global: fontMin/fontMax ---
-    // Миграция: раньше были в appearance, теперь на верхнем уровне
-    let fontMin = saved.fontMin;
-    let fontMax = saved.fontMax;
-    if (fontMin === undefined && saved.appearance) {
-      fontMin = saved.appearance.fontMin;
-    }
-    if (fontMax === undefined && saved.appearance) {
-      fontMax = saved.appearance.fontMax;
-    }
+    // fontMin/fontMax: миграция из appearance (старый формат) на верхний уровень
+    const fontMin = saved.fontMin ?? saved.appearance?.fontMin ?? DEFAULT_CONFIG.fontMin;
+    const fontMax = saved.fontMax ?? saved.appearance?.fontMax ?? DEFAULT_CONFIG.fontMax;
 
     const result = {
       _schemaVersion: CONFIG_SCHEMA_VERSION,
       books,
       activeBookId,
-      fontMin: fontMin ?? DEFAULT_CONFIG.fontMin,
-      fontMax: fontMax ?? DEFAULT_CONFIG.fontMax,
+      fontMin,
+      fontMax,
       readingFonts: Array.isArray(saved.readingFonts)
         ? saved.readingFonts
         : structuredClone(DEFAULT_READING_FONTS),
@@ -210,7 +229,6 @@ export class AdminConfigStore {
       },
     };
 
-    // Валидация структуры — предупреждение при расхождении со схемой
     const schemaErrors = AdminConfigStore.validateSchema(result);
     if (schemaErrors.length > 0) {
       console.warn('AdminConfigStore: расхождение со схемой конфигурации:', schemaErrors);
@@ -219,31 +237,48 @@ export class AdminConfigStore {
     return result;
   }
 
+  /** Миграция формата books из старой схемы */
+  _migrateBooks(saved) {
+    if (Array.isArray(saved.books) && saved.books.length > 0) {
+      return saved.books;
+    }
+    if (saved.cover || saved.chapters) {
+      return [{
+        id: 'default',
+        cover: { ...structuredClone(DEFAULT_BOOK.cover), ...(saved.cover || {}) },
+        chapters: Array.isArray(saved.chapters) ? saved.chapters : structuredClone(DEFAULT_BOOK.chapters),
+      }];
+    }
+    return structuredClone(DEFAULT_CONFIG.books);
+  }
+
+  /** Извлечь per-book настройки из верхнего уровня (старый формат) как fallback */
+  _extractTopLevelFallback(saved) {
+    return {
+      defaultSettings: saved.defaultSettings || null,
+      appearance: saved.appearance || null,
+      sounds: saved.sounds || null,
+      ambients: saved.ambients || null,
+      decorativeFont: saved.decorativeFont !== undefined ? saved.decorativeFont : undefined,
+    };
+  }
+
   /**
    * Миграция данных между версиями схемы.
-   * Каждая версия добавляет свои преобразования поверх предыдущих.
-   *
-   * @param {Object} data - Загруженные данные
-   * @param {number} fromVersion - Версия загруженных данных
-   * @returns {Object} Мигрированные данные
+   * @param {Object} data
+   * @param {number} fromVersion
+   * @returns {Object}
    */
   _migrateSchema(data, fromVersion) {
-    // v1 → v2: per-book настройки (appearance, sounds, ambients) перенесены из top-level в books[]
-    // Эта миграция уже реализована в _mergeWithDefaults через topLevel fallback,
-    // поэтому здесь просто логируем факт миграции.
     if (fromVersion < 2) {
       console.info(`AdminConfigStore: миграция схемы v${fromVersion} → v${CONFIG_SCHEMA_VERSION}`);
     }
-
-    // Будущие миграции добавляются сюда:
-    // if (fromVersion < 3) { ... }
-
+    // Будущие миграции: if (fromVersion < 3) { ... }
     return data;
   }
 
   /** Обеспечить наличие per-book настроек в объекте книги */
   _ensureBookSettings(book, fallback) {
-    // defaultSettings
     if (!book.defaultSettings) {
       book.defaultSettings = {
         ...structuredClone(DEFAULT_BOOK_SETTINGS.defaultSettings),
@@ -251,44 +286,38 @@ export class AdminConfigStore {
       };
     }
 
-    // appearance (с миграцией light/dark)
     if (!book.appearance) {
       const src = fallback.appearance || {};
       const hasPerTheme = src.light || src.dark;
-      let light, dark;
       if (hasPerTheme) {
-        light = { ...structuredClone(LIGHT_DEFAULTS), ...(src.light || {}) };
-        dark = { ...structuredClone(DARK_DEFAULTS), ...(src.dark || {}) };
+        book.appearance = {
+          light: { ...structuredClone(LIGHT_DEFAULTS), ...(src.light || {}) },
+          dark: { ...structuredClone(DARK_DEFAULTS), ...(src.dark || {}) },
+        };
       } else {
         const rest = { ...src };
         delete rest.fontMin;
         delete rest.fontMax;
-        light = { ...structuredClone(LIGHT_DEFAULTS), ...rest };
-        dark = structuredClone(DARK_DEFAULTS);
+        book.appearance = {
+          light: { ...structuredClone(LIGHT_DEFAULTS), ...rest },
+          dark: structuredClone(DARK_DEFAULTS),
+        };
       }
-      book.appearance = { light, dark };
     } else {
-      // Убедиться что light/dark полные
       book.appearance.light = { ...structuredClone(LIGHT_DEFAULTS), ...(book.appearance.light || {}) };
       book.appearance.dark = { ...structuredClone(DARK_DEFAULTS), ...(book.appearance.dark || {}) };
     }
 
-    // sounds
     if (!book.sounds) {
-      book.sounds = {
-        ...structuredClone(DEFAULT_BOOK_SETTINGS.sounds),
-        ...(fallback.sounds || {}),
-      };
+      book.sounds = { ...structuredClone(DEFAULT_BOOK_SETTINGS.sounds), ...(fallback.sounds || {}) };
     }
 
-    // ambients
     if (!book.ambients) {
       book.ambients = Array.isArray(fallback.ambients)
         ? structuredClone(fallback.ambients)
         : structuredClone(DEFAULT_BOOK_SETTINGS.ambients);
     }
 
-    // decorativeFont
     if (book.decorativeFont === undefined) {
       book.decorativeFont = fallback.decorativeFont !== undefined
         ? (fallback.decorativeFont ? structuredClone(fallback.decorativeFont) : null)
@@ -296,16 +325,16 @@ export class AdminConfigStore {
     }
   }
 
+  // ─── Персистенция ─────────────────────────────────────────────────────────
+
   /**
-   * Сохранить конфиг в IndexedDB и localStorage (для ридера).
-   * Использует оптимистичную блокировку: если во время асинхронного сохранения
-   * произошли новые изменения, автоматически запускает повторное сохранение
-   * с актуальным снимком.
+   * Сохранить конфиг в IndexedDB и localStorage.
+   * Использует оптимистичную блокировку: если во время сохранения
+   * произошли новые изменения, автоматически повторяет сохранение.
    */
   _save() {
     this._version++;
 
-    // Если сохранение уже идёт — помечаем, что нужно повторить
     if (this._saving) {
       this._dirtyDuringSave = true;
       return;
@@ -323,11 +352,6 @@ export class AdminConfigStore {
     const snapshot = structuredClone(this._config);
     const savedVersion = this._version;
 
-    // Синхронизируем в localStorage — ридер (config.js) читает оттуда.
-    // Сохраняем облегчённую версию: без htmlContent (он может быть очень большим
-    // из-за base64-изображений из EPUB/FB2, и не помещается в лимит localStorage,
-    // особенно на мобильных устройствах — обычно 5 МБ).
-    // Полная версия хранится в IndexedDB, ридер дозагрузит htmlContent оттуда.
     this._saveToLocalStorage(snapshot);
 
     this._savePromise = this._idb.put(STORAGE_KEY, snapshot)
@@ -338,62 +362,25 @@ export class AdminConfigStore {
       })
       .finally(() => {
         this._saving = false;
-
-        // Если за время сохранения были новые изменения — повторить с актуальным снимком
         if (this._dirtyDuringSave || this._version !== savedVersion) {
           this._performSave();
         }
       });
   }
 
-  /** @private Синхронное сохранение облегчённой версии в localStorage */
+  /**
+   * Синхронное сохранение облегчённой версии в localStorage.
+   * Тяжёлые data URL заменяются маркерами _idb — ридер дозагрузит из IndexedDB.
+   */
   _saveToLocalStorage(snapshot) {
     try {
       const lsSnapshot = structuredClone(snapshot);
+
       for (const book of lsSnapshot.books) {
-        // Убираем тяжёлый htmlContent глав
-        if (book.chapters) {
-          for (const ch of book.chapters) {
-            if (ch.htmlContent) {
-              ch._idb = true;    // маркер: контент в IndexedDB
-              delete ch.htmlContent;
-            }
-          }
-        }
-
-        // Убираем data URL декоративного шрифта
-        if (book.decorativeFont?.dataUrl) {
-          book.decorativeFont = { name: book.decorativeFont.name, _idb: true };
-        }
-
-        // Убираем data URL амбиентов
-        if (book.ambients) {
-          for (const a of book.ambients) {
-            if (a.file && a.file.startsWith('data:')) {
-              a._idb = true;
-              delete a.file;
-            }
-          }
-        }
-
-        // Убираем data URL из оформления (coverBgImage, customTextureData)
-        if (book.appearance) {
-          for (const theme of ['light', 'dark']) {
-            const t = book.appearance[theme];
-            if (!t) continue;
-            if (t.coverBgImage?.startsWith('data:')) {
-              t._idbCoverBgImage = true;
-              delete t.coverBgImage;
-            }
-            if (t.customTextureData?.startsWith('data:')) {
-              t._idbCustomTexture = true;
-              delete t.customTextureData;
-            }
-          }
-        }
+        stripBookDataUrls(book);
       }
 
-      // Убираем data URL пользовательских шрифтов для чтения
+      // Шрифты для чтения: data URL
       if (lsSnapshot.readingFonts) {
         for (const f of lsSnapshot.readingFonts) {
           if (f.dataUrl) {
@@ -405,13 +392,11 @@ export class AdminConfigStore {
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(lsSnapshot));
     } catch (err) {
-      // localStorage переполнен — не критично, IndexedDB основной.
-      // Ридер дозагрузит данные из IndexedDB через enrichConfigFromIDB().
       console.warn('AdminConfigStore: localStorage сохранение не удалось', err.message);
     }
   }
 
-  /** Дождаться завершения последнего сохранения (для операций, где важен результат) */
+  /** Дождаться завершения последнего сохранения */
   async waitForSave() {
     if (this._savePromise) {
       await this._savePromise;
@@ -423,9 +408,9 @@ export class AdminConfigStore {
     return structuredClone(this._config);
   }
 
-  // --- Книги ---
+  // ─── Книги ────────────────────────────────────────────────────────────────
 
-  /** Получить список всех книг (краткая инфо: id, title, author, chaptersCount) */
+  /** Получить список всех книг (краткая инфо) */
   getBooks() {
     return this._config.books.map(b => ({
       id: b.id,
@@ -454,19 +439,31 @@ export class AdminConfigStore {
       || this._config.books[0];
   }
 
-  /** Добавить новую книгу (per-book настройки берутся из дефолтов) */
+  /**
+   * Выполнить операцию над активной книгой с автосохранением.
+   * @param {(book: Object) => void} fn - Мутирующая операция
+   * @returns {boolean} true если операция выполнена
+   */
+  _modifyActiveBook(fn) {
+    const book = this._getActiveBook();
+    if (!book) return false;
+    fn(book);
+    this._save();
+    return true;
+  }
+
+  /** Добавить новую книгу */
   addBook(book) {
     this._config.books.push({
       id: book.id || `book_${Date.now()}`,
       cover: book.cover || { title: '', author: '', bg: '', bgMobile: '' },
       chapters: book.chapters || [],
-      // Per-book: всегда дефолтные значения
       ...structuredClone(DEFAULT_BOOK_SETTINGS),
     });
     this._save();
   }
 
-  /** Переместить книгу с позиции fromIndex на позицию toIndex */
+  /** Переместить книгу */
   moveBook(fromIndex, toIndex) {
     const books = this._config.books;
     if (fromIndex < 0 || fromIndex >= books.length) return;
@@ -483,7 +480,6 @@ export class AdminConfigStore {
     if (idx === -1) return;
     this._config.books.splice(idx, 1);
 
-    // Если удалили активную — переключаемся на первую
     if (this._config.activeBookId === bookId) {
       this._config.activeBookId = this._config.books.length > 0 ? this._config.books[0].id : '';
     }
@@ -499,7 +495,7 @@ export class AdminConfigStore {
     this._save();
   }
 
-  // --- Обложка (активной книги) ---
+  // ─── Обложка (активной книги) ─────────────────────────────────────────────
 
   getCover() {
     const book = this._getActiveBook();
@@ -507,13 +503,12 @@ export class AdminConfigStore {
   }
 
   updateCover(cover) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    book.cover = { ...book.cover, ...cover };
-    this._save();
+    this._modifyActiveBook(book => {
+      book.cover = { ...book.cover, ...cover };
+    });
   }
 
-  // --- Главы (активной книги) ---
+  // ─── Главы (активной книги) ───────────────────────────────────────────────
 
   getChapters() {
     const book = this._getActiveBook();
@@ -521,43 +516,39 @@ export class AdminConfigStore {
   }
 
   addChapter(chapter) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    book.chapters.push({ ...chapter });
-    this._save();
+    this._modifyActiveBook(book => {
+      book.chapters.push({ ...chapter });
+    });
   }
 
   updateChapter(index, chapter) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    if (index >= 0 && index < book.chapters.length) {
-      book.chapters[index] = { ...chapter };
-      this._save();
-    }
+    this._modifyActiveBook(book => {
+      if (index >= 0 && index < book.chapters.length) {
+        book.chapters[index] = { ...chapter };
+      }
+    });
   }
 
   removeChapter(index) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    if (index >= 0 && index < book.chapters.length) {
-      book.chapters.splice(index, 1);
-      this._save();
-    }
+    this._modifyActiveBook(book => {
+      if (index >= 0 && index < book.chapters.length) {
+        book.chapters.splice(index, 1);
+      }
+    });
   }
 
   moveChapter(fromIndex, toIndex) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    const chapters = book.chapters;
-    if (fromIndex < 0 || fromIndex >= chapters.length) return;
-    if (toIndex < 0 || toIndex >= chapters.length) return;
+    this._modifyActiveBook(book => {
+      const chapters = book.chapters;
+      if (fromIndex < 0 || fromIndex >= chapters.length) return;
+      if (toIndex < 0 || toIndex >= chapters.length) return;
 
-    const [moved] = chapters.splice(fromIndex, 1);
-    chapters.splice(toIndex, 0, moved);
-    this._save();
+      const [moved] = chapters.splice(fromIndex, 1);
+      chapters.splice(toIndex, 0, moved);
+    });
   }
 
-  // --- Амбиенты (per-book, активной книги) ---
+  // ─── Амбиенты (per-book, активной книги) ──────────────────────────────────
 
   getAmbients() {
     const book = this._getActiveBook();
@@ -565,31 +556,28 @@ export class AdminConfigStore {
   }
 
   addAmbient(ambient) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    book.ambients.push({ ...ambient });
-    this._save();
+    this._modifyActiveBook(book => {
+      book.ambients.push({ ...ambient });
+    });
   }
 
   updateAmbient(index, data) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    if (index >= 0 && index < book.ambients.length) {
-      book.ambients[index] = { ...book.ambients[index], ...data };
-      this._save();
-    }
+    this._modifyActiveBook(book => {
+      if (index >= 0 && index < book.ambients.length) {
+        book.ambients[index] = { ...book.ambients[index], ...data };
+      }
+    });
   }
 
   removeAmbient(index) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    if (index >= 0 && index < book.ambients.length) {
-      book.ambients.splice(index, 1);
-      this._save();
-    }
+    this._modifyActiveBook(book => {
+      if (index >= 0 && index < book.ambients.length) {
+        book.ambients.splice(index, 1);
+      }
+    });
   }
 
-  // --- Звуки (per-book, активной книги) ---
+  // ─── Звуки (per-book, активной книги) ─────────────────────────────────────
 
   getSounds() {
     const book = this._getActiveBook();
@@ -597,13 +585,12 @@ export class AdminConfigStore {
   }
 
   updateSounds(sounds) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    book.sounds = { ...book.sounds, ...sounds };
-    this._save();
+    this._modifyActiveBook(book => {
+      book.sounds = { ...book.sounds, ...sounds };
+    });
   }
 
-  // --- Настройки по умолчанию (per-book, активной книги) ---
+  // ─── Настройки по умолчанию (per-book, активной книги) ────────────────────
 
   getDefaultSettings() {
     const book = this._getActiveBook();
@@ -611,13 +598,12 @@ export class AdminConfigStore {
   }
 
   updateDefaultSettings(settings) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    book.defaultSettings = { ...book.defaultSettings, ...settings };
-    this._save();
+    this._modifyActiveBook(book => {
+      book.defaultSettings = { ...book.defaultSettings, ...settings };
+    });
   }
 
-  // --- Декоративный шрифт (per-book, активной книги) ---
+  // ─── Декоративный шрифт (per-book, активной книги) ────────────────────────
 
   getDecorativeFont() {
     const book = this._getActiveBook();
@@ -625,13 +611,12 @@ export class AdminConfigStore {
   }
 
   setDecorativeFont(fontData) {
-    const book = this._getActiveBook();
-    if (!book) return;
-    book.decorativeFont = fontData ? { ...fontData } : null;
-    this._save();
+    this._modifyActiveBook(book => {
+      book.decorativeFont = fontData ? { ...fontData } : null;
+    });
   }
 
-  // --- Шрифты для чтения (global) ---
+  // ─── Шрифты для чтения (global) ───────────────────────────────────────────
 
   getReadingFonts() {
     return structuredClone(this._config.readingFonts);
@@ -659,7 +644,7 @@ export class AdminConfigStore {
     }
   }
 
-  // --- Оформление ---
+  // ─── Оформление ───────────────────────────────────────────────────────────
 
   /** Получить оформление: global fontMin/fontMax + per-book light/dark */
   getAppearance() {
@@ -683,16 +668,12 @@ export class AdminConfigStore {
   /** Обновить per-theme поля оформления (активной книги) */
   updateAppearanceTheme(theme, data) {
     if (theme !== 'light' && theme !== 'dark') return;
-    const book = this._getActiveBook();
-    if (!book) return;
-    book.appearance[theme] = {
-      ...book.appearance[theme],
-      ...data,
-    };
-    this._save();
+    this._modifyActiveBook(book => {
+      book.appearance[theme] = { ...book.appearance[theme], ...data };
+    });
   }
 
-  // --- Видимость настроек (global) ---
+  // ─── Видимость настроек (global) ──────────────────────────────────────────
 
   getSettingsVisibility() {
     return { ...this._config.settingsVisibility };
@@ -706,14 +687,14 @@ export class AdminConfigStore {
     this._save();
   }
 
-  // --- Экспорт/Импорт ---
+  // ─── Экспорт/Импорт ──────────────────────────────────────────────────────
 
   exportJSON() {
     return JSON.stringify(this._config, null, 2);
   }
 
   importJSON(jsonString) {
-    const parsed = JSON.parse(jsonString); // может бросить ошибку
+    const parsed = JSON.parse(jsonString);
     this._config = this._mergeWithDefaults(parsed);
     this._save();
   }

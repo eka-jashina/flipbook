@@ -90,19 +90,114 @@ export function resolveSound(value, fallback) {
   return `${BASE_URL}${value}`;
 }
 
-// ─── Построение конфиг-секций ─────────────────────────────────────────────────
+// ─── Дефолтные значения секций ────────────────────────────────────────────────
 
-// Амбиенты: из админки (с фильтрацией по visible) или дефолтные
-export function buildAmbientConfig(adminAmbients) {
-  const defaultAmbients = {
+/** Дефолтные оформления тем — используются в createConfig и createConfigFromAPI */
+const LIGHT_THEME_DEFAULTS = {
+  coverBgStart: '#3a2d1f', coverBgEnd: '#2a2016', coverText: '#f2e9d8',
+  coverBgImage: null, pageTexture: 'default', customTextureData: null,
+  bgPage: '#fdfcf8', bgApp: '#e6e3dc',
+};
+
+const DARK_THEME_DEFAULTS = {
+  coverBgStart: '#111111', coverBgEnd: '#000000', coverText: '#eaeaea',
+  coverBgImage: null, pageTexture: 'none', customTextureData: null,
+  bgPage: '#1e1e1e', bgApp: '#121212',
+};
+
+/** Дефолтная карта шрифтов */
+const DEFAULT_FONTS = {
+  georgia: "Georgia, serif",
+  merriweather: '"Merriweather", serif',
+  "libre-baskerville": '"Libre Baskerville", serif',
+  inter: "Inter, sans-serif",
+  roboto: "Roboto, sans-serif",
+  "open-sans": '"Open Sans", sans-serif',
+};
+
+/** Дефолтные амбиенты */
+function getDefaultAmbients() {
+  return {
     none: { label: "Без звука", shortLabel: "Нет", icon: "✕", file: null },
     rain: { label: "Дождь", shortLabel: "Дождь", icon: "🌧️", file: `${BASE_URL}sounds/ambient/rain.mp3` },
     fireplace: { label: "Камин", shortLabel: "Камин", icon: "🔥", file: `${BASE_URL}sounds/ambient/fireplace.mp3` },
     cafe: { label: "Кафе", shortLabel: "Кафе", icon: "☕", file: `${BASE_URL}sounds/ambient/cafe.mp3` },
   };
+}
 
+// ─── Построение конфиг-секций ─────────────────────────────────────────────────
+
+/**
+ * Построить DEFAULT_SETTINGS из источника (adminDefaults / API defaults).
+ * @param {Object} src - Источник настроек ({ font, fontSize, theme, ... })
+ * @returns {Object}
+ */
+export function buildDefaultSettings(src = {}) {
+  return {
+    font: src.font || "georgia",
+    fontSize: src.fontSize || 18,
+    theme: src.theme || "light",
+    page: 0,
+    soundEnabled: src.soundEnabled ?? true,
+    soundVolume: src.soundVolume ?? 0.3,
+    ambientType: src.ambientType || 'none',
+    ambientVolume: src.ambientVolume ?? 0.5,
+  };
+}
+
+/**
+ * Построить тему оформления (light/dark) с дефолтами.
+ * @param {'light'|'dark'} theme - Тема
+ * @param {Object} src - Исходные данные темы
+ * @param {Object} [fieldMap] - Маппинг полей API → CONFIG (для coverBgImageUrl → coverBgImage и т.д.)
+ * @returns {Object}
+ */
+export function buildAppearanceTheme(theme, src = {}, fieldMap = null) {
+  const defaults = theme === 'dark' ? DARK_THEME_DEFAULTS : LIGHT_THEME_DEFAULTS;
+  const result = {};
+
+  for (const key of Object.keys(defaults)) {
+    // Если передан маппинг полей (API формат) — сначала ищем по маппингу
+    const srcKey = fieldMap?.[key] || key;
+    result[key] = src[srcKey] ?? defaults[key];
+  }
+
+  return result;
+}
+
+/**
+ * Построить SETTINGS_VISIBILITY из источника.
+ * @param {Object} src - Источник видимости настроек
+ * @returns {Object}
+ */
+export function buildSettingsVisibility(src = {}) {
+  return {
+    fontSize: src.fontSize ?? true,
+    theme: src.theme ?? true,
+    font: src.font ?? true,
+    fullscreen: src.fullscreen ?? true,
+    sound: src.sound ?? true,
+    ambient: src.ambient ?? true,
+  };
+}
+
+/**
+ * Построить SOUNDS из источника.
+ * @param {Object} src - Источник звуков ({ pageFlip, bookOpen, bookClose })
+ * @returns {Object}
+ */
+export function buildSoundsConfig(src = {}) {
+  return {
+    pageFlip: resolveSound(src.pageFlip, 'sounds/page-flip.mp3'),
+    bookOpen: resolveSound(src.bookOpen, 'sounds/cover-flip.mp3'),
+    bookClose: resolveSound(src.bookClose, 'sounds/cover-flip.mp3'),
+  };
+}
+
+// Амбиенты: из админки (с фильтрацией по visible) или дефолтные
+export function buildAmbientConfig(adminAmbients) {
   if (!Array.isArray(adminAmbients) || adminAmbients.length === 0) {
-    return defaultAmbients;
+    return getDefaultAmbients();
   }
 
   const result = {};
@@ -122,19 +217,31 @@ export function buildAmbientConfig(adminAmbients) {
   return result;
 }
 
+/**
+ * Амбиенты из API формата → CONFIG формат.
+ * @param {Array} apiAmbients - Амбиенты из API
+ * @returns {Object}
+ */
+export function buildAmbientConfigFromAPI(apiAmbients) {
+  if (!apiAmbients?.length) return getDefaultAmbients();
+
+  const result = {};
+  for (const a of apiAmbients) {
+    if (!a.visible) continue;
+    result[a.ambientKey || a.id] = {
+      label: a.label,
+      shortLabel: a.shortLabel || a.label,
+      icon: a.icon,
+      file: a.fileUrl ? resolveAssetPath(a.fileUrl) : null,
+    };
+  }
+  return Object.keys(result).length > 0 ? result : getDefaultAmbients();
+}
+
 // Шрифты для чтения: из админки (только enabled) или дефолтные
 export function buildFontsConfig(adminReadingFonts) {
-  const defaultFonts = {
-    georgia: "Georgia, serif",
-    merriweather: '"Merriweather", serif',
-    "libre-baskerville": '"Libre Baskerville", serif',
-    inter: "Inter, sans-serif",
-    roboto: "Roboto, sans-serif",
-    "open-sans": '"Open Sans", sans-serif',
-  };
-
   if (!Array.isArray(adminReadingFonts) || adminReadingFonts.length === 0) {
-    return { fonts: defaultFonts, fontsList: null };
+    return { fonts: DEFAULT_FONTS, fontsList: null };
   }
 
   const fonts = {};
@@ -147,6 +254,33 @@ export function buildFontsConfig(adminReadingFonts) {
     }
   }
   return { fonts, fontsList: adminReadingFonts.filter(f => f.enabled), customFonts };
+}
+
+/**
+ * Шрифты из API формата → CONFIG формат.
+ * @param {Array} apiFonts - Шрифты из API
+ * @returns {{ fonts: Object, fontsList: Array|null, customFonts: Array }}
+ */
+export function buildFontsConfigFromAPI(apiFonts) {
+  if (!apiFonts?.length) return { fonts: DEFAULT_FONTS, fontsList: null, customFonts: [] };
+
+  const fonts = {};
+  const fontsList = [];
+  const customFonts = [];
+  for (const f of apiFonts) {
+    if (!f.enabled) continue;
+    const key = f.fontKey || f.id;
+    fonts[key] = f.family;
+    fontsList.push({ id: key, label: f.label, family: f.family, builtin: f.builtin, enabled: f.enabled });
+    if (!f.builtin && f.fileUrl) {
+      customFonts.push({ id: key, label: f.label, family: f.family, dataUrl: f.fileUrl });
+    }
+  }
+  return {
+    fonts: Object.keys(fonts).length > 0 ? fonts : DEFAULT_FONTS,
+    fontsList: fontsList.length > 0 ? fontsList : null,
+    customFonts,
+  };
 }
 
 // ─── Общие настройки (timing, layout, UI и т.д.) ──────────────────────────────
