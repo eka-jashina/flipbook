@@ -37,6 +37,7 @@ export class AppInitializer {
     this.readerMode = context.readerMode || 'owner';
     this.bookOwner = context.bookOwner || null;
     this.bookId = context.bookId || null;
+    this._editBtnHandler = null;
   }
 
   /**
@@ -199,16 +200,15 @@ export class AppInitializer {
    * @private
    */
   _setupOwnerMode() {
-    // Показать кнопку «Редактировать»
     const editBtn = document.getElementById('reader-edit-btn');
     if (editBtn && this.bookId) {
       editBtn.hidden = false;
-      editBtn.addEventListener('click', () => {
-        // Навигация через History API
+      this._editBtnHandler = () => {
         const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
         window.history.pushState(null, '', `${base}/account?edit=${this.bookId}`);
         window.dispatchEvent(new PopStateEvent('popstate'));
-      });
+      };
+      editBtn.addEventListener('click', this._editBtnHandler);
     }
   }
 
@@ -229,7 +229,7 @@ export class AppInitializer {
     if (username) {
       const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
       authorEl.href = `${base}/${username}`;
-      authorEl.dataset.route = '';
+      authorEl.dataset.route = `/${username}`;
     }
 
     authorEl.hidden = false;
@@ -268,6 +268,17 @@ export class AppInitializer {
       pill.dataset.active = isActive;
       pill.setAttribute('aria-checked', isActive);
     });
+  }
+
+  /**
+   * Очистить ресурсы (event listeners) при уничтожении ридера.
+   */
+  destroy() {
+    if (this._editBtnHandler) {
+      const editBtn = document.getElementById('reader-edit-btn');
+      if (editBtn) editBtn.removeEventListener('click', this._editBtnHandler);
+      this._editBtnHandler = null;
+    }
   }
 
   /**

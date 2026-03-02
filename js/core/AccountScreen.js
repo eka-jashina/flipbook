@@ -77,8 +77,8 @@ export class AccountScreen {
     if (this._api) {
       try {
         this._store = await ServerAdminConfigStore.create(this._api);
-      } catch {
-        // Fallback
+      } catch (err) {
+        console.warn('[AccountScreen] Server store unavailable, falling back to local:', err);
       }
     }
     if (!this._store) {
