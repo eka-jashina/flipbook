@@ -32,11 +32,11 @@ middleware/ (сквозные аспекты: auth, CSRF, validation, rate limit
 
 ### Что можно улучшить
 
-**Нет явного слоя репозиториев.** Сервисы напрямую вызывают `getPrisma()`. Это работает при текущем размере, но при росте проекта замена Prisma или юнит-тестирование бизнес-логики без БД станет затруднительной. Внедрение тонкого Repository-интерфейса повысило бы тестируемость.
+**Нет явного слоя репозиториев.** Сервисы напрямую вызывают `getPrisma()`. Это работает при текущем размере, но при росте проекта замена Prisma или юнит-тестирование бизнес-логики без БД станет затруднительной. Внедрение тонкого Repository-интерфейса повысило бы тестируемость. *(Актуально)*
 
-**Singleton-паттерн для Prisma и S3** через мутабельные переменные модуля (`let prisma: PrismaClient | null = null`). Работает, но делает юнит-тестирование сложнее — нельзя подменить зависимость без monkey-patching. В идеале — DI-контейнер или фабрика, передающая зависимости вниз.
+**Singleton-паттерн для Prisma и S3** через мутабельные переменные модуля (`let prisma: PrismaClient | null = null`). Работает, но делает юнит-тестирование сложнее — нельзя подменить зависимость без monkey-patching. В идеале — DI-контейнер или фабрика, передающая зависимости вниз. *(Актуально)*
 
-**Нет разделения на bounded contexts.** Все 13 ресурсов живут в одном плоском пространстве. Пока это не проблема, но при росте (например, добавление комментариев, социальных фич, аналитики) стоит группировать по доменам.
+**Нет разделения на bounded contexts.** Все 13 ресурсов живут в одном плоском пространстве. Пока это не проблема, но при росте (например, добавление комментариев, социальных фич, аналитики) стоит группировать по доменам. *(Актуально)*
 
 ---
 
@@ -86,20 +86,20 @@ middleware/ (сквозные аспекты: auth, CSRF, validation, rate limit
 
 **Несогласованность ownership-проверок — главная проблема.**
 
-В `app.ts:163` видна централизованная проверка:
+В `app.ts:197` видна централизованная проверка:
 ```typescript
 app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 ```
 
-Это покрывает все под-ресурсы книг через middleware. **Однако** роуты books.routes.ts дополнительно навешивают `requireBookOwnership` на каждый эндпоинт с `:bookId` — что приводит к **двойному вызову** `verifyBookOwnership` для одного запроса (одна проверка на уровне app.use, вторая — в роуте). Это не баг, но лишний запрос к БД на каждый запрос к книге.
+Это покрывает все под-ресурсы книг через middleware. **Однако** роуты books.routes.ts дополнительно навешивают `requireBookOwnership` на каждый эндпоинт с `:bookId` (GET, PATCH, DELETE) — что приводит к **двойному вызову** `verifyBookOwnership` для одного запроса. Это не баг, но лишний запрос к БД на каждый запрос к книге. Под-ресурсы (chapters, sounds, ambients и т.д.) не дублируют — только прямые роуты books.
 
-**Рекомендация:** Убрать дублирующий `requireBookOwnership` из отдельных роутов в `books.routes.ts`, раз он уже установлен глобально в `app.ts`.
+**Рекомендация:** Убрать дублирующий `requireBookOwnership` из отдельных роутов в `books.routes.ts`, раз он уже установлен глобально в `app.ts`. *(Актуально)*
 
-**MIME-type валидация загрузок полагается на клиентский Content-Type.** `application/octet-stream` разрешён в font и book uploads — это позволяет обойти проверку типа. Для продакшена стоит добавить проверку magic bytes (файловых сигнатур).
+**MIME-type валидация загрузок полагается на клиентский Content-Type.** `application/octet-stream` разрешён в font и book uploads — это позволяет обойти проверку типа. Для продакшена стоит добавить проверку magic bytes (файловых сигнатур). *(Актуально — все 4 типа загрузок (font, sound, image, book) проверяют только mimetype, magic bytes не проверяются)*
 
-**Нет ограничения на количество сессий на пользователя.** Злоумышленник с валидными кредами может создать неограниченное количество сессий, заполняя таблицу session. Стоит либо лимитировать, либо добавить cleanup.
+**Нет ограничения на количество сессий на пользователя.** Злоумышленник с валидными кредами может создать неограниченное количество сессий, заполняя таблицу session. Стоит либо лимитировать, либо добавить cleanup. *(Актуально)*
 
-**Нет Content-Security-Policy на API-ответы.** Helmet устанавливает заголовки, но для Swagger UI CSP задан inline в HTML (`swagger.ts:277`). Стоит убедиться, что helmet не конфликтует с этим.
+**~~Нет Content-Security-Policy на API-ответы.~~** ✅ РЕШЕНО — Helmet применяется глобально в `app.ts` (строки 65–77) с настроенным CSP. Для JSON API-ответов CSP не релевантен, но `X-Content-Type-Options: nosniff` устанавливается Helmet по умолчанию, что защищает от MIME-sniffing.
 
 ---
 
@@ -122,15 +122,15 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Замечания
 
-**Нет soft delete.** Удаление книги — необратимая операция. Для production-системы стоит рассмотреть `deletedAt` поле и архивацию.
+**~~Нет soft delete.~~** ✅ РЕШЕНО — Модель `Book` имеет поле `deletedAt DateTime?` в `schema.prisma`. Фильтрация реализована через хелпер `activeBooks(userId)` в `books.service.ts`. Есть составной индекс `@@index([userId, deletedAt])`.
 
-**Нет оптимистичной блокировки на обычных update'ах.** Если два пользователя одновременно редактируют главу, последний перезапишет. `updatedAt` есть, но не используется для конфликт-детекции. Для этого проекта это допустимо, но стоит учитывать при росте.
+**~~Нет оптимистичной блокировки на обычных update'ах.~~** ✅ РЕШЕНО — Реализована оптимистичная блокировка через `ifUnmodifiedSince` в `books.service.ts`, `chapters.service.ts`, `progress.service.ts`. При конфликте возвращается `409 CONFLICT_DETECTED`.
 
-**ReadingProgress хранит настройки (font, fontSize, theme и т.д.)** помимо позиции чтения. Это нарушает Single Responsibility — progress и preferences смешаны в одной таблице. При расширении модели (закладки, аннотации) станет неудобно.
+**~~ReadingProgress хранит настройки (font, fontSize, theme и т.д.)~~** ✅ РЕШЕНО — `ReadingProgress` теперь содержит только `page` и `updatedAt`. Настройки вынесены в отдельную модель `ReadingPreferences` (font, fontSize, theme, soundEnabled и т.д.).
 
-**Нет миграции вниз (down migrations).** Prisma миграции — только вперёд. Для production deploy стоит иметь план отката.
+**Нет миграции вниз (down migrations).** ~~Prisma миграции — только вперёд.~~ Частично решено — у большинства миграций есть `down.sql` (init, add_updated_at_fields, soft_delete_split_progress_pool). Однако миграция `add_username_visibility` не имеет `down.sql`. *(Частично актуально)*
 
-**Нет connection pooling конфигурации.** PrismaClient использует дефолтный пул. Для нагруженного приложения стоит настроить `connection_limit`, `pool_timeout` в DATABASE_URL или через Prisma config.
+**~~Нет connection pooling конфигурации.~~** ✅ РЕШЕНО — `connection_limit` и `pool_timeout` настроены в `docker-compose.yml` (`connection_limit=10&pool_timeout=10`). В `config.ts` задокументированы рекомендации для dev и prod окружений.
 
 ---
 
@@ -156,15 +156,15 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Замечания
 
-**Нет версионирования API** (`/api/v1/...`). При изменении контракта придётся ломать клиентов или городить хаки.
+**Нет версионирования API** (`/api/v1/...`). При изменении контракта придётся ломать клиентов или городить хаки. *(Актуально)*
 
-**Пагинация только для книг.** Остальные списки (chapters, ambients, fonts) возвращаются полностью. При 200 главах с htmlContent это может быть проблемой. Впрочем, `getChapters()` не возвращает htmlContent — только метаданные. Это правильно.
+**Пагинация только для книг.** Остальные списки (chapters, ambients, fonts) возвращаются полностью. При 200 главах с htmlContent это может быть проблемой. Впрочем, `getChapters()` не возвращает htmlContent — только метаданные. Это правильно. *(Актуально, но некритично)*
 
-**PATCH для reorder** — спорный выбор. Семантически это скорее action, не частичное обновление ресурса. `POST /api/books/reorder` был бы яснее. Но это вкусовщина.
+**PATCH для reorder** — спорный выбор. Семантически это скорее action, не частичное обновление ресурса. `POST /api/books/reorder` был бы яснее. Но это вкусовщина. *(Актуально, но вкусовщина)*
 
-**Нет ETag/If-Match для кэширования и конкурентных обновлений.** Для e-book reader'а с offline-режимом это было бы особенно полезно.
+**Нет ETag/If-Match для кэширования и конкурентных обновлений.** Для e-book reader'а с offline-режимом это было бы особенно полезно. *(Актуально — при этом оптимистичная блокировка через `ifUnmodifiedSince` уже реализована как альтернатива If-Match)*
 
-**Health check** (`app.ts:116-148`) — грамотный, проверяет и DB, и S3, возвращает degraded вместо ошибки. Единственное замечание — health-эндпоинт не защищён от спама (не за rate limiter'ом).
+**Health check** (`app.ts:116-148`) — грамотный, проверяет и DB, и S3, возвращает degraded вместо ошибки. ~~Единственное замечание — health-эндпоинт не защищён от спама (не за rate limiter'ом).~~ ✅ РЕШЕНО — health endpoint находится по пути `/api/health` и покрывается глобальным rate limiter `app.use('/api/', createRateLimiter())`, который применяется раньше.
 
 ---
 
@@ -190,9 +190,9 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Замечания
 
-**Нет различия между клиентскими и серверными ошибками в формате ответа.** И 400, и 500 имеют одинаковую структуру `{ error, message, statusCode }`. Это скорее преимущество (единообразие), но некоторые команды предпочитают разные форматы.
+**Нет различия между клиентскими и серверными ошибками в формате ответа.** И 400, и 500 имеют одинаковую структуру `{ error, message, statusCode }`. Это скорее преимущество (единообразие), но некоторые команды предпочитают разные форматы. *(Не проблема — единообразие лучше)*
 
-**Нет retry-логики для transient DB errors** (connection timeout, pool exhaustion). Serializable retry обрабатывает только P2034. Стоит добавить обработку connection errors.
+**Нет retry-логики для transient DB errors** (connection timeout, pool exhaustion). Serializable retry обрабатывает только P2034. Стоит добавить обработку connection errors. *(Актуально)*
 
 ---
 
@@ -200,7 +200,7 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Что хорошо
 
-**~99 тест-кейсов** покрывают все 14 endpoint-групп. Тесты через supertest проверяют реальный HTTP-стек (middleware → route → service → DB).
+**~207 тест-кейсов** (не 99, как было в начальной оценке) покрывают все 16 endpoint-групп (включая health и profile). Тесты через supertest проверяют реальный HTTP-стек (middleware → route → service → DB).
 
 **Тестовая инфраструктура грамотная:**
 - `cleanDatabase()` чистит в правильном FK-порядке.
@@ -219,17 +219,17 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Замечания — важные
 
-**Нет юнит-тестов сервисов.** Все тесты — интеграционные через HTTP. Сервисная логика (sanitization, position calculation, S3 cleanup) не тестируется изолированно. При росте проекта это станет узким местом — интеграционные тесты медленные.
+**Нет юнит-тестов сервисов.** Все тесты — интеграционные через HTTP. Сервисная логика (sanitization, position calculation, S3 cleanup) не тестируется изолированно. При росте проекта это станет узким местом — интеграционные тесты медленные. *(Актуально)*
 
-**Нет тестов на конкурентность.** Serializable retry — ключевой механизм, но ни один тест не создаёт race condition. Стоит добавить тесты с параллельными запросами на создание элементов с position.
+**Нет тестов на конкурентность.** Serializable retry — ключевой механизм, но ни один тест не создаёт race condition. Стоит добавить тесты с параллельными запросами на создание элементов с position. *(Актуально)*
 
-**Нет тестов на edge cases парсеров.** Upload-тесты проверяют txt и fb2, но не docx, epub, doc. Учитывая сложность этих парсеров (особенно DOC с OLE2), это серьёзный пробел.
+**Нет тестов на edge cases парсеров.** Upload-тесты проверяют txt и fb2, но не docx, epub, doc. Учитывая сложность этих парсеров (особенно DOC с OLE2), это серьёзный пробел. *(Актуально)*
 
-**Нет нагрузочных тестов.** Для проекта с rate limiting и connection pooling это было бы полезно.
+**Нет нагрузочных тестов.** Для проекта с rate limiting и connection pooling это было бы полезно. *(Актуально)*
 
-**Coverage неизвестен.** Нет настроенного coverage-отчёта для серверных тестов (в package.json нет `test:coverage`).
+**Coverage неизвестен.** Нет настроенного coverage-отчёта для серверных тестов (в package.json нет `test:coverage`). *(Актуально)*
 
-**`fileParallelism: false`** в конфиге vitest — тесты идут последовательно. Правильно для консистентности БД, но замедляет CI.
+**`fileParallelism: false`** в конфиге vitest — тесты идут последовательно. Правильно для консистентности БД, но замедляет CI. *(Осознанное решение, не проблема)*
 
 ---
 
@@ -247,11 +247,11 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Замечания
 
-**Нет ограничения на размер распарсенных данных.** Файл 50 MB после парсинга может сгенерировать HTML, значительно превышающий лимиты. Стоит добавить проверку размера выходных данных.
+**Нет ограничения на размер распарсенных данных.** Файл 50 MB после парсинга может сгенерировать HTML, значительно превышающий лимиты. Стоит добавить проверку размера выходных данных. Import-схема в `exportImport.service.ts` ограничивает `htmlContent` до 2 MB, но парсеры сами не проверяют суммарный размер выходных данных. *(Актуально)*
 
-**Парсеры не обрабатывают malformed-файлы gracefully.** Некорректный EPUB или DOC может вызвать uncaught exception. Стоит обернуть каждый парсер в try/catch с понятным сообщением.
+**Парсеры не обрабатывают malformed-файлы gracefully.** Некорректный EPUB или DOC может вызвать uncaught exception. `BookParser.ts` не оборачивает вызовы парсеров в try/catch. DocParser использует loop guards (1000/10000/100000 итераций) для защиты от бесконечных циклов, но при ошибке возвращает null без контекста. Fb2Parser имеет рекурсивный парсинг без ограничения глубины (риск stack overflow). *(Актуально)*
 
-**Нет timeout на парсинг.** Сложный DOC-файл может парситься долго, блокируя event loop. Стоит добавить timeout или вынести в worker thread.
+**Нет timeout на парсинг.** Сложный DOC-файл может парситься долго, блокируя event loop. `upload.service.ts` и `upload.routes.ts` не оборачивают вызов парсера в `Promise.race()` с таймаутом. *(Актуально)*
 
 ---
 
@@ -271,13 +271,13 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Замечания
 
-**Нет CI/CD для бэкенда.** GitHub Actions (описан в CLAUDE.md) запускает только фронтенд-тесты. Серверные тесты не включены в CI-pipeline. Это критично — без CI нет гарантии, что сервер работает после изменений.
+**~~Нет CI/CD для бэкенда.~~** ✅ РЕШЕНО — Существует `.github/workflows/server-tests.yml`: запускается на push в main и на PR при изменениях в `server/**`. Поднимает PostgreSQL 17 контейнер с healthcheck, прогоняет полный тест-сюит.
 
-**Docker Compose использует dev-секреты в environment:** `SESSION_SECRET: dev-session-secret-change-in-production-min32chars`. Для production нужен .env файл или secrets management. Это очевидно для dev, но стоит добавить docker-compose.prod.yml.
+**Docker Compose использует dev-секреты в environment:** `SESSION_SECRET: dev-session-secret-change-in-production-min32chars`. Для production нужен .env файл или secrets management. Это очевидно для dev, но стоит добавить docker-compose.prod.yml. *(Актуально)*
 
-**Нет health check endpoint для readiness vs liveness.** `/api/health` проверяет всё — и DB, и S3. Kubernetes требует разделения: liveness (процесс жив) и readiness (готов принимать трафик).
+**Нет health check endpoint для readiness vs liveness.** `/api/health` проверяет всё — и DB, и S3. Kubernetes требует разделения: liveness (процесс жив) и readiness (готов принимать трафик). *(Актуально)*
 
-**Нет миграций как часть CI.** `prisma migrate deploy` выполняется в CMD Dockerfile — при ошибке миграции контейнер упадёт. Стоит разделить миграцию и запуск.
+**Нет миграций как часть CI.** `prisma migrate deploy` выполняется в CMD Dockerfile — при ошибке миграции контейнер упадёт. Стоит разделить миграцию и запуск. *(Актуально)*
 
 ---
 
@@ -298,11 +298,11 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Замечания
 
-**Дублирование маппинга.** `getBookById()` в books.service.ts и `exportUserConfig()` в exportImport.service.ts дублируют один и тот же маппинг BookDetail. Стоит извлечь в общую функцию.
+**Дублирование маппинга.** `getBookById()` в books.service.ts и `exportUserConfig()` в exportImport.service.ts дублируют один и тот же маппинг BookDetail (~28 строк). Стоит извлечь в общую функцию. *(Актуально)*
 
-**Magic strings.** Тема `'light'`/`'dark'` проверяется через строковые литералы в appearance.service.ts. Стоит использовать enum или const.
+**Magic strings.** Тема `'light'`/`'dark'` проверяется через строковые литералы в appearance.service.ts (сигнатура `theme: 'light' | 'dark'`). Стоит использовать enum или const. *(Актуально)*
 
-**Нет JSDoc на сервисных функциях** (кроме отдельных). Для библиотечного кода документация важна.
+**Нет JSDoc на сервисных функциях** (кроме отдельных). Для библиотечного кода документация важна. *(Актуально)*
 
 ---
 
@@ -320,11 +320,11 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Замечания
 
-**Нет автоматической очистки orphaned файлов.** Если S3 cleanup при удалении книги не сработал, файлы остаются навсегда. Стоит добавить фоновый job для периодической очистки.
+**Нет автоматической очистки orphaned файлов.** Если S3 cleanup при удалении книги не сработал, файлы остаются навсегда. `books.service.ts` логирует orphaned URL'ы для ручной очистки, но автоматического cron job нет. *(Актуально)*
 
-**Нет S3 presigned URLs.** Все файлы доступны по прямому публичному URL. Для приватного контента (главы книг, пользовательские шрифты) стоит использовать presigned URLs с ограниченным сроком.
+**Нет S3 presigned URLs.** Все файлы доступны по прямому публичному URL. `storage.ts` экспортирует `getPublicUrl()`, но не имеет функции генерации presigned URLs. Для приватного контента стоит использовать presigned URLs с ограниченным сроком. *(Актуально)*
 
-**Нет content-type verification на уровне S3.** Файл загружается с клиентским content-type. Злоумышленник может загрузить HTML как `image/png` и получить XSS при прямом доступе к S3.
+**Нет content-type verification на уровне S3.** Файл загружается с клиентским content-type без проверки magic bytes. Злоумышленник может загрузить HTML как `image/png` и получить XSS при прямом доступе к S3. *(Актуально)*
 
 ---
 
@@ -341,28 +341,28 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Замечания
 
-**`vitest: ^2.0.0` в server/package.json, но `vitest: ^4.0.18` в корневом package.json.** Несогласованность версий может привести к проблемам.
+**`vitest: ^2.0.0` в server/package.json, но `vitest: ^4.0.18` в корневом package.json.** Несогласованность мажорных версий может привести к проблемам. *(Актуально)*
 
-**Нет `@types/express@5`.** Express 5 имеет собственные типы, но `@types/express: ^5.0.0` может конфликтовать. Стоит проверить совместимость.
+**~~Нет `@types/express@5`.~~** ✅ РЕШЕНО — `@types/express: ^5.0.0` в server/package.json корректно соответствует `express: ^5.0.1`.
 
-**Нет dependabot или renovate** для автоматических обновлений безопасности.
+**Нет dependabot или renovate** для автоматических обновлений безопасности. *(Актуально)*
 
 ---
 
 ## 12. Итоговая таблица
 
-| Аспект | Оценка | Комментарий |
-|--------|--------|-------------|
-| **Архитектура** | 8/10 | Чистое послойное разделение, но нет DI и repository layer |
-| **Безопасность** | 9/10 | Впечатляющая проработка: session fixation, CSRF, account hijacking, XSS, SQL injection. Мелкие замечания по MIME и сессиям |
-| **База данных** | 8/10 | Грамотная схема, индексы, транзакции. Нет soft delete, оптимистичной блокировки |
-| **API Design** | 8/10 | RESTful, единообразный. Нет версионирования и ETag |
-| **Обработка ошибок** | 9/10 | Эталонная реализация. Все типы ошибок обработаны, нет утечек |
-| **Тестирование** | 7/10 | 99 кейсов, хорошая инфраструктура. Нет юнит-тестов, конкурентности, coverage |
-| **Парсеры** | 8/10 | 5 форматов, сложная реализация DOC/EPUB. Нет error handling и timeout |
-| **Инфраструктура** | 8/10 | Docker, multi-stage, healthcheck, graceful shutdown. Нет CI для бэкенда |
-| **Качество кода** | 8.5/10 | Единообразный, минималистичный, читаемый. Минорное дублирование |
-| **Хранилище файлов** | 7.5/10 | Абстракция и cleanup. Нет presigned URLs и orphan cleanup |
+| Аспект | Оценка | Было | Стало после доработок |
+|--------|--------|------|----------------------|
+| **Архитектура** | 8/10 | Нет DI и repository layer | Без изменений — актуально |
+| **Безопасность** | 9/10 | Замечания по MIME, сессиям, CSP | CSP ✅ решено (Helmet). MIME и сессии — актуально |
+| **База данных** | 8→9/10 | Нет soft delete, оптимистичной блокировки, connection pooling | Soft delete ✅, оптимистичная блокировка ✅, connection pooling ✅, ReadingProgress разделён ✅ |
+| **API Design** | 8/10 | Нет версионирования, ETag, health не rate-limited | Health rate-limited ✅. Версионирование и ETag — актуально |
+| **Обработка ошибок** | 9/10 | Все типы обработаны, нет утечек | Без изменений |
+| **Тестирование** | 7→7.5/10 | 99 кейсов, нет юнит-тестов, coverage | ~207 кейсов, 16 файлов. Юнит-тесты и coverage — актуально |
+| **Парсеры** | 8/10 | Нет error handling и timeout | Без изменений — актуально |
+| **Инфраструктура** | 8→9/10 | Нет CI для бэкенда | CI ✅ (server-tests.yml). Docker секреты и liveness/readiness — актуально |
+| **Качество кода** | 8.5/10 | Минорное дублирование | Без изменений — актуально |
+| **Хранилище файлов** | 7.5/10 | Нет presigned URLs и orphan cleanup | Без изменений — актуально |
 
 ---
 
@@ -370,24 +370,24 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 ### Критические (P0)
 
-1. **Добавить серверные тесты в CI/CD** — без этого регрессии неизбежны.
-2. **Добавить timeout и error handling в парсеры книг** — malformed файлы могут повесить сервер.
-3. **Убрать дублирование requireBookOwnership** в books.routes.ts (двойной запрос к БД).
+1. ~~**Добавить серверные тесты в CI/CD**~~ ✅ РЕШЕНО — `.github/workflows/server-tests.yml`.
+2. **Добавить timeout и error handling в парсеры книг** — malformed файлы могут повесить сервер. *(Актуально)*
+3. **Убрать дублирование requireBookOwnership** в books.routes.ts (двойной запрос к БД). *(Актуально)*
 
 ### Важные (P1)
 
-4. **Добавить юнит-тесты сервисов** — ускорит feedback loop и поймает баги в бизнес-логике.
-5. **Добавить content-type verification по magic bytes** для загружаемых файлов.
-6. **Добавить API versioning** (`/api/v1/`) до первого production-деплоя.
-7. **Настроить test coverage** для серверных тестов.
+4. **Добавить юнит-тесты сервисов** — ускорит feedback loop и поймает баги в бизнес-логике. *(Актуально)*
+5. **Добавить content-type verification по magic bytes** для загружаемых файлов. *(Актуально)*
+6. **Добавить API versioning** (`/api/v1/`) до первого production-деплоя. *(Актуально)*
+7. **Настроить test coverage** для серверных тестов. *(Актуально)*
 
 ### Желательные (P2)
 
-8. Добавить connection pool настройки для Prisma.
-9. Разделить health check на liveness и readiness.
-10. Добавить cron job для очистки orphaned S3 файлов.
-11. Рассмотреть presigned URLs для приватного контента.
-12. Добавить rate limiting на health endpoint.
+8. ~~Добавить connection pool настройки для Prisma.~~ ✅ РЕШЕНО.
+9. Разделить health check на liveness и readiness. *(Актуально)*
+10. Добавить cron job для очистки orphaned S3 файлов. *(Актуально)*
+11. Рассмотреть presigned URLs для приватного контента. *(Актуально)*
+12. ~~Добавить rate limiting на health endpoint.~~ ✅ РЕШЕНО — покрыт глобальным `/api/` rate limiter.
 
 ---
 
@@ -395,6 +395,48 @@ app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
 
 Бэкенд Flipbook — это **качественная, безопасная и хорошо структурированная серверная часть**. Автор демонстрирует глубокое понимание веб-безопасности (session fixation, CSRF, account hijacking, XSS), правильно работает с транзакциями и конкурентностью, и поддерживает высокий уровень единообразия кода.
 
-Основные зоны роста — тестирование (юнит-тесты + CI) и операционная зрелость (versioning, presigned URLs, orphan cleanup). Это не критические проблемы, а естественные шаги эволюции от MVP к production-grade системе.
+Основные зоны роста — тестирование (юнит-тесты + coverage) и операционная зрелость (versioning, presigned URLs, orphan cleanup). Это не критические проблемы, а естественные шаги эволюции от MVP к production-grade системе.
 
 Для pet-проекта / портфолио — это **отличная работа**, демонстрирующая зрелый подход к бэкенд-разработке.
+
+---
+
+## Приложение: Статус замечаний (обновлено 2026-03-02)
+
+### ✅ Решённые замечания (7):
+1. **Soft delete** — реализован (`deletedAt` в модели Book, индекс, фильтрация в `activeBooks()`)
+2. **Оптимистичная блокировка** — реализована (`ifUnmodifiedSince` в books, chapters, progress)
+3. **ReadingProgress / Settings разделение** — `ReadingProgress` хранит только page, настройки в `ReadingPreferences`
+4. **Connection pooling** — настроен в docker-compose.yml и документирован в config.ts
+5. **CI/CD для бэкенда** — `.github/workflows/server-tests.yml` с PostgreSQL контейнером
+6. **CSP / Helmet** — Helmet применяется глобально, `X-Content-Type-Options: nosniff` защищает JSON
+7. **Health endpoint rate limiting** — покрыт глобальным `/api/` rate limiter
+8. **@types/express совместимость** — v5.0.0 корректно соответствует express v5.0.1
+
+### ⚠️ Актуальные замечания (по приоритету):
+
+**P0 — Критические:**
+- Timeout и error handling в парсерах книг
+- Дублирование `requireBookOwnership` в books.routes.ts
+
+**P1 — Важные:**
+- Юнит-тесты сервисов (все тесты — интеграционные через HTTP)
+- Content-type verification по magic bytes (все 4 типа загрузок)
+- API versioning (`/api/v1/`)
+- Test coverage для серверных тестов
+- Vitest version mismatch (v2 vs v4)
+
+**P2 — Желательные:**
+- Liveness / readiness разделение health check
+- Cron job для очистки orphaned S3 файлов
+- Presigned URLs для приватного контента
+- Ограничение сессий на пользователя
+- Dependabot / Renovate для автообновлений
+- Дублирование BookDetail маппинга (books.service / exportImport.service)
+- Magic strings для тем ('light'/'dark')
+- Down migration для `add_username_visibility`
+- Docker secrets management для production
+- Repository layer / DI
+- JSDoc на сервисных функциях
+- Bounded contexts
+- Тесты на конкурентность, edge cases парсеров, нагрузку
