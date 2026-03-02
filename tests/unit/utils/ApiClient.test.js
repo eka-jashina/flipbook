@@ -299,7 +299,7 @@ describe('ApiClient', () => {
 
       const user = await client.register('test@test.com', 'pass1234', 'Test');
 
-      expect(global.fetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/auth/register', expect.objectContaining({
         method: 'POST',
       }));
       expect(user).toEqual({ id: 1, email: 'test@test.com' });
@@ -319,7 +319,7 @@ describe('ApiClient', () => {
 
       await client.logout();
 
-      expect(global.fetch).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/auth/logout', expect.objectContaining({
         method: 'POST',
       }));
     });
@@ -348,14 +348,14 @@ describe('ApiClient', () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: { id: 1, title: 'Test' } }));
 
       const result = await client.getBook('abc');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/abc', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/abc', expect.anything());
     });
 
     it('updateBook should PATCH /api/books/:id', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: { id: 1 } }));
 
       await client.updateBook('abc', { title: 'Updated' });
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/abc', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/abc', expect.objectContaining({
         method: 'PATCH',
       }));
     });
@@ -364,7 +364,7 @@ describe('ApiClient', () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(204));
 
       await client.deleteBook('abc');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/abc', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/abc', expect.objectContaining({
         method: 'DELETE',
       }));
     });
@@ -386,7 +386,7 @@ describe('ApiClient', () => {
     it('getChapters should fetch chapters for a book', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: [] }));
       await client.getChapters('b1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/chapters', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/chapters', expect.anything());
     });
 
     it('createChapter should POST chapter data', async () => {
@@ -398,13 +398,13 @@ describe('ApiClient', () => {
     it('getChapter should fetch single chapter', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: { id: 'c1' } }));
       await client.getChapter('b1', 'c1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/chapters/c1', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/chapters/c1', expect.anything());
     });
 
     it('updateChapter should PATCH chapter', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: { id: 'c1' } }));
       await client.updateChapter('b1', 'c1', { title: 'Updated' });
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/chapters/c1', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/chapters/c1', expect.objectContaining({
         method: 'PATCH',
       }));
     });
@@ -412,7 +412,7 @@ describe('ApiClient', () => {
     it('deleteChapter should DELETE chapter', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(204));
       await client.deleteChapter('b1', 'c1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/chapters/c1', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/chapters/c1', expect.objectContaining({
         method: 'DELETE',
       }));
     });
@@ -427,7 +427,7 @@ describe('ApiClient', () => {
     it('getChapterContent should fetch content', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: '<p>Content</p>' }));
       await client.getChapterContent('b1', 'c1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/chapters/c1/content', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/chapters/c1/content', expect.anything());
     });
   });
 
@@ -439,13 +439,13 @@ describe('ApiClient', () => {
     it('getAppearance should fetch appearance', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.getAppearance('b1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/appearance', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/appearance', expect.anything());
     });
 
     it('updateAppearance should PATCH appearance', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.updateAppearance('b1', { fontMin: 14 });
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/appearance', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/appearance', expect.objectContaining({
         method: 'PATCH',
       }));
     });
@@ -453,7 +453,7 @@ describe('ApiClient', () => {
     it('updateAppearanceTheme should PATCH theme', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.updateAppearanceTheme('b1', 'dark', { bgPage: '#000' });
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/appearance/dark', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/appearance/dark', expect.objectContaining({
         method: 'PATCH',
       }));
     });
@@ -463,13 +463,13 @@ describe('ApiClient', () => {
     it('getSounds should fetch sounds', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.getSounds('b1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/sounds', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/sounds', expect.anything());
     });
 
     it('updateSounds should PATCH sounds', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.updateSounds('b1', { pageFlip: 'url' });
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/sounds', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/sounds', expect.objectContaining({
         method: 'PATCH',
       }));
     });
@@ -479,7 +479,7 @@ describe('ApiClient', () => {
     it('getAmbients should fetch ambients', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: [] }));
       await client.getAmbients('b1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/ambients', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/ambients', expect.anything());
     });
 
     it('createAmbient should POST ambient', async () => {
@@ -491,7 +491,7 @@ describe('ApiClient', () => {
     it('updateAmbient should PATCH ambient', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.updateAmbient('b1', 'a1', { label: 'Updated' });
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/ambients/a1', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/ambients/a1', expect.objectContaining({
         method: 'PATCH',
       }));
     });
@@ -499,7 +499,7 @@ describe('ApiClient', () => {
     it('deleteAmbient should DELETE ambient', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(204));
       await client.deleteAmbient('b1', 'a1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/ambients/a1', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/ambients/a1', expect.objectContaining({
         method: 'DELETE',
       }));
     });
@@ -537,7 +537,7 @@ describe('ApiClient', () => {
     it('setDecorativeFont should PUT font data', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.setDecorativeFont('b1', { name: 'Fancy' });
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/decorative-font', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/decorative-font', expect.objectContaining({
         method: 'PUT',
       }));
     });
@@ -545,7 +545,7 @@ describe('ApiClient', () => {
     it('deleteDecorativeFont should DELETE font', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(204));
       await client.deleteDecorativeFont('b1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/decorative-font', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/decorative-font', expect.objectContaining({
         method: 'DELETE',
       }));
     });
@@ -559,7 +559,7 @@ describe('ApiClient', () => {
     it('getFonts should GET /api/fonts', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: [] }));
       await client.getFonts();
-      expect(global.fetch).toHaveBeenCalledWith('/api/fonts', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/fonts', expect.anything());
     });
 
     it('createFont should POST font', async () => {
@@ -570,7 +570,7 @@ describe('ApiClient', () => {
     it('updateFont should PATCH font', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.updateFont('f1', { label: 'Updated' });
-      expect(global.fetch).toHaveBeenCalledWith('/api/fonts/f1', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/fonts/f1', expect.objectContaining({
         method: 'PATCH',
       }));
     });
@@ -578,7 +578,7 @@ describe('ApiClient', () => {
     it('deleteFont should DELETE font', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(204));
       await client.deleteFont('f1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/fonts/f1', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/fonts/f1', expect.objectContaining({
         method: 'DELETE',
       }));
     });
@@ -599,7 +599,7 @@ describe('ApiClient', () => {
     it('getSettings should GET /api/settings', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.getSettings();
-      expect(global.fetch).toHaveBeenCalledWith('/api/settings', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/settings', expect.anything());
     });
 
     it('updateSettings should PATCH /api/settings', async () => {
@@ -610,7 +610,7 @@ describe('ApiClient', () => {
     it('getDefaultSettings should GET book default settings', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.getDefaultSettings('b1');
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/default-settings', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/default-settings', expect.anything());
     });
 
     it('updateDefaultSettings should PATCH book default settings', async () => {
@@ -644,7 +644,7 @@ describe('ApiClient', () => {
     it('saveProgress should PUT progress data', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: {} }));
       await client.saveProgress('b1', { page: 10 });
-      expect(global.fetch).toHaveBeenCalledWith('/api/books/b1/progress', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/books/b1/progress', expect.objectContaining({
         method: 'PUT',
       }));
     });
@@ -671,7 +671,7 @@ describe('ApiClient', () => {
       const file = new File(['data'], 'sound.mp3');
 
       await client.uploadSound(file);
-      expect(global.fetch).toHaveBeenCalledWith('/api/upload/sound', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/upload/sound', expect.anything());
     });
 
     it('uploadImage should POST FormData', async () => {
@@ -679,7 +679,7 @@ describe('ApiClient', () => {
       const file = new File(['data'], 'image.webp');
 
       await client.uploadImage(file);
-      expect(global.fetch).toHaveBeenCalledWith('/api/upload/image', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/upload/image', expect.anything());
     });
 
     it('uploadBook should POST FormData', async () => {
@@ -687,7 +687,7 @@ describe('ApiClient', () => {
       const file = new File(['data'], 'book.epub');
 
       await client.uploadBook(file);
-      expect(global.fetch).toHaveBeenCalledWith('/api/upload/book', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/upload/book', expect.anything());
     });
   });
 
@@ -699,13 +699,13 @@ describe('ApiClient', () => {
     it('exportConfig should GET /api/export', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: { books: [] } }));
       await client.exportConfig();
-      expect(global.fetch).toHaveBeenCalledWith('/api/export', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/export', expect.anything());
     });
 
     it('importConfig should POST to /api/import', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: null }));
       await client.importConfig({ books: [] });
-      expect(global.fetch).toHaveBeenCalledWith('/api/import', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/import', expect.objectContaining({
         method: 'POST',
       }));
     });
