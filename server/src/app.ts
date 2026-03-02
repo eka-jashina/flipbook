@@ -76,10 +76,13 @@ export function createApp() {
     },
   }));
 
-  // CORS
+  // CORS (supports multiple comma-separated origins)
+  const corsOrigins = config.CORS_ORIGIN.includes(',')
+    ? config.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : config.CORS_ORIGIN;
   app.use(
     cors({
-      origin: config.CORS_ORIGIN,
+      origin: corsOrigins,
       credentials: true,
     }),
   );

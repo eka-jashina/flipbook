@@ -10,7 +10,7 @@ This document provides essential context for AI assistants working on this codeb
 - 3D page flip animations with realistic physics
 - Multi-chapter support (default: 3 chapters of Tolkien's "The Hobbit" in Russian)
 - Bookshelf as the main screen — book cards with context menu (read / edit / delete)
-- Admin panel (admin.html) for book management (upload, chapters, fonts, sounds, appearance, export)
+- Admin panel (Account screen within SPA) for book management (upload, chapters, fonts, sounds, appearance, export)
 - Backend server with REST API, user authentication (email/password + Google OAuth), S3 file storage
 - Multi-book support with per-book reading progress (Continue Reading button)
 - Customizable reading experience (fonts, sizes, themes, sounds)
@@ -93,8 +93,7 @@ npm run deploy:vercel  # Deploy to Vercel
 
 ```
 flipbook/
-├── index.html                 # Main entry — bookshelf + reader
-├── admin.html                 # Admin panel (book management)
+├── index.html                 # Main entry — bookshelf + reader + account (SPA)
 ├── html/                      # HTML partials (build-time includes)
 │   └── partials/
 │       ├── admin/             # Admin panel partials
@@ -831,7 +830,7 @@ npm run lint:css:fix      # Stylelint autofix
 ### Adding a New Chapter
 
 **Via personal account (recommended):**
-1. Open `admin.html` (or click "Редактировать" from the bookshelf context menu)
+1. Open Account screen (click "Редактировать" from the bookshelf context menu, or navigate to /account)
 2. Upload a book file (txt, doc, docx, epub, fb2) or add chapters manually
 3. Configure backgrounds and settings
 4. Save — config is persisted to localStorage (offline) or server (authenticated)
