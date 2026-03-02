@@ -12,7 +12,7 @@ describe('Export/Import API', () => {
 
   it('should export empty config', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    const res = await agent.get('/api/export').expect(200);
+    const res = await agent.get('/api/v1/export').expect(200);
     expect(res.body.data.books).toEqual([]);
     expect(res.body.data.readingFonts).toEqual([]);
     // Registration auto-creates default global settings
@@ -28,22 +28,22 @@ describe('Export/Import API', () => {
 
   it('should include Content-Disposition header', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    const res = await agent.get('/api/export').expect(200);
+    const res = await agent.get('/api/v1/export').expect(200);
     expect(res.headers['content-disposition']).toContain('attachment');
   });
 
   it('should export books with chapters', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    const bookRes = await agent.post('/api/books').send({ title: 'My Book', author: 'Me' }).expect(201);
+    const bookRes = await agent.post('/api/v1/books').send({ title: 'My Book', author: 'Me' }).expect(201);
     await agent.post(`/api/books/${bookRes.body.data.id}/chapters`).send({ title: 'Ch 1', htmlContent: '<p>Hi</p>' }).expect(201);
-    const res = await agent.get('/api/export').expect(200);
+    const res = await agent.get('/api/v1/export').expect(200);
     expect(res.body.data.books).toHaveLength(1);
     expect(res.body.data.books[0].chapters).toHaveLength(1);
   });
 
   it('should export book with appearance and sounds', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    const bookRes = await agent.post('/api/books').send({ title: 'Styled' }).expect(201);
+    const bookRes = await agent.post('/api/v1/books').send({ title: 'Styled' }).expect(201);
     const bookId = bookRes.body.data.id;
 
     // Update appearance
@@ -51,14 +51,14 @@ describe('Export/Import API', () => {
     // Update sounds
     await agent.patch(`/api/books/${bookId}/sounds`).send({ pageFlip: 'custom/flip.mp3' }).expect(200);
 
-    const res = await agent.get('/api/export').expect(200);
+    const res = await agent.get('/api/v1/export').expect(200);
     expect(res.body.data.books[0].appearance.light.coverBgStart).toBe('#ff0000');
     expect(res.body.data.books[0].sounds.pageFlip).toBe('custom/flip.mp3');
   });
 
   it('should export book with ambients and decorative font', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    const bookRes = await agent.post('/api/books').send({ title: 'Full' }).expect(201);
+    const bookRes = await agent.post('/api/v1/books').send({ title: 'Full' }).expect(201);
     const bookId = bookRes.body.data.id;
 
     // Add ambient
@@ -66,26 +66,26 @@ describe('Export/Import API', () => {
     // Add decorative font
     await agent.put(`/api/books/${bookId}/decorative-font`).send({ name: 'Fancy', fileUrl: 'fonts/fancy.woff2' }).expect(200);
 
-    const res = await agent.get('/api/export').expect(200);
+    const res = await agent.get('/api/v1/export').expect(200);
     expect(res.body.data.books[0].ambients.length).toBeGreaterThanOrEqual(1);
     expect(res.body.data.books[0].decorativeFont).toEqual({ name: 'Fancy', fileUrl: 'fonts/fancy.woff2' });
   });
 
   it('should export reading fonts', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    await agent.post('/api/fonts').send({ fontKey: 'custom', label: 'Custom Font', family: 'CustomFont' }).expect(201);
+    await agent.post('/api/v1/fonts').send({ fontKey: 'custom', label: 'Custom Font', family: 'CustomFont' }).expect(201);
 
-    const res = await agent.get('/api/export').expect(200);
+    const res = await agent.get('/api/v1/export').expect(200);
     expect(res.body.data.readingFonts).toHaveLength(1);
     expect(res.body.data.readingFonts[0].fontKey).toBe('custom');
   });
 
   it('should not leak data between users', async () => {
     const { agent: agent1 } = await createAuthenticatedAgent(app);
-    await agent1.post('/api/books').send({ title: 'User1 Book' }).expect(201);
+    await agent1.post('/api/v1/books').send({ title: 'User1 Book' }).expect(201);
 
     const { agent: agent2 } = await createAuthenticatedAgent(app, { email: 'user2@test.com' });
-    const res = await agent2.get('/api/export').expect(200);
+    const res = await agent2.get('/api/v1/export').expect(200);
     expect(res.body.data.books).toHaveLength(0);
   });
 
@@ -98,11 +98,11 @@ describe('Export/Import API', () => {
       readingFonts: [{ fontKey: 'georgia', label: 'Georgia', family: 'Georgia', builtin: true, enabled: true, fileUrl: null, position: 0 }],
       globalSettings: { fontMin: 12, fontMax: 28, settingsVisibility: { fontSize: true, theme: true, font: true, fullscreen: false, sound: true, ambient: false } },
     };
-    const res = await agent.post('/api/import').send(importData).expect(200);
+    const res = await agent.post('/api/v1/import').send(importData).expect(200);
     expect(res.body.data.imported.books).toBe(1);
     expect(res.body.data.imported.fonts).toBe(1);
 
-    const exp = await agent.get('/api/export').expect(200);
+    const exp = await agent.get('/api/v1/export').expect(200);
     expect(exp.body.data.books).toHaveLength(1);
     expect(exp.body.data.readingFonts).toHaveLength(1);
     expect(exp.body.data.globalSettings?.fontMin).toBe(12);
@@ -128,10 +128,10 @@ describe('Export/Import API', () => {
       readingFonts: [],
       globalSettings: null,
     };
-    const res = await agent.post('/api/import').send(importData).expect(200);
+    const res = await agent.post('/api/v1/import').send(importData).expect(200);
     expect(res.body.data.imported.books).toBe(1);
 
-    const exp = await agent.get('/api/export').expect(200);
+    const exp = await agent.get('/api/v1/export').expect(200);
     const book = exp.body.data.books[0];
     expect(book.appearance.fontMin).toBe(12);
     expect(book.appearance.light.coverBgStart).toBe('#aaa');
@@ -153,10 +153,10 @@ describe('Export/Import API', () => {
       readingFonts: [],
       globalSettings: null,
     };
-    const res = await agent.post('/api/import').send(importData).expect(200);
+    const res = await agent.post('/api/v1/import').send(importData).expect(200);
     expect(res.body.data.imported.books).toBe(3);
 
-    const exp = await agent.get('/api/export').expect(200);
+    const exp = await agent.get('/api/v1/export').expect(200);
     expect(exp.body.data.books).toHaveLength(3);
   });
 
@@ -170,9 +170,9 @@ describe('Export/Import API', () => {
         settingsVisibility: { fontSize: false, theme: false, font: true, fullscreen: false, sound: false, ambient: true },
       },
     };
-    await agent.post('/api/import').send(importData).expect(200);
+    await agent.post('/api/v1/import').send(importData).expect(200);
 
-    const exp = await agent.get('/api/export').expect(200);
+    const exp = await agent.get('/api/v1/export').expect(200);
     expect(exp.body.data.globalSettings.fontMin).toBe(10);
     expect(exp.body.data.globalSettings.fontMax).toBe(30);
     expect(exp.body.data.globalSettings.settingsVisibility.fontSize).toBe(false);
@@ -183,22 +183,22 @@ describe('Export/Import API', () => {
 
   it('should reject invalid payload', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    await agent.post('/api/import').send({ invalid: 'data' }).expect(400);
+    await agent.post('/api/v1/import').send({ invalid: 'data' }).expect(400);
   });
 
   it('should reject empty body', async () => {
     const { agent } = await createAuthenticatedAgent(app);
-    await agent.post('/api/import').send({}).expect(400);
+    await agent.post('/api/v1/import').send({}).expect(400);
   });
 
   // ─── Auth ─────────────────────────────────────────────────────────
 
   it('should require authentication for export', async () => {
-    await request(app).get('/api/export').expect(401);
+    await request(app).get('/api/v1/export').expect(401);
   });
 
   it('should require authentication for import', async () => {
     const { agent } = await createCsrfAgent(app);
-    await agent.post('/api/import').send({ books: [] }).expect(401);
+    await agent.post('/api/v1/import').send({ books: [] }).expect(401);
   });
 });

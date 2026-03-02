@@ -43,7 +43,7 @@ export class ApiClient {
 
   /**
    * Выполнить HTTP-запрос к API
-   * @param {string} path - Путь (например '/api/books')
+   * @param {string} path - Путь (например '/api/v1/books')
    * @param {Object} [options] - fetch options
    * @returns {Promise<*>} Parsed JSON response
    * @throws {ApiError}
@@ -156,7 +156,7 @@ export class ApiClient {
   /** Получить текущего пользователя (или null если не авторизован) */
   async getMe() {
     try {
-      const data = await this._fetch('/api/auth/me');
+      const data = await this._fetch('/api/v1/auth/me');
       return data.user;
     } catch (err) {
       if (err.status === 401) return null;
@@ -166,7 +166,7 @@ export class ApiClient {
 
   /** Регистрация + автоматический вход */
   async register(email, password, displayName, username) {
-    const data = await this._fetch('/api/auth/register', {
+    const data = await this._fetch('/api/v1/auth/register', {
       method: 'POST',
       body: { email, password, displayName, username },
     });
@@ -175,7 +175,7 @@ export class ApiClient {
 
   /** Вход */
   async login(email, password) {
-    const data = await this._fetch('/api/auth/login', {
+    const data = await this._fetch('/api/v1/auth/login', {
       method: 'POST',
       body: { email, password },
     });
@@ -184,7 +184,7 @@ export class ApiClient {
 
   /** Выход */
   async logout() {
-    await this._fetch('/api/auth/logout', { method: 'POST' });
+    await this._fetch('/api/v1/auth/logout', { method: 'POST' });
   }
 
   // ═══════════════════════════════════════════
@@ -193,12 +193,12 @@ export class ApiClient {
 
   /** Список книг (для полки) */
   async getBooks() {
-    return this._fetchWithRetry('/api/books');
+    return this._fetchWithRetry('/api/v1/books');
   }
 
   /** Создать книгу */
   async createBook(data) {
-    return this._fetchWithRetry('/api/books', { method: 'POST', body: data });
+    return this._fetchWithRetry('/api/v1/books', { method: 'POST', body: data });
   }
 
   /** Полная информация о книге */
@@ -218,7 +218,7 @@ export class ApiClient {
 
   /** Изменить порядок книг */
   async reorderBooks(bookIds) {
-    return this._fetchWithRetry('/api/books/reorder', { method: 'PATCH', body: { bookIds } });
+    return this._fetchWithRetry('/api/v1/books/reorder', { method: 'PATCH', body: { bookIds } });
   }
 
   // ═══════════════════════════════════════════
@@ -352,12 +352,12 @@ export class ApiClient {
 
   /** Список шрифтов */
   async getFonts() {
-    return this._fetchWithRetry('/api/fonts');
+    return this._fetchWithRetry('/api/v1/fonts');
   }
 
   /** Добавить шрифт */
   async createFont(data) {
-    return this._fetchWithRetry('/api/fonts', { method: 'POST', body: data });
+    return this._fetchWithRetry('/api/v1/fonts', { method: 'POST', body: data });
   }
 
   /** Обновить шрифт */
@@ -372,7 +372,7 @@ export class ApiClient {
 
   /** Изменить порядок шрифтов */
   async reorderFonts(fontIds) {
-    return this._fetchWithRetry('/api/fonts/reorder', { method: 'PATCH', body: { fontIds } });
+    return this._fetchWithRetry('/api/v1/fonts/reorder', { method: 'PATCH', body: { fontIds } });
   }
 
   // ═══════════════════════════════════════════
@@ -381,12 +381,12 @@ export class ApiClient {
 
   /** Глобальные настройки */
   async getSettings() {
-    return this._fetchWithRetry('/api/settings');
+    return this._fetchWithRetry('/api/v1/settings');
   }
 
   /** Обновить глобальные настройки */
   async updateSettings(data) {
-    return this._fetchWithRetry('/api/settings', { method: 'PATCH', body: data });
+    return this._fetchWithRetry('/api/v1/settings', { method: 'PATCH', body: data });
   }
 
   /** Дефолтные настройки книги */
@@ -426,28 +426,28 @@ export class ApiClient {
   async uploadFont(file) {
     const form = new FormData();
     form.append('file', file);
-    return this._fetchWithRetry('/api/upload/font', { method: 'POST', body: form });
+    return this._fetchWithRetry('/api/v1/upload/font', { method: 'POST', body: form });
   }
 
   /** Загрузить звук */
   async uploadSound(file) {
     const form = new FormData();
     form.append('file', file);
-    return this._fetchWithRetry('/api/upload/sound', { method: 'POST', body: form });
+    return this._fetchWithRetry('/api/v1/upload/sound', { method: 'POST', body: form });
   }
 
   /** Загрузить изображение */
   async uploadImage(file) {
     const form = new FormData();
     form.append('file', file);
-    return this._fetchWithRetry('/api/upload/image', { method: 'POST', body: form });
+    return this._fetchWithRetry('/api/v1/upload/image', { method: 'POST', body: form });
   }
 
   /** Загрузить книгу (парсинг на сервере) */
   async uploadBook(file) {
     const form = new FormData();
     form.append('file', file);
-    return this._fetchWithRetry('/api/upload/book', { method: 'POST', body: form });
+    return this._fetchWithRetry('/api/v1/upload/book', { method: 'POST', body: form });
   }
 
   // ═══════════════════════════════════════════
@@ -456,12 +456,12 @@ export class ApiClient {
 
   /** Экспорт всей конфигурации */
   async exportConfig() {
-    return this._fetchWithRetry('/api/export');
+    return this._fetchWithRetry('/api/v1/export');
   }
 
   /** Импорт конфигурации */
   async importConfig(data) {
-    return this._fetchWithRetry('/api/import', { method: 'POST', body: data });
+    return this._fetchWithRetry('/api/v1/import', { method: 'POST', body: data });
   }
 
   // ═══════════════════════════════════════════
@@ -505,12 +505,12 @@ export class ApiClient {
 
   /** Получить профиль текущего пользователя */
   async getProfile() {
-    return this._fetchWithRetry('/api/profile');
+    return this._fetchWithRetry('/api/v1/profile');
   }
 
   /** Обновить профиль текущего пользователя */
   async updateProfile(data) {
-    return this._fetchWithRetry('/api/profile', { method: 'PUT', body: data });
+    return this._fetchWithRetry('/api/v1/profile', { method: 'PUT', body: data });
   }
 
   /** Проверить доступность username */

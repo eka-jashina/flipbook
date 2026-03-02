@@ -56,12 +56,16 @@ router.patch(
   }),
 );
 
+// Ownership check — applied once for every /:bookId route below.
+// (Sub-resource routes like /chapters, /sounds etc. are covered separately
+//  by the centralised middleware in app.ts.)
+router.all('/:bookId', requireBookOwnership);
+
 /**
  * GET /api/books/:bookId — Get book details
  */
 router.get(
   '/:bookId',
-  requireBookOwnership,
   asyncHandler(async (req, res) => {
     const book = await getBookById(req.params.bookId as string, req.user!.id);
     ok(res, book);
@@ -73,7 +77,6 @@ router.get(
  */
 router.patch(
   '/:bookId',
-  requireBookOwnership,
   validate(updateBookSchema),
   asyncHandler(async (req, res) => {
     const ifUnmodifiedSince = req.headers['if-unmodified-since'] as string | undefined;
@@ -91,7 +94,6 @@ router.patch(
  */
 router.delete(
   '/:bookId',
-  requireBookOwnership,
   asyncHandler(async (req, res) => {
     await deleteBook(req.params.bookId as string, req.user!.id);
     res.status(204).send();

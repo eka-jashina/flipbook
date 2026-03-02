@@ -15,7 +15,7 @@ describe('Auth API', () => {
       const { agent } = await createCsrfAgent(app);
 
       const res = await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           email: 'new@example.com',
           password: 'Password123!',
@@ -38,12 +38,12 @@ describe('Auth API', () => {
       const { agent } = await createCsrfAgent(app);
 
       await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'dup@example.com', password: 'Password123!', username: 'dup-user1' })
         .expect(201);
 
       const res = await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'dup@example.com', password: 'Password123!', username: 'dup-user2' })
         .expect(409);
 
@@ -54,7 +54,7 @@ describe('Auth API', () => {
       const { agent } = await createCsrfAgent(app);
 
       const res = await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'weak@example.com', password: 'short', username: 'weak-user' })
         .expect(400);
 
@@ -65,7 +65,7 @@ describe('Auth API', () => {
       const { agent } = await createCsrfAgent(app);
 
       await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'not-an-email', password: 'Password123!', username: 'invalid-email-user' })
         .expect(400);
     });
@@ -74,12 +74,12 @@ describe('Auth API', () => {
       const { agent } = await createCsrfAgent(app);
 
       await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'user1@example.com', password: 'Password123!', username: 'same-name' })
         .expect(201);
 
       const res = await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'user2@example.com', password: 'Password123!', username: 'same-name' })
         .expect(409);
 
@@ -90,7 +90,7 @@ describe('Auth API', () => {
       const { agent } = await createCsrfAgent(app);
 
       const res = await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'reserved@example.com', password: 'Password123!', username: 'admin' })
         .expect(400);
 
@@ -101,7 +101,7 @@ describe('Auth API', () => {
       const { agent } = await createCsrfAgent(app);
 
       await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'bad-user@example.com', password: 'Password123!', username: 'AB' })
         .expect(400);
     });
@@ -113,14 +113,14 @@ describe('Auth API', () => {
 
       // Register first
       await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'login@example.com', password: 'Password123!', username: 'login-user' });
 
       // Logout so we can test login
-      await agent.post('/api/auth/logout');
+      await agent.post('/api/v1/auth/logout');
 
       const res = await agent
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: 'login@example.com', password: 'Password123!' })
         .expect(200);
 
@@ -131,13 +131,13 @@ describe('Auth API', () => {
       const { agent } = await createCsrfAgent(app);
 
       await agent
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'wrong@example.com', password: 'Password123!', username: 'wrong-user' });
 
-      await agent.post('/api/auth/logout');
+      await agent.post('/api/v1/auth/logout');
 
       await agent
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: 'wrong@example.com', password: 'WrongPassword!' })
         .expect(401);
     });
@@ -146,7 +146,7 @@ describe('Auth API', () => {
       const { agent } = await createCsrfAgent(app);
 
       await agent
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: 'nouser@example.com', password: 'Password123!' })
         .expect(401);
     });
@@ -156,12 +156,12 @@ describe('Auth API', () => {
     it('should return current user when authenticated', async () => {
       const { agent, email } = await createAuthenticatedAgent(app);
 
-      const res = await agent.get('/api/auth/me').expect(200);
+      const res = await agent.get('/api/v1/auth/me').expect(200);
       expect(res.body.data.user.email).toBe(email);
     });
 
     it('should return 401 when not authenticated', async () => {
-      await request(app).get('/api/auth/me').expect(401);
+      await request(app).get('/api/v1/auth/me').expect(401);
     });
   });
 
@@ -170,26 +170,26 @@ describe('Auth API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       // Should be authenticated
-      await agent.get('/api/auth/me').expect(200);
+      await agent.get('/api/v1/auth/me').expect(200);
 
       // Logout
-      await agent.post('/api/auth/logout').expect(200);
+      await agent.post('/api/v1/auth/logout').expect(200);
 
       // Should no longer be authenticated
-      await agent.get('/api/auth/me').expect(401);
+      await agent.get('/api/v1/auth/me').expect(401);
     });
   });
 
   describe('CSRF protection', () => {
     it('should reject POST without CSRF token', async () => {
       await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: 'test@example.com', password: 'Password123!' })
         .expect(403);
     });
 
     it('should allow GET without CSRF token', async () => {
-      const res = await request(app).get('/api/auth/csrf-token').expect(200);
+      const res = await request(app).get('/api/v1/auth/csrf-token').expect(200);
       expect(res.body.data.token).toBeDefined();
     });
   });

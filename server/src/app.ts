@@ -87,6 +87,17 @@ export function createApp() {
     }),
   );
 
+  // Backward-compat: redirect /api/... → /api/v1/...
+  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+    // Skip paths that already contain /v1/ or are meta-endpoints (health, docs)
+    if (req.path.startsWith('/v1/') || req.path === '/health' || req.path.startsWith('/docs')) {
+      return next();
+    }
+    // Redirect with 308 (preserves method & body) for versioned clients
+    const newUrl = `/api/v1${req.path}${req.url.includes('?') ? '?' + req.url.split('?')[1] : ''}`;
+    res.redirect(308, newUrl);
+  });
+
   // Rate limiting
   app.use('/api/', createRateLimiter());
 
@@ -141,7 +152,7 @@ export function createApp() {
     }),
   );
 
-  // Health check with DB + S3 verification
+  // Health check with DB + S3 verification (unversioned — always at /api/health)
   app.get('/api/health', async (_req: Request, res: Response) => {
     const checks: Record<string, string> = {};
     let status = 'ok';
@@ -184,28 +195,28 @@ export function createApp() {
     res.type('html').send(swaggerHtml);
   });
 
-  // Routes
-  app.use('/api/auth', authRoutes);
-  app.use('/api/profile', profileRoutes);
-  app.use('/api/public', publicRoutes);
-  app.use('/api/books', booksRoutes);
+  // Routes (API v1)
+  app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/profile', profileRoutes);
+  app.use('/api/v1/public', publicRoutes);
+  app.use('/api/v1/books', booksRoutes);
 
   // Progress: any authenticated user can track reading progress (no ownership required)
-  app.use('/api/books/:bookId/progress', progressRoutes);
+  app.use('/api/v1/books/:bookId/progress', progressRoutes);
 
   // Book sub-resource routes — unified ownership check via middleware
-  app.use('/api/books/:bookId', requireAuth, requireBookOwnership);
-  app.use('/api/books/:bookId/chapters', chaptersRoutes);
-  app.use('/api/books/:bookId/appearance', appearanceRoutes);
-  app.use('/api/books/:bookId/sounds', soundsRoutes);
-  app.use('/api/books/:bookId/ambients', ambientsRoutes);
-  app.use('/api/books/:bookId/decorative-font', decorativeFontRoutes);
-  app.use('/api/books/:bookId/default-settings', defaultSettingsRoutes);
+  app.use('/api/v1/books/:bookId', requireAuth, requireBookOwnership);
+  app.use('/api/v1/books/:bookId/chapters', chaptersRoutes);
+  app.use('/api/v1/books/:bookId/appearance', appearanceRoutes);
+  app.use('/api/v1/books/:bookId/sounds', soundsRoutes);
+  app.use('/api/v1/books/:bookId/ambients', ambientsRoutes);
+  app.use('/api/v1/books/:bookId/decorative-font', decorativeFontRoutes);
+  app.use('/api/v1/books/:bookId/default-settings', defaultSettingsRoutes);
 
-  app.use('/api/fonts', fontsRoutes);
-  app.use('/api/settings', settingsRoutes);
-  app.use('/api/upload', uploadRoutes);
-  app.use('/api', exportImportRoutes);
+  app.use('/api/v1/fonts', fontsRoutes);
+  app.use('/api/v1/settings', settingsRoutes);
+  app.use('/api/v1/upload', uploadRoutes);
+  app.use('/api/v1', exportImportRoutes);
 
   // 404 handler for unmatched API routes — prevents leaking SPA HTML for API paths
   app.use('/api', (_req: Request, res: Response) => {

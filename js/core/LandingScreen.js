@@ -81,7 +81,7 @@ export class LandingScreen {
     if (!showcase || !grid) return;
 
     try {
-      const resp = await fetch('/api/public/discover?limit=6');
+      const resp = await fetch('/api/v1/public/discover?limit=6');
       if (!resp.ok) return;
 
       const { data: books } = await resp.json();

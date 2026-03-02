@@ -15,12 +15,12 @@ describe('Books API', () => {
     it('should return empty list for new user', async () => {
       const { agent } = await createAuthenticatedAgent(app);
 
-      const res = await agent.get('/api/books').expect(200);
+      const res = await agent.get('/api/v1/books').expect(200);
       expect(res.body.data.books).toEqual([]);
     });
 
     it('should require authentication', async () => {
-      await request(app).get('/api/books').expect(401);
+      await request(app).get('/api/v1/books').expect(401);
     });
   });
 
@@ -29,7 +29,7 @@ describe('Books API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       const res = await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'Test Book', author: 'Test Author' })
         .expect(201);
 
@@ -45,23 +45,23 @@ describe('Books API', () => {
     it('should require title', async () => {
       const { agent } = await createAuthenticatedAgent(app);
 
-      await agent.post('/api/books').send({ author: 'No Title' }).expect(400);
+      await agent.post('/api/v1/books').send({ author: 'No Title' }).expect(400);
     });
 
     it('should auto-increment position', async () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'Book 1' })
         .expect(201);
 
       await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'Book 2' })
         .expect(201);
 
-      const res = await agent.get('/api/books').expect(200);
+      const res = await agent.get('/api/v1/books').expect(200);
       expect(res.body.data.books).toHaveLength(2);
       expect(res.body.data.books[0].position).toBe(0);
       expect(res.body.data.books[1].position).toBe(1);
@@ -73,7 +73,7 @@ describe('Books API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       const createRes = await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'Detail Book', author: 'Author' })
         .expect(201);
 
@@ -90,7 +90,7 @@ describe('Books API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       await agent
-        .get('/api/books/00000000-0000-0000-0000-000000000000')
+        .get('/api/v1/books/00000000-0000-0000-0000-000000000000')
         .expect(404);
     });
 
@@ -103,7 +103,7 @@ describe('Books API', () => {
       });
 
       const createRes = await agent1
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'Private Book' })
         .expect(201);
 
@@ -116,7 +116,7 @@ describe('Books API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       const createRes = await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'Original Title' })
         .expect(201);
 
@@ -135,7 +135,7 @@ describe('Books API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       const createRes = await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'To Delete' })
         .expect(201);
 
@@ -146,7 +146,7 @@ describe('Books API', () => {
         .expect(204);
 
       // Book should not appear in the list
-      const res = await agent.get('/api/books').expect(200);
+      const res = await agent.get('/api/v1/books').expect(200);
       expect(res.body.data.books).toHaveLength(0);
 
       // But the row still exists in the database with deletedAt set
@@ -160,7 +160,7 @@ describe('Books API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       const createRes = await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'To Delete' })
         .expect(201);
 
@@ -174,7 +174,7 @@ describe('Books API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       const createRes = await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'Locking Test' })
         .expect(201);
 
@@ -201,7 +201,7 @@ describe('Books API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       const createRes = await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'No Lock Test' })
         .expect(201);
 
@@ -220,21 +220,21 @@ describe('Books API', () => {
       const { agent } = await createAuthenticatedAgent(app);
 
       const book1 = await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'Book A' })
         .expect(201);
       const book2 = await agent
-        .post('/api/books')
+        .post('/api/v1/books')
         .send({ title: 'Book B' })
         .expect(201);
 
       // Reverse order
       await agent
-        .patch('/api/books/reorder')
+        .patch('/api/v1/books/reorder')
         .send({ bookIds: [book2.body.data.id, book1.body.data.id] })
         .expect(200);
 
-      const res = await agent.get('/api/books').expect(200);
+      const res = await agent.get('/api/v1/books').expect(200);
       expect(res.body.data.books[0].title).toBe('Book B');
       expect(res.body.data.books[1].title).toBe('Book A');
     });
