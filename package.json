@@ -37,7 +37,8 @@
     "lint:js:fix": "eslint js/ --fix",
     "lint:css:fix": "stylelint \"css/**/*.css\" --fix",
     "docs": "jsdoc -c jsdoc.json",
-    "docs:serve": "npm run docs && npx serve docs -p 3001"
+    "docs:serve": "npm run docs && npx serve docs -p 3001",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
@@ -48,8 +49,10 @@
     "clean-jsdoc-theme": "^4.3.0",
     "eslint": "^9.39.2",
     "globals": "^17.3.0",
+    "husky": "^9.1.7",
     "jsdoc": "^4.0.4",
     "jsdom": "^27.4.0",
+    "lint-staged": "^16.3.1",
     "postcss": "^8.4.32",
     "sharp": "^0.34.5",
     "stylelint": "^17.1.1",
@@ -82,7 +85,12 @@
     "interactive",
     "reading"
   ],
+  "lint-staged": {
+    "js/**/*.js": "eslint",
+    "css/**/*.css": "stylelint"
+  },
   "dependencies": {
+    "@sentry/browser": "^10.40.0",
     "dompurify": "^3.3.1",
     "jszip": "^3.10.1",
     "quill": "^2.0.3"

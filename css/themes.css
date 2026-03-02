@@ -10,6 +10,22 @@
    ═══════════════════════════════════════════ */
 
 html[data-theme="dark"] {
+  /* UI токены */
+  --color-accent: #7b8ad4;
+  --color-accent-hover: #8e9bdf;
+  --color-accent-focus: rgb(123, 138, 212, 0.2);
+  --color-surface: #1e1e1e;
+  --color-surface-alt: #2a2a2a;
+  --color-surface-hover: #333;
+  --color-text-primary: #e6e6e6;
+  --color-text-secondary: #aaa;
+  --color-text-tertiary: #777;
+  --color-text-placeholder: #666;
+  --color-border: #444;
+  --color-border-hover: #555;
+  --color-error-bg: #2d1b1b;
+  --color-error-text: #f87171;
+  --color-divider: #333;
   --bg-app: #121212;
   --bg-book: #1b1b1b;
   --bg-page: #1e1e1e;
@@ -77,6 +93,22 @@ html[data-theme="dark"] .loading-progress {
    ═══════════════════════════════════════════ */
 
 html[data-theme="bw"] {
+  /* UI токены */
+  --color-accent: #000;
+  --color-accent-hover: #333;
+  --color-accent-focus: rgb(0, 0, 0, 0.15);
+  --color-surface: #fff;
+  --color-surface-alt: #f5f5f5;
+  --color-surface-hover: #eee;
+  --color-text-primary: #000;
+  --color-text-secondary: #333;
+  --color-text-tertiary: #666;
+  --color-text-placeholder: #999;
+  --color-border: #000;
+  --color-border-hover: #333;
+  --color-error-bg: #fee;
+  --color-error-text: #900;
+  --color-divider: #000;
   --bg-app: #fff;
   --bg-book: #fff;
   --bg-page: #fff;

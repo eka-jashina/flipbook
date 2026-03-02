@@ -3,13 +3,14 @@
  *
  * Модальное окно аутентификации (логин/регистрация).
  * Показывается поверх bookshelf при 401.
+ * Использует дизайн-токены — поддерживает dark/bw темы.
  */
 
 /* Оверлей */
 .auth-overlay {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: var(--z-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,79 +23,79 @@
 .auth-modal {
   width: 100%;
   max-width: 400px;
-  margin: 16px;
-  padding: 32px;
-  background: #fff;
-  border-radius: 12px;
+  margin: var(--spacing-md);
+  padding: var(--spacing-xl);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
   box-shadow: 0 20px 60px rgb(0, 0, 0, 0.3);
   animation: auth-slide-up 0.3s ease;
 }
 
 .auth-modal-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .auth-modal-title {
   margin: 0;
   font-size: 24px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
 }
 
 .auth-modal-subtitle {
-  margin: 6px 0 0;
+  margin: var(--spacing-xs) 0 0;
   font-size: 14px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 /* Форма */
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--spacing-md);
 }
 
 .auth-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .auth-label {
   font-size: 13px;
   font-weight: 500;
-  color: #444;
+  color: var(--color-text-secondary);
 }
 
 .auth-input {
   padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 15px;
   font-family: inherit;
-  color: #1a1a2e;
-  background: #fafafa;
+  color: var(--color-text-primary);
+  background: var(--color-surface-alt);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .auth-input:focus {
   outline: none;
-  border-color: #5b6abf;
-  box-shadow: 0 0 0 3px rgb(91, 106, 191, 0.15);
-  background: #fff;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-focus);
+  background: var(--color-surface);
 }
 
 .auth-input::placeholder {
-  color: #aaa;
+  color: var(--color-text-placeholder);
 }
 
 /* Ошибка */
 .auth-error {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: #fef2f2;
-  color: #b91c1c;
+  padding: var(--spacing-sm) 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -103,8 +104,8 @@
 .auth-submit {
   padding: 12px;
   border: none;
-  border-radius: 8px;
-  background: #5b6abf;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
@@ -114,7 +115,7 @@
 }
 
 .auth-submit:hover:not(:disabled) {
-  background: #4a59a8;
+  background: var(--color-accent-hover);
 }
 
 .auth-submit:disabled {
@@ -127,8 +128,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 20px 0 16px;
-  color: #999;
+  margin: 20px 0 var(--spacing-md);
+  color: var(--color-text-tertiary);
   font-size: 13px;
 }
 
@@ -137,7 +138,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: #e0e0e0;
+  background: var(--color-divider);
 }
 
 /* Кнопка Google OAuth */
@@ -148,10 +149,10 @@
   gap: 10px;
   width: 100%;
   padding: 11px 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fff;
-  color: #333;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 500;
   font-family: inherit;
@@ -161,8 +162,8 @@
 }
 
 .auth-google-btn:hover {
-  background: #f5f5f5;
-  border-color: #ccc;
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
 }
 
 .auth-google-icon {
@@ -171,16 +172,16 @@
 
 /* Переключение режима */
 .auth-switch {
-  margin-top: 16px;
+  margin-top: var(--spacing-md);
   text-align: center;
   font-size: 13px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .auth-switch-btn {
   background: none;
   border: none;
-  color: #5b6abf;
+  color: var(--color-accent);
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
@@ -189,7 +190,7 @@
 }
 
 .auth-switch-btn:hover {
-  color: #4a59a8;
+  color: var(--color-accent-hover);
 }
 
 /* Анимации */
@@ -213,7 +214,7 @@
 /* Мобильные */
 @media (max-width: 480px) {
   .auth-modal {
-    padding: 24px 20px;
+    padding: var(--spacing-lg) 20px;
     margin: 12px;
   }
 
