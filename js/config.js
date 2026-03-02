@@ -22,8 +22,14 @@ import {
   resolveSound,
   getActiveBook,
   buildAmbientConfig,
+  buildAmbientConfigFromAPI,
   buildFontsConfig,
+  buildFontsConfigFromAPI,
   buildCommonConfig,
+  buildDefaultSettings,
+  buildAppearanceTheme,
+  buildSettingsVisibility,
+  buildSoundsConfig,
 } from './config/configHelpers.js';
 
 export { enrichConfigFromIDB } from './config/enrichConfigFromIDB.js';
@@ -84,12 +90,8 @@ export function createConfig(adminConfig = null) {
         },
       ];
 
-  const adminDefaults = activeBook?.defaultSettings || {};
   const bookAppearance = activeBook?.appearance || {};
-  const adminFontMin = adminConfig?.fontMin ?? adminConfig?.appearance?.fontMin;
-  const adminFontMax = adminConfig?.fontMax ?? adminConfig?.appearance?.fontMax;
   const adminCover = activeBook?.cover || {};
-  const adminSounds = activeBook?.sounds || {};
   const fontsResult = buildFontsConfig(adminConfig?.readingFonts);
 
   return deepFreeze({
@@ -100,77 +102,32 @@ export function createConfig(adminConfig = null) {
     CHAPTERS,
 
     FONTS: fontsResult.fonts,
-
-    // Список шрифтов с метаданными (для генерации <select>)
     FONTS_LIST: fontsResult.fontsList,
-
-    // Кастомные шрифты (нужна загрузка через FontFace)
     CUSTOM_FONTS: fontsResult.customFonts || [],
-
-    // Декоративный шрифт (для заголовков, per-book)
     DECORATIVE_FONT: activeBook?.decorativeFont || null,
 
-    SOUNDS: {
-      pageFlip: resolveSound(adminSounds.pageFlip, 'sounds/page-flip.mp3'),
-      bookOpen: resolveSound(adminSounds.bookOpen, 'sounds/cover-flip.mp3'),
-      bookClose: resolveSound(adminSounds.bookClose, 'sounds/cover-flip.mp3'),
-    },
-
-    // Конфигурация ambient звуков (per-book)
+    SOUNDS: buildSoundsConfig(activeBook?.sounds),
     AMBIENT: buildAmbientConfig(activeBook?.ambients),
+    DEFAULT_SETTINGS: buildDefaultSettings(activeBook?.defaultSettings),
 
-    DEFAULT_SETTINGS: {
-      font: adminDefaults.font || "georgia",
-      fontSize: adminDefaults.fontSize || 18,
-      theme: adminDefaults.theme || "light",
-      page: 0,
-      soundEnabled: adminDefaults.soundEnabled ?? true,
-      soundVolume: adminDefaults.soundVolume ?? 0.3,
-      ambientType: adminDefaults.ambientType || 'none',
-      ambientVolume: adminDefaults.ambientVolume ?? 0.5
-    },
-
-    // Настройки оформления: global fontMin/fontMax + per-book light/dark
     APPEARANCE: {
       coverTitle: adminCover.title || 'О хоббитах',
       coverAuthor: adminCover.author || 'Дж.Р.Р.Толкин',
-      fontMin: adminFontMin ?? 14,
-      fontMax: adminFontMax ?? 22,
+      fontMin: adminConfig?.fontMin ?? adminConfig?.appearance?.fontMin ?? 14,
+      fontMax: adminConfig?.fontMax ?? adminConfig?.appearance?.fontMax ?? 22,
       light: {
-        coverBgStart: bookAppearance.light?.coverBgStart || '#3a2d1f',
-        coverBgEnd: bookAppearance.light?.coverBgEnd || '#2a2016',
-        coverText: bookAppearance.light?.coverText || '#f2e9d8',
-        coverBgImage: bookAppearance.light?.coverBgImage || null,
+        ...buildAppearanceTheme('light', bookAppearance.light),
         _idbCoverBgImage: bookAppearance.light?._idbCoverBgImage || false,
-        pageTexture: bookAppearance.light?.pageTexture || 'default',
-        customTextureData: bookAppearance.light?.customTextureData || null,
         _idbCustomTexture: bookAppearance.light?._idbCustomTexture || false,
-        bgPage: bookAppearance.light?.bgPage || '#fdfcf8',
-        bgApp: bookAppearance.light?.bgApp || '#e6e3dc',
       },
       dark: {
-        coverBgStart: bookAppearance.dark?.coverBgStart || '#111111',
-        coverBgEnd: bookAppearance.dark?.coverBgEnd || '#000000',
-        coverText: bookAppearance.dark?.coverText || '#eaeaea',
-        coverBgImage: bookAppearance.dark?.coverBgImage || null,
+        ...buildAppearanceTheme('dark', bookAppearance.dark),
         _idbCoverBgImage: bookAppearance.dark?._idbCoverBgImage || false,
-        pageTexture: bookAppearance.dark?.pageTexture || 'none',
-        customTextureData: bookAppearance.dark?.customTextureData || null,
         _idbCustomTexture: bookAppearance.dark?._idbCustomTexture || false,
-        bgPage: bookAppearance.dark?.bgPage || '#1e1e1e',
-        bgApp: bookAppearance.dark?.bgApp || '#121212',
       },
     },
 
-    // Видимость настроек для читателя (из админки)
-    SETTINGS_VISIBILITY: {
-      fontSize: adminConfig?.settingsVisibility?.fontSize ?? true,
-      theme: adminConfig?.settingsVisibility?.theme ?? true,
-      font: adminConfig?.settingsVisibility?.font ?? true,
-      fullscreen: adminConfig?.settingsVisibility?.fullscreen ?? true,
-      sound: adminConfig?.settingsVisibility?.sound ?? true,
-      ambient: adminConfig?.settingsVisibility?.ambient ?? true,
-    },
+    SETTINGS_VISIBILITY: buildSettingsVisibility(adminConfig?.settingsVisibility),
 
     ...buildCommonConfig(),
   });
@@ -191,15 +148,14 @@ export function createConfig(adminConfig = null) {
  */
 export function createConfigFromAPI(bookDetail, globalSettings, readingFonts) {
   // Главы: из API (id, title, filePath, hasHtmlContent, bg, bgMobile)
-  // htmlContent грузится отдельно через ContentLoader → API
   const CHAPTERS = bookDetail.chapters?.length
     ? bookDetail.chapters.map(ch => ({
         id: ch.id,
         title: ch.title || '',
         file: resolveAssetPath(ch.filePath),
-        htmlContent: null, // Контент загружается через API отдельно
+        htmlContent: null,
         _idb: false,
-        _hasHtmlContent: ch.hasHtmlContent, // Маркер: контент на сервере
+        _hasHtmlContent: ch.hasHtmlContent,
         bg: resolveAssetPath(ch.bg),
         bgMobile: resolveAssetPath(ch.bgMobile),
       }))
@@ -207,8 +163,6 @@ export function createConfigFromAPI(bookDetail, globalSettings, readingFonts) {
 
   const cover = bookDetail.cover || {};
   const appearance = bookDetail.appearance || {};
-  const sounds = bookDetail.sounds || {};
-  const defaults = bookDetail.defaultSettings || {};
 
   // Обложка: режимы default/none/custom
   let coverBg = `${BASE_URL}images/backgrounds/bg-cover.webp`;
@@ -224,62 +178,13 @@ export function createConfigFromAPI(bookDetail, globalSettings, readingFonts) {
     if (cover.bgMobile) coverBgMobile = resolveAssetPath(cover.bgMobile);
   }
 
-  // Амбиенты из API формата → CONFIG формат
-  const ambientConfig = {};
-  if (bookDetail.ambients?.length) {
-    for (const a of bookDetail.ambients) {
-      if (!a.visible) continue;
-      ambientConfig[a.ambientKey || a.id] = {
-        label: a.label,
-        shortLabel: a.shortLabel || a.label,
-        icon: a.icon,
-        file: a.fileUrl ? resolveAssetPath(a.fileUrl) : null,
-      };
-    }
-  }
-  // Если нет амбиентов — дефолтные
-  const AMBIENT = Object.keys(ambientConfig).length > 0
-    ? ambientConfig
-    : {
-        none: { label: "Без звука", shortLabel: "Нет", icon: "✕", file: null },
-        rain: { label: "Дождь", shortLabel: "Дождь", icon: "🌧️", file: `${BASE_URL}sounds/ambient/rain.mp3` },
-        fireplace: { label: "Камин", shortLabel: "Камин", icon: "🔥", file: `${BASE_URL}sounds/ambient/fireplace.mp3` },
-        cafe: { label: "Кафе", shortLabel: "Кафе", icon: "☕", file: `${BASE_URL}sounds/ambient/cafe.mp3` },
-      };
+  // Маппинг полей API → CONFIG для appearance
+  const apiFieldMap = {
+    coverBgImage: 'coverBgImageUrl',
+    customTextureData: 'customTextureUrl',
+  };
 
-  // Шрифты из API → CONFIG формат
-  const fonts = {};
-  const fontsList = [];
-  const customFonts = [];
-  if (readingFonts?.length) {
-    for (const f of readingFonts) {
-      if (!f.enabled) continue;
-      const key = f.fontKey || f.id;
-      fonts[key] = f.family;
-      fontsList.push({ id: key, label: f.label, family: f.family, builtin: f.builtin, enabled: f.enabled });
-      if (!f.builtin && f.fileUrl) {
-        customFonts.push({ id: key, label: f.label, family: f.family, dataUrl: f.fileUrl });
-      }
-    }
-  }
-  const FONTS = Object.keys(fonts).length > 0
-    ? fonts
-    : {
-        georgia: "Georgia, serif",
-        merriweather: '"Merriweather", serif',
-        "libre-baskerville": '"Libre Baskerville", serif',
-        inter: "Inter, sans-serif",
-        roboto: "Roboto, sans-serif",
-        "open-sans": '"Open Sans", sans-serif',
-      };
-
-  // Декоративный шрифт
-  const decorativeFont = bookDetail.decorativeFont
-    ? { name: bookDetail.decorativeFont.name, dataUrl: bookDetail.decorativeFont.fileUrl }
-    : null;
-
-  // Видимость настроек
-  const vis = globalSettings?.settingsVisibility || {};
+  const fontsResult = buildFontsConfigFromAPI(readingFonts);
 
   return deepFreeze({
     STORAGE_KEY: `reader-settings:${bookDetail.id}`,
@@ -289,65 +194,27 @@ export function createConfigFromAPI(bookDetail, globalSettings, readingFonts) {
 
     CHAPTERS,
 
-    FONTS,
-    FONTS_LIST: fontsList.length > 0 ? fontsList : null,
-    CUSTOM_FONTS: customFonts,
-    DECORATIVE_FONT: decorativeFont,
+    FONTS: fontsResult.fonts,
+    FONTS_LIST: fontsResult.fontsList,
+    CUSTOM_FONTS: fontsResult.customFonts,
+    DECORATIVE_FONT: bookDetail.decorativeFont
+      ? { name: bookDetail.decorativeFont.name, dataUrl: bookDetail.decorativeFont.fileUrl }
+      : null,
 
-    SOUNDS: {
-      pageFlip: resolveSound(sounds.pageFlip, 'sounds/page-flip.mp3'),
-      bookOpen: resolveSound(sounds.bookOpen, 'sounds/cover-flip.mp3'),
-      bookClose: resolveSound(sounds.bookClose, 'sounds/cover-flip.mp3'),
-    },
-
-    AMBIENT,
-
-    DEFAULT_SETTINGS: {
-      font: defaults.font || "georgia",
-      fontSize: defaults.fontSize || 18,
-      theme: defaults.theme || "light",
-      page: 0,
-      soundEnabled: defaults.soundEnabled ?? true,
-      soundVolume: defaults.soundVolume ?? 0.3,
-      ambientType: defaults.ambientType || 'none',
-      ambientVolume: defaults.ambientVolume ?? 0.5
-    },
+    SOUNDS: buildSoundsConfig(bookDetail.sounds),
+    AMBIENT: buildAmbientConfigFromAPI(bookDetail.ambients),
+    DEFAULT_SETTINGS: buildDefaultSettings(bookDetail.defaultSettings),
 
     APPEARANCE: {
       coverTitle: bookDetail.title || '',
       coverAuthor: bookDetail.author || '',
       fontMin: appearance.fontMin ?? globalSettings?.fontMin ?? 14,
       fontMax: appearance.fontMax ?? globalSettings?.fontMax ?? 22,
-      light: {
-        coverBgStart: appearance.light?.coverBgStart || '#3a2d1f',
-        coverBgEnd: appearance.light?.coverBgEnd || '#2a2016',
-        coverText: appearance.light?.coverText || '#f2e9d8',
-        coverBgImage: appearance.light?.coverBgImageUrl || null,
-        pageTexture: appearance.light?.pageTexture || 'default',
-        customTextureData: appearance.light?.customTextureUrl || null,
-        bgPage: appearance.light?.bgPage || '#fdfcf8',
-        bgApp: appearance.light?.bgApp || '#e6e3dc',
-      },
-      dark: {
-        coverBgStart: appearance.dark?.coverBgStart || '#111111',
-        coverBgEnd: appearance.dark?.coverBgEnd || '#000000',
-        coverText: appearance.dark?.coverText || '#eaeaea',
-        coverBgImage: appearance.dark?.coverBgImageUrl || null,
-        pageTexture: appearance.dark?.pageTexture || 'none',
-        customTextureData: appearance.dark?.customTextureUrl || null,
-        bgPage: appearance.dark?.bgPage || '#1e1e1e',
-        bgApp: appearance.dark?.bgApp || '#121212',
-      },
+      light: buildAppearanceTheme('light', appearance.light, apiFieldMap),
+      dark: buildAppearanceTheme('dark', appearance.dark, apiFieldMap),
     },
 
-    SETTINGS_VISIBILITY: {
-      fontSize: vis.fontSize ?? true,
-      theme: vis.theme ?? true,
-      font: vis.font ?? true,
-      fullscreen: vis.fullscreen ?? true,
-      sound: vis.sound ?? true,
-      ambient: vis.ambient ?? true,
-    },
+    SETTINGS_VISIBILITY: buildSettingsVisibility(globalSettings?.settingsVisibility),
 
     ...buildCommonConfig(),
   });
