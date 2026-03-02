@@ -18,6 +18,7 @@
  * Fallback: если сервер недоступен — работа через localStorage.
  */
 
+import './sentry.js';
 import { BookController } from './core/BookController.js';
 import { BookshelfScreen, loadBooksFromAPI, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
 import { LandingScreen } from './core/LandingScreen.js';
