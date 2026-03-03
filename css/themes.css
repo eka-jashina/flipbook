@@ -48,6 +48,17 @@ html[data-theme="dark"] {
   --spine-mid: rgb(0, 0, 0, 0.6);
   --spine-soft: rgb(0, 0, 0, 0.25);
   --paper-highlight: rgb(255, 255, 255, 0.08);
+
+  /* Компонентные токены */
+  --color-img-placeholder: #2a2622;
+  --color-img-placeholder-alt: #3a3632;
+  --loading-overlay: rgb(30, 25, 20, 0.75);
+  --loading-dot: rgb(200, 150, 100, 0.7);
+  --loading-text: rgb(200, 150, 100, 0.8);
+  --toc-hover: rgb(255, 255, 255, 0.12);
+  --toc-active: rgb(255, 255, 255, 0.18);
+  --toc-focus-ring: rgb(255, 255, 255, 0.5);
+  --toc-focus-bg: rgb(255, 255, 255, 0.08);
 }
 
 /* ═══════════════════════════════════════════
@@ -80,22 +91,6 @@ html[data-theme="dark"] .bg[data-loading="true"] {
 
 html[data-theme="dark"] img {
   filter: brightness(50%);
-  background: linear-gradient(135deg, #2a2622 0%, #3a3632 50%, #2a2622 100%);
-}
-
-/* Индикатор загрузки */
-html[data-theme="dark"] .loading-overlay {
-  background: rgb(30, 25, 20, 0.75);
-}
-
-html[data-theme="dark"] .loading-spinner::before,
-html[data-theme="dark"] .loading-spinner::after,
-html[data-theme="dark"] .loading-spinner span {
-  background: rgb(200, 150, 100, 0.7);
-}
-
-html[data-theme="dark"] .loading-progress {
-  color: rgb(200, 150, 100, 0.8);
 }
 
 /* ═══════════════════════════════════════════
@@ -134,6 +129,17 @@ html[data-theme="bw"] {
   --cover-front-bg: #000;
   --cover-front-text: #fff;
   --cover-back-bg: #fff;
+
+  /* Компонентные токены */
+  --color-img-placeholder: #ccc;
+  --color-img-placeholder-alt: #eee;
+  --loading-overlay: rgb(255, 255, 255, 0.85);
+  --loading-dot: rgb(0, 0, 0, 0.5);
+  --loading-text: rgb(0, 0, 0, 0.6);
+  --toc-hover: rgb(0, 0, 0, 0.1);
+  --toc-active: rgb(0, 0, 0, 0.15);
+  --toc-focus-ring: rgb(0, 0, 0, 0.5);
+  --toc-focus-bg: rgb(0, 0, 0, 0.08);
 }
 
 /* ═══════════════════════════════════════════
@@ -163,20 +169,4 @@ html[data-theme="bw"] .bg[data-loading="true"] {
 
 html[data-theme="bw"] img {
   filter: grayscale(100%);
-  background: linear-gradient(135deg, #ccc 0%, #eee 50%, #ccc 100%);
-}
-
-/* Индикатор загрузки */
-html[data-theme="bw"] .loading-overlay {
-  background: rgb(255, 255, 255, 0.85);
-}
-
-html[data-theme="bw"] .loading-spinner::before,
-html[data-theme="bw"] .loading-spinner::after,
-html[data-theme="bw"] .loading-spinner span {
-  background: rgb(0, 0, 0, 0.5);
-}
-
-html[data-theme="bw"] .loading-progress {
-  color: rgb(0, 0, 0, 0.6);
 }

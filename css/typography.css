@@ -111,7 +111,7 @@ article h2,
 }
 
 .toc li:hover {
-  background: rgb(139, 69, 19, 0.12);
+  background: var(--toc-hover);
 }
 
 .toc li:hover::before {
@@ -120,7 +120,7 @@ article h2,
 }
 
 .toc li:active {
-  background: rgb(139, 69, 19, 0.18);
+  background: var(--toc-active);
 }
 
 /* Дополнительная визуальная обратная связь только для мышки.
@@ -138,38 +138,9 @@ article h2,
 
 /* Клавиатурная навигация */
 .toc li:focus-visible {
-  outline: 2px solid rgb(139, 69, 19, 0.5);
+  outline: 2px solid var(--toc-focus-ring);
   outline-offset: 2px;
-  background: rgb(139, 69, 19, 0.08);
-}
-
-/* ═══════════════════════════════════════════
-   TOC - DARK THEME
-   ═══════════════════════════════════════════ */
-
-html[data-theme="dark"] .toc li:hover {
-  background: rgb(255, 255, 255, 0.12);
-}
-
-html[data-theme="dark"] .toc li:active {
-  background: rgb(255, 255, 255, 0.18);
-}
-
-html[data-theme="dark"] .toc li:focus-visible {
-  outline-color: rgb(255, 255, 255, 0.5);
-  background: rgb(255, 255, 255, 0.08);
-}
-
-/* ═══════════════════════════════════════════
-   TOC - B&W THEME
-   ═══════════════════════════════════════════ */
-
-html[data-theme="bw"] .toc li:hover {
-  background: rgb(0, 0, 0, 0.1);
-}
-
-html[data-theme="bw"] .toc li:active {
-  background: rgb(0, 0, 0, 0.15);
+  background: var(--toc-focus-bg);
 }
 
 /* ═══════════════════════════════════════════
