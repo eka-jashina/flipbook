@@ -268,7 +268,16 @@ test.describe('Reading Flows', () => {
 
       // Navigate to different chapter
       await bookPage.goToChapter(1);
-      await page.waitForTimeout(500); // Wait for background transition
+
+      // Wait for background transition to complete
+      await page.waitForFunction(
+        (prevBg) => {
+          const book = document.querySelector('.book');
+          return book && getComputedStyle(book).backgroundImage !== prevBg;
+        },
+        bgBefore,
+        { timeout: 2000 }
+      ).catch(() => {}); // Background might not change in test environment
 
       const bgAfter = await page.locator('.book').evaluate(el =>
         getComputedStyle(el).backgroundImage

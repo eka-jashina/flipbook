@@ -271,7 +271,7 @@ test.describe('Navigation', () => {
       await page.mouse.move(endX, y, { steps: 5 });
       await page.mouse.up();
 
-      await page.waitForTimeout(500);
+      await bookPage.waitForState('opened', 1000);
       const pageAfter = await bookPage.getCurrentPageIndex();
 
       expect(pageAfter).toBe(pageBefore);
@@ -295,7 +295,7 @@ test.describe('Navigation', () => {
       await page.mouse.move(x, endY, { steps: 10 });
       await page.mouse.up();
 
-      await page.waitForTimeout(500);
+      await bookPage.waitForState('opened', 1000);
       const pageAfter = await bookPage.getCurrentPageIndex();
 
       expect(pageAfter).toBe(pageBefore);
@@ -351,7 +351,7 @@ test.describe('Navigation', () => {
         await page.mouse.move(box.x - 50, box.y, { steps: 10 }); // Маленькое перетаскивание
         await page.mouse.up();
 
-        await page.waitForTimeout(500);
+        await bookPage.waitForState('opened', 1000);
         const pageAfter = await bookPage.getCurrentPageIndex();
 
         // Страница не должна измениться (перелистывание отменено)
@@ -374,8 +374,14 @@ test.describe('Navigation', () => {
         bookPage.btnNext.click(); // Не ждём
       }
 
-      // Ждём стабилизации
-      await page.waitForTimeout(3000);
+      // Wait for state to stabilize (opened or still flipping)
+      await page.waitForFunction(
+        () => {
+          const state = document.querySelector('.book')?.getAttribute('data-state');
+          return state === 'opened' || state === 'flipping';
+        },
+        { timeout: 5000 }
+      );
 
       // Книга должна быть в валидном состоянии
       const state = await bookPage.getState();

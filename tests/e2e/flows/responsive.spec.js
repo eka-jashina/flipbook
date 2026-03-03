@@ -283,7 +283,7 @@ test.describe('Resize Handling', () => {
 
     // Resize to mobile
     await page.setViewportSize(viewports.mobile);
-    await page.waitForTimeout(500); // Wait for resize handling
+    await bookPage.waitForState('opened', 3000);
 
     // Should maintain approximate position
     const pageMobile = await bookPage.getCurrentPageIndex();
@@ -302,7 +302,7 @@ test.describe('Resize Handling', () => {
 
     // Resize to desktop
     await page.setViewportSize(viewports.desktop);
-    await page.waitForTimeout(500);
+    await bookPage.waitForState('opened', 3000);
 
     // Book should still be functional
     expect(await bookPage.isOpened()).toBe(true);
@@ -325,7 +325,7 @@ test.describe('Resize Handling', () => {
 
     // Resize to mobile (much smaller)
     await page.setViewportSize(viewports.mobile);
-    await page.waitForTimeout(1000); // Wait for repagination
+    await bookPage.waitForState('opened', 5000);
 
     const pagesMobile = await bookPage.getTotalPages();
 

@@ -83,9 +83,12 @@ export async function getStoredSettings(page) {
  * @param {import('@playwright/test').Page} page
  * @param {number} timeout
  */
-export async function waitForAnimations(page, timeout = 1500) {
-  // Общее время анимации: lift(240) + rotate(900) + drop(160) = 1300ms
-  await page.waitForTimeout(timeout);
+export async function waitForAnimations(page, timeout = 5000) {
+  // Wait for book animation to complete (state returns to 'opened')
+  await page.waitForFunction(
+    () => document.querySelector('.book')?.getAttribute('data-state') === 'opened',
+    { timeout }
+  );
 }
 
 /**
@@ -121,7 +124,7 @@ export async function touchSwipe(page, { startX, startY, endX, endY, steps = 10 
     const x = startX + ((endX - startX) * i) / steps;
     const y = startY + ((endY - startY) * i) / steps;
     await page.touchscreen.tap(x, y);
-    await page.waitForTimeout(10);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
   }
 }
 

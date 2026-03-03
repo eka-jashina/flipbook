@@ -109,7 +109,10 @@ export class BookPage {
    */
   async waitForAnimation() {
     // Wait for flipping state to start (if not already)
-    await this.page.waitForTimeout(100);
+    await this.page.waitForFunction(
+      () => document.querySelector('.book')?.getAttribute('data-state') === 'flipping',
+      { timeout: 500 }
+    ).catch(() => {}); // Animation might be too fast to catch
 
     // Wait for animation to complete
     await this.waitForState('opened', 3000);

@@ -68,8 +68,10 @@ test.describe('Offline & Error Scenarios', () => {
 
       await page.goto('/');
 
-      // Дождаться загрузки — retry должен сработать
-      await page.waitForTimeout(3000);
+      // Wait for retry to succeed (second call returns 200)
+      await page.waitForResponse(
+        resp => resp.url().includes('/api/books') && resp.status() === 200
+      );
 
       // Было минимум 2 вызова (первый 503, второй 200)
       expect(callCount).toBeGreaterThanOrEqual(2);
@@ -112,7 +114,7 @@ test.describe('Offline & Error Scenarios', () => {
       });
 
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // 404 не должен вызывать retry — максимум 1 вызов
       expect(callCount).toBeLessThanOrEqual(1);

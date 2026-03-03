@@ -53,7 +53,7 @@ test.describe('Accessibility', () => {
       // Открываем настройки
       const settingsCheckbox = page.locator('#settings-checkbox');
       await settingsCheckbox.click();
-      await page.waitForTimeout(300);
+      await page.locator('.settings-pod').waitFor({ state: 'visible', timeout: 1000 });
 
       const results = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa'])
@@ -359,7 +359,7 @@ test.describe('Accessibility', () => {
       // Открываем настройки чтобы все контролы были видны
       const settingsCheckbox = page.locator('#settings-checkbox');
       await settingsCheckbox.click();
-      await page.waitForTimeout(300);
+      await page.locator('.settings-pod').waitFor({ state: 'visible', timeout: 1000 });
 
       // Собираем все интерактивные элементы
       const focusableElements = await page.evaluate(() => {
