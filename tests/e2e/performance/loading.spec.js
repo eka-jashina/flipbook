@@ -225,8 +225,7 @@ test.describe('Repagination Performance', () => {
     const startTime = Date.now();
     await page.setViewportSize(viewports.mobile);
 
-    // Ждём репагинации
-    await page.waitForTimeout(500);
+    // Wait for repagination to complete
     await bookPage.waitForState('opened', 5000);
 
     const resizeTime = Date.now() - startTime;
@@ -266,7 +265,8 @@ test.describe('Memory Performance', () => {
     await page.evaluate(() => {
       if (global.gc) global.gc();
     });
-    await page.waitForTimeout(500);
+    // Let GC settle
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
 
     // Получаем итоговую память
     const finalMetrics = await getPerformanceMetrics(page);
@@ -294,7 +294,8 @@ test.describe('Memory Performance', () => {
       await bookPage.waitForState('closed', 5000);
     }
 
-    await page.waitForTimeout(500);
+    // Let GC settle
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
 
     const finalMetrics = await getPerformanceMetrics(page);
     const finalMemory = finalMetrics.usedJSHeapSize || 0;

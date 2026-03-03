@@ -55,7 +55,7 @@ export class SettingsPanel {
     const isOpen = await this.isOpen();
     if (!isOpen) {
       await this.settingsCheckbox.click();
-      await this.page.waitForTimeout(300); // Wait for animation
+      await this.page.locator('.settings-pod').waitFor({ state: 'visible', timeout: 1000 });
     }
   }
 
@@ -66,7 +66,7 @@ export class SettingsPanel {
     const isOpen = await this.isOpen();
     if (isOpen) {
       await this.settingsCheckbox.click();
-      await this.page.waitForTimeout(300);
+      await this.page.locator('.settings-pod').waitFor({ state: 'hidden', timeout: 1000 });
     }
   }
 
@@ -167,7 +167,10 @@ export class SettingsPanel {
     await this.open();
     const themeBtn = this.page.locator(`[data-theme="${theme}"]`);
     await themeBtn.click();
-    await this.page.waitForTimeout(100); // Wait for theme transition
+    await this.page.waitForFunction(
+      (t) => document.documentElement.getAttribute('data-theme') === t,
+      theme
+    );
   }
 
   /**
@@ -265,7 +268,10 @@ export class SettingsPanel {
     await this.open();
     const pill = this.page.locator(`[data-type="${type}"]`);
     await pill.click();
-    await this.page.waitForTimeout(100);
+    await this.page.waitForFunction(
+      (t) => document.querySelector(`[data-type="${t}"]`)?.getAttribute('data-active') === 'true',
+      type
+    );
   }
 
   /**
@@ -337,7 +343,7 @@ export class SettingsPanel {
    */
   async waitForRepagination() {
     // Wait for loading indicator to appear and disappear
-    await this.page.waitForTimeout(100);
+    await this.page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
 
     try {
       await this.page.locator('.loading-indicator').waitFor({
@@ -352,8 +358,11 @@ export class SettingsPanel {
       // Loading might be too fast to catch, which is fine
     }
 
-    // Extra wait for render
-    await this.page.waitForTimeout(200);
+    // Wait for book to settle in opened state after render
+    await this.page.waitForFunction(
+      () => document.querySelector('.book')?.getAttribute('data-state') === 'opened',
+      { timeout: 3000 }
+    ).catch(() => {});
   }
 
   /**
