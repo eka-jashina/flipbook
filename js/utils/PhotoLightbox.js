@@ -39,6 +39,9 @@ export class PhotoLightbox {
     /** @type {{x: number, y: number}|null} Начало свайпа */
     this._touchStart = null;
 
+    /** @type {number|null} Pending navigation timeout */
+    this._navigateTimer = null;
+
     this._onKeyDown = this._onKeyDown.bind(this);
     this._onPopState = this._onPopState.bind(this);
     this._onTouchStart = this._onTouchStart.bind(this);
@@ -284,7 +287,9 @@ export class PhotoLightbox {
 
     // Плавная смена: fade-out / fade-in через CSS transition
     this._img.classList.add('lightbox__img--fade');
-    setTimeout(() => {
+    if (this._navigateTimer !== null) clearTimeout(this._navigateTimer);
+    this._navigateTimer = setTimeout(() => {
+      this._navigateTimer = null;
       this._applyImage(imgEl);
       this._img.style.transform = this._rotation || '';
       this._img.classList.remove('lightbox__img--fade');
@@ -412,6 +417,10 @@ export class PhotoLightbox {
   }
 
   destroy() {
+    if (this._navigateTimer !== null) {
+      clearTimeout(this._navigateTimer);
+      this._navigateTimer = null;
+    }
     document.removeEventListener('keydown', this._onKeyDown);
     window.removeEventListener('popstate', this._onPopState);
     this._overlay?.removeEventListener('touchstart', this._onTouchStart);
