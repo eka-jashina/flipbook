@@ -9,15 +9,20 @@ This document provides essential context for AI assistants working on this codeb
 **Key Features:**
 - 3D page flip animations with realistic physics
 - Multi-chapter support (default: 3 chapters of Tolkien's "The Hobbit" in Russian)
+- Landing page for guests with public book discovery
 - Bookshelf as the main screen — book cards with context menu (read / edit / delete)
-- Admin panel (Account screen within SPA) for book management (upload, chapters, fonts, sounds, appearance, export)
+- Account screen (SPA) for book management (upload, chapters, fonts, sounds, appearance, export) and user profile
+- User profiles — username, display name, bio, avatar; public author shelves
 - Backend server with REST API, user authentication (email/password + Google OAuth), S3 file storage
+- Public book discovery — browse recently published books, view author shelves
 - Multi-book support with per-book reading progress (Continue Reading button)
+- Internationalization (i18n) — 5 languages: Russian, English, Spanish, French, German (via i18next)
+- SPA routing via History API (Router utility)
 - Customizable reading experience (fonts, sizes, themes, sounds)
 - Per-book appearance customization (cover colors, page textures, decorative fonts)
 - Responsive design (desktop & mobile)
-- Background ambient sounds (rain, fireplace, cafe) — configurable via admin panel
-- Page-turn sound effects — configurable via admin panel
+- Background ambient sounds (rain, fireplace, cafe) — configurable via account panel
+- Page-turn sound effects — configurable via account panel
 - Photo album / lightbox with cropping tool
 - Dual persistence: localStorage/IndexedDB (offline) or server API (authenticated)
 - Data migration from localStorage to server on first login
@@ -25,6 +30,8 @@ This document provides essential context for AI assistants working on this codeb
 - Book import from txt, doc, docx, epub, fb2 formats
 - WYSIWYG chapter editor (Quill) with formatting, tables, and images
 - Mobile swipe hint for first-time users
+- Error monitoring via Sentry (client + server)
+- K6 load testing suite (smoke, load, stress, spike, soak scenarios)
 
 **Live Demo:** Deployed to GitHub Pages at `/flipbook/`
 
@@ -65,6 +72,16 @@ npm run test:e2e:headed # E2E with visible browser
 npm run test:e2e:debug  # E2E in debug mode
 npm run test:e2e:report # Show E2E test report
 
+# K6 Load Testing
+npm run test:k6:smoke   # Smoke test (2 VU, 30s)
+npm run test:k6:load    # Load test (up to 50 VU, 5 min)
+npm run test:k6:stress  # Stress test (up to 200 VU, 10 min)
+npm run test:k6:spike   # Spike test (10→200 VU instant)
+npm run test:k6:soak    # Soak test (30 VU, 30 min)
+npm run test:k6:docker:smoke   # Docker-based smoke test
+npm run test:k6:docker:load    # Docker-based load test
+npm run test:k6:docker:stress  # Docker-based stress test
+
 # Linting
 npm run lint         # Run ESLint + Stylelint
 npm run lint:js      # ESLint on js/
@@ -93,7 +110,7 @@ npm run deploy:vercel  # Deploy to Vercel
 
 ```
 flipbook/
-├── index.html                 # Main entry — bookshelf + reader + account (SPA)
+├── index.html                 # Main entry — landing + bookshelf + reader + account (SPA)
 ├── html/                      # HTML partials (build-time includes)
 │   └── partials/
 │       ├── admin/             # Admin panel partials
@@ -108,8 +125,10 @@ flipbook/
 │       │   ├── modal-reading-font.html
 │       │   └── platform-settings.html
 │       └── reader/            # Reader partials
-│           ├── book-container.html
+│           ├── landing.html       # Landing screen (guests)
 │           ├── bookshelf.html
+│           ├── account.html       # Account management screen
+│           ├── book-container.html
 │           ├── controls.html
 │           ├── pwa.html
 │           └── templates.html
@@ -135,6 +154,8 @@ flipbook/
 │   ├── install-prompt.css    # PWA install prompt
 │   ├── offline.css           # Offline status indicator
 │   ├── bookshelf.css         # Bookshelf screen (multi-book)
+│   ├── landing.css           # Landing page (guests)
+│   ├── embed.css             # Embedded reader mode
 │   ├── photo-album.css       # Photo album / lightbox
 │   ├── swipe-hint.css        # Mobile swipe hint
 │   ├── responsive.css        # Mobile/responsive
@@ -164,15 +185,27 @@ flipbook/
 │       ├── cropper.css       # Photo cropper overlay
 │       ├── editor.css        # Quill WYSIWYG editor styles
 │       ├── export.css        # Export functionality
+│       ├── profile.css       # User profile management
 │       └── toast.css         # Toast notifications
 │
 ├── js/                        # JavaScript modules
 │   ├── index.js              # Reader application entry point
 │   ├── config.js             # Configuration (multi-source: localStorage / API)
+│   ├── sentry.js             # Sentry error monitoring initialization
 │   │
 │   ├── config/              # Configuration helpers (extracted from config.js)
 │   │   ├── configHelpers.js     # Pure helpers: path resolution, fonts, ambients
 │   │   └── enrichConfigFromIDB.js # IndexedDB data enrichment for config
+│   │
+│   ├── i18n/                 # Internationalization (i18next)
+│   │   ├── index.js              # i18n initialization & helpers (initI18n, t, setLanguage, applyTranslations)
+│   │   └── locales/              # Translation files
+│   │       ├── index.js          # Locales entry point
+│   │       ├── ru.js             # Russian
+│   │       ├── en.js             # English
+│   │       ├── es.js             # Spanish
+│   │       ├── fr.js             # French
+│   │       └── de.js             # German
 │   │
 │   ├── utils/                # Low-level utilities
 │   │   ├── ApiClient.js      # HTTP API client (server communication)
@@ -189,6 +222,7 @@ flipbook/
 │   │   ├── IdbStorage.js     # IndexedDB wrapper for large data
 │   │   ├── SettingsValidator.js # Settings validation & sanitization
 │   │   ├── RateLimiter.js    # Call rate limiting
+│   │   ├── Router.js         # SPA router (History API)
 │   │   ├── InstallPrompt.js  # PWA install prompt
 │   │   ├── OfflineIndicator.js   # Offline status indicator
 │   │   ├── ScreenReaderAnnouncer.js # Screen reader announcements (a11y)
@@ -223,6 +257,9 @@ flipbook/
 │   │   ├── ResizeHandler.js       # Window resize
 │   │   ├── DelegateMediator.js    # Delegate communication
 │   │   ├── BookshelfScreen.js     # Bookshelf display (multi-book)
+│   │   ├── LandingScreen.js       # Landing page for guests (public book showcase)
+│   │   ├── AccountScreen.js       # Personal account management (books, profile, settings, export)
+│   │   ├── ProfileHeader.js       # Profile header component (avatar, name, bio)
 │   │   │
 │   │   ├── services/              # Service groups (DI bundles)
 │   │   │   ├── CoreServices.js        # DOM, events, timers, storage
@@ -249,6 +286,8 @@ flipbook/
 │       ├── AdminConfigStore.js    # Persistent admin config (localStorage/IndexedDB)
 │       ├── ServerAdminConfigStore.js # Server-backed admin config (API adapter)
 │       ├── AdminConfigDefaults.js # Pure defaults constants
+│       ├── AdminConfigMigration.js # Config schema validation & normalization
+│       ├── AdminConfigStrip.js    # Config data URL stripping for localStorage
 │       ├── BookParser.js          # Book parsing dispatch
 │       ├── modeCardsData.js       # Book creation mode cards data
 │       ├── modules/               # Admin functional modules
@@ -261,6 +300,7 @@ flipbook/
 │       │   ├── ExportModule.js        # Config export
 │       │   ├── FontsModule.js         # Font management
 │       │   ├── PhotoCropper.js        # Interactive photo cropping tool
+│       │   ├── ProfileModule.js       # User profile editing (username, bio, avatar)
 │       │   ├── QuillEditorWrapper.js  # Quill WYSIWYG editor wrapper
 │       │   ├── SettingsModule.js      # Global settings
 │       │   └── SoundsModule.js        # Sound effects management
@@ -278,7 +318,7 @@ flipbook/
 │   ├── tsconfig.json
 │   ├── vitest.config.ts
 │   ├── prisma/
-│   │   ├── schema.prisma         # Database schema (13 models)
+│   │   ├── schema.prisma         # Database schema (14 models)
 │   │   ├── seed.ts               # Database seeding
 │   │   └── migrations/           # Prisma migrations
 │   ├── src/
@@ -308,6 +348,8 @@ flipbook/
 │   │   │   ├── settings.routes.ts    # GET/PUT /api/settings
 │   │   │   ├── progress.routes.ts    # GET/PUT /api/progress
 │   │   │   ├── upload.routes.ts      # POST /api/upload
+│   │   │   ├── profile.routes.ts     # GET/PUT /api/profile
+│   │   │   ├── public.routes.ts      # GET /api/public/* (discovery, shelves)
 │   │   │   └── exportImport.routes.ts # GET/POST /api/export, /api/import
 │   │   ├── services/             # Business logic (one per resource)
 │   │   │   ├── auth.service.ts       # Authentication
@@ -322,6 +364,8 @@ flipbook/
 │   │   │   ├── settings.service.ts   # Global settings
 │   │   │   ├── progress.service.ts   # Reading progress
 │   │   │   ├── upload.service.ts     # File upload
+│   │   │   ├── profile.service.ts    # User profile management
+│   │   │   ├── public.service.ts     # Public discovery & author shelves
 │   │   │   └── exportImport.service.ts # Export/import
 │   │   ├── parsers/              # Server-side book parsers
 │   │   │   ├── BookParser.ts         # Parser dispatch
@@ -353,6 +397,11 @@ flipbook/
 │       ├── helpers.ts
 │       └── *.test.ts                 # Per-resource test files
 │
+├── k6/                        # K6 load testing suite
+│   ├── lib/                  # Shared utilities (auth, checks, config, data, endpoints)
+│   ├── flows/                # User flow scripts (reader, author, browsing, admin)
+│   └── scenarios/            # Load test scenarios (smoke, load, stress, spike, soak)
+│
 ├── public/                    # Static assets (copied as-is)
 │   ├── content/              # Chapter HTML files (part_1.html, etc.)
 │   ├── images/               # Backgrounds & illustrations (.webp)
@@ -382,11 +431,15 @@ flipbook/
 ├── scripts/                   # Build scripts
 │   └── generate-icons.js     # PWA icon generation (sharp)
 │
+├── .husky/                    # Git hooks (pre-commit linting via lint-staged)
+├── .nvmrc                     # Node.js version (22)
 ├── Dockerfile                # Full-stack Docker build (frontend + server)
 ├── docker-compose.yml        # Docker Compose (PostgreSQL + MinIO + server)
+├── docker-compose.k6.yml     # Docker Compose overlay for K6 load testing
 ├── amvera.yml                # Amvera Cloud deployment config
 ├── railway.toml              # Railway deployment config
 ├── DEPLOYMENT.md             # Deployment guide (Amvera + Cloud.ru S3)
+├── PROJECT_REVIEW.md         # Project review & analysis document
 ├── vite.config.js            # Vite configuration
 ├── vite-plugin-mobile-backgrounds.js # Custom plugin for mobile backgrounds
 ├── vite-plugin-html-includes.js # Custom plugin for HTML partials
@@ -432,6 +485,19 @@ CLOSED → OPENING → OPENED ↔ FLIPPING
 | **LRU Cache** | `LRUCache.js` | Performance optimization |
 | **Adapter** | `ServerAdminConfigStore.js` | Same interface, server backend |
 
+### Screen Navigation (SPA Router)
+
+```
+Landing (/) ──[auth]──→ Bookshelf (/)
+                             │
+                    ┌────────┼────────┐
+                    ▼        ▼        ▼
+              Reader      Account   Public Shelf
+           (/book/:id)  (/account)  (/:username)
+```
+
+Routes are managed by `Router.js` using History API. Guests see the Landing screen; authenticated users see the Bookshelf.
+
 ### Data Flow
 
 ```
@@ -462,7 +528,10 @@ DOM + CSS Animations
 | AsyncPaginator | `managers/AsyncPaginator.js` | Content pagination |
 | EventController | `core/EventController.js` | Input handling |
 | DelegateMediator | `core/DelegateMediator.js` | Delegate communication |
+| LandingScreen | `core/LandingScreen.js` | Landing page for guests (hero, public book showcase, CTA) |
 | BookshelfScreen | `core/BookshelfScreen.js` | Main start screen: bookshelf with context menu (read/edit/delete), mode selector for book creation, per-book reading progress |
+| AccountScreen | `core/AccountScreen.js` | Personal account management (books, profile, settings, export tabs) |
+| ProfileHeader | `core/ProfileHeader.js` | Reusable profile header component (avatar, name, bio) |
 | AuthModal | `core/AuthModal.js` | Login/register modal (email + Google OAuth) |
 | MigrationHelper | `core/MigrationHelper.js` | localStorage → server data migration |
 | NavigationDelegate | `core/delegates/NavigationDelegate.js` | Page flip logic |
@@ -477,13 +546,18 @@ DOM + CSS Animations
 | AudioServices | `core/services/AudioServices.js` | Sounds & ambient |
 | RenderServices | `core/services/RenderServices.js` | Rendering & animations |
 | ContentServices | `core/services/ContentServices.js` | Loading & pagination |
+| Router | `utils/Router.js` | SPA router (History API: /, /book/:id, /account, /:username, /embed/:id) |
 | ApiClient | `utils/ApiClient.js` | HTTP API client (server communication) |
 | PhotoLightbox | `utils/PhotoLightbox.js` | Photo album lightbox |
 | SwipeHint | `utils/SwipeHint.js` | Mobile swipe gesture hint |
+| i18n | `i18n/index.js` | Internationalization (initI18n, t, setLanguage, applyTranslations) |
 | AdminConfigStore | `admin/AdminConfigStore.js` | Persistent admin config (localStorage/IndexedDB) |
 | ServerAdminConfigStore | `admin/ServerAdminConfigStore.js` | Server-backed admin config (API adapter) |
 | AdminConfigDefaults | `admin/AdminConfigDefaults.js` | Pure defaults constants for admin config |
+| AdminConfigMigration | `admin/AdminConfigMigration.js` | Config schema validation & normalization |
+| AdminConfigStrip | `admin/AdminConfigStrip.js` | Data URL stripping for localStorage snapshots |
 | BookParser | `admin/BookParser.js` | Book format parsing dispatch |
+| ProfileModule | `admin/modules/ProfileModule.js` | User profile editing (username, bio, avatar) |
 | PhotoCropper | `admin/modules/PhotoCropper.js` | Interactive photo cropping tool |
 | QuillEditorWrapper | `admin/modules/QuillEditorWrapper.js` | Quill WYSIWYG editor wrapper |
 | IdbStorage | `utils/IdbStorage.js` | IndexedDB wrapper for large data |
@@ -498,14 +572,15 @@ DOM + CSS Animations
 - **Auth:** Passport.js (local strategy + Google OAuth)
 - **Storage:** S3-compatible (MinIO in dev, AWS S3 / compatible in prod)
 - **Validation:** Zod schemas
+- **Monitoring:** Sentry (`@sentry/node`)
 - **Testing:** Vitest + supertest
 
 ### Database Models (Prisma)
 
 | Model | Relationship | Purpose |
 |-------|-------------|---------|
-| User | has many Books, ReadingFonts, ReadingProgress; has one GlobalSettings | User accounts |
-| Book | belongs to User; has many Chapters, Ambients; has one Appearance, Sounds, DefaultSettings, DecorativeFont | Book entity |
+| User | has many Books, ReadingFonts, ReadingProgress, ReadingPreferences; has one GlobalSettings | User accounts (with profile: username, displayName, bio, avatarUrl) |
+| Book | belongs to User; has many Chapters, Ambients; has one Appearance, Sounds, DefaultSettings, DecorativeFont | Book entity (with visibility: draft/published, description) |
 | Chapter | belongs to Book | Chapter content + background |
 | BookAppearance | belongs to Book | Light/dark theme customization |
 | BookSounds | belongs to Book | Page flip / cover sounds |
@@ -515,6 +590,7 @@ DOM + CSS Animations
 | ReadingFont | belongs to User | Custom reading fonts |
 | GlobalSettings | belongs to User | Font size limits, settings visibility |
 | ReadingProgress | belongs to User + Book | Per-book reading state |
+| ReadingPreferences | belongs to User + Book | Per-book user reading preferences (font, theme, volume) |
 
 ### API Routes
 
@@ -532,6 +608,12 @@ DOM + CSS Animations
 | `/api/settings` | GET/PUT | Global settings |
 | `/api/progress` | GET/PUT | Reading progress |
 | `/api/upload` | POST | File upload to S3 |
+| `/api/profile` | GET/PUT | User profile (username, displayName, bio, avatar) |
+| `/api/profile/check-username/:name` | GET | Username availability check |
+| `/api/public/discover` | GET | Browse recently published books (paginated) |
+| `/api/public/shelves/:username` | GET | Author's public book shelf |
+| `/api/public/books/:bookId` | GET | Public book details |
+| `/api/public/books/:bookId/chapters/:id` | GET | Public chapter content |
 | `/api/export`, `/api/import` | GET/POST | Config export/import |
 
 ### Local Development
@@ -575,9 +657,10 @@ npm run dev            # Start Vite dev server (port 3000)
 ### JavaScript Patterns
 - ES Modules (import/export)
 - Classes for components
-- No external frameworks — minimal runtime dependencies (dompurify, jszip, quill)
+- No external frameworks — minimal runtime dependencies (dompurify, jszip, quill, i18next, @sentry/browser)
 - Async/await for asynchronous operations
 - Destructuring in function parameters
+- i18n: `data-i18n` attributes for DOM translation (supports `data-i18n-html`, `data-i18n-placeholder`, `data-i18n-aria-label`, `data-i18n-title`)
 
 ### Resource Cleanup
 - All event listeners tracked and removed on destroy
@@ -704,6 +787,7 @@ export const BoolStr = Object.freeze({ TRUE: "true", FALSE: "false" });
 '@utils':   '/js/utils'
 '@managers':'/js/managers'
 '@core':    '/js/core'
+'@i18n':    '/js/i18n'
 '@css':     '/css'
 '@images':  '/images'
 '@fonts':   '/fonts'
@@ -758,6 +842,7 @@ export const BoolStr = Object.freeze({ TRUE: "true", FALSE: "false" });
 | **Integration** | Vitest + jsdom | Component interaction testing |
 | **E2E** | Playwright | Full browser testing (Chrome, Firefox, Safari, mobile) |
 | **Server API** | Vitest + supertest | Backend endpoint testing |
+| **Load** | K6 | Performance & stress testing (smoke, load, stress, spike, soak) |
 
 ### Test Structure
 
@@ -804,6 +889,13 @@ npm run test:e2e:headed   # E2E with visible browser
 # Backend
 cd server && npm run test       # Server API tests (single run)
 cd server && npm run test:watch # Server tests in watch mode
+
+# K6 Load Testing
+npm run test:k6:smoke     # Quick smoke test (2 VU, 30s)
+npm run test:k6:load      # Load test (up to 50 VU, 5 min)
+npm run test:k6:stress    # Stress test (up to 200 VU, 10 min)
+# Docker-based (includes full infrastructure):
+npm run test:k6:docker:smoke
 ```
 
 ## Linting
@@ -862,6 +954,13 @@ npm run lint:css:fix      # Stylelint autofix
 2. Update default fonts in `js/config.js` `buildFontsConfig()`
 3. Add option to font selector in HTML
 
+### Adding a New Language (i18n)
+
+1. Create a new locale file in `js/i18n/locales/` (e.g., `ja.js`) exporting a translation object
+2. Register it in `js/i18n/locales/index.js`
+3. Add the language entry to the `LANGUAGES` array in `js/i18n/index.js`
+4. Use `data-i18n="key"` attributes in HTML for translatable elements
+
 ### Modifying Animation Timings
 
 Edit CSS variables in `css/variables.css`:
@@ -886,7 +985,7 @@ Build includes:
 - Gzip + Brotli compression
 - Image optimization (Sharp + SVGO via vite-plugin-image-optimizer)
 - CSS minification + code splitting
-- Manual chunks (utils, managers, delegates)
+- Manual chunks (utils, managers, delegates, account)
 - PWA Service Worker generation (Workbox)
 
 ### GitHub Pages Deployment
@@ -916,6 +1015,8 @@ A root-level `Dockerfile` builds both frontend and server into a single image:
 - **dompurify** `^3.3.1` — XSS protection (sanitization engine for HTMLSanitizer)
 - **jszip** `^3.10.1` — ZIP operations (admin export, docx/epub parsing)
 - **quill** `^2.0.3` — WYSIWYG rich text editor (admin chapter editing)
+- **i18next** `^25.8.13` — Internationalization (5 languages)
+- **@sentry/browser** `^10.40.0` — Client-side error monitoring
 
 ### Frontend Dev Dependencies (key)
 - **vite** `^5.0.0` — Bundler
@@ -925,6 +1026,8 @@ A root-level `Dockerfile` builds both frontend and server into a single image:
 - **stylelint** `^17.1.1` — CSS linting
 - **sharp** `^0.34.5` — Image processing (icon generation)
 - **vite-plugin-pwa** `^1.2.0` — PWA/Service Worker support
+- **husky** `^9.1.7` — Git hooks (pre-commit linting)
+- **lint-staged** `^16.3.1` — Pre-commit lint runner
 
 ### Backend Runtime (server/)
 - **express** `^5.0.1` — HTTP framework
