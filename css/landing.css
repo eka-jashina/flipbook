@@ -244,8 +244,8 @@ body[data-screen="landing"] .bookshelf-screen {
 
 .auth-hint {
   font-size: 12px;
-  color: #999;
-  margin-top: 2px;
+  color: var(--color-text-tertiary);
+  margin-top: var(--spacing-2xs);
 }
 
 /* ═══════════════════════════════════════════

@@ -52,20 +52,61 @@
   --pages-count: 6;
 
   /* ═══════════════════════════════════════════
-     ОТСТУПЫ (8px шкала)
+     ШКАЛА ОТСТУПОВ (Spacing Scale)
+     ─────────────────────────────────────────
+     Базовая единица: 4px.
+     Используйте эти токены вместо жёстко заданных
+     значений для единообразных отступов.
+
+     2xs  2px   — микро-зазоры (hint-текст)
+     xs   4px   — минимальный (label↔input)
+     sm   8px   — малый (padding ячеек, gap полей)
+     md  16px   — средний (gap формы, section padding)
+     lg  24px   — большой (header margin, section gap)
+     xl  32px   — модалка padding
+     2xl 40px   — крупные секции
+     3xl 48px   — hero-блоки
      ═══════════════════════════════════════════ */
+  --spacing-2xs: 2px;
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
+  --spacing-2xl: 40px;
+  --spacing-3xl: 48px;
 
   /* ═══════════════════════════════════════════
-     СКРУГЛЕНИЯ
+     СКРУГЛЕНИЯ (Border Radius)
+     ─────────────────────────────────────────
+     sm   6px  — badge, chip, toast
+     md   8px  — input, кнопка
+     lg  12px  — модалка, карточка
      ═══════════════════════════════════════════ */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
+
+  /* ═══════════════════════════════════════════
+     КНОПКИ (Button Tokens)
+     ─────────────────────────────────────────
+     Единые токены для всех кнопок auth-модалки
+     и других UI-элементов.
+
+     Варианты размеров:
+       default — основная кнопка (submit, OAuth)
+       sm      — компактная (switch-ссылка, inline)
+     ═══════════════════════════════════════════ */
+  --btn-height: 44px;
+  --btn-padding-y: 12px;
+  --btn-padding-x: 16px;
+  --btn-font-size: 15px;
+  --btn-font-weight: 600;
+  --btn-radius: var(--radius-md);
+  --btn-transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  --btn-sm-padding-y: 8px;
+  --btn-sm-padding-x: 12px;
+  --btn-sm-font-size: 13px;
 
   /* ═══════════════════════════════════════════
      Z-INDEX ШКАЛА
@@ -80,6 +121,7 @@
   --color-accent: #5b6abf;
   --color-accent-hover: #4a59a8;
   --color-accent-focus: rgb(91, 106, 191, 0.15);
+  --color-accent-text: #fff;
   --color-surface: #fff;
   --color-surface-alt: #fafafa;
   --color-surface-hover: #f5f5f5;
@@ -92,6 +134,28 @@
   --color-error-bg: #fef2f2;
   --color-error-text: #b91c1c;
   --color-divider: #e0e0e0;
+
+  /* ═══════════════════════════════════════════
+     КОМПОНЕНТНЫЕ ЦВЕТА (светлая тема)
+     ─────────────────────────────────────────
+     Семантические токены для конкретных компонентов.
+     Переопределяются в themes.css для dark / bw.
+     ═══════════════════════════════════════════ */
+
+  /* Placeholder изображений (shimmer-gradient) */
+  --color-img-placeholder: #d4cfc7;
+  --color-img-placeholder-alt: #e8e4dc;
+
+  /* Индикатор загрузки */
+  --loading-overlay: rgb(255, 255, 255, 0.4);
+  --loading-dot: rgb(139, 69, 19, 0.6);
+  --loading-text: rgb(139, 69, 19, 0.7);
+
+  /* TOC (оглавление) — интерактивные состояния */
+  --toc-hover: rgb(139, 69, 19, 0.12);
+  --toc-active: rgb(139, 69, 19, 0.18);
+  --toc-focus-ring: rgb(139, 69, 19, 0.5);
+  --toc-focus-bg: rgb(139, 69, 19, 0.08);
 
   /* ═══════════════════════════════════════════
      ЦВЕТА (СВЕТЛАЯ ТЕМА)
