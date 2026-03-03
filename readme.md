@@ -31,11 +31,16 @@
 
 - **3D-анимация** — реалистичное перелистывание страниц с CSS 3D-трансформациями
 - **Мультиглавная навигация** — поддержка книг с несколькими главами
+- **Лендинг для гостей** — публичная витрина книг, описание возможностей, CTA
 - **Книжная полка** — стартовый экран с карточками книг, контекстное меню (читать / редактировать / удалить)
-- **Личный кабинет** — управление книгами, главами, шрифтами, звуками, оформлением
+- **Личный кабинет** — управление книгами, главами, шрифтами, звуками, оформлением, профилем
+- **Профили пользователей** — username, отображаемое имя, био, аватар; публичные авторские полки
+- **Публичное обнаружение книг** — просмотр опубликованных книг других авторов, авторские полки
 - **WYSIWYG-редактор** — редактирование глав через Quill с поддержкой форматирования, таблиц и изображений
 - **Мультикнижность** — поддержка нескольких книг, per-book прогресс чтения (кнопка «Продолжить чтение»)
 - **Импорт книг** — загрузка из форматов txt, doc, docx, epub, fb2
+- **Мультиязычность (i18n)** — 5 языков: русский, английский, испанский, французский, немецкий (через i18next)
+- **SPA-роутинг** — навигация по History API (лендинг → полка → читалка → кабинет)
 - **Персонализация** — выбор шрифта, размера текста, темы оформления
 - **Кастомизация оформления** — per-book настройка цветов обложки, текстур страниц, декоративных шрифтов
 - **Ambient-звуки** — фоновая атмосфера (дождь, камин, кафе) — настраиваемые через личный кабинет
@@ -46,6 +51,8 @@
 - **Миграция данных** — автоматический перенос из localStorage на сервер при первом логине
 - **Сохранение прогресса** — автоматическое запоминание позиции чтения по каждой книге
 - **PWA** — установка как приложение, офлайн-доступ через Service Worker
+- **Мониторинг ошибок** — Sentry интеграция (клиент + сервер)
+- **Нагрузочное тестирование** — K6 (smoke, load, stress, spike, soak сценарии)
 
 ---
 
@@ -119,18 +126,25 @@ User Input (click / touch / keyboard)
 
 ```
 flipbook/
-├── index.html                     # Точка входа — читалка
-├── admin.html                     # Админ-панель
+├── index.html                     # Точка входа — SPA (лендинг + полка + читалка + кабинет)
 │
 ├── js/
 │   ├── index.js                    # Точка входа
 │   ├── config.js                   # Конфигурация (admin-aware, мультикнижная)
+│   ├── sentry.js                   # Sentry мониторинг ошибок
 │   ├── config/                     # Вспомогательные модули конфигурации
 │   │   ├── configHelpers.js        # Чистые хелперы: пути, шрифты, амбиенты
 │   │   └── enrichConfigFromIDB.js  # Дозагрузка данных из IndexedDB
 │   │
+│   ├── i18n/                       # Интернационализация (i18next)
+│   │   ├── index.js                # Инициализация и хелперы (initI18n, t, setLanguage)
+│   │   └── locales/                # Файлы переводов
+│   │       ├── index.js            # Точка входа локалей
+│   │       ├── ru.js / en.js / es.js / fr.js / de.js
+│   │
 │   ├── utils/                      # Низкоуровневые утилиты
 │   │   ├── ApiClient.js            # HTTP API клиент (связь с сервером)
+│   │   ├── Router.js               # SPA-роутер (History API)
 │   │   ├── EventEmitter.js         # Реализация паттерна Observer
 │   │   ├── EventListenerManager.js # Автоматическая очистка listeners
 │   │   ├── LRUCache.js             # Кэш с вытеснением
@@ -177,7 +191,10 @@ flipbook/
 │   │   ├── SubscriptionManager.js  # Управление подписками на события
 │   │   ├── ResizeHandler.js        # Обработка изменения размера окна
 │   │   ├── DelegateMediator.js     # Коммуникация между делегатами
+│   │   ├── LandingScreen.js        # Лендинг для гостей (витрина публичных книг)
 │   │   ├── BookshelfScreen.js      # Экран книжной полки (мультикнижность)
+│   │   ├── AccountScreen.js        # Личный кабинет (книги, профиль, настройки, экспорт)
+│   │   ├── ProfileHeader.js        # Компонент профиля (аватар, имя, био)
 │   │   │
 │   │   ├── services/               # Сервисные группы (DI)
 │   │   │   ├── CoreServices.js         # DOM, события, таймеры, storage
@@ -199,11 +216,13 @@ flipbook/
 │   │       ├── FontController.js       # Управление шрифтами
 │   │       └── ThemeController.js      # Управление темами оформления
 │   │
-│   └── admin/                      # Админ-панель
+│   └── admin/                      # Админ-панель (вкладки в личном кабинете)
 │       ├── index.js                # Точка входа админки
 │       ├── AdminConfigStore.js     # Персистентное хранилище конфига (localStorage/IndexedDB)
 │       ├── ServerAdminConfigStore.js # Серверный конфиг (API-адаптер)
 │       ├── AdminConfigDefaults.js  # Константы дефолтных значений конфига
+│       ├── AdminConfigMigration.js # Валидация и нормализация схемы конфига
+│       ├── AdminConfigStrip.js     # Стриппинг data URL для localStorage
 │       ├── BookParser.js           # Диспетчер парсинга книг
 │       ├── modeCardsData.js        # Данные карточек режимов создания книг
 │       ├── modules/                # Функциональные модули админки
@@ -216,6 +235,7 @@ flipbook/
 │       │   ├── ExportModule.js         # Экспорт конфигурации
 │       │   ├── FontsModule.js          # Управление шрифтами
 │       │   ├── PhotoCropper.js         # Интерактивный инструмент обрезки фото
+│       │   ├── ProfileModule.js        # Управление профилем (username, био, аватар)
 │       │   ├── QuillEditorWrapper.js   # Обёртка WYSIWYG-редактора Quill
 │       │   ├── SettingsModule.js       # Глобальные настройки
 │       │   └── SoundsModule.js         # Управление звуковыми эффектами
@@ -248,6 +268,8 @@ flipbook/
 │   ├── install-prompt.css          # PWA-промпт установки
 │   ├── offline.css                 # Индикатор офлайн-режима
 │   ├── bookshelf.css               # Экран книжной полки
+│   ├── landing.css                 # Лендинг для гостей
+│   ├── embed.css                   # Встраиваемый режим чтения
 │   ├── photo-album.css             # Фотоальбом / лайтбокс
 │   ├── swipe-hint.css              # Подсказка свайпа (мобильные)
 │   ├── responsive.css              # Адаптивность
@@ -277,7 +299,35 @@ flipbook/
 │       ├── cropper.css             # Оверлей обрезки фото
 │       ├── editor.css              # Стили WYSIWYG-редактора Quill
 │       ├── export.css              # Экспорт
+│       ├── profile.css             # Профиль пользователя
 │       └── toast.css               # Toast-уведомления
+│
+├── html/                           # HTML-фрагменты (подключение при сборке)
+│   └── partials/
+│       ├── admin/                  # Фрагменты админ-панели
+│       └── reader/                 # Фрагменты читалки
+│           ├── landing.html        # Лендинг (гости)
+│           ├── bookshelf.html      # Книжная полка
+│           ├── account.html        # Личный кабинет
+│           ├── book-container.html # Контейнер книги
+│           ├── controls.html       # Контролы
+│           ├── pwa.html            # PWA
+│           └── templates.html      # Шаблоны
+│
+├── server/                         # Бэкенд (Express + Prisma + PostgreSQL)
+│   ├── prisma/                     # Схема БД (14 моделей) + миграции
+│   ├── src/
+│   │   ├── routes/                 # API-маршруты (auth, books, chapters, profile, public и т.д.)
+│   │   ├── services/              # Бизнес-логика (profile, public, books и т.д.)
+│   │   ├── middleware/            # Middleware (auth, CSRF, rate limit, upload)
+│   │   ├── parsers/               # Серверные парсеры книг
+│   │   └── utils/                 # Утилиты сервера
+│   └── tests/                     # Тесты API (Vitest + supertest)
+│
+├── k6/                             # K6 нагрузочное тестирование
+│   ├── lib/                        # Общие утилиты (auth, checks, config, endpoints)
+│   ├── flows/                      # Сценарии пользователей (reader, author, browsing, admin)
+│   └── scenarios/                  # Сценарии нагрузки (smoke, load, stress, spike, soak)
 │
 ├── public/                         # Статические ресурсы
 │   ├── content/                    # HTML-контент глав
@@ -286,64 +336,17 @@ flipbook/
 │   ├── icons/                      # PWA-иконки (SVG, PNG)
 │   └── sounds/                     # Аудио (перелистывание, ambient)
 │
-└── tests/                          # Тесты
-    ├── setup.js                    # Настройка тестового окружения
-    ├── helpers/                    # Вспомогательные утилиты для тестов
-    │   ├── testUtils.js            # Утилиты для юнит-тестов
-    │   └── integrationUtils.js     # Утилиты для интеграционных тестов
-    ├── unit/                       # Юнит-тесты (Vitest)
-    │   ├── utils/                  # Тесты утилит (21 файл)
-    │   ├── managers/               # Тесты менеджеров (5 файлов)
-    │   ├── core/                   # Тесты ядра (17 + delegates + services)
-    │   └── admin/                  # Тесты админ-модулей (20 файлов)
-    ├── integration/                # Интеграционные тесты (Vitest)
-    │   ├── smoke.test.js           # Smoke-тесты
-    │   ├── flows/                  # Тесты пользовательских сценариев (24 файла)
-    │   │   ├── navigation.test.js      # Навигация по страницам
-    │   │   ├── settings.test.js        # Работа с настройками
-    │   │   ├── chapters.test.js        # Переключение глав
-    │   │   ├── drag.test.js            # Drag-взаимодействие
-    │   │   ├── events.test.js          # Обработка событий
-    │   │   ├── accessibility.test.js   # Доступность
-    │   │   ├── chapterRepagination.test.js  # Репагинация при смене глав
-    │   │   ├── settingsRepagination.test.js # Репагинация при смене настроек
-    │   │   ├── dragNavConflict.test.js # Конфликт drag/навигации
-    │   │   ├── errorRecovery.test.js   # Восстановление при ошибках
-    │   │   ├── fullReadingSession.test.js   # Полная сессия чтения
-    │   │   ├── resizeFlow.test.js      # Обработка ресайза
-    │   │   ├── adminPanel.test.js      # Админ-панель
-    │   │   ├── audio.test.js           # Аудио
-    │   │   ├── authMigration.test.js   # Авторизация и миграция
-    │   │   ├── bookshelf.test.js       # Книжная полка
-    │   │   ├── theme.test.js           # Темы оформления
-    │   │   ├── ambientSoundLifecycle.test.js  # Жизненный цикл ambient-звуков
-    │   │   ├── bookSwitchingLifecycle.test.js # Переключение книг
-    │   │   ├── configExportImport.test.js     # Экспорт/импорт конфига
-    │   │   ├── delegateMediator.test.js       # Медиатор делегатов
-    │   │   ├── fontManagement.test.js         # Управление шрифтами
-    │   │   ├── multiBookSession.test.js       # Мультикнижная сессия
-    │   │   └── photoAlbumLifecycle.test.js     # Жизненный цикл фотоальбома
-    │   ├── lifecycle/              # Тесты жизненного цикла
-    │   │   ├── bookLifecycle.test.js   # Жизненный цикл книги
-    │   │   └── stateMachine.test.js    # Конечный автомат
-    │   └── services/               # Тесты сервисов
-    │       └── contentLoader.test.js   # Загрузка контента
-    └── e2e/                        # E2E-тесты (Playwright)
-        ├── fixtures/               # Фикстуры для тестов
-        │   └── book.fixture.js     # Фикстура книги
-        ├── pages/                  # Page Object модели
-        │   ├── index.js            # Экспорт моделей
-        │   ├── BookPage.js         # Страница книги
-        │   └── SettingsPanel.js    # Панель настроек
-        ├── flows/                  # Тестовые сценарии
-        │   ├── reading.spec.js     # Сценарии чтения
-        │   ├── navigation.spec.js  # Навигация
-        │   ├── settings.spec.js    # Настройки
-        │   ├── responsive.spec.js  # Адаптивность
-        │   ├── accessibility.spec.js # Доступность
-        │   └── offline.spec.js     # Офлайн-режим
-        └── performance/            # Тесты производительности
-            └── loading.spec.js     # Производительность загрузки
+├── tests/                          # Фронтенд-тесты
+│   ├── unit/                       # Юнит-тесты (Vitest)
+│   ├── integration/                # Интеграционные тесты (Vitest + jsdom)
+│   └── e2e/                        # E2E-тесты (Playwright)
+│
+├── .husky/                         # Git-хуки (pre-commit линтинг)
+├── .nvmrc                          # Версия Node.js (22)
+├── docker-compose.yml              # Docker Compose (PostgreSQL + MinIO + сервер)
+├── docker-compose.k6.yml           # Docker Compose оверлей для K6
+├── Dockerfile                      # Full-stack Docker-образ
+└── package.json                    # Зависимости и скрипты
 ```
 
 ---
@@ -387,6 +390,13 @@ npm run dev
 | `npm run test:e2e:debug` | E2E-тесты в режиме отладки |
 | `npm run test:e2e:headed` | E2E-тесты с видимым браузером |
 | `npm run test:e2e:report` | Показать отчёт E2E-тестов |
+| **K6 нагрузочное тестирование** | |
+| `npm run test:k6:smoke` | Smoke-тест (2 VU, 30с) |
+| `npm run test:k6:load` | Нагрузочный тест (до 50 VU, 5 мин) |
+| `npm run test:k6:stress` | Стресс-тест (до 200 VU, 10 мин) |
+| `npm run test:k6:spike` | Spike-тест (10→200 VU мгновенно) |
+| `npm run test:k6:soak` | Soak-тест (30 VU, 30 мин) |
+| `npm run test:k6:docker:*` | Docker-варианты K6-тестов |
 | `npm run lint` | Запуск ESLint + Stylelint |
 | `npm run lint:js` | ESLint на js/ |
 | `npm run lint:css` | Stylelint на css/ |
@@ -420,7 +430,10 @@ npm run dev
 | **SettingsBindings** | `core/SettingsBindings.js` | Привязки UI настроек (шрифт, тема, звук) |
 | **NavigationDelegate** | `core/delegates/NavigationDelegate.js` | Логика навигации по страницам |
 | **DelegateMediator** | `core/DelegateMediator.js` | Коммуникация между делегатами |
+| **LandingScreen** | `core/LandingScreen.js` | Лендинг для гостей (витрина публичных книг, CTA) |
 | **BookshelfScreen** | `core/BookshelfScreen.js` | Экран книжной полки (мультикнижность) |
+| **AccountScreen** | `core/AccountScreen.js` | Личный кабинет (книги, профиль, настройки, экспорт) |
+| **ProfileHeader** | `core/ProfileHeader.js` | Компонент профиля (аватар, имя, био) |
 | **AuthModal** | `core/AuthModal.js` | Модалка логина/регистрации (email + Google OAuth) |
 | **MigrationHelper** | `core/MigrationHelper.js` | Миграция данных localStorage → сервер |
 | **DragDelegate** | `core/delegates/DragDelegate.js` | Touch-перетаскивание страниц |
@@ -434,7 +447,9 @@ npm run dev
 | **AudioServices** | `core/services/AudioServices.js` | Группа: звуки и ambient |
 | **RenderServices** | `core/services/RenderServices.js` | Группа: рендеринг и анимации |
 | **ContentServices** | `core/services/ContentServices.js` | Группа: загрузка и пагинация |
+| **Router** | `utils/Router.js` | SPA-роутер (History API: /, /book/:id, /account, /:username) |
 | **ApiClient** | `utils/ApiClient.js` | HTTP API клиент (связь с сервером) |
+| **i18n** | `i18n/index.js` | Интернационализация (initI18n, t, setLanguage, applyTranslations) |
 | **PhotoLightbox** | `utils/PhotoLightbox.js` | Лайтбокс фотоальбома |
 | **SwipeHint** | `utils/SwipeHint.js` | Подсказка жеста свайпа (мобильные) |
 | **InstallPrompt** | `utils/InstallPrompt.js` | PWA-промпт установки приложения |
@@ -444,7 +459,10 @@ npm run dev
 | **AdminConfigStore** | `admin/AdminConfigStore.js` | Персистентное хранилище конфига (localStorage/IndexedDB) |
 | **ServerAdminConfigStore** | `admin/ServerAdminConfigStore.js` | Серверный конфиг (API-адаптер) |
 | **AdminConfigDefaults** | `admin/AdminConfigDefaults.js` | Константы дефолтных значений конфига |
+| **AdminConfigMigration** | `admin/AdminConfigMigration.js` | Валидация и нормализация схемы конфига |
+| **AdminConfigStrip** | `admin/AdminConfigStrip.js` | Стриппинг data URL для localStorage |
 | **BookParser** | `admin/BookParser.js` | Диспетчер парсинга книг |
+| **ProfileModule** | `admin/modules/ProfileModule.js` | Управление профилем (username, био, аватар) |
 | **PhotoCropper** | `admin/modules/PhotoCropper.js` | Интерактивный инструмент обрезки фото |
 | **QuillEditorWrapper** | `admin/modules/QuillEditorWrapper.js` | Обёртка WYSIWYG-редактора Quill |
 | **IdbStorage** | `utils/IdbStorage.js` | IndexedDB-обёртка для крупных данных |
@@ -454,7 +472,7 @@ npm run dev
 
 ## Личный кабинет
 
-Личный кабинет (`admin.html`) позволяет управлять содержимым и оформлением без изменения кода. Открывается кнопкой «Редактировать» из контекстного меню на книжной полке.
+Личный кабинет (экран `/account` в SPA) позволяет управлять содержимым, оформлением и профилем без изменения кода. Открывается кнопкой «Редактировать» из контекстного меню на книжной полке или через навигацию.
 
 ### Вкладка «Мои книги»
 
@@ -466,6 +484,14 @@ npm run dev
 - **Ambient-звуки** — добавление и настройка фоновых звуков
 - **Оформление** — цвета обложки, текстуры страниц, фон приложения (отдельно для light/dark тем)
 - **Фотоальбом** — управление галереей изображений
+
+### Вкладка «Профиль»
+
+- **Username** — уникальное имя пользователя (проверка доступности в реальном времени)
+- **Отображаемое имя** — имя для публичного профиля
+- **Био** — краткое описание (до 500 символов)
+- **Аватар** — загрузка фото профиля
+- **Предпросмотр** — как профиль выглядит на публичной полке
 
 ### Вкладка «Настройки»
 
@@ -538,6 +564,11 @@ npm run dev            # Vite dev-сервер (порт 3000)
 | `/api/settings` | GET/PUT | Глобальные настройки |
 | `/api/progress` | GET/PUT | Прогресс чтения |
 | `/api/upload` | POST | Загрузка файлов в S3 |
+| `/api/profile` | GET/PUT | Профиль пользователя (username, имя, био, аватар) |
+| `/api/profile/check-username/:name` | GET | Проверка доступности username |
+| `/api/public/discover` | GET | Каталог опубликованных книг (пагинация) |
+| `/api/public/shelves/:username` | GET | Публичная полка автора |
+| `/api/public/books/:bookId` | GET | Публичная информация о книге |
 | `/api/export`, `/api/import` | GET/POST | Экспорт/импорт конфигурации |
 
 ### Деплой
@@ -545,6 +576,7 @@ npm run dev            # Vite dev-сервер (порт 3000)
 Проект поддерживает несколько вариантов деплоя:
 
 - **Docker** — root-level `Dockerfile` собирает фронтенд + сервер в единый образ
+- **Docker Compose + K6** — `docker-compose.k6.yml` оверлей для нагрузочного тестирования
 - **Amvera Cloud** — конфигурация в `amvera.yml`
 - **Railway** — конфигурация в `railway.toml`
 - **GitHub Pages** — только фронтенд (автоматически через GitHub Actions)
@@ -557,7 +589,7 @@ npm run dev            # Vite dev-сервер (порт 3000)
 
 ### Стратегия тестирования
 
-Проект использует четырёхуровневую стратегию тестирования:
+Проект использует пятиуровневую стратегию тестирования:
 
 | Уровень | Инструмент | Назначение |
 |---------|------------|------------|
@@ -565,6 +597,7 @@ npm run dev            # Vite dev-сервер (порт 3000)
 | **Integration** | Vitest + jsdom | Тестирование взаимодействия компонентов |
 | **E2E** | Playwright | Сквозное тестирование в реальных браузерах |
 | **Server API** | Vitest + supertest | Тестирование бэкенд-эндпоинтов |
+| **Load** | K6 | Нагрузочное и стресс-тестирование (smoke, load, stress, spike, soak) |
 
 ### E2E-тестирование (Playwright)
 
@@ -712,6 +745,8 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 - **dompurify** `^3.3.1` — XSS-защита (движок санитизации HTML)
 - **jszip** `^3.10.1` — ZIP-операции (экспорт конфига, парсинг docx/epub)
 - **quill** `^2.0.3` — WYSIWYG-редактор (редактирование глав в личном кабинете)
+- **i18next** `^25.8.13` — Интернационализация (5 языков)
+- **@sentry/browser** `^10.40.0` — Мониторинг ошибок (клиент)
 
 ### Frontend Dev Dependencies (ключевые)
 - **vite** `^5.0.0` — Бандлер
@@ -721,6 +756,8 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 - **stylelint** `^17.1.1` — Линтинг CSS
 - **sharp** `^0.34.5` — Обработка изображений (генерация иконок)
 - **vite-plugin-pwa** `^1.2.0` — PWA/Service Worker
+- **husky** `^9.1.7` — Git-хуки (pre-commit линтинг)
+- **lint-staged** `^16.3.1` — Запуск линтеров для staged файлов
 
 ### Backend Runtime (server/)
 - **express** `^5.0.1` — HTTP-фреймворк
