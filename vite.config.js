@@ -283,6 +283,7 @@ export default defineConfig(({ command, mode }) => {
         '@utils': '/js/utils',
         '@managers': '/js/managers',
         '@core': '/js/core',
+        '@i18n': '/js/i18n',
         '@css': '/css',
         '@images': '/images',
         '@fonts': '/fonts',

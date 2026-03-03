@@ -9,6 +9,9 @@
 /** Допустимые темы */
 const VALID_THEMES = new Set(['light', 'dark', 'bw']);
 
+/** Допустимые языки */
+const VALID_LANGUAGES = new Set(['ru', 'en', 'es', 'fr', 'de', 'auto']);
+
 /** Абсолютные границы размера шрифта (на случай повреждённого fontMin/fontMax) */
 const FONT_SIZE_ABS_MIN = 8;
 const FONT_SIZE_ABS_MAX = 72;
@@ -143,6 +146,16 @@ export function isValidTheme(value) {
   return VALID_THEMES.has(value);
 }
 
+/**
+ * Проверить, является ли значение допустимым языком.
+ *
+ * @param {*} value
+ * @returns {boolean}
+ */
+export function isValidLanguage(value) {
+  return VALID_LANGUAGES.has(value);
+}
+
 // ─── Маппинг санитайзеров по ключам ──────────────────────────────────────────
 
 const SANITIZERS = {
@@ -182,6 +195,10 @@ const SANITIZERS = {
   ambientVolume(value, defaultValue) {
     return sanitizeVolume(value, defaultValue);
   },
+
+  language(value, defaultValue) {
+    return VALID_LANGUAGES.has(value) ? value : defaultValue;
+  },
 };
 
 // ─── Формальная JSON-схема настроек ─────────────────────────────────────────
@@ -197,6 +214,7 @@ export const SETTINGS_SCHEMA = Object.freeze({
   font:          { type: 'string' },
   fontSize:      { type: 'number' },
   theme:         { type: 'string' },
+  language:      { type: 'string' },
   page:          { type: 'number' },
   soundEnabled:  { type: 'boolean' },
   soundVolume:   { type: 'number' },

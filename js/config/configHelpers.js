@@ -139,6 +139,7 @@ export function buildDefaultSettings(src = {}) {
     font: src.font || "georgia",
     fontSize: src.fontSize || 18,
     theme: src.theme || "light",
+    language: src.language || "auto",
     page: 0,
     soundEnabled: src.soundEnabled ?? true,
     soundVolume: src.soundVolume ?? 0.3,
