@@ -1,26 +1,26 @@
     <!-- Книжная полка (стартовый экран) -->
     <div class="bookshelf-screen" id="bookshelf-screen" hidden>
       <div class="bookshelf-header">
-        <h1 class="bookshelf-title">Книжная полка</h1>
+        <h1 class="bookshelf-title" data-i18n="bookshelf.title">Книжная полка</h1>
         <span class="bookshelf-subtitle" id="bookshelf-subtitle"></span>
       </div>
       <div class="bookshelf-shelves" id="bookshelf-shelves"></div>
       <div class="bookshelf-actions" id="bookshelf-actions">
-        <button type="button" class="bookshelf-add-btn" data-action="add-book" aria-label="Создать книгу">
+        <button type="button" class="bookshelf-add-btn" data-action="add-book" data-i18n-aria-label="bookshelf.createBook" aria-label="Создать книгу">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
-          Создать книгу
+          <span data-i18n="bookshelf.createBook">Создать книгу</span>
         </button>
       </div>
       <div class="bookshelf-empty" id="bookshelf-empty" hidden>
         <div class="bookshelf-empty-icon">📚</div>
-        <div class="bookshelf-empty-text">Книги пока не добавлены</div>
-        <button type="button" class="bookshelf-add-btn" data-action="add-book" aria-label="Создать книгу">
+        <div class="bookshelf-empty-text" data-i18n="bookshelf.empty">Книги пока не добавлены</div>
+        <button type="button" class="bookshelf-add-btn" data-action="add-book" data-i18n-aria-label="bookshelf.createBook" aria-label="Создать книгу">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
-          Создать книгу
+          <span data-i18n="bookshelf.createBook">Создать книгу</span>
         </button>
       </div>
     </div>

@@ -126,6 +126,7 @@ export default {
   'pwa.dismiss': 'Позже',
   'pwa.install': 'Установить',
   'pwa.closeAria': 'Закрыть',
+  'pwa.newVersion': 'Доступна новая версия приложения. Обновить?',
   'pwa.offline': 'Режим офлайн',
   'pwa.swipeHint': 'Листайте свайпом<br>влево и вправо',
 

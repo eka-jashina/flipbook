@@ -33,6 +33,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
 import { photoLightbox } from './utils/PhotoLightbox.js';
+import { initI18n, t, applyTranslations } from '@i18n';
 
 // Catch unhandled promise rejections globally so they don't vanish silently
 window.addEventListener('unhandledrejection', (event) => {
@@ -53,7 +54,7 @@ let useAPI = false;
 // Регистрация Service Worker для PWA
 const updateSW = registerSW({
   onNeedRefresh() {
-    const shouldUpdate = confirm('Доступна новая версия приложения. Обновить?');
+    const shouldUpdate = confirm(t('pwa.newVersion'));
     if (shouldUpdate) {
       updateSW(true);
     }
@@ -569,6 +570,11 @@ async function init() {
       currentUser = await checkAuth();
     }
 
+    // Инициализируем i18n: язык берём из localStorage (reader-settings) или 'auto'
+    const savedLang = localStorage.getItem('flipbook-language') || 'auto';
+    await initI18n(savedLang);
+    applyTranslations();
+
     // Создаём роутер (порядок важен: конкретные маршруты первыми, /:username — последний)
     router = new Router([
       { name: 'home', path: '/', handler: handleHome },
@@ -590,7 +596,7 @@ async function init() {
     await router.start();
   } catch (error) {
     console.error('Failed to initialize Book Reader:', error);
-    ErrorHandler.handle(error, 'Не удалось запустить приложение');
+    ErrorHandler.handle(error, t('error.initialization'));
   }
 }
 

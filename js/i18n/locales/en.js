@@ -125,6 +125,7 @@ export default {
   'pwa.dismiss': 'Later',
   'pwa.install': 'Install',
   'pwa.closeAria': 'Close',
+  'pwa.newVersion': 'A new version is available. Update now?',
   'pwa.offline': 'Offline mode',
   'pwa.swipeHint': 'Swipe left and right<br>to turn pages',
 

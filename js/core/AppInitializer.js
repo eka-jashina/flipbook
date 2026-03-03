@@ -18,6 +18,7 @@
 import { CONFIG } from '../config.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { AmbientManager } from '../managers/AmbientManager.js';
+import { t, getLanguage, applyTranslations } from '@i18n';
 
 export class AppInitializer {
   /**
@@ -54,7 +55,7 @@ export class AppInitializer {
       await document.fonts.ready;
       await this.lifecycleDelegate.init();
     } catch (error) {
-      ErrorHandler.handle(error, "Ошибка инициализации");
+      ErrorHandler.handle(error, t('error.initialization'));
       throw error;
     }
   }
@@ -137,6 +138,15 @@ export class AppInitializer {
       const savedVolume = this.settings.get("ambientVolume");
       ambientVolume.value = savedVolume * 100;
     }
+
+    // Синхронизировать селектор языка
+    const languageSelect = this.dom.get('languageSelect');
+    if (languageSelect) {
+      languageSelect.value = getLanguage();
+    }
+
+    // Обновить переводы в DOM
+    applyTranslations();
 
     // Состояние volume control для перелистывания управляется через CSS :has()
   }
@@ -288,7 +298,7 @@ export class AppInitializer {
   _bindEvents() {
     const {
       nextBtn, prevBtn, tocBtn, continueBtn, cover,
-      increaseBtn, decreaseBtn, fontSizeValue, fontSelect, themeSegmented, debugToggle,
+      increaseBtn, decreaseBtn, fontSizeValue, fontSelect, languageSelect, themeSegmented, debugToggle,
       soundToggle, volumeSlider,
       ambientPills, ambientVolume, ambientVolumeWrapper,
       fullscreenBtn
@@ -297,7 +307,7 @@ export class AppInitializer {
     this.eventController.bind({
       nextBtn, prevBtn, tocBtn, continueBtn,
       coverEl: cover,
-      increaseBtn, decreaseBtn, fontSizeValue, fontSelect, themeSegmented, debugToggle,
+      increaseBtn, decreaseBtn, fontSizeValue, fontSelect, languageSelect, themeSegmented, debugToggle,
       soundToggle, volumeSlider,
       ambientPills, ambientVolume, ambientVolumeWrapper,
       fullscreenBtn

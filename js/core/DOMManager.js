@@ -82,6 +82,9 @@ export class DOMManager {
       // Чекбокс настроек (fallback для Safari без :has())
       settingsCheckbox: $("settings-checkbox"),
 
+      // Язык интерфейса
+      languageSelect: $("language-select"),
+
       // Полноэкранный режим
       fullscreenBtn: $("fullscreen-btn"),
 

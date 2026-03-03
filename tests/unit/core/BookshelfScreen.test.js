@@ -370,30 +370,30 @@ describe('BookshelfScreen', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // _pluralize() — склонение по-русски
+  // _formatBooksCount() — склонение с i18n
   // ─────────────────────────────────────────────────────────────────────────
 
-  describe('_pluralize()', () => {
+  describe('_formatBooksCount()', () => {
     beforeEach(() => {
       screen = new BookshelfScreen({ container, books: [], onBookSelect });
     });
 
-    it('returns "книга" for 1', () => expect(screen._pluralize(1)).toBe('книга'));
-    it('returns "книги" for 2', () => expect(screen._pluralize(2)).toBe('книги'));
-    it('returns "книги" for 3', () => expect(screen._pluralize(3)).toBe('книги'));
-    it('returns "книги" for 4', () => expect(screen._pluralize(4)).toBe('книги'));
-    it('returns "книг" for 5', () => expect(screen._pluralize(5)).toBe('книг'));
-    it('returns "книг" for 0', () => expect(screen._pluralize(0)).toBe('книг'));
-    it('returns "книг" for 6', () => expect(screen._pluralize(6)).toBe('книг'));
-    it('returns "книг" for 11 (исключение: 11)', () => expect(screen._pluralize(11)).toBe('книг'));
-    it('returns "книг" for 12 (исключение: 12)', () => expect(screen._pluralize(12)).toBe('книг'));
-    it('returns "книг" for 13 (исключение: 13)', () => expect(screen._pluralize(13)).toBe('книг'));
-    it('returns "книг" for 14 (исключение: 14)', () => expect(screen._pluralize(14)).toBe('книг'));
-    it('returns "книга" for 21', () => expect(screen._pluralize(21)).toBe('книга'));
-    it('returns "книги" for 22', () => expect(screen._pluralize(22)).toBe('книги'));
-    it('returns "книга" for 101', () => expect(screen._pluralize(101)).toBe('книга'));
-    it('returns "книг" for 111 (исключение: 111)', () => expect(screen._pluralize(111)).toBe('книг'));
-    it('returns "книги" for 1004', () => expect(screen._pluralize(1004)).toBe('книги'));
+    it('returns "1 книга" for 1', () => expect(screen._formatBooksCount(1)).toBe('1 книга'));
+    it('returns "2 книги" for 2', () => expect(screen._formatBooksCount(2)).toBe('2 книги'));
+    it('returns "3 книги" for 3', () => expect(screen._formatBooksCount(3)).toBe('3 книги'));
+    it('returns "4 книги" for 4', () => expect(screen._formatBooksCount(4)).toBe('4 книги'));
+    it('returns "5 книг" for 5', () => expect(screen._formatBooksCount(5)).toBe('5 книг'));
+    it('returns "0 книг" for 0', () => expect(screen._formatBooksCount(0)).toBe('0 книг'));
+    it('returns "6 книг" for 6', () => expect(screen._formatBooksCount(6)).toBe('6 книг'));
+    it('returns "11 книг" for 11 (исключение: 11)', () => expect(screen._formatBooksCount(11)).toBe('11 книг'));
+    it('returns "12 книг" for 12 (исключение: 12)', () => expect(screen._formatBooksCount(12)).toBe('12 книг'));
+    it('returns "13 книг" for 13 (исключение: 13)', () => expect(screen._formatBooksCount(13)).toBe('13 книг'));
+    it('returns "14 книг" for 14 (исключение: 14)', () => expect(screen._formatBooksCount(14)).toBe('14 книг'));
+    it('returns "21 книга" for 21', () => expect(screen._formatBooksCount(21)).toBe('21 книга'));
+    it('returns "22 книги" for 22', () => expect(screen._formatBooksCount(22)).toBe('22 книги'));
+    it('returns "101 книга" for 101', () => expect(screen._formatBooksCount(101)).toBe('101 книга'));
+    it('returns "111 книг" for 111 (исключение: 111)', () => expect(screen._formatBooksCount(111)).toBe('111 книг'));
+    it('returns "1004 книги" for 1004', () => expect(screen._formatBooksCount(1004)).toBe('1004 книги'));
   });
 
   // ─────────────────────────────────────────────────────────────────────────

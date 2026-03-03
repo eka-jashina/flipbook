@@ -13,6 +13,7 @@ import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 import { FontController } from './FontController.js';
 import { AudioController } from './AudioController.js';
 import { ThemeController } from './ThemeController.js';
+import { setLanguage, applyTranslations } from '@i18n';
 
 export class SettingsDelegate extends BaseDelegate {
   /**
@@ -118,6 +119,9 @@ export class SettingsDelegate extends BaseDelegate {
       case "fullscreen":
         this._handleFullscreen();
         break;
+      case "language":
+        this._handleLanguage(value);
+        break;
     }
 
     // Уведомляем контроллер об обновлении
@@ -132,6 +136,18 @@ export class SettingsDelegate extends BaseDelegate {
     if (this.debugPanel) {
       this.debugPanel.toggle();
     }
+  }
+
+  /**
+   * Обработать смену языка интерфейса
+   * @private
+   * @param {string} code - Код языка (ru, en, es, fr, de)
+   */
+  async _handleLanguage(code) {
+    await setLanguage(code);
+    // Сохраняем выбранный язык отдельно (не зависит от книги)
+    localStorage.setItem('flipbook-language', code);
+    applyTranslations();
   }
 
   /**
