@@ -5,8 +5,11 @@
  * Показывается один раз при первом открытии книги на мобильном устройстве.
  */
 
-const STORAGE_KEY = 'flipbook-swipe-hint-shown';
+import { StorageManager } from './StorageManager.js';
+
 const AUTO_HIDE_DELAY = 3500;
+
+const storage = new StorageManager('flipbook-swipe-hint-shown');
 
 export class SwipeHint {
   constructor() {
@@ -25,12 +28,7 @@ export class SwipeHint {
     if (window.matchMedia('(min-width: 769px)').matches) return;
 
     // Не показывать повторно
-    try {
-      if (localStorage.getItem(STORAGE_KEY)) return;
-    } catch {
-      // localStorage недоступен — не показываем
-      return;
-    }
+    if (storage.getRaw()) return;
 
     this._show();
   }
@@ -56,11 +54,7 @@ export class SwipeHint {
     this._el.classList.remove('swipe-hint--visible');
 
     // Запомнить что уже показали
-    try {
-      localStorage.setItem(STORAGE_KEY, '1');
-    } catch {
-      // Игнорируем ошибки localStorage
-    }
+    storage.setRaw('1');
 
     // Убрать из DOM после анимации
     setTimeout(() => {

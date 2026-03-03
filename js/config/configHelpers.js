@@ -6,8 +6,13 @@
  * резолвинга путей, построения шрифтов, амбиентов и т.д.
  */
 
+import { StorageManager } from '../utils/StorageManager.js';
+
 // Vite подставляет base URL для production
 export const BASE_URL = import.meta.env.BASE_URL || '/';
+
+/** StorageManager для конфига админки — используется в нескольких модулях */
+export const adminConfigStorage = new StorageManager('flipbook-admin-config');
 
 // ─── Загрузка и хранение ──────────────────────────────────────────────────────
 
@@ -16,11 +21,8 @@ export const BASE_URL = import.meta.env.BASE_URL || '/';
  * @returns {Object|null}
  */
 export function loadAdminConfig() {
-  try {
-    const raw = localStorage.getItem('flipbook-admin-config');
-    if (raw) return JSON.parse(raw);
-  } catch { /* повреждённые данные — игнорируем */ }
-  return null;
+  const data = adminConfigStorage.load();
+  return Object.keys(data).length > 0 ? data : null;
 }
 
 // ─── Иммутабельность ──────────────────────────────────────────────────────────

@@ -11,7 +11,9 @@
  * - Можно повторно вызвать из настроек
  */
 
-const STORAGE_KEY = 'flipbook_install_dismissed';
+import { StorageManager } from './StorageManager.js';
+
+const storage = new StorageManager('flipbook_install_dismissed');
 const DELAY_MS = 30000; // 30 секунд перед показом
 
 export class InstallPrompt {
@@ -62,11 +64,7 @@ export class InstallPrompt {
    * @returns {boolean}
    */
   _isDismissed() {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === 'true';
-    } catch {
-      return false;
-    }
+    return storage.getRaw() === 'true';
   }
 
   /**
@@ -74,11 +72,7 @@ export class InstallPrompt {
    * @private
    */
   _setDismissed() {
-    try {
-      localStorage.setItem(STORAGE_KEY, 'true');
-    } catch {
-      // Игнорируем ошибки localStorage
-    }
+    storage.setRaw('true');
   }
 
   /**
@@ -261,11 +255,7 @@ export class InstallPrompt {
    * Сбросить отклонение (для повторного показа из настроек)
    */
   resetDismissed() {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Игнорируем
-    }
+    storage.clear();
   }
 
   /**

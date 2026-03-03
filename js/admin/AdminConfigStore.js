@@ -12,6 +12,7 @@
  */
 
 import { IdbStorage } from '../utils/IdbStorage.js';
+import { StorageManager } from '../utils/StorageManager.js';
 import {
   DEFAULT_BOOK_SETTINGS,
   DEFAULT_BOOK,
@@ -23,6 +24,8 @@ import { stripBookDataUrls } from './AdminConfigStrip.js';
 const STORAGE_KEY = 'flipbook-admin-config';
 const IDB_NAME = 'flipbook-admin';
 const IDB_STORE = 'config';
+
+const lsStorage = new StorageManager(STORAGE_KEY);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -86,23 +89,18 @@ export class AdminConfigStore {
     }
 
     // 2. Миграция из localStorage
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const config = mergeWithDefaults(parsed);
+    const lsData = lsStorage.load();
+    if (Object.keys(lsData).length > 0) {
+      const config = mergeWithDefaults(lsData);
 
-        // Мигрировать в IndexedDB (localStorage не удаляем — ридер читает оттуда)
-        try {
-          await this._idb.put(STORAGE_KEY, config);
-        } catch {
-          // Не удалось мигрировать — не критично, данные уже в памяти
-        }
-
-        return config;
+      // Мигрировать в IndexedDB (localStorage не удаляем — ридер читает оттуда)
+      try {
+        await this._idb.put(STORAGE_KEY, config);
+      } catch {
+        // Не удалось мигрировать — не критично, данные уже в памяти
       }
-    } catch {
-      // Повреждённые данные — используем дефолт
+
+      return config;
     }
 
     return structuredClone(DEFAULT_CONFIG);
@@ -156,26 +154,24 @@ export class AdminConfigStore {
    * Тяжёлые data URL заменяются маркерами _idb — ридер дозагрузит из IndexedDB.
    */
   _saveToLocalStorage(snapshot) {
-    try {
-      const lsSnapshot = structuredClone(snapshot);
+    const lsSnapshot = structuredClone(snapshot);
 
-      for (const book of lsSnapshot.books) {
-        stripBookDataUrls(book);
-      }
+    for (const book of lsSnapshot.books) {
+      stripBookDataUrls(book);
+    }
 
-      // Шрифты для чтения: data URL
-      if (lsSnapshot.readingFonts) {
-        for (const f of lsSnapshot.readingFonts) {
-          if (f.dataUrl) {
-            f._idb = true;
-            delete f.dataUrl;
-          }
+    // Шрифты для чтения: data URL
+    if (lsSnapshot.readingFonts) {
+      for (const f of lsSnapshot.readingFonts) {
+        if (f.dataUrl) {
+          f._idb = true;
+          delete f.dataUrl;
         }
       }
+    }
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(lsSnapshot));
-    } catch (err) {
-      console.warn('AdminConfigStore: localStorage сохранение не удалось', err.message);
+    if (!lsStorage.setFull(lsSnapshot)) {
+      console.warn('AdminConfigStore: localStorage сохранение не удалось');
     }
   }
 
@@ -491,7 +487,7 @@ export class AdminConfigStore {
   /** Удалить конфиг из IndexedDB и localStorage */
   clear() {
     this._idb.delete(STORAGE_KEY).catch(() => {});
-    localStorage.removeItem(STORAGE_KEY);
+    lsStorage.clear();
     this._config = structuredClone(DEFAULT_CONFIG);
   }
 }

@@ -94,12 +94,13 @@ describe('SwipeHint', () => {
       expect(mockEl.hidden).toBe(true);
     });
 
-    it('should not show if localStorage throws', () => {
+    it('should show hint even if localStorage throws (cannot check prior views)', () => {
       localStorage.getItem.mockImplementation(() => { throw new Error('Quota'); });
       const hint = new SwipeHint();
       hint.showIfNeeded();
 
-      expect(mockEl.hidden).toBe(true);
+      // StorageManager.getRaw() возвращает null при ошибке → подсказка показывается
+      expect(mockEl.hidden).toBe(false);
     });
   });
 
