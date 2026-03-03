@@ -4,6 +4,7 @@
  */
 
 import { vi, beforeEach, afterEach } from 'vitest';
+import { initI18n } from '@i18n';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MOCK: localStorage
@@ -316,7 +317,10 @@ global.IntersectionObserver = vi.fn().mockImplementation((callback) => ({
 // HOOKS: Очистка между тестами
 // ═══════════════════════════════════════════════════════════════════════════
 
-beforeEach(() => {
+beforeEach(async () => {
+  // Инициализируем i18n (русский язык по умолчанию для тестов)
+  await initI18n('ru');
+
   // Очищаем все моки
   vi.clearAllMocks();
 

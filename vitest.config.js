@@ -109,6 +109,7 @@ export default defineConfig({
       '@managers': resolve(__dirname, './js/managers'),
       '@core': resolve(__dirname, './js/core'),
       '@css': resolve(__dirname, './css'),
+      '@i18n': resolve(__dirname, './js/i18n'),
     },
   },
 });

@@ -21,6 +21,7 @@ export function bindSettingsControls(elements, eventManager, onSettings, getFont
     decreaseBtn,
     fontSizeValue,
     fontSelect,
+    languageSelect,
     themeSegmented,
     debugToggle,
     soundToggle,
@@ -49,6 +50,13 @@ export function bindSettingsControls(elements, eventManager, onSettings, getFont
   if (fontSelect) {
     eventManager.add(fontSelect, "change", (e) => {
       onSettings("font", e.target.value);
+    });
+  }
+
+  // Language select
+  if (languageSelect) {
+    eventManager.add(languageSelect, "change", (e) => {
+      onSettings("language", e.target.value);
     });
   }
 

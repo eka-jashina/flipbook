@@ -22,14 +22,8 @@
 
 import { ProfileHeader } from './ProfileHeader.js';
 import { adminConfigStorage } from '../config/configHelpers.js';
+import { t, applyTranslations } from '@i18n';
 const BOOKS_PER_SHELF = 5;
-
-/** Метки видимости книг */
-const VISIBILITY_LABELS = {
-  draft: 'Черновик',
-  unlisted: 'По ссылке',
-  published: 'Опубликована',
-};
 
 /** Циклическое переключение видимости */
 const VISIBILITY_NEXT = {
@@ -38,19 +32,35 @@ const VISIBILITY_NEXT = {
   unlisted: 'draft',
 };
 
+/**
+ * Метки видимости — вызываются как функции для актуального перевода.
+ * @param {string} vis - draft | unlisted | published
+ * @returns {string}
+ */
+function visibilityLabel(vis) {
+  const map = {
+    draft: 'bookshelf.visibilityDraft',
+    unlisted: 'bookshelf.visibilityUnlisted',
+    published: 'bookshelf.visibilityPublished',
+  };
+  return t(map[vis] || map.draft);
+}
+
 // Дефолтная книга для полки (когда нет конфига)
-const DEFAULT_BOOKSHELF_BOOK = {
-  id: 'default',
-  title: 'О хоббитах',
-  author: 'Дж.Р.Р.Толкин',
-  appearance: {
-    light: {
-      coverBgStart: '#3a2d1f',
-      coverBgEnd: '#2a2016',
-      coverText: '#f2e9d8',
+function getDefaultBook() {
+  return {
+    id: 'default',
+    title: t('bookshelf.defaultTitle'),
+    author: t('bookshelf.defaultAuthor'),
+    appearance: {
+      light: {
+        coverBgStart: '#3a2d1f',
+        coverBgEnd: '#2a2016',
+        coverText: '#f2e9d8',
+      },
     },
-  },
-};
+  };
+}
 
 export class BookshelfScreen {
   /**
@@ -125,7 +135,7 @@ export class BookshelfScreen {
       } else {
         // Guest: пустая полка — показываем сообщение
         if (shelves) shelves.hidden = true;
-        if (subtitle) subtitle.textContent = 'Книг пока нет';
+        if (subtitle) subtitle.textContent = t('bookshelf.emptyGuest');
       }
     } else {
       // Есть книги — показать полки
@@ -143,11 +153,14 @@ export class BookshelfScreen {
       if (isOwner && actions) actions.hidden = false;
       if (header) header.hidden = false;
       if (subtitle) {
-        subtitle.textContent = `${this.books.length} ${this._pluralize(this.books.length)}`;
+        subtitle.textContent = this._formatBooksCount(this.books.length);
       }
     }
 
     this.container.addEventListener('click', this._boundHandleClick);
+
+    // Обновить переводы в контейнере (для data-i18n атрибутов)
+    applyTranslations(this.container);
   }
 
   /**
@@ -251,7 +264,7 @@ export class BookshelfScreen {
     // Button
     const btn = frag.querySelector('.bookshelf-book');
     btn.dataset.bookId = book.id;
-    btn.setAttribute('aria-label', `Открыть книгу: ${title}`);
+    btn.setAttribute('aria-label', t('bookshelf.openBook', { title }));
 
     // Cover
     const cover = frag.querySelector('.bookshelf-book-cover');
@@ -265,7 +278,7 @@ export class BookshelfScreen {
     // Visibility badge (only in owner mode for non-published)
     const badge = frag.querySelector('.bookshelf-book-badge');
     if (isOwner && visibility !== 'published' && badge) {
-      badge.textContent = VISIBILITY_LABELS[visibility] || visibility;
+      badge.textContent = visibilityLabel(visibility);
       badge.hidden = false;
     }
 
@@ -289,7 +302,7 @@ export class BookshelfScreen {
       const visLabel = frag.querySelector('[data-visibility-label]');
       if (visLabel) {
         const nextVis = VISIBILITY_NEXT[visibility];
-        visLabel.textContent = VISIBILITY_LABELS[nextVis] ? `Сделать: ${VISIBILITY_LABELS[nextVis].toLowerCase()}` : 'Видимость';
+        visLabel.textContent = visibilityLabel(nextVis);
       }
     } else {
       // Guest mode: удалить контекстное меню
@@ -451,9 +464,9 @@ export class BookshelfScreen {
    */
   async _deleteBook(bookId) {
     const book = this.books.find(b => b.id === bookId);
-    const title = book?.title || book?.cover?.title || 'эту книгу';
+    const title = book?.title || book?.cover?.title || '';
 
-    if (!confirm(`Удалить «${title}»?`)) return;
+    if (!confirm(t('bookshelf.deleteConfirm', { title }))) return;
 
     if (this._api) {
       try {
@@ -479,15 +492,26 @@ export class BookshelfScreen {
   }
 
   /**
-   * Склонение слова "книга"
+   * Форматирование количества книг с учётом текущего языка
    * @private
+   * @param {number} count
+   * @returns {string}
    */
-  _pluralize(count) {
+  _formatBooksCount(count) {
+    // i18next plural keys: booksCount_one / booksCount_few / booksCount_many
     const mod10 = count % 10;
     const mod100 = count % 100;
-    if (mod10 === 1 && mod100 !== 11) return 'книга';
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'книги';
-    return 'книг';
+
+    let suffix;
+    if (mod10 === 1 && mod100 !== 11) {
+      suffix = 'one';
+    } else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+      suffix = 'few';
+    } else {
+      suffix = 'many';
+    }
+
+    return t(`bookshelf.booksCount_${suffix}`, { count });
   }
 }
 
@@ -507,11 +531,11 @@ export async function loadBooksFromAPI(apiClient) {
  */
 export function getBookshelfData() {
   const config = adminConfigStorage.load();
-  if (Object.keys(config).length === 0) return { books: [DEFAULT_BOOKSHELF_BOOK] };
+  if (Object.keys(config).length === 0) return { books: [getDefaultBook()] };
 
   const books = Array.isArray(config.books) && config.books.length
     ? config.books
-    : [DEFAULT_BOOKSHELF_BOOK];
+    : [getDefaultBook()];
 
   return { books };
 }
