@@ -19,7 +19,6 @@ import {
   deepFreeze,
   resolveAssetPath,
   resolveCoverBgFromCover,
-  resolveSound,
   getActiveBook,
   buildAmbientConfig,
   buildAmbientConfigFromAPI,
