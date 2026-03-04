@@ -5,6 +5,7 @@
  */
 
 import { BookParser } from '../BookParser.js';
+import { setupDropzone } from './adminHelpers.js';
 
 export class BookUploadManager {
   constructor(chaptersModule) {
@@ -29,21 +30,8 @@ export class BookUploadManager {
   }
 
   bindEvents() {
-    this.bookDropzone.addEventListener('click', () => this.bookFileInput.click());
+    setupDropzone(this.bookDropzone, this.bookFileInput, (file) => this._processBookFile(file));
     this.bookFileInput.addEventListener('change', (e) => this._handleBookUpload(e));
-    this.bookDropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      this.bookDropzone.classList.add('dragover');
-    });
-    this.bookDropzone.addEventListener('dragleave', () => {
-      this.bookDropzone.classList.remove('dragover');
-    });
-    this.bookDropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      this.bookDropzone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file) this._processBookFile(file);
-    });
     this.bookUploadConfirm.addEventListener('click', () => this._applyParsedBook());
     this.bookUploadCancel.addEventListener('click', () => this._resetBookUpload());
   }

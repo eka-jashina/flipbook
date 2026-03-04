@@ -98,6 +98,11 @@ export const listBooksQuerySchema = z.object({
 /** Max chapter HTML size: 2 MB */
 const MAX_HTML_CONTENT_LENGTH = 2 * 1024 * 1024;
 
+export const listChaptersQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
 export const createChapterSchema = z.object({
   title: z.string().min(1).max(500),
   htmlContent: z.string().max(MAX_HTML_CONTENT_LENGTH).optional(),

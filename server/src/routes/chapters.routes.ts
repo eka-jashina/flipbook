@@ -10,8 +10,8 @@ import {
   reorderChapters,
 } from '../services/chapters.service.js';
 import { requireAuth } from '../middleware/auth.js';
-import { validate } from '../middleware/validate.js';
-import { createChapterSchema, updateChapterSchema, reorderChaptersSchema } from '../schemas.js';
+import { validate, validateQuery } from '../middleware/validate.js';
+import { createChapterSchema, updateChapterSchema, reorderChaptersSchema, listChaptersQuerySchema } from '../schemas.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/response.js';
 
@@ -21,13 +21,16 @@ const router = Router({ mergeParams: true });
 router.use(requireAuth);
 
 /**
- * GET /api/books/:bookId/chapters — List chapters (meta only)
+ * GET /api/books/:bookId/chapters — List chapters (meta only, paginated)
+ * Query: ?limit=100&offset=0
  */
 router.get(
   '/',
+  validateQuery(listChaptersQuerySchema),
   asyncHandler(async (req, res) => {
-    const chapters = await getChapters(req.params.bookId as string);
-    ok(res, { chapters });
+    const { limit, offset } = req.query as { limit?: number; offset?: number };
+    const result = await getChapters(req.params.bookId as string, { limit, offset });
+    ok(res, result);
   }),
 );
 

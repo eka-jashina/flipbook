@@ -126,7 +126,7 @@ describe('FontsModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Допустимые форматы: .woff2, .woff, .ttf, .otf');
     });
 
-    it('should accept .woff2 files', () => {
+    it('should accept .woff2 files', async () => {
       const mockReader = {
         readAsDataURL: vi.fn(function () {
           this.result = 'data:font/woff2;base64,abc';
@@ -142,7 +142,7 @@ describe('FontsModule', () => {
         target: { files: [{ size: 1024, name: 'myfont.woff2' }], value: 'myfont.woff2' },
       };
 
-      mod._handleDecorativeFontUpload(event);
+      await mod._handleDecorativeFontUpload(event);
 
       expect(app.store.setDecorativeFont).toHaveBeenCalledWith({
         name: 'myfont',
@@ -153,7 +153,7 @@ describe('FontsModule', () => {
       global.FileReader = OriginalFileReader;
     });
 
-    it('should strip extension from font name', () => {
+    it('should strip extension from font name', async () => {
       const mockReader = {
         readAsDataURL: vi.fn(function () {
           this.result = 'data:abc';
@@ -169,7 +169,7 @@ describe('FontsModule', () => {
         target: { files: [{ size: 1024, name: 'My-Custom-Font.ttf' }], value: '' },
       };
 
-      mod._handleDecorativeFontUpload(event);
+      await mod._handleDecorativeFontUpload(event);
 
       const call = app.store.setDecorativeFont.mock.calls[0][0];
       expect(call.name).toBe('My-Custom-Font');
@@ -266,7 +266,7 @@ describe('FontsModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Допустимые форматы: .woff2, .woff, .ttf, .otf');
     });
 
-    it('should store pending data URL and update label', () => {
+    it('should store pending data URL and update label', async () => {
       const mockReader = {
         readAsDataURL: vi.fn(function () {
           this.result = 'data:font;base64,xyz';
@@ -282,7 +282,7 @@ describe('FontsModule', () => {
         target: { files: [{ size: 1024, name: 'custom.woff2' }], value: 'custom.woff2' },
       };
 
-      mod._handleReadingFontFileUpload(event);
+      await mod._handleReadingFontFileUpload(event);
 
       expect(mod._pendingReadingFontDataUrl).toBe('data:font;base64,xyz');
       expect(mod.readingFontUploadLabel.textContent).toBe('custom.woff2');

@@ -2,6 +2,7 @@
  * Модуль управления шрифтами (декоративный + шрифты для чтения)
  */
 import { BaseModule } from './BaseModule.js';
+import { readFileAsDataURL } from './adminHelpers.js';
 
 const FONT_EXTENSIONS = ['.woff2', '.woff', '.ttf', '.otf'];
 // Reader loads admin config from localStorage; data URL expands file size (~33%),
@@ -69,22 +70,18 @@ export class FontsModule extends BaseModule {
     }
   }
 
-  _handleDecorativeFontUpload(e) {
+  async _handleDecorativeFontUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!this._validateFile(file, { maxSize: MAX_DECORATIVE_FONT_SIZE, extensions: FONT_EXTENSIONS, inputEl: e.target })) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      const name = file.name.replace(/\.[^.]+$/, '');
-      this.store.setDecorativeFont({ name, dataUrl });
-      this._renderDecorativeFont();
-      this._renderJsonPreview();
-      this._showToast('Декоративный шрифт загружен');
-    };
-    reader.readAsDataURL(file);
+    const dataUrl = await readFileAsDataURL(file);
+    const name = file.name.replace(/\.[^.]+$/, '');
+    this.store.setDecorativeFont({ name, dataUrl });
+    this._renderDecorativeFont();
+    this._renderJsonPreview();
+    this._showToast('Декоративный шрифт загружен');
     e.target.value = '';
   }
 
@@ -178,18 +175,14 @@ export class FontsModule extends BaseModule {
     this.readingFontModal.showModal();
   }
 
-  _handleReadingFontFileUpload(e) {
+  async _handleReadingFontFileUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, extensions: FONT_EXTENSIONS, inputEl: e.target })) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this._pendingReadingFontDataUrl = reader.result;
-      this.readingFontUploadLabel.textContent = file.name;
-    };
-    reader.readAsDataURL(file);
+    this._pendingReadingFontDataUrl = await readFileAsDataURL(file);
+    this.readingFontUploadLabel.textContent = file.name;
     e.target.value = '';
   }
 
