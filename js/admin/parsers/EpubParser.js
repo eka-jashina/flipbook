@@ -7,32 +7,7 @@
 
 import JSZip from 'jszip';
 import { escapeHtml, parseXml, parseHtml, getTextContent } from './parserUtils.js';
-
-/** Максимальный суммарный размер распакованных данных (100 MB) */
-const MAX_DECOMPRESSED_SIZE = 100 * 1024 * 1024;
-
-/**
- * Проверить суммарный размер распакованных файлов в ZIP-архиве (защита от ZIP-бомб).
- * @param {JSZip} zip
- * @throws {Error} Если суммарный размер превышает лимит
- */
-async function validateZipSize(zip) {
-  let totalSize = 0;
-  for (const [, entry] of Object.entries(zip.files)) {
-    if (entry.dir) continue;
-    // JSZip хранит _data.uncompressedSize для загруженных архивов
-    const entryData = entry._data;
-    if (entryData && entryData.uncompressedSize !== undefined && entryData.uncompressedSize !== null) {
-      totalSize += entryData.uncompressedSize;
-    }
-    if (totalSize > MAX_DECOMPRESSED_SIZE) {
-      throw new Error(
-        `Распакованный размер архива превышает лимит (${Math.round(MAX_DECOMPRESSED_SIZE / 1024 / 1024)} МБ). ` +
-        `Возможно, файл повреждён.`
-      );
-    }
-  }
-}
+import { validateZipSize, findZipFile } from './BaseParser.js';
 
 /**
  * Парсинг EPUB файла
@@ -147,61 +122,6 @@ async function readZipFile(zip, path) {
     throw new Error(`Файл не найден в архиве: ${path}`);
   }
   return file.async('string');
-}
-
-/**
- * Найти файл в ZIP-архиве с учётом URL-кодирования, регистра и т.д.
- * EPUB-файлы из разных генераторов хранят пути по-разному:
- * OPF может ссылаться на URL-кодированный путь, а ZIP содержит декодированный (или наоборот).
- */
-function findZipFile(zip, path) {
-  // Убираем фрагмент (#section) и начальный слеш
-  const noFragment = path.split('#')[0];
-  const cleanPath = noFragment.startsWith('/') ? noFragment.substring(1) : noFragment;
-
-  // 1. Точное совпадение
-  let file = zip.file(cleanPath);
-  if (file) return file;
-
-  // 2. URL-декодированный путь (OPF: %D0%93%D0%BB%D0%B0%D0%B2%D0%B0.xhtml → ZIP: Глава.xhtml)
-  try {
-    const decoded = decodeURIComponent(cleanPath);
-    if (decoded !== cleanPath) {
-      file = zip.file(decoded);
-      if (file) return file;
-    }
-  } catch { /* невалидный URI — пропускаем */ }
-
-  // 3. URL-кодированный путь (OPF: Глава.xhtml → ZIP: %D0%93...xhtml)
-  try {
-    const encoded = cleanPath.split('/').map(p => encodeURIComponent(p)).join('/');
-    if (encoded !== cleanPath) {
-      file = zip.file(encoded);
-      if (file) return file;
-    }
-  } catch { /* */ }
-
-  // 4. Регистронезависимый поиск (некоторые архиваторы меняют регистр)
-  const lowerPath = cleanPath.toLowerCase();
-  for (const [name, entry] of Object.entries(zip.files)) {
-    if (!entry.dir && name.toLowerCase() === lowerPath) {
-      return entry;
-    }
-  }
-
-  // 5. Также попробовать декодированный вариант регистронезависимо
-  try {
-    const decodedLower = decodeURIComponent(cleanPath).toLowerCase();
-    if (decodedLower !== lowerPath) {
-      for (const [name, entry] of Object.entries(zip.files)) {
-        if (!entry.dir && name.toLowerCase() === decodedLower) {
-          return entry;
-        }
-      }
-    }
-  } catch { /* */ }
-
-  return null;
 }
 
 // --- Изображения ---

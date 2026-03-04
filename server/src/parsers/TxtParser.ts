@@ -6,13 +6,14 @@
  */
 
 import { escapeHtml, type ParsedBook } from './parserUtils.js';
+import { createChapter, wrapChapterHtml, titleFromFilename } from './BaseParser.js';
 
 /**
  * Парсинг TXT из Buffer
  */
 export function parseTxt(buffer: Buffer, filename: string): ParsedBook {
   const text = buffer.toString('utf-8');
-  const title = filename.replace(/\.txt$/i, '');
+  const title = titleFromFilename(filename);
 
   if (!text.trim()) {
     throw new Error('Файл пуст');
@@ -30,10 +31,6 @@ export function parseTxt(buffer: Buffer, filename: string): ParsedBook {
   return {
     title,
     author: '',
-    chapters: [{
-      id: 'chapter_1',
-      title,
-      html: `<article>\n<h2>${escapeHtml(title)}</h2>\n${html}\n</article>`,
-    }],
+    chapters: [createChapter(0, title, wrapChapterHtml(title, html))],
   };
 }

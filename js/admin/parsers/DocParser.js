@@ -13,6 +13,7 @@
  */
 
 import { escapeHtml } from './parserUtils.js';
+import { createChapter, wrapChapterHtml, titleFromFilename } from './BaseParser.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Константы OLE2
@@ -64,7 +65,7 @@ const CP1252_MAP = {
  * @returns {Promise<import('../BookParser.js').ParsedBook>}
  */
 export async function parseDoc(file) {
-  const title = file.name.replace(/\.doc$/i, '');
+  const title = titleFromFilename(file.name);
   const buffer = await file.arrayBuffer();
   const text = extractDocText(buffer);
 
@@ -83,11 +84,7 @@ export async function parseDoc(file) {
   return {
     title,
     author: '',
-    chapters: [{
-      id: 'chapter_1',
-      title,
-      html: `<article>\n<h2>${escapeHtml(title)}</h2>\n${html}\n</article>`,
-    }],
+    chapters: [createChapter(0, title, wrapChapterHtml(title, html))],
   };
 }
 

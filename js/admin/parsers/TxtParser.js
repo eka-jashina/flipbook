@@ -6,6 +6,7 @@
  */
 
 import { escapeHtml } from './parserUtils.js';
+import { createChapter, wrapChapterHtml, titleFromFilename } from './BaseParser.js';
 
 /**
  * Парсинг TXT файла
@@ -14,7 +15,7 @@ import { escapeHtml } from './parserUtils.js';
  */
 export async function parseTxt(file) {
   const text = await file.text();
-  const title = file.name.replace(/\.txt$/i, '');
+  const title = titleFromFilename(file.name);
 
   if (!text.trim()) {
     throw new Error('Файл пуст');
@@ -32,10 +33,6 @@ export async function parseTxt(file) {
   return {
     title,
     author: '',
-    chapters: [{
-      id: 'chapter_1',
-      title,
-      html: `<article>\n<h2>${escapeHtml(title)}</h2>\n${html}\n</article>`,
-    }],
+    chapters: [createChapter(0, title, wrapChapterHtml(title, html))],
   };
 }

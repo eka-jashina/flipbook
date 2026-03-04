@@ -8,6 +8,7 @@
 import JSZip from 'jszip';
 import { JSDOM } from 'jsdom';
 import { escapeHtml, parseXml, parseHtml, getTextContent, type ParsedBook, type ParsedChapter } from './parserUtils.js';
+import { validateZipSize, findZipFile } from './BaseParser.js';
 
 const { Node: NodeType } = new JSDOM('').window;
 const TEXT_NODE = NodeType.TEXT_NODE;
@@ -15,6 +16,9 @@ const ELEMENT_NODE = NodeType.ELEMENT_NODE;
 
 export async function parseEpub(buffer: Buffer, filename: string): Promise<ParsedBook> {
   const zip = await JSZip.loadAsync(buffer);
+
+  // Защита от ZIP-бомб
+  await validateZipSize(zip);
 
   // 1. Найти путь к content.opf через META-INF/container.xml
   const containerXml = await readZipFile(zip, 'META-INF/container.xml');
@@ -106,50 +110,6 @@ async function readZipFile(zip: JSZip, path: string): Promise<string> {
     throw new Error(`Файл не найден в архиве: ${path}`);
   }
   return file.async('string');
-}
-
-function findZipFile(zip: JSZip, path: string): JSZip.JSZipObject | null {
-  const noFragment = path.split('#')[0];
-  const cleanPath = noFragment.startsWith('/') ? noFragment.substring(1) : noFragment;
-
-  let file = zip.file(cleanPath);
-  if (file) return file;
-
-  try {
-    const decoded = decodeURIComponent(cleanPath);
-    if (decoded !== cleanPath) {
-      file = zip.file(decoded);
-      if (file) return file;
-    }
-  } catch { /* */ }
-
-  try {
-    const encoded = cleanPath.split('/').map(p => encodeURIComponent(p)).join('/');
-    if (encoded !== cleanPath) {
-      file = zip.file(encoded);
-      if (file) return file;
-    }
-  } catch { /* */ }
-
-  const lowerPath = cleanPath.toLowerCase();
-  for (const [name, entry] of Object.entries(zip.files)) {
-    if (!entry.dir && name.toLowerCase() === lowerPath) {
-      return entry;
-    }
-  }
-
-  try {
-    const decodedLower = decodeURIComponent(cleanPath).toLowerCase();
-    if (decodedLower !== lowerPath) {
-      for (const [name, entry] of Object.entries(zip.files)) {
-        if (!entry.dir && name.toLowerCase() === decodedLower) {
-          return entry;
-        }
-      }
-    }
-  } catch { /* */ }
-
-  return null;
 }
 
 // --- Изображения ---
