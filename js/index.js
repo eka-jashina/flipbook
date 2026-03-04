@@ -34,6 +34,9 @@ import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
 import { photoLightbox } from './utils/PhotoLightbox.js';
 import { initI18n, t, applyTranslations } from '@i18n';
+import { StorageManager } from './utils/StorageManager.js';
+
+const languageStorage = new StorageManager('flipbook-language');
 
 // Catch unhandled promise rejections globally so they don't vanish silently
 window.addEventListener('unhandledrejection', (event) => {
@@ -571,7 +574,7 @@ async function init() {
     }
 
     // Инициализируем i18n: язык берём из localStorage (reader-settings) или 'auto'
-    const savedLang = localStorage.getItem('flipbook-language') || 'auto';
+    const savedLang = languageStorage.getRaw() || 'auto';
     await initI18n(savedLang);
     applyTranslations();
 
