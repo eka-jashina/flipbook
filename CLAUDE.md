@@ -55,6 +55,7 @@ cd server && npm run dev       # Start backend dev server (port 4000, tsx watch)
 cd server && npm run db:migrate # Run Prisma migrations
 cd server && npm run db:seed    # Seed database with test data
 cd server && npm run db:studio  # Open Prisma Studio GUI
+cd server && npm run db:backup  # Backup PostgreSQL database
 cd server && npm run test       # Run server tests (Vitest + supertest)
 
 # Docker (full stack)
@@ -81,6 +82,11 @@ npm run test:k6:soak    # Soak test (30 VU, 30 min)
 npm run test:k6:docker:smoke   # Docker-based smoke test
 npm run test:k6:docker:load    # Docker-based load test
 npm run test:k6:docker:stress  # Docker-based stress test
+
+# Infrastructure & Observability
+npm run infra:observability    # Start Loki + Grafana + DB backup stack
+npm run infra:backup           # Run manual database backup
+cd server && npm run db:backup # Alternative: backup via server script
 
 # Linting
 npm run lint         # Run ESLint + Stylelint
@@ -368,6 +374,7 @@ flipbook/
 │   │   │   ├── public.service.ts     # Public discovery & author shelves
 │   │   │   └── exportImport.service.ts # Export/import
 │   │   ├── parsers/              # Server-side book parsers
+│   │   │   ├── BaseParser.ts         # Abstract base parser (shared utilities, error handling)
 │   │   │   ├── BookParser.ts         # Parser dispatch
 │   │   │   ├── parserUtils.ts        # Shared parser utilities
 │   │   │   ├── TxtParser.ts          # Plain text (.txt)
@@ -380,7 +387,7 @@ flipbook/
 │   │   │   ├── storage.ts            # S3 storage operations
 │   │   │   ├── sanitize.ts           # HTML sanitization
 │   │   │   ├── password.ts           # Password hashing (bcrypt)
-│   │   │   ├── logger.ts             # Pino logger
+│   │   │   ├── logger.ts             # Pino logger (with pino-loki integration)
 │   │   │   ├── mappers.ts            # DB→API response mappers
 │   │   │   ├── defaults.ts           # Default values
 │   │   │   ├── limits.ts             # Upload size limits
@@ -428,14 +435,25 @@ flipbook/
 │       ├── flows/            # Test scenarios (6 files incl. offline)
 │       └── performance/      # Performance tests
 │
-├── scripts/                   # Build scripts
-│   └── generate-icons.js     # PWA icon generation (sharp)
+├── scripts/                   # Build & maintenance scripts
+│   ├── generate-icons.js     # PWA icon generation (sharp)
+│   ├── backup-db.sh          # PostgreSQL backup with retention
+│   └── cleanup-s3-orphans.sh # Remove orphaned S3 files not referenced in DB
+│
+├── infra/                     # Infrastructure configuration
+│   ├── loki-config.yaml      # Loki log aggregation config (14-day retention)
+│   └── grafana-datasources.yaml # Grafana data source provisioning
+│
+├── .github/workflows/         # CI/CD pipelines
+│   ├── deploy.yml            # Frontend: Lint → Test → E2E → Build → Deploy (GitHub Pages)
+│   └── server-tests.yml      # Server API tests (PostgreSQL service, Prisma migrations)
 │
 ├── .husky/                    # Git hooks (pre-commit linting via lint-staged)
 ├── .nvmrc                     # Node.js version (22)
 ├── Dockerfile                # Full-stack Docker build (frontend + server)
 ├── docker-compose.yml        # Docker Compose (PostgreSQL + MinIO + server)
 ├── docker-compose.k6.yml     # Docker Compose overlay for K6 load testing
+├── docker-compose.observability.yml # Docker Compose overlay (Loki + Grafana + DB backup)
 ├── amvera.yml                # Amvera Cloud deployment config
 ├── railway.toml              # Railway deployment config
 ├── DEPLOYMENT.md             # Deployment guide (Amvera + Cloud.ru S3)
@@ -990,11 +1008,16 @@ Build includes:
 
 ### GitHub Pages Deployment
 
-Automatic via GitHub Actions on push to `main`:
-1. **Lint** — ESLint + Stylelint
-2. **Test** — Unit + integration tests (parallel with lint)
-3. **Build** — Production build (after lint + test pass)
-4. **Deploy** — Upload to GitHub Pages
+Automatic via GitHub Actions (`deploy.yml`) on push to `main`:
+1. **Lint** — ESLint + Stylelint (10 min timeout)
+2. **Test** — Unit + integration tests (10 min timeout, parallel with lint)
+3. **E2E** — Playwright tests on Chromium (15 min timeout)
+4. **Build** — Production build (after lint + test + e2e pass)
+5. **Deploy** — Upload to GitHub Pages
+
+Separate workflow (`server-tests.yml`) runs server API tests on `server/` changes:
+- PostgreSQL 17 test service
+- Prisma migrations + Vitest + supertest
 
 Base path configured via environment variable:
 ```javascript
@@ -1008,6 +1031,23 @@ A root-level `Dockerfile` builds both frontend and server into a single image:
 - Multi-stage build: frontend (Vite) → server (tsc) → production image
 - Configured for Amvera Cloud (`amvera.yml`) and Railway (`railway.toml`)
 - See `DEPLOYMENT.md` for step-by-step guide (Amvera + Cloud.ru S3)
+
+### Observability & Infrastructure
+
+```bash
+npm run infra:observability    # Start observability stack via Docker Compose overlay
+npm run infra:backup           # Manual database backup
+```
+
+Observability stack (`docker-compose.observability.yml`):
+- **Loki** — Log aggregation (port 3200, 14-day retention)
+- **Grafana** — Dashboards (port 3100, default: admin/admin)
+- **pg-backup** — Daily PostgreSQL backup (3:00 UTC cron, 7-day rotation)
+- Server logs shipped via `pino-loki` integration
+
+DevOps scripts (`scripts/`):
+- `backup-db.sh` — PostgreSQL backup with gzip compression and configurable retention
+- `cleanup-s3-orphans.sh` — Identify/remove orphaned S3 files (dry-run or --delete mode)
 
 ## Dependencies
 
@@ -1040,6 +1080,7 @@ A root-level `Dockerfile` builds both frontend and server into a single image:
 - **helmet** `^8.0.0` — Security headers
 - **pino** `^9.0.0` — Structured logging
 - **pino-http** `^10.5.0` — HTTP request logging
+- **pino-loki** `^2.6.0` — Log shipping to Grafana Loki
 - **bcrypt** `^5.1.0` — Password hashing
 - **csrf-csrf** `^4.0.3` — CSRF protection
 - **express-rate-limit** `^7.0.0` — Rate limiting
