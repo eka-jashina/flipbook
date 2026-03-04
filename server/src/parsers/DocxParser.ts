@@ -7,10 +7,14 @@
 
 import JSZip from 'jszip';
 import { escapeHtml, parseXml, getTextContent, type ParsedBook } from './parserUtils.js';
+import { validateZipSize, createChapter, wrapChapterHtml, titleFromFilename } from './BaseParser.js';
 
 export async function parseDocx(buffer: Buffer, filename: string): Promise<ParsedBook> {
   const zip = await JSZip.loadAsync(buffer);
-  const title = filename.replace(/\.docx$/i, '');
+
+  // Защита от ZIP-бомб
+  await validateZipSize(zip);
+  const title = titleFromFilename(filename);
 
   // Метаданные из docProps/core.xml
   let author = '';
@@ -49,11 +53,7 @@ export async function parseDocx(buffer: Buffer, filename: string): Promise<Parse
   return {
     title: finalTitle,
     author,
-    chapters: [{
-      id: 'chapter_1',
-      title: finalTitle,
-      html: `<article>\n<h2>${escapeHtml(finalTitle)}</h2>\n${html}\n</article>`,
-    }],
+    chapters: [createChapter(0, finalTitle, wrapChapterHtml(finalTitle, html))],
   };
 }
 

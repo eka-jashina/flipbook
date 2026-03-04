@@ -7,6 +7,7 @@
 
 import { JSDOM } from 'jsdom';
 import { escapeHtml, parseXml, type ParsedBook, type ParsedChapter } from './parserUtils.js';
+import { titleFromFilename } from './BaseParser.js';
 
 const { Node: NodeType } = new JSDOM('').window;
 const TEXT_NODE = NodeType.TEXT_NODE;
@@ -21,7 +22,7 @@ export function parseFb2(buffer: Buffer, filename: string): ParsedBook {
 
   // Метаданные
   const titleInfo = doc.querySelector('title-info');
-  const title = getFb2Text(titleInfo, 'book-title') || filename.replace(/\.fb2$/i, '');
+  const title = getFb2Text(titleInfo, 'book-title') || titleFromFilename(filename);
   const authorFirst = getFb2Text(titleInfo, 'author first-name') || '';
   const authorMiddle = getFb2Text(titleInfo, 'author middle-name') || '';
   const authorLast = getFb2Text(titleInfo, 'author last-name') || '';

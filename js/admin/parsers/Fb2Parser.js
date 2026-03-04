@@ -6,6 +6,7 @@
  */
 
 import { escapeHtml, parseXml } from './parserUtils.js';
+import { titleFromFilename } from './BaseParser.js';
 
 /** Максимальная глубина рекурсии при парсинге вложенных секций */
 const MAX_SECTION_DEPTH = 100;
@@ -21,7 +22,7 @@ export async function parseFb2(file) {
 
   // Метаданные
   const titleInfo = doc.querySelector('title-info');
-  const title = getFb2Text(titleInfo, 'book-title') || file.name.replace(/\.fb2$/i, '');
+  const title = getFb2Text(titleInfo, 'book-title') || titleFromFilename(file.name);
   const authorFirst = getFb2Text(titleInfo, 'author first-name') || '';
   const authorMiddle = getFb2Text(titleInfo, 'author middle-name') || '';
   const authorLast = getFb2Text(titleInfo, 'author last-name') || '';

@@ -7,6 +7,7 @@
  */
 
 import { escapeHtml, type ParsedBook } from './parserUtils.js';
+import { createChapter, wrapChapterHtml, titleFromFilename } from './BaseParser.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Константы OLE2
@@ -35,7 +36,7 @@ const CP1252_MAP: Record<number, number> = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function parseDoc(buffer: Buffer, filename: string): ParsedBook {
-  const title = filename.replace(/\.doc$/i, '');
+  const title = titleFromFilename(filename);
   const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
   const text = extractDocText(arrayBuffer);
 
@@ -54,11 +55,7 @@ export function parseDoc(buffer: Buffer, filename: string): ParsedBook {
   return {
     title,
     author: '',
-    chapters: [{
-      id: 'chapter_1',
-      title,
-      html: `<article>\n<h2>${escapeHtml(title)}</h2>\n${html}\n</article>`,
-    }],
+    chapters: [createChapter(0, title, wrapChapterHtml(title, html))],
   };
 }
 

@@ -7,31 +7,7 @@
 
 import JSZip from 'jszip';
 import { escapeHtml, parseXml, getTextContent } from './parserUtils.js';
-
-/** Максимальный суммарный размер распакованных данных (100 MB) */
-const MAX_DECOMPRESSED_SIZE = 100 * 1024 * 1024;
-
-/**
- * Проверить суммарный размер распакованных файлов в ZIP-архиве (защита от ZIP-бомб).
- * @param {JSZip} zip
- * @throws {Error} Если суммарный размер превышает лимит
- */
-async function validateZipSize(zip) {
-  let totalSize = 0;
-  for (const [, entry] of Object.entries(zip.files)) {
-    if (entry.dir) continue;
-    const entryData = entry._data;
-    if (entryData && entryData.uncompressedSize !== undefined && entryData.uncompressedSize !== null) {
-      totalSize += entryData.uncompressedSize;
-    }
-    if (totalSize > MAX_DECOMPRESSED_SIZE) {
-      throw new Error(
-        `Распакованный размер архива превышает лимит (${Math.round(MAX_DECOMPRESSED_SIZE / 1024 / 1024)} МБ). ` +
-        `Возможно, файл повреждён.`
-      );
-    }
-  }
-}
+import { validateZipSize, createChapter, wrapChapterHtml, titleFromFilename } from './BaseParser.js';
 
 /**
  * Парсинг DOCX файла
@@ -43,7 +19,7 @@ export async function parseDocx(file) {
 
   // Защита от ZIP-бомб
   await validateZipSize(zip);
-  const title = file.name.replace(/\.docx$/i, '');
+  const title = titleFromFilename(file.name);
 
   // Метаданные из docProps/core.xml
   let author = '';
@@ -83,11 +59,7 @@ export async function parseDocx(file) {
   return {
     title: finalTitle,
     author,
-    chapters: [{
-      id: 'chapter_1',
-      title: finalTitle,
-      html: `<article>\n<h2>${escapeHtml(finalTitle)}</h2>\n${html}\n</article>`,
-    }],
+    chapters: [createChapter(0, finalTitle, wrapChapterHtml(finalTitle, html))],
   };
 }
 
