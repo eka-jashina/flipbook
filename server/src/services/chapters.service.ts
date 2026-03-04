@@ -4,6 +4,7 @@ import { RESOURCE_LIMITS } from '../utils/limits.js';
 import { bulkUpdatePositions } from '../utils/reorder.js';
 import { withSerializableRetry } from '../utils/serializable.js';
 import { sanitizeHtml } from '../utils/sanitize.js';
+import { mapChapterToListItem, mapChapterToDetail } from '../utils/mappers.js';
 import type { ChapterListItem, ChapterDetail } from '../types/api.js';
 
 interface PaginatedChapters {
@@ -37,15 +38,7 @@ export async function getChapters(
   ]);
 
   return {
-    chapters: chapters.map((ch) => ({
-      id: ch.id,
-      title: ch.title,
-      position: ch.position,
-      filePath: ch.filePath,
-      hasHtmlContent: ch.htmlContent !== null,
-      bg: ch.bg,
-      bgMobile: ch.bgMobile,
-    })),
+    chapters: chapters.map(mapChapterToListItem),
     total,
     limit,
     offset,
@@ -69,16 +62,7 @@ export async function getChapterById(
     throw new AppError(404, 'Chapter not found');
   }
 
-  return {
-    id: chapter.id,
-    title: chapter.title,
-    position: chapter.position,
-    filePath: chapter.filePath,
-    hasHtmlContent: chapter.htmlContent !== null,
-    bg: chapter.bg,
-    bgMobile: chapter.bgMobile,
-    htmlContent: chapter.htmlContent,
-  };
+  return mapChapterToDetail(chapter);
 }
 
 /**
@@ -145,16 +129,7 @@ export async function createChapter(
     });
   });
 
-  return {
-    id: chapter.id,
-    title: chapter.title,
-    position: chapter.position,
-    filePath: chapter.filePath,
-    hasHtmlContent: chapter.htmlContent !== null,
-    bg: chapter.bg,
-    bgMobile: chapter.bgMobile,
-    htmlContent: chapter.htmlContent,
-  };
+  return mapChapterToDetail(chapter);
 }
 
 /**
@@ -204,16 +179,7 @@ export async function updateChapter(
     },
   });
 
-  return {
-    id: updated.id,
-    title: updated.title,
-    position: updated.position,
-    filePath: updated.filePath,
-    hasHtmlContent: updated.htmlContent !== null,
-    bg: updated.bg,
-    bgMobile: updated.bgMobile,
-    htmlContent: updated.htmlContent,
-  };
+  return mapChapterToDetail(updated);
 }
 
 /**

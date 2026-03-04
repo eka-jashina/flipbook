@@ -1,5 +1,6 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { mapSoundsToDto } from '../utils/mappers.js';
 import type { SoundsDetail } from '../types/api.js';
 
 /**
@@ -18,11 +19,7 @@ export async function getSounds(
     throw new AppError(404, 'Sounds not found');
   }
 
-  return {
-    pageFlip: sounds.pageFlipUrl,
-    bookOpen: sounds.bookOpenUrl,
-    bookClose: sounds.bookCloseUrl,
-  };
+  return mapSoundsToDto(sounds);
 }
 
 /**
@@ -45,9 +42,5 @@ export async function updateSounds(
     update: updateData,
   });
 
-  return {
-    pageFlip: sounds.pageFlipUrl,
-    bookOpen: sounds.bookOpenUrl,
-    bookClose: sounds.bookCloseUrl,
-  };
+  return mapSoundsToDto(sounds);
 }

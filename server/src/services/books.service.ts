@@ -5,12 +5,8 @@ import { bulkUpdatePositions } from '../utils/reorder.js';
 import { withSerializableRetry } from '../utils/serializable.js';
 import { logger } from '../utils/logger.js';
 import {
-  mapAppearanceToDto,
-  mapSoundsToDto,
-  mapDefaultSettingsToDto,
-  mapAmbientToDto,
-  mapChapterToListItem,
-  mapDecorativeFontToDto,
+  mapBookToDetail,
+  mapBookToListItem,
 } from '../utils/mappers.js';
 import type { BookListItem, BookDetail } from '../types/api.js';
 
@@ -62,32 +58,7 @@ export async function getUserBooks(
   ]);
 
   return {
-    books: books.map((book) => ({
-      id: book.id,
-      title: book.title,
-      author: book.author,
-      position: book.position,
-      visibility: book.visibility,
-      description: book.description,
-      chaptersCount: book._count.chapters,
-      coverBgMode: book.coverBgMode,
-      appearance: book.appearance
-        ? {
-            light: {
-              coverBgStart: book.appearance.lightCoverBgStart,
-              coverBgEnd: book.appearance.lightCoverBgEnd,
-              coverText: book.appearance.lightCoverText,
-            },
-          }
-        : null,
-      readingProgress:
-        book.readingProgress.length > 0
-          ? {
-              page: book.readingProgress[0].page,
-              updatedAt: book.readingProgress[0].updatedAt.toISOString(),
-            }
-          : null,
-    })),
+    books: books.map(mapBookToListItem),
     total,
     limit,
     offset,
@@ -124,34 +95,7 @@ export async function getBookById(
   }
 
   // Ownership verified by requireBookOwnership middleware
-  return {
-    id: book.id,
-    title: book.title,
-    author: book.author,
-    visibility: book.visibility,
-    description: book.description,
-    publishedAt: book.publishedAt?.toISOString() ?? null,
-    cover: {
-      bg: book.coverBg,
-      bgMobile: book.coverBgMobile,
-      bgMode: book.coverBgMode,
-      bgCustomUrl: book.coverBgCustomUrl,
-    },
-    chapters: book.chapters.map(mapChapterToListItem),
-    defaultSettings: book.defaultSettings
-      ? mapDefaultSettingsToDto(book.defaultSettings)
-      : null,
-    appearance: book.appearance
-      ? mapAppearanceToDto(book.appearance)
-      : null,
-    sounds: book.sounds
-      ? mapSoundsToDto(book.sounds)
-      : null,
-    ambients: book.ambients.map(mapAmbientToDto),
-    decorativeFont: book.decorativeFont
-      ? mapDecorativeFontToDto(book.decorativeFont)
-      : null,
-  };
+  return mapBookToDetail(book);
 }
 
 /**
