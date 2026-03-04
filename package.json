@@ -39,6 +39,8 @@
     "test:k6:docker:smoke": "docker compose -f docker-compose.yml -f docker-compose.k6.yml run --rm k6 run /scripts/scenarios/smoke.js",
     "test:k6:docker:load": "docker compose -f docker-compose.yml -f docker-compose.k6.yml run --rm k6 run /scripts/scenarios/load.js",
     "test:k6:docker:stress": "docker compose -f docker-compose.yml -f docker-compose.k6.yml run --rm k6 run /scripts/scenarios/stress.js",
+    "infra:observability": "docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d",
+    "infra:backup": "docker compose -f docker-compose.yml -f docker-compose.observability.yml run --rm pg-backup",
     "lint": "npm run lint:js && npm run lint:css",
     "lint:js": "eslint js/",
     "lint:css": "stylelint \"css/**/*.css\"",

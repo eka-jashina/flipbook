@@ -4,17 +4,13 @@ import { RESOURCE_LIMITS } from '../utils/limits.js';
 import { bulkUpdatePositions } from '../utils/reorder.js';
 import { withSerializableRetry } from '../utils/serializable.js';
 import { logger } from '../utils/logger.js';
+import { mapReadingFontToDto } from '../utils/mappers.js';
 import type { ReadingFontItem } from '../types/api.js';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapFont(f: any): ReadingFontItem {
-  return { id: f.id, fontKey: f.fontKey, label: f.label, family: f.family, builtin: f.builtin, enabled: f.enabled, fileUrl: f.fileUrl, position: f.position };
-}
 
 export async function getReadingFonts(userId: string): Promise<ReadingFontItem[]> {
   const prisma = getPrisma();
   const fonts = await prisma.readingFont.findMany({ where: { userId }, orderBy: { position: 'asc' } });
-  return fonts.map(mapFont);
+  return fonts.map(mapReadingFontToDto);
 }
 
 export async function createReadingFont(userId: string, data: { fontKey: string; label: string; family: string; builtin?: boolean; enabled?: boolean; fileUrl?: string }): Promise<ReadingFontItem> {
@@ -29,7 +25,7 @@ export async function createReadingFont(userId: string, data: { fontKey: string;
       data: { userId, fontKey: data.fontKey, label: data.label, family: data.family, builtin: data.builtin ?? false, enabled: data.enabled ?? true, fileUrl: data.fileUrl || null, position: (last?.position ?? -1) + 1 },
     });
   });
-  return mapFont(font);
+  return mapReadingFontToDto(font);
 }
 
 export async function updateReadingFont(fontId: string, userId: string, data: { label?: string; family?: string; enabled?: boolean; fileUrl?: string | null }): Promise<ReadingFontItem> {
@@ -41,7 +37,7 @@ export async function updateReadingFont(fontId: string, userId: string, data: { 
     where: { id: fontId },
     data: { ...(data.label !== undefined && { label: data.label }), ...(data.family !== undefined && { family: data.family }), ...(data.enabled !== undefined && { enabled: data.enabled }), ...(data.fileUrl !== undefined && { fileUrl: data.fileUrl }) },
   });
-  return mapFont(updated);
+  return mapReadingFontToDto(updated);
 }
 
 export async function deleteReadingFont(fontId: string, userId: string): Promise<void> {

@@ -1,5 +1,6 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { mapReadingProgressToDto } from '../utils/mappers.js';
 import type { ReadingProgressDetail } from '../types/api.js';
 
 export async function getReadingProgress(bookId: string, userId: string): Promise<ReadingProgressDetail | null> {
@@ -12,17 +13,7 @@ export async function getReadingProgress(bookId: string, userId: string): Promis
 
   if (!progress) return null;
 
-  return {
-    page: progress.page,
-    font: preferences?.font ?? 'georgia',
-    fontSize: preferences?.fontSize ?? 18,
-    theme: preferences?.theme ?? 'light',
-    soundEnabled: preferences?.soundEnabled ?? true,
-    soundVolume: preferences?.soundVolume ?? 0.3,
-    ambientType: preferences?.ambientType ?? 'none',
-    ambientVolume: preferences?.ambientVolume ?? 0.5,
-    updatedAt: progress.updatedAt.toISOString(),
-  };
+  return mapReadingProgressToDto(progress, preferences);
 }
 
 export async function upsertReadingProgress(
@@ -74,13 +65,7 @@ export async function upsertReadingProgress(
 
   return {
     page: progress.page,
-    font,
-    fontSize,
-    theme,
-    soundEnabled,
-    soundVolume,
-    ambientType,
-    ambientVolume,
+    ...preferencesData,
     updatedAt: progress.updatedAt.toISOString(),
   };
 }

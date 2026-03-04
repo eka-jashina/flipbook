@@ -1,5 +1,6 @@
 import { getPrisma } from '../utils/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { mapDefaultSettingsToDto } from '../utils/mappers.js';
 import type { DefaultSettings } from '../types/api.js';
 
 /**
@@ -18,15 +19,7 @@ export async function getDefaultSettings(
     throw new AppError(404, 'Default settings not found');
   }
 
-  return {
-    font: settings.font,
-    fontSize: settings.fontSize,
-    theme: settings.theme,
-    soundEnabled: settings.soundEnabled,
-    soundVolume: settings.soundVolume,
-    ambientType: settings.ambientType,
-    ambientVolume: settings.ambientVolume,
-  };
+  return mapDefaultSettingsToDto(settings);
 }
 
 /**
@@ -52,13 +45,5 @@ export async function updateDefaultSettings(
     update: data,
   });
 
-  return {
-    font: settings.font,
-    fontSize: settings.fontSize,
-    theme: settings.theme,
-    soundEnabled: settings.soundEnabled,
-    soundVolume: settings.soundVolume,
-    ambientType: settings.ambientType,
-    ambientVolume: settings.ambientVolume,
-  };
+  return mapDefaultSettingsToDto(settings);
 }

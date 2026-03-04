@@ -1,9 +1,43 @@
 import pino from 'pino';
 
-export const logger = pino({
-  level: process.env.NODE_ENV === 'test' ? 'silent' : 'info',
-  transport:
-    process.env.NODE_ENV === 'development'
-      ? { target: 'pino-pretty', options: { colorize: true } }
-      : undefined,
-});
+const targets: pino.TransportTargetOptions[] = [];
+
+if (process.env.NODE_ENV === 'development') {
+  targets.push({
+    target: 'pino-pretty',
+    options: { colorize: true },
+    level: 'info',
+  });
+} else if (process.env.NODE_ENV !== 'test') {
+  // Production: JSON stdout (для Docker log driver / Loki / CloudWatch)
+  targets.push({
+    target: 'pino/file',
+    options: { destination: 1 },
+    level: 'info',
+  });
+}
+
+// Loki transport — отправка логов в Grafana Loki (если LOKI_URL задан)
+if (process.env.LOKI_URL) {
+  targets.push({
+    target: 'pino-loki',
+    options: {
+      host: process.env.LOKI_URL,
+      batching: true,
+      interval: 5,
+      labels: {
+        app: 'flipbook-server',
+        env: process.env.NODE_ENV || 'development',
+      },
+    },
+    level: 'info',
+  });
+}
+
+export const logger =
+  process.env.NODE_ENV === 'test'
+    ? pino({ level: 'silent' })
+    : pino(
+        { level: 'info' },
+        targets.length > 0 ? pino.transport({ targets }) : undefined,
+      );

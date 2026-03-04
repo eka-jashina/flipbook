@@ -5,6 +5,11 @@ import type {
   Ambient,
   Chapter,
   DecorativeFont,
+  ReadingFont,
+  GlobalSettings,
+  ReadingProgress,
+  ReadingPreferences,
+  User,
 } from '@prisma/client';
 import type {
   AppearanceDetail,
@@ -12,7 +17,19 @@ import type {
   DefaultSettings,
   AmbientItem,
   ChapterListItem,
+  ChapterDetail,
+  DecorativeFontDetail,
+  ReadingFontItem,
+  GlobalSettingsDetail,
+  ReadingProgressDetail,
+  UserResponse,
+  PublicAuthor,
+  PublicBookCard,
+  BookListItem,
+  BookDetail,
 } from '../types/api.js';
+
+// ── Appearance ──────────────────────────────────────────────────
 
 export function mapAppearanceToDto(a: BookAppearance): AppearanceDetail {
   return {
@@ -41,6 +58,23 @@ export function mapAppearanceToDto(a: BookAppearance): AppearanceDetail {
   };
 }
 
+/** Map appearance to cover-only subset (for book lists / cards). */
+export function mapAppearanceToCoverDto(a: {
+  lightCoverBgStart: string;
+  lightCoverBgEnd: string;
+  lightCoverText: string;
+}): BookListItem['appearance'] {
+  return {
+    light: {
+      coverBgStart: a.lightCoverBgStart,
+      coverBgEnd: a.lightCoverBgEnd,
+      coverText: a.lightCoverText,
+    },
+  };
+}
+
+// ── Sounds ──────────────────────────────────────────────────────
+
 export function mapSoundsToDto(s: BookSounds): SoundsDetail {
   return {
     pageFlip: s.pageFlipUrl,
@@ -48,6 +82,8 @@ export function mapSoundsToDto(s: BookSounds): SoundsDetail {
     bookClose: s.bookCloseUrl,
   };
 }
+
+// ── Default Settings ────────────────────────────────────────────
 
 export function mapDefaultSettingsToDto(ds: BookDefaultSettings): DefaultSettings {
   return {
@@ -60,6 +96,8 @@ export function mapDefaultSettingsToDto(ds: BookDefaultSettings): DefaultSetting
     ambientVolume: ds.ambientVolume,
   };
 }
+
+// ── Ambients ────────────────────────────────────────────────────
 
 export function mapAmbientToDto(a: Ambient): AmbientItem {
   return {
@@ -75,6 +113,8 @@ export function mapAmbientToDto(a: Ambient): AmbientItem {
   };
 }
 
+// ── Chapters ────────────────────────────────────────────────────
+
 export function mapChapterToListItem(ch: Chapter): ChapterListItem {
   return {
     id: ch.id,
@@ -87,9 +127,222 @@ export function mapChapterToListItem(ch: Chapter): ChapterListItem {
   };
 }
 
-export function mapDecorativeFontToDto(df: DecorativeFont): { name: string; fileUrl: string } {
+export function mapChapterToDetail(ch: Chapter): ChapterDetail {
+  return {
+    ...mapChapterToListItem(ch),
+    htmlContent: ch.htmlContent,
+  };
+}
+
+// ── Decorative Font ─────────────────────────────────────────────
+
+export function mapDecorativeFontToDto(df: DecorativeFont): DecorativeFontDetail {
   return {
     name: df.name,
     fileUrl: df.fileUrl,
+  };
+}
+
+// ── Reading Font ────────────────────────────────────────────────
+
+export function mapReadingFontToDto(f: ReadingFont): ReadingFontItem {
+  return {
+    id: f.id,
+    fontKey: f.fontKey,
+    label: f.label,
+    family: f.family,
+    builtin: f.builtin,
+    enabled: f.enabled,
+    fileUrl: f.fileUrl,
+    position: f.position,
+  };
+}
+
+// ── Global Settings ─────────────────────────────────────────────
+
+export function mapGlobalSettingsToDto(s: GlobalSettings): GlobalSettingsDetail {
+  return {
+    fontMin: s.fontMin,
+    fontMax: s.fontMax,
+    settingsVisibility: {
+      fontSize: s.visFontSize,
+      theme: s.visTheme,
+      font: s.visFont,
+      fullscreen: s.visFullscreen,
+      sound: s.visSound,
+      ambient: s.visAmbient,
+    },
+  };
+}
+
+// ── Reading Progress ────────────────────────────────────────────
+
+export function mapReadingProgressToDto(
+  progress: ReadingProgress,
+  preferences: ReadingPreferences | null,
+): ReadingProgressDetail {
+  return {
+    page: progress.page,
+    font: preferences?.font ?? 'georgia',
+    fontSize: preferences?.fontSize ?? 18,
+    theme: preferences?.theme ?? 'light',
+    soundEnabled: preferences?.soundEnabled ?? true,
+    soundVolume: preferences?.soundVolume ?? 0.3,
+    ambientType: preferences?.ambientType ?? 'none',
+    ambientVolume: preferences?.ambientVolume ?? 0.5,
+    updatedAt: progress.updatedAt.toISOString(),
+  };
+}
+
+// ── User ────────────────────────────────────────────────────────
+
+/**
+ * Format a User model for the API response.
+ * Accepts both Prisma user (with passwordHash) and Express.User (with hasPassword).
+ */
+export function mapUserToDto(user: {
+  id: string;
+  email: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  username?: string | null;
+  bio?: string | null;
+  googleId: string | null;
+  passwordHash?: string | null;
+  hasPassword?: boolean;
+}): UserResponse {
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
+    username: user.username ?? null,
+    bio: user.bio ?? null,
+    hasPassword: user.hasPassword ?? (user.passwordHash !== null),
+    hasGoogle: user.googleId !== null,
+  };
+}
+
+// ── Public (author / book card) ─────────────────────────────────
+
+export function mapUserToPublicAuthor(user: {
+  username: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+}): PublicAuthor {
+  return {
+    username: user.username!,
+    displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
+    bio: user.bio,
+  };
+}
+
+/** Map a book with _count + appearance (cover subset) to a PublicBookCard. */
+export function mapBookToPublicCard(book: {
+  id: string;
+  title: string;
+  author: string;
+  description: string | null;
+  publishedAt: Date | null;
+  _count: { chapters: number };
+  appearance: { lightCoverBgStart: string; lightCoverBgEnd: string; lightCoverText: string } | null;
+}): PublicBookCard {
+  return {
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    description: book.description,
+    publishedAt: book.publishedAt?.toISOString() ?? null,
+    chaptersCount: book._count.chapters,
+    appearance: book.appearance ? mapAppearanceToCoverDto(book.appearance) : null,
+  };
+}
+
+// ── Book (full detail) ──────────────────────────────────────────
+
+type BookWithRelations = {
+  id: string;
+  title: string;
+  author: string;
+  visibility: string;
+  description: string | null;
+  publishedAt: Date | null;
+  coverBg: string;
+  coverBgMobile: string;
+  coverBgMode: string;
+  coverBgCustomUrl: string | null;
+  chapters: Chapter[];
+  defaultSettings: BookDefaultSettings | null;
+  appearance: BookAppearance | null;
+  sounds: BookSounds | null;
+  ambients: Ambient[];
+  decorativeFont: DecorativeFont | null;
+};
+
+export function mapBookToDetail(book: BookWithRelations): BookDetail {
+  return {
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    visibility: book.visibility,
+    description: book.description,
+    publishedAt: book.publishedAt?.toISOString() ?? null,
+    cover: {
+      bg: book.coverBg,
+      bgMobile: book.coverBgMobile,
+      bgMode: book.coverBgMode,
+      bgCustomUrl: book.coverBgCustomUrl,
+    },
+    chapters: book.chapters.map(mapChapterToListItem),
+    defaultSettings: book.defaultSettings
+      ? mapDefaultSettingsToDto(book.defaultSettings)
+      : null,
+    appearance: book.appearance
+      ? mapAppearanceToDto(book.appearance)
+      : null,
+    sounds: book.sounds
+      ? mapSoundsToDto(book.sounds)
+      : null,
+    ambients: book.ambients.map(mapAmbientToDto),
+    decorativeFont: book.decorativeFont
+      ? mapDecorativeFontToDto(book.decorativeFont)
+      : null,
+  };
+}
+
+// ── Book List Item ──────────────────────────────────────────────
+
+type BookForList = {
+  id: string;
+  title: string;
+  author: string;
+  position: number;
+  visibility: string;
+  description: string | null;
+  coverBgMode: string;
+  _count: { chapters: number };
+  appearance: { lightCoverBgStart: string; lightCoverBgEnd: string; lightCoverText: string } | null;
+  readingProgress: { page: number; updatedAt: Date }[];
+};
+
+export function mapBookToListItem(book: BookForList): BookListItem {
+  return {
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    position: book.position,
+    visibility: book.visibility,
+    description: book.description,
+    chaptersCount: book._count.chapters,
+    coverBgMode: book.coverBgMode,
+    appearance: book.appearance ? mapAppearanceToCoverDto(book.appearance) : null,
+    readingProgress: book.readingProgress.length > 0
+      ? {
+          page: book.readingProgress[0].page,
+          updatedAt: book.readingProgress[0].updatedAt.toISOString(),
+        }
+      : null,
   };
 }

@@ -1,19 +1,15 @@
 import { getPrisma } from '../utils/prisma.js';
 import { FONT_LIMITS, SETTINGS_VISIBILITY_DEFAULTS } from '../utils/defaults.js';
+import { mapGlobalSettingsToDto } from '../utils/mappers.js';
 import type { GlobalSettingsDetail, SettingsVisibility } from '../types/api.js';
 
 const DEFAULTS: GlobalSettingsDetail = { ...FONT_LIMITS, settingsVisibility: { ...SETTINGS_VISIBILITY_DEFAULTS } };
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapSettings(s: any): GlobalSettingsDetail {
-  return { fontMin: s.fontMin, fontMax: s.fontMax, settingsVisibility: { fontSize: s.visFontSize, theme: s.visTheme, font: s.visFont, fullscreen: s.visFullscreen, sound: s.visSound, ambient: s.visAmbient } };
-}
 
 export async function getGlobalSettings(userId: string): Promise<GlobalSettingsDetail> {
   const prisma = getPrisma();
   const settings = await prisma.globalSettings.findUnique({ where: { userId } });
   if (!settings) return DEFAULTS;
-  return mapSettings(settings);
+  return mapGlobalSettingsToDto(settings);
 }
 
 export async function updateGlobalSettings(userId: string, data: { fontMin?: number; fontMax?: number; settingsVisibility?: Partial<SettingsVisibility> }): Promise<GlobalSettingsDetail> {
@@ -31,5 +27,5 @@ export async function updateGlobalSettings(userId: string, data: { fontMin?: num
     if (vis.ambient !== undefined) updateData.visAmbient = vis.ambient;
   }
   const settings = await prisma.globalSettings.upsert({ where: { userId }, create: { userId, ...updateData }, update: updateData });
-  return mapSettings(settings);
+  return mapGlobalSettingsToDto(settings);
 }

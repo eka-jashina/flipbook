@@ -3,6 +3,7 @@ import { getPrisma } from '../utils/prisma.js';
 import { hashPassword } from '../utils/password.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { mapUserToDto } from '../utils/mappers.js';
 import type { UserResponse } from '../types/api.js';
 
 /**
@@ -19,30 +20,9 @@ const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000;
 
 /**
  * Format a User model for the API response.
- * Accepts both Prisma user (with passwordHash) and Express.User (with hasPassword).
+ * Delegates to centralized mapper in utils/mappers.ts.
  */
-export function formatUser(user: {
-  id: string;
-  email: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-  username?: string | null;
-  bio?: string | null;
-  googleId: string | null;
-  passwordHash?: string | null;
-  hasPassword?: boolean;
-}): UserResponse {
-  return {
-    id: user.id,
-    email: user.email,
-    displayName: user.displayName,
-    avatarUrl: user.avatarUrl,
-    username: user.username ?? null,
-    bio: user.bio ?? null,
-    hasPassword: user.hasPassword ?? (user.passwordHash !== null),
-    hasGoogle: user.googleId !== null,
-  };
-}
+export const formatUser = mapUserToDto;
 
 /**
  * Register a new user with email and password.

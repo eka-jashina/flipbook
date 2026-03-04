@@ -12,12 +12,9 @@ import {
   COVER_BG_MODE_DEFAULT,
 } from '../utils/defaults.js';
 import {
-  mapAppearanceToDto,
-  mapSoundsToDto,
-  mapDefaultSettingsToDto,
-  mapAmbientToDto,
-  mapChapterToListItem,
-  mapDecorativeFontToDto,
+  mapBookToDetail,
+  mapReadingFontToDto,
+  mapGlobalSettingsToDto,
 } from '../utils/mappers.js';
 import type { BookDetail, ReadingFontItem, GlobalSettingsDetail, ExportData } from '../types/api.js';
 
@@ -148,64 +145,17 @@ export async function exportUserConfig(userId: string): Promise<ExportData> {
     },
   });
 
-  const bookDetails: BookDetail[] = books.map((book) => ({
-    id: book.id,
-    title: book.title,
-    author: book.author,
-    visibility: book.visibility,
-    description: book.description,
-    publishedAt: book.publishedAt?.toISOString() ?? null,
-    cover: {
-      bg: book.coverBg,
-      bgMobile: book.coverBgMobile,
-      bgMode: book.coverBgMode,
-      bgCustomUrl: book.coverBgCustomUrl,
-    },
-    chapters: book.chapters.map(mapChapterToListItem),
-    defaultSettings: book.defaultSettings
-      ? mapDefaultSettingsToDto(book.defaultSettings)
-      : null,
-    appearance: book.appearance
-      ? mapAppearanceToDto(book.appearance)
-      : null,
-    sounds: book.sounds
-      ? mapSoundsToDto(book.sounds)
-      : null,
-    ambients: book.ambients.map(mapAmbientToDto),
-    decorativeFont: book.decorativeFont
-      ? mapDecorativeFontToDto(book.decorativeFont)
-      : null,
-  }));
+  const bookDetails: BookDetail[] = books.map(mapBookToDetail);
 
   const fonts = await prisma.readingFont.findMany({
     where: { userId },
     orderBy: { position: 'asc' },
   });
-  const readingFonts: ReadingFontItem[] = fonts.map((f) => ({
-    id: f.id,
-    fontKey: f.fontKey,
-    label: f.label,
-    family: f.family,
-    builtin: f.builtin,
-    enabled: f.enabled,
-    fileUrl: f.fileUrl,
-    position: f.position,
-  }));
+  const readingFonts: ReadingFontItem[] = fonts.map(mapReadingFontToDto);
 
   const settings = await prisma.globalSettings.findUnique({ where: { userId } });
   const globalSettings: GlobalSettingsDetail | null = settings
-    ? {
-        fontMin: settings.fontMin,
-        fontMax: settings.fontMax,
-        settingsVisibility: {
-          fontSize: settings.visFontSize,
-          theme: settings.visTheme,
-          font: settings.visFont,
-          fullscreen: settings.visFullscreen,
-          sound: settings.visSound,
-          ambient: settings.visAmbient,
-        },
-      }
+    ? mapGlobalSettingsToDto(settings)
     : null;
 
   return { books: bookDetails, readingFonts, globalSettings };
