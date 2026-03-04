@@ -1,55 +1,27 @@
 /**
  * Менеджер фотоальбомов
- * Управляет созданием и редактированием мульти-страничных фотоальбомов с раскладками
- * Работает как полноэкранный вид (screen-view), а не модалка
+ * Управляет созданием и редактированием мульти-страничных фотоальбомов с раскладками.
+ * Работает как полноэкранный вид (screen-view), а не модалка.
  *
- * Хранит структурированные данные альбома (albumData) в главе,
- * что позволяет повторно редактировать альбомы после создания.
+ * Делегирует рендеринг, обработку изображений и генерацию HTML подмодулям:
+ * - albumConstants.js      — константы и чистые утилиты
+ * - AlbumPageRenderer.js   — рендеринг UI страниц и слотов
+ * - AlbumImageProcessor.js — сжатие, кадрирование, поворот, массовая загрузка
+ * - AlbumHtmlBuilder.js    — генерация HTML из структурированных данных
  */
 
 import { PhotoCropper } from './PhotoCropper.js';
-
-/** Количество изображений для каждого шаблона */
-const LAYOUT_IMAGE_COUNT = {
-  '1': 1, '2': 2, '2h': 2,
-  '3': 3, '3r': 3, '3t': 3, '3b': 3,
-  '4': 4,
-};
-
-/** Максимальный размер длинной стороны изображения (px) */
-const IMAGE_MAX_DIMENSION = 1920;
-
-/** Качество JPEG-сжатия (0–1) */
-const IMAGE_QUALITY = 0.85;
-
-/** Максимальный размер загружаемого файла до сжатия (10 МБ) */
-const IMAGE_MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-/** Доступные рамки для фотографий */
-const FRAME_OPTIONS = [
-  { id: 'none', label: 'Без рамки' },
-  { id: 'thin', label: 'Тонкая' },
-  { id: 'shadow', label: 'Тень' },
-  { id: 'polaroid', label: 'Polaroid' },
-  { id: 'rounded', label: 'Скруглённая' },
-  { id: 'double', label: 'Двойная' },
-];
-
-/** Доступные фильтры для фотографий */
-const FILTER_OPTIONS = [
-  { id: 'none', label: 'Без фильтра' },
-  { id: 'grayscale', label: 'Ч/Б' },
-  { id: 'sepia', label: 'Сепия' },
-  { id: 'contrast', label: 'Контраст' },
-  { id: 'warm', label: 'Тёплый' },
-  { id: 'cool', label: 'Холодный' },
-];
-
-/** Допустимые значения поворота (градусы) */
-const ROTATION_VALUES = [0, 90, 180, 270];
-
-/** Интенсивность фильтра по умолчанию (100 = максимальный эффект) */
-const DEFAULT_FILTER_INTENSITY = 100;
+import { LAYOUT_IMAGE_COUNT, DEFAULT_FILTER_INTENSITY, getPageSlots, computeFilterStyle } from './albumConstants.js';
+import { buildAlbumHtml, buildItemModifiers, buildImgInlineStyle, buildImgDataAttrs } from './AlbumHtmlBuilder.js';
+import {
+  compressImage, readPageImageFile, cropPageImage, resetCrop,
+  rotatePageImage, bulkUpload, bulkUploadToPage,
+  distributeBulkFiles, processBulkFiles,
+} from './AlbumImageProcessor.js';
+import {
+  renderAlbumPages, buildLayoutButtons, buildOptionSelect,
+  applyFilterPreview, getSlotElement,
+} from './AlbumPageRenderer.js';
 
 export class AlbumManager {
   constructor(chaptersModule) {
@@ -81,6 +53,8 @@ export class AlbumManager {
     this.saveAlbumBtn.addEventListener('click', () => this._handleAlbumSubmit());
     this.cancelAlbumBtn.addEventListener('click', () => this._cancelAlbum());
   }
+
+  // ─── Открытие / закрытие ─────────────────────────────────────────────
 
   /** Открыть для создания нового альбома (вызывается из роутера) */
   openInView() {
@@ -128,131 +102,11 @@ export class AlbumManager {
     app._showView(hadPending ? 'bookshelf' : 'editor');
   }
 
+  // ─── Управление страницами ──────────────────────────────────────────
+
   _addAlbumPage() {
     this._isDirty = true;
     this._albumPages.push({ layout: '1', images: [] });
-    this._renderAlbumPages();
-  }
-
-  /**
-   * Массовая загрузка фото на уровне альбома
-   * Заполняет пустые слоты существующих страниц, затем создаёт новые (layout=4)
-   */
-  _bulkUpload() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.multiple = true;
-    input.addEventListener('change', () => {
-      const files = [...input.files].filter(f => f.type.startsWith('image/'));
-      if (!files.length) return;
-      this._distributeBulkFiles(files);
-    });
-    input.click();
-  }
-
-  /**
-   * Массовая загрузка на уровне одной страницы
-   * Заполняет пустые слоты только этой страницы
-   */
-  _bulkUploadToPage(pageIndex) {
-    const page = this._albumPages[pageIndex];
-    if (!page) return;
-    const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
-    const emptySlots = [];
-    for (let i = 0; i < count; i++) {
-      if (!page.images[i]?.dataUrl) emptySlots.push(i);
-    }
-    if (!emptySlots.length) {
-      this._module._showToast('Нет пустых слотов на этой странице');
-      return;
-    }
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.multiple = true;
-    input.addEventListener('change', () => {
-      const files = [...input.files].filter(f => f.type.startsWith('image/'));
-      if (!files.length) return;
-      // Ограничить количество файлов количеством пустых слотов
-      const limited = files.slice(0, emptySlots.length);
-      const slots = emptySlots.slice(0, limited.length).map(imageIndex => ({
-        pageIndex,
-        imageIndex,
-      }));
-      this._processBulkFiles(limited, slots);
-    });
-    input.click();
-  }
-
-  /**
-   * Распределить файлы по пустым слотам всех страниц, создать новые если нужно
-   */
-  async _distributeBulkFiles(files) {
-    // Валидация файлов
-    const validFiles = files.filter(f =>
-      this._module._validateFile(f, { maxSize: IMAGE_MAX_FILE_SIZE, mimePrefix: 'image/' }),
-    );
-    if (!validFiles.length) return;
-
-    // Собрать все пустые слоты существующих страниц
-    const slots = [];
-    for (let p = 0; p < this._albumPages.length; p++) {
-      const page = this._albumPages[p];
-      const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
-      for (let i = 0; i < count; i++) {
-        if (!page.images[i]?.dataUrl) {
-          slots.push({ pageIndex: p, imageIndex: i });
-        }
-      }
-    }
-
-    // Создать новые страницы для оставшихся файлов
-    let remaining = validFiles.length - slots.length;
-    while (remaining > 0) {
-      const pageIndex = this._albumPages.length;
-      this._albumPages.push({ layout: '4', images: [] });
-      const count = LAYOUT_IMAGE_COUNT['4'];
-      for (let i = 0; i < count && remaining > 0; i++) {
-        slots.push({ pageIndex, imageIndex: i });
-        remaining--;
-      }
-    }
-
-    this._renderAlbumPages();
-    await this._processBulkFiles(validFiles, slots);
-  }
-
-  /**
-   * Обработать массив файлов и загрузить в указанные слоты
-   */
-  async _processBulkFiles(files, slots) {
-    const promises = files.map(async (file, idx) => {
-      const { pageIndex, imageIndex } = slots[idx];
-      const slotEl = this._getSlotElement(pageIndex, imageIndex);
-      slotEl?.classList.add('loading');
-      try {
-        const dataUrl = await this._compressImage(file);
-        const page = this._albumPages[pageIndex];
-        if (!page) return;
-        this._isDirty = true;
-        const prev = page.images[imageIndex];
-        page.images[imageIndex] = {
-          dataUrl,
-          originalDataUrl: dataUrl,
-          caption: prev?.caption || '',
-          frame: prev?.frame || 'none',
-          filter: prev?.filter || 'none',
-          filterIntensity: prev?.filterIntensity ?? DEFAULT_FILTER_INTENSITY,
-          rotation: prev?.rotation || 0,
-        };
-      } catch {
-        slotEl?.classList.remove('loading');
-      }
-    });
-
-    await Promise.all(promises);
     this._renderAlbumPages();
   }
 
@@ -301,327 +155,6 @@ export class AlbumManager {
     this._renderAlbumPages();
   }
 
-  /** Отрисовать все страницы альбома */
-  _renderAlbumPages() {
-    // Сохранить позицию скролла и фокус перед перерисовкой
-    const scrollParent = this.albumPagesEl.closest('.admin-section-content') || this.albumPagesEl.parentElement;
-    const savedScroll = scrollParent?.scrollTop ?? 0;
-
-    this.albumPagesEl.innerHTML = '';
-
-    this._albumPages.forEach((page, pageIndex) => {
-      const card = document.createElement('div');
-      card.className = 'album-page-card';
-
-      // Заголовок страницы
-      const header = document.createElement('div');
-      header.className = 'album-page-header';
-
-      const title = document.createElement('span');
-      title.className = 'album-page-title';
-      title.textContent = `Страница ${pageIndex + 1}`;
-
-      header.appendChild(title);
-
-      if (this._albumPages.length > 1) {
-        // Кнопки перемещения
-        const moveWrap = document.createElement('span');
-        moveWrap.className = 'album-page-move';
-
-        if (pageIndex > 0) {
-          const upBtn = document.createElement('button');
-          upBtn.type = 'button';
-          upBtn.className = 'album-page-move-btn';
-          upBtn.title = 'Переместить вверх';
-          upBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>';
-          upBtn.addEventListener('click', () => this._movePageUp(pageIndex));
-          moveWrap.appendChild(upBtn);
-        }
-
-        if (pageIndex < this._albumPages.length - 1) {
-          const downBtn = document.createElement('button');
-          downBtn.type = 'button';
-          downBtn.className = 'album-page-move-btn';
-          downBtn.title = 'Переместить вниз';
-          downBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>';
-          downBtn.addEventListener('click', () => this._movePageDown(pageIndex));
-          moveWrap.appendChild(downBtn);
-        }
-
-        header.appendChild(moveWrap);
-
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'album-page-remove';
-        removeBtn.title = 'Удалить страницу';
-        removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
-        removeBtn.addEventListener('click', () => this._removeAlbumPage(pageIndex));
-        header.appendChild(removeBtn);
-      }
-
-      // Кнопка массовой загрузки на уровне страницы
-      const pageBulkBtn = document.createElement('button');
-      pageBulkBtn.type = 'button';
-      pageBulkBtn.className = 'album-page-bulk-btn';
-      pageBulkBtn.title = 'Загрузить несколько фото';
-      pageBulkBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>';
-      pageBulkBtn.addEventListener('click', () => this._bulkUploadToPage(pageIndex));
-      header.appendChild(pageBulkBtn);
-
-      card.appendChild(header);
-
-      // Шаблон раскладки
-      const layoutsWrap = document.createElement('div');
-      layoutsWrap.className = 'album-layouts';
-      layoutsWrap.innerHTML = this._buildLayoutButtons(page.layout);
-      layoutsWrap.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-layout]');
-        if (!btn) return;
-        this._selectPageLayout(pageIndex, btn.dataset.layout);
-      });
-      card.appendChild(layoutsWrap);
-
-      // Слоты изображений
-      const imagesWrap = document.createElement('div');
-      imagesWrap.className = 'album-images';
-      this._renderPageImageSlots(imagesWrap, page, pageIndex);
-      card.appendChild(imagesWrap);
-
-      this.albumPagesEl.appendChild(card);
-    });
-
-    // Восстановить позицию скролла после перерисовки
-    if (scrollParent && savedScroll) {
-      scrollParent.scrollTop = savedScroll;
-    }
-  }
-
-  /** Получить слоты изображений для страницы — всегда length === LAYOUT_IMAGE_COUNT */
-  _getPageSlots(page) {
-    const count = LAYOUT_IMAGE_COUNT[page.layout] || 1;
-    return Array.from({ length: count }, (_, i) => page.images[i] || null);
-  }
-
-  /** Сгенерировать HTML кнопок выбора шаблона */
-  _buildLayoutButtons(activeLayout) {
-    const layouts = [
-      { id: '1', title: '1 фото', items: 1 },
-      { id: '2', title: '2 фото (вертикально)', items: 2 },
-      { id: '2h', title: '2 фото (горизонтально)', items: 2 },
-      { id: '3', title: 'Большое слева + 2 справа', items: 3 },
-      { id: '3r', title: 'Большое справа + 2 слева', items: 3 },
-      { id: '3t', title: 'Большое сверху + 2 снизу', items: 3 },
-      { id: '3b', title: 'Большое снизу + 2 сверху', items: 3 },
-      { id: '4', title: 'Сетка 2x2', items: 4 },
-    ];
-    return layouts.map(l => {
-      const active = l.id === activeLayout ? ' active' : '';
-      const icons = Array.from({ length: l.items }, () => '<i></i>').join('');
-      return `<button class="album-layout-btn${active}" type="button" data-layout="${l.id}" title="${l.title}"><span class="album-layout-preview album-layout-preview--${l.id}">${icons}</span><span class="album-layout-label">${l.id}</span></button>`;
-    }).join('');
-  }
-
-  /** Отрисовать слоты изображений для одной страницы */
-  _renderPageImageSlots(container, page, pageIndex) {
-    for (const [i, img] of this._getPageSlots(page).entries()) {
-      const group = document.createElement('div');
-      group.className = 'album-image-group';
-
-      const slot = document.createElement('div');
-      slot.className = `album-image-slot${img ? ' has-image' : ''}`;
-
-      slot.innerHTML = `
-        <span class="album-image-slot-placeholder">
-          <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/></svg>
-          Фото ${i + 1}
-        </span>
-        <span class="album-image-slot-num">${i + 1}</span>
-        <button class="album-image-slot-rotate" type="button" title="Повернуть на 90°">
-          <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47zM7.1 18.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32zM13 4.07V1L8.45 5.55 13 10V6.09c2.84.48 5 2.94 5 5.91s-2.16 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93s-3.05-7.44-7-7.93z"/></svg>
-        </button>
-        <button class="album-image-slot-crop" type="button" title="Кадрировать">
-          <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/></svg>
-        </button>
-        <button class="album-image-slot-uncrop" type="button" title="Сбросить кадрирование">
-          <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
-        </button>
-        <button class="album-image-slot-remove" type="button" title="Удалить">&times;</button>
-      `;
-
-      if (img) {
-        const imgEl = document.createElement('img');
-        imgEl.className = 'album-image-slot-img';
-        imgEl.src = img.dataUrl;
-        if (img.rotation) {
-          imgEl.style.transform = `rotate(${img.rotation}deg)`;
-        }
-        slot.insertBefore(imgEl, slot.firstChild);
-      }
-
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*';
-      fileInput.hidden = true;
-
-      // Показывать кнопку сброса кадрирования только если есть оригинал, отличный от текущего
-      const isCropped = img?.originalDataUrl && img.originalDataUrl !== img.dataUrl;
-      const uncropBtn = slot.querySelector('.album-image-slot-uncrop');
-      if (!isCropped) uncropBtn.style.display = 'none';
-
-      slot.addEventListener('click', (e) => {
-        if (e.target.closest('.album-image-slot-remove')) return;
-        if (e.target.closest('.album-image-slot-crop')) return;
-        if (e.target.closest('.album-image-slot-uncrop')) return;
-        if (e.target.closest('.album-image-slot-rotate')) return;
-        fileInput.click();
-      });
-
-      slot.querySelector('.album-image-slot-crop').addEventListener('click', () => {
-        if (!page.images[i]?.dataUrl) return;
-        this._cropPageImage(pageIndex, i);
-      });
-
-      uncropBtn.addEventListener('click', () => {
-        this._resetCrop(pageIndex, i);
-      });
-
-      slot.querySelector('.album-image-slot-rotate').addEventListener('click', () => {
-        if (!page.images[i]?.dataUrl) return;
-        this._rotatePageImage(pageIndex, i);
-      });
-
-      fileInput.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        if (!file) return;
-        if (!this._module._validateFile(file, { maxSize: IMAGE_MAX_FILE_SIZE, mimePrefix: 'image/', inputEl: fileInput })) return;
-        this._readPageImageFile(file, pageIndex, i);
-        fileInput.value = '';
-      });
-
-      // Drag & Drop загрузка фото
-      slot.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
-        slot.classList.add('drag-over');
-      });
-      slot.addEventListener('dragleave', () => {
-        slot.classList.remove('drag-over');
-      });
-      slot.addEventListener('drop', (e) => {
-        e.preventDefault();
-        slot.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (!file) return;
-        if (!this._module._validateFile(file, { maxSize: IMAGE_MAX_FILE_SIZE, mimePrefix: 'image/' })) return;
-        this._readPageImageFile(file, pageIndex, i);
-      });
-
-      slot.querySelector('.album-image-slot-remove').addEventListener('click', () => {
-        this._isDirty = true;
-        page.images[i] = null;
-        this._renderAlbumPages();
-      });
-
-      group.appendChild(slot);
-      group.appendChild(fileInput);
-
-      const captionInput = document.createElement('input');
-      captionInput.type = 'text';
-      captionInput.className = 'album-image-slot-caption';
-      captionInput.placeholder = 'Подпись...';
-      captionInput.value = img?.caption || '';
-      captionInput.addEventListener('input', () => {
-        this._isDirty = true;
-        if (!page.images[i]) page.images[i] = { dataUrl: '', caption: '' };
-        page.images[i].caption = captionInput.value;
-      });
-      group.appendChild(captionInput);
-
-      // Рамка и фильтр
-      const optionsRow = document.createElement('div');
-      optionsRow.className = 'album-image-options';
-
-      const frameSelect = this._buildOptionSelect(
-        FRAME_OPTIONS, img?.frame || 'none', (val) => {
-          this._ensureImageData(page, i);
-          page.images[i].frame = val;
-        },
-      );
-      optionsRow.appendChild(frameSelect);
-
-      const currentFilter = img?.filter || 'none';
-      const filterSelect = this._buildOptionSelect(
-        FILTER_OPTIONS, currentFilter, (val) => {
-          this._ensureImageData(page, i);
-          page.images[i].filter = val;
-          // Показать/скрыть слайдер интенсивности
-          intensityRow.hidden = val === 'none';
-          // Обновить превью фильтра на миниатюре
-          this._applyFilterPreview(slot, page.images[i]);
-        },
-      );
-      optionsRow.appendChild(filterSelect);
-
-      group.appendChild(optionsRow);
-
-      // Слайдер интенсивности фильтра
-      const intensityRow = document.createElement('div');
-      intensityRow.className = 'album-filter-intensity';
-      intensityRow.hidden = currentFilter === 'none';
-
-      const intensityLabel = document.createElement('span');
-      intensityLabel.className = 'album-filter-intensity-label';
-      intensityLabel.textContent = `${img?.filterIntensity ?? DEFAULT_FILTER_INTENSITY}%`;
-
-      const intensityRange = document.createElement('input');
-      intensityRange.type = 'range';
-      intensityRange.className = 'album-filter-intensity-range';
-      intensityRange.min = '0';
-      intensityRange.max = '100';
-      intensityRange.value = String(img?.filterIntensity ?? DEFAULT_FILTER_INTENSITY);
-
-      intensityRange.addEventListener('input', () => {
-        this._ensureImageData(page, i);
-        const val = Number(intensityRange.value);
-        page.images[i].filterIntensity = val;
-        intensityLabel.textContent = `${val}%`;
-        this._applyFilterPreview(slot, page.images[i]);
-      });
-
-      intensityRow.appendChild(intensityRange);
-      intensityRow.appendChild(intensityLabel);
-      group.appendChild(intensityRow);
-
-      // Превью фильтра на миниатюре
-      this._applyFilterPreview(slot, img);
-
-      container.appendChild(group);
-    }
-  }
-
-  /** Создать <select> для выбора рамки/фильтра */
-  _buildOptionSelect(options, activeId, onChange) {
-    const select = document.createElement('select');
-    select.className = 'album-image-option-select';
-    for (const opt of options) {
-      const option = document.createElement('option');
-      option.value = opt.id;
-      option.textContent = opt.label;
-      if (opt.id === activeId) option.selected = true;
-      select.appendChild(option);
-    }
-    select.addEventListener('change', () => onChange(select.value));
-    return select;
-  }
-
-  /** Применить превью фильтра к миниатюре в слоте */
-  _applyFilterPreview(slot, img) {
-    const imgEl = slot.querySelector('.album-image-slot-img');
-    if (!imgEl) return;
-    const filterStyle = this._computeFilterStyle(img?.filter, img?.filterIntensity);
-    imgEl.style.filter = filterStyle || '';
-  }
-
   /** Гарантировать наличие объекта изображения в слоте */
   _ensureImageData(page, index) {
     this._isDirty = true;
@@ -630,138 +163,7 @@ export class AlbumManager {
     }
   }
 
-  /** Открыть диалог кадрирования для изображения */
-  async _cropPageImage(pageIndex, imageIndex) {
-    const page = this._albumPages[pageIndex];
-    if (!page) return;
-    const img = page.images[imageIndex];
-    if (!img?.dataUrl) return;
-
-    // Кадрировать из оригинала, чтобы не терять качество при повторном кадрировании
-    const source = img.originalDataUrl || img.dataUrl;
-
-    try {
-      const cropped = await this._cropper.crop(source);
-      // null = пользователь отменил
-      if (!cropped) return;
-      // Страница могла быть удалена во время кадрирования
-      if (!this._albumPages[pageIndex]) return;
-      this._isDirty = true;
-      const target = this._albumPages[pageIndex].images[imageIndex];
-      target.dataUrl = cropped;
-      // Сохранить оригинал если его ещё нет
-      if (!target.originalDataUrl) target.originalDataUrl = source;
-      this._renderAlbumPages();
-    } catch {
-      this._module._showToast('Ошибка при кадрировании');
-    }
-  }
-
-  /** Сбросить кадрирование — вернуть оригинальное изображение */
-  _resetCrop(pageIndex, imageIndex) {
-    const page = this._albumPages[pageIndex];
-    if (!page) return;
-    const img = page.images[imageIndex];
-    if (!img?.originalDataUrl || img.dataUrl === img.originalDataUrl) return;
-
-    this._isDirty = true;
-    img.dataUrl = img.originalDataUrl;
-    this._renderAlbumPages();
-  }
-
-  /** Повернуть изображение на 90° по часовой стрелке */
-  _rotatePageImage(pageIndex, imageIndex) {
-    const page = this._albumPages[pageIndex];
-    if (!page) return;
-    const img = page.images[imageIndex];
-    if (!img?.dataUrl) return;
-
-    this._isDirty = true;
-    const current = img.rotation || 0;
-    const next = ROTATION_VALUES[(ROTATION_VALUES.indexOf(current) + 1) % ROTATION_VALUES.length];
-    img.rotation = next;
-    this._renderAlbumPages();
-  }
-
-  async _readPageImageFile(file, pageIndex, imageIndex) {
-    // Показать индикатор загрузки на слоте
-    const slotEl = this._getSlotElement(pageIndex, imageIndex);
-    slotEl?.classList.add('loading');
-
-    try {
-      const dataUrl = await this._compressImage(file);
-      const page = this._albumPages[pageIndex];
-      if (!page) return; // Страница могла быть удалена во время сжатия
-      const prev = page.images[imageIndex];
-      this._isDirty = true;
-      page.images[imageIndex] = {
-        dataUrl,
-        originalDataUrl: dataUrl,
-        caption: prev?.caption || '',
-        frame: prev?.frame || 'none',
-        filter: prev?.filter || 'none',
-        filterIntensity: prev?.filterIntensity ?? DEFAULT_FILTER_INTENSITY,
-        rotation: prev?.rotation || 0,
-      };
-      this._renderAlbumPages();
-    } catch {
-      slotEl?.classList.remove('loading');
-      this._module._showToast('Ошибка при обработке изображения');
-    }
-  }
-
-  /** Получить DOM-элемент слота по индексу страницы и изображения */
-  _getSlotElement(pageIndex, imageIndex) {
-    const pageCard = this.albumPagesEl?.children[pageIndex];
-    if (!pageCard) return null;
-    const slots = pageCard.querySelectorAll('.album-image-slot');
-    return slots[imageIndex] || null;
-  }
-
-  /**
-   * Сжатие изображения через canvas: ресайз + перекодирование
-   * @param {File} file - Файл изображения
-   * @returns {Promise<string>} data URL сжатого изображения
-   */
-  _compressImage(file) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-
-        let w = img.naturalWidth;
-        let h = img.naturalHeight;
-
-        // Масштабирование по длинной стороне
-        if (w > IMAGE_MAX_DIMENSION || h > IMAGE_MAX_DIMENSION) {
-          const ratio = Math.min(IMAGE_MAX_DIMENSION / w, IMAGE_MAX_DIMENSION / h);
-          w = Math.round(w * ratio);
-          h = Math.round(h * ratio);
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-
-        // PNG → сохраняем формат (прозрачность), остальные → JPEG
-        const dataUrl = file.type === 'image/png'
-          ? canvas.toDataURL('image/png')
-          : canvas.toDataURL('image/jpeg', IMAGE_QUALITY);
-
-        resolve(dataUrl);
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error('Не удалось загрузить изображение'));
-      };
-
-      img.src = url;
-    });
-  }
+  // ─── Сохранение ─────────────────────────────────────────────────────
 
   async _handleAlbumSubmit() {
     const title = this.albumTitleInput.value.trim();
@@ -845,82 +247,32 @@ export class AlbumManager {
     app.openEditor();
   }
 
-  /**
-   * Сгенерировать HTML-разметку мульти-страничного фотоальбома
-   * из структурированных данных
-   * @param {Object} albumData - { title, hideTitle, pages }
-   * @returns {string} HTML-строка
-   */
-  _buildAlbumHtml(albumData) {
-    const h2Class = albumData.hideTitle ? ' class="sr-only"' : '';
+  // ─── Делегирование: рендеринг ─────────────────────────────────────
 
-    const albumDivs = albumData.pages.map(page => {
-      const figures = this._getPageSlots(page).filter(img => img?.dataUrl).map(img => {
-        const caption = img.caption
-          ? `<figcaption>${this._module._escapeHtml(img.caption)}</figcaption>`
-          : '';
-        const modifiers = this._buildItemModifiers(img);
-        const imgStyles = this._buildImgInlineStyle(img);
-        const styleAttr = imgStyles ? ` style="${imgStyles}"` : '';
-        const dataAttrs = this._buildImgDataAttrs(img);
-        return `<figure class="photo-album__item${modifiers}"><img src="${img.dataUrl}" alt="${this._module._escapeHtml(img.caption || '')}"${styleAttr}${dataAttrs}>${caption}</figure>`;
-      });
-      return `<div class="photo-album" data-layout="${page.layout}">${figures.join('')}</div>`;
-    });
+  _renderAlbumPages() { renderAlbumPages(this); }
+  _buildLayoutButtons(layout) { return buildLayoutButtons(layout); }
+  _buildOptionSelect(opts, activeId, cb) { return buildOptionSelect(opts, activeId, cb); }
+  _applyFilterPreview(slot, img) { applyFilterPreview(slot, img); }
+  _getSlotElement(pi, ii) { return getSlotElement(this, pi, ii); }
+  _getPageSlots(page) { return getPageSlots(page); }
 
-    return `<article><h2${h2Class}>${this._module._escapeHtml(albumData.title)}</h2>${albumDivs.join('')}</article>`;
-  }
+  // ─── Делегирование: обработка изображений ─────────────────────────
 
-  /** Собрать CSS-модификаторы рамки и фильтра для figure */
-  _buildItemModifiers(img) {
-    let cls = '';
-    if (img.frame && img.frame !== 'none') cls += ` photo-album__item--frame-${img.frame}`;
-    if (img.filter && img.filter !== 'none') cls += ` photo-album__item--filter-${img.filter}`;
-    return cls;
-  }
+  _compressImage(file) { return compressImage(file); }
+  _readPageImageFile(file, pi, ii) { return readPageImageFile(this, file, pi, ii); }
+  _cropPageImage(pi, ii) { return cropPageImage(this, pi, ii); }
+  _resetCrop(pi, ii) { resetCrop(this, pi, ii); }
+  _rotatePageImage(pi, ii) { rotatePageImage(this, pi, ii); }
+  _bulkUpload() { bulkUpload(this); }
+  _bulkUploadToPage(pi) { bulkUploadToPage(this, pi); }
+  _distributeBulkFiles(files) { return distributeBulkFiles(this, files); }
+  _processBulkFiles(files, slots) { return processBulkFiles(this, files, slots); }
 
-  /** Собрать inline style для <img>: rotation + filter с учётом интенсивности */
-  _buildImgInlineStyle(img) {
-    const parts = [];
-    if (img.rotation) parts.push(`transform:rotate(${img.rotation}deg)`);
-    const filterStyle = this._computeFilterStyle(img.filter, img.filterIntensity);
-    if (filterStyle) parts.push(`filter:${filterStyle}`);
-    return parts.join(';');
-  }
+  // ─── Делегирование: генерация HTML ────────────────────────────────
 
-  /**
-   * Собрать data-атрибуты для <img>, чтобы стили выжили после HTML-санитизации.
-   * Санитайзер удаляет inline style, но data-атрибуты из белого списка сохраняются.
-   * AsyncPaginator после санитизации восстанавливает inline-стили из этих атрибутов.
-   */
-  _buildImgDataAttrs(img) {
-    const attrs = [];
-    if (img.filter && img.filter !== 'none') {
-      attrs.push(`data-filter="${img.filter}"`);
-      attrs.push(`data-filter-intensity="${img.filterIntensity ?? DEFAULT_FILTER_INTENSITY}"`);
-    }
-    if (img.rotation) {
-      attrs.push(`data-rotation="${img.rotation}"`);
-    }
-    return attrs.length ? ` ${attrs.join(' ')}` : '';
-  }
-
-  /**
-   * Вычислить inline CSS filter для изображения
-   * @param {string} filter - id фильтра (none, grayscale, sepia, contrast, warm, cool)
-   * @param {number} intensity - интенсивность 0–100
-   * @returns {string} значение CSS filter или пустая строка
-   */
-  _computeFilterStyle(filter, intensity) {
-    if (!filter || filter === 'none') return '';
-    const t = Math.max(0, Math.min(100, intensity ?? DEFAULT_FILTER_INTENSITY)) / 100;
-    switch (filter) {
-      case 'grayscale': return `grayscale(${t})`;
-      case 'sepia': return `sepia(${+(t * 0.75).toFixed(3)})`;
-      case 'contrast': return `contrast(${+(1 + t * 0.35).toFixed(3)})`;
-      case 'warm': return `saturate(${+(1 + t * 0.3).toFixed(3)}) hue-rotate(${+(-t * 10).toFixed(2)}deg)`;
-      case 'cool': return `saturate(${+(1 + t * 0.1).toFixed(3)}) hue-rotate(${+(t * 15).toFixed(2)}deg) brightness(${+(1 + t * 0.05).toFixed(3)})`;
-      default: return '';
-    }
-  }
+  _buildAlbumHtml(data) { return buildAlbumHtml(data, (s) => this._module._escapeHtml(s)); }
+  _buildItemModifiers(img) { return buildItemModifiers(img); }
+  _buildImgInlineStyle(img) { return buildImgInlineStyle(img); }
+  _buildImgDataAttrs(img) { return buildImgDataAttrs(img); }
+  _computeFilterStyle(filter, intensity) { return computeFilterStyle(filter, intensity); }
 }
