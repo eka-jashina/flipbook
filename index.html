@@ -23,15 +23,18 @@
     <meta name="twitter:description" content="Электронная книга с реалистичной 3D анимацией перелистывания страниц.">
     <meta name="twitter:image" content="https://eka-jashina.github.io/flipbook/icons/icon-512.png">
 
+    <!-- Plausible Analytics (privacy-friendly, no cookies) -->
+    <script defer data-domain="eka-jashina.github.io" src="https://plausible.io/js/script.js"></script>
+
     <!-- Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self';
+      script-src 'self' https://plausible.io;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com data:;
       img-src 'self' data: blob:;
       media-src 'self' data:;
-      connect-src 'self' https://*.ingest.sentry.io;
+      connect-src 'self' https://*.ingest.sentry.io https://plausible.io;
       base-uri 'self';
       form-action 'none';
     ">

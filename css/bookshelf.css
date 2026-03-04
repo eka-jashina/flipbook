@@ -22,6 +22,17 @@
   --shelf-border-hover: rgb(232, 220, 200, 0.35);
   --shelf-bg-subtle: rgb(255, 255, 255, 0.06);
   --shelf-bg-hover: rgb(255, 255, 255, 0.12);
+  --shelf-danger: #e8a09a;
+  --shelf-danger-bg: rgb(180, 74, 62, 0.25);
+  --shelf-badge-draft: #aaa;
+  --shelf-badge-unlisted: #c9a84c;
+  --shelf-wood-light: #6b5340;
+  --shelf-wood-mid: #5a4535;
+  --shelf-wood-dark: #4d3a2b;
+  --shelf-wood-base: #3d2e22;
+  --shelf-wood-deep: #35261b;
+  --shelf-wood-wall: #4a3728;
+  --shelf-wood-accent: #7a6350;
 
   position: fixed;
   inset: 0;
@@ -42,7 +53,7 @@
       rgb(0, 0, 0, 0.03) 4px
     ),
     /* Дерево — основа */
-    linear-gradient(180deg, #4a3728 0%, #3d2e22 40%, #35261b 100%);
+    linear-gradient(180deg, var(--shelf-wood-wall) 0%, var(--shelf-wood-base) 40%, var(--shelf-wood-deep) 100%);
   transition: opacity 0.4s ease, visibility 0.4s ease;
 }
 
@@ -152,7 +163,7 @@
       rgb(0, 0, 0, 0.04) 9px
     ),
     /* Основной цвет планки */
-    linear-gradient(180deg, #6b5340 0%, #5a4535 60%, #4d3a2b 100%);
+    linear-gradient(180deg, var(--shelf-wood-light) 0%, var(--shelf-wood-mid) 60%, var(--shelf-wood-dark) 100%);
   box-shadow:
     0 4px 8px rgb(0, 0, 0, 0.4),
     0 2px 3px rgb(0, 0, 0, 0.3),
@@ -168,7 +179,7 @@
   top: 100%;
   height: 10px;
   background:
-    linear-gradient(180deg, #4d3a2b 0%, #3d2e22 100%);
+    linear-gradient(180deg, var(--shelf-wood-dark) 0%, var(--shelf-wood-base) 100%);
   box-shadow:
     0 4px 12px rgb(0, 0, 0, 0.5),
     inset 0 1px 0 rgb(0, 0, 0, 0.2);
@@ -182,7 +193,7 @@
   bottom: auto;
   height: 4px;
   border-radius: 2px 2px 0 0;
-  background: linear-gradient(180deg, #7a6350, #6b5340);
+  background: linear-gradient(180deg, var(--shelf-wood-accent), var(--shelf-wood-light));
   box-shadow: 0 -1px 2px rgb(0, 0, 0, 0.2);
 }
 
@@ -436,11 +447,11 @@
 }
 
 .bookshelf-menu-item--danger {
-  color: #e8a09a;
+  color: var(--shelf-danger);
 }
 
 .bookshelf-menu-item--danger:hover {
-  background: rgb(180, 74, 62, 0.25);
+  background: var(--shelf-danger-bg);
 }
 
 /* Затемнение книги когда открыто меню */
@@ -768,11 +779,11 @@ body[data-screen="reader"] .bookshelf-screen {
 }
 
 .bookshelf-book--draft .bookshelf-book-badge {
-  color: #aaa;
+  color: var(--shelf-badge-draft);
 }
 
 .bookshelf-book--unlisted .bookshelf-book-badge {
-  color: #c9a84c;
+  color: var(--shelf-badge-unlisted);
 }
 
 /* ═══════════════════════════════════════════

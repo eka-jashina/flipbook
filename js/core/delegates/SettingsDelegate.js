@@ -14,6 +14,9 @@ import { FontController } from './FontController.js';
 import { AudioController } from './AudioController.js';
 import { ThemeController } from './ThemeController.js';
 import { setLanguage, applyTranslations } from '@i18n';
+import { StorageManager } from '@utils/StorageManager.js';
+
+const languageStorage = new StorageManager('flipbook-language');
 
 export class SettingsDelegate extends BaseDelegate {
   /**
@@ -146,7 +149,7 @@ export class SettingsDelegate extends BaseDelegate {
   async _handleLanguage(code) {
     await setLanguage(code);
     // Сохраняем выбранный язык отдельно (не зависит от книги)
-    localStorage.setItem('flipbook-language', code);
+    languageStorage.setRaw(code);
     applyTranslations();
   }
 

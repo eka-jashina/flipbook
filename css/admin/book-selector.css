@@ -29,8 +29,8 @@
 .book-card.active {
   border-color: var(--admin-primary);
   border-left: 4px solid var(--admin-primary);
-  background: rgb(107, 83, 64, 0.08);
-  box-shadow: 0 0 0 2px rgb(107, 83, 64, 0.2);
+  background: var(--admin-primary-lighter);
+  box-shadow: var(--admin-focus-ring);
 }
 
 .book-card:focus-visible {
@@ -80,7 +80,7 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--admin-primary);
-  background: rgb(107, 83, 64, 0.12);
+  background: var(--admin-primary-light);
   padding: 2px 8px;
   border-radius: 4px;
   white-space: nowrap;

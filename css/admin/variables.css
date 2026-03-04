@@ -1,21 +1,51 @@
 /* Личный кабинет — переменные */
 
 :root {
+  /* Текст */
   --admin-bg: #f0ebe4;
   --admin-surface: #faf7f2;
   --admin-border: #d4cbbf;
   --admin-text: #2c2418;
   --admin-text-secondary: #7a6e5f;
   --admin-text-tertiary: #a59b8d;
+
+  /* Accent */
   --admin-primary: #6b5340;
   --admin-primary-hover: #55412f;
+  --admin-primary-light: rgb(107, 83, 64, 0.12);
+  --admin-primary-lighter: rgb(107, 83, 64, 0.06);
+
+  /* Статусы */
   --admin-danger: #b44a3e;
   --admin-danger-hover: #943a30;
+  --admin-danger-light: rgb(255, 59, 48, 0.1);
   --admin-success: #5a8a5e;
+  --admin-warning: #c2873a;
+
+  /* Скругления */
   --admin-radius: 12px;
   --admin-radius-sm: 8px;
+
+  /* Тени */
   --admin-shadow: 0 1px 3px rgb(0, 0, 0, 0.08);
   --admin-shadow-md: 0 4px 12px rgb(0, 0, 0, 0.1);
+  --admin-shadow-lg: 0 20px 60px rgb(0, 0, 0, 0.3);
+  --admin-focus-ring: 0 0 0 3px rgb(107, 83, 64, 0.2);
+
+  /* Фоны */
+  --admin-bg-light: #f8f7f5;
+  --admin-bg-hover: #f0ede6;
+  --admin-backdrop: rgb(0, 0, 0, 0.5);
+
+  /* Header (тёмный) */
+  --admin-header-bg: #3a2d1f;
+  --admin-header-text: #e8dcc8;
+
+  /* Иконки и вспомогательные */
+  --admin-icon-muted: #a09888;
+  --admin-border-active: #7c6f5b;
+
+  /* Layout */
   --admin-transition: 200ms ease;
   --admin-max-width: 960px;
   --admin-font: "Inter", -apple-system, blinkmacsystemfont, "Segoe UI", sans-serif;

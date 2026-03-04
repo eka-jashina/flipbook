@@ -11,9 +11,9 @@
 .profile-edit-preview {
   margin-bottom: 24px;
   padding: 20px;
-  background: var(--admin-color-bg-card, #fff);
-  border: 1px solid var(--admin-color-border, #e0e0e0);
-  border-radius: var(--admin-radius, 8px);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
 }
 
 .profile-header--preview {
@@ -30,16 +30,16 @@
 .profile-username-prefix {
   padding: 8px 0 8px 12px;
   font-size: 15px;
-  color: var(--admin-color-text-secondary, #666);
-  background: var(--admin-color-bg-input, #fff);
-  border: 1px solid var(--admin-color-border, #d0d0d0);
+  color: var(--admin-text-secondary);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
   border-right: none;
-  border-radius: var(--admin-radius, 4px) 0 0 var(--admin-radius, 4px);
+  border-radius: var(--admin-radius-sm) 0 0 var(--admin-radius-sm);
   line-height: 1.4;
 }
 
 .profile-username-input .form-input {
-  border-radius: 0 var(--admin-radius, 4px) var(--admin-radius, 4px) 0;
+  border-radius: 0 var(--admin-radius-sm) var(--admin-radius-sm) 0;
 }
 
 /* Валидация username */
@@ -51,22 +51,22 @@
 }
 
 .form-validation--success {
-  color: var(--admin-color-success, #16a34a);
+  color: var(--admin-success);
 }
 
 .form-validation--error {
-  color: var(--admin-color-danger, #dc2626);
+  color: var(--admin-danger);
 }
 
 .form-validation--neutral {
-  color: var(--admin-color-text-secondary, #666);
+  color: var(--admin-text-secondary);
 }
 
 /* Счётчик символов */
 .char-counter {
   margin-top: 4px;
   font-size: 12px;
-  color: var(--admin-color-text-secondary, #999);
+  color: var(--admin-text-tertiary);
   text-align: right;
 }
 
@@ -104,7 +104,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--admin-header-text);
   font-size: 32px;
   font-weight: 600;
 }
@@ -144,8 +144,8 @@
   align-items: center;
   gap: 8px;
   padding: 16px 12px;
-  border: 2px solid var(--admin-color-border, #e0e0e0);
-  border-radius: var(--admin-radius, 8px);
+  border: 2px solid var(--admin-border);
+  border-radius: var(--admin-radius);
   text-align: center;
   transition: border-color 0.2s, background 0.2s;
 }
@@ -156,16 +156,16 @@
 
 .publish-visibility-card span {
   font-size: 12px;
-  color: var(--admin-color-text-secondary, #666);
+  color: var(--admin-text-secondary);
 }
 
 .publish-visibility-option input[type="radio"]:checked + .publish-visibility-card {
-  border-color: var(--admin-color-primary, #06c);
-  background: rgb(0, 102, 204, 0.05);
+  border-color: var(--admin-primary);
+  background: var(--admin-primary-lighter);
 }
 
 .publish-visibility-option input[type="radio"]:focus-visible + .publish-visibility-card {
-  outline: 2px solid var(--admin-color-primary, #06c);
+  outline: 2px solid var(--admin-primary);
   outline-offset: 2px;
 }
 

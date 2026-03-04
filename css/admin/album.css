@@ -42,7 +42,7 @@
 
 .album-layout-btn.active {
   border-color: var(--admin-primary);
-  box-shadow: 0 0 0 2px rgb(107, 83, 64, 0.25);
+  box-shadow: var(--admin-focus-ring);
 }
 
 .album-layout-label {
@@ -123,14 +123,14 @@
 
 .album-image-slot:hover {
   border-color: var(--admin-primary);
-  background: rgb(107, 83, 64, 0.06);
+  background: var(--admin-primary-lighter);
 }
 
 .album-image-slot.drag-over {
   border-color: var(--admin-primary);
   border-style: solid;
-  background: rgb(107, 83, 64, 0.12);
-  box-shadow: 0 0 0 2px rgb(107, 83, 64, 0.25);
+  background: var(--admin-primary-light);
+  box-shadow: var(--admin-focus-ring);
 }
 
 .album-image-slot.has-image {
@@ -295,7 +295,7 @@
 .album-image-option-select:focus {
   border-color: var(--admin-primary);
   outline: none;
-  box-shadow: 0 0 0 2px rgb(107, 83, 64, 0.15);
+  box-shadow: var(--admin-focus-ring);
 }
 
 /* === Интенсивность фильтра === */
@@ -392,8 +392,8 @@
 }
 
 .album-page-remove:hover {
-  background: rgb(255, 59, 48, 0.1);
-  color: #ff3b30;
+  background: var(--admin-danger-light);
+  color: var(--admin-danger);
 }
 
 .album-page-bulk-btn {

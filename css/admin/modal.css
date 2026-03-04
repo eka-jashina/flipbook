@@ -6,11 +6,11 @@
   padding: 0;
   max-width: 480px;
   width: calc(100% - 48px);
-  box-shadow: 0 20px 60px rgb(0, 0, 0, 0.3);
+  box-shadow: var(--admin-shadow-lg);
 }
 
 .admin-modal::backdrop {
-  background: rgb(0, 0, 0, 0.5);
+  background: var(--admin-backdrop);
 }
 
 .modal-form {
@@ -48,7 +48,7 @@
 .form-input:focus {
   outline: none;
   border-color: var(--admin-primary);
-  box-shadow: 0 0 0 3px rgb(107, 83, 64, 0.2);
+  box-shadow: var(--admin-focus-ring);
 }
 
 .form-hint {
