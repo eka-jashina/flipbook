@@ -52,6 +52,7 @@ services:
       mc alias set myminio http://minio:9000 minioadmin minioadmin;
       mc mb myminio/flipbook-uploads --ignore-existing;
       mc anonymous set download myminio/flipbook-uploads;
+      mc version enable myminio/flipbook-uploads;
       "
 
   server:

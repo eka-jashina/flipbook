@@ -45,5 +45,8 @@ test-results/
 # Generated documentation
 docs/
 
+# Database backups
+backups/
+
 # OS
 Thumbs.db
