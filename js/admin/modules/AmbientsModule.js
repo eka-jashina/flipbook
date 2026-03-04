@@ -2,6 +2,7 @@
  * Модуль управления атмосферными звуками (амбиентами)
  */
 import { BaseModule } from './BaseModule.js';
+import { readFileAsDataURL } from './adminHelpers.js';
 
 export class AmbientsModule extends BaseModule {
   constructor(app) {
@@ -127,7 +128,7 @@ export class AmbientsModule extends BaseModule {
     this.ambientModal.showModal();
   }
 
-  _handleAmbientFileUpload(e) {
+  async _handleAmbientFileUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -135,12 +136,8 @@ export class AmbientsModule extends BaseModule {
     // and then new ambients won't be visible in the reader config.
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'audio/', inputEl: e.target })) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this._pendingAmbientDataUrl = reader.result;
-      this.ambientUploadLabel.textContent = file.name;
-    };
-    reader.readAsDataURL(file);
+    this._pendingAmbientDataUrl = await readFileAsDataURL(file);
+    this.ambientUploadLabel.textContent = file.name;
     e.target.value = '';
   }
 

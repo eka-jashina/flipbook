@@ -242,7 +242,7 @@ describe('AppearanceModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Допустимы только изображения');
     });
 
-    it('should upload valid image and update store', () => {
+    it('should upload valid image and update store', async () => {
       const mockReader = {
         readAsDataURL: vi.fn(function () {
           this.result = 'data:image/png;base64,abc';
@@ -258,7 +258,7 @@ describe('AppearanceModule', () => {
         target: { files: [{ size: 1024, type: 'image/png' }], value: 'img.png' },
       };
 
-      mod._handleCoverBgUpload(event);
+      await mod._handleCoverBgUpload(event);
 
       expect(app.store.updateAppearanceTheme).toHaveBeenCalledWith('light', { coverBgImage: 'data:image/png;base64,abc' });
       expect(app._showToast).toHaveBeenCalledWith('Фон обложки загружен');
@@ -305,7 +305,7 @@ describe('AppearanceModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Допустимы только изображения');
     });
 
-    it('should upload custom texture and set to custom mode', () => {
+    it('should upload custom texture and set to custom mode', async () => {
       const mockReader = {
         readAsDataURL: vi.fn(function () {
           this.result = 'data:image/png;base64,tex';
@@ -321,7 +321,7 @@ describe('AppearanceModule', () => {
         target: { files: [{ size: 1024, type: 'image/png' }], value: 'tex.png' },
       };
 
-      mod._handleTextureUpload(event);
+      await mod._handleTextureUpload(event);
 
       expect(app.store.updateAppearanceTheme).toHaveBeenCalledWith('light', {
         pageTexture: 'custom',

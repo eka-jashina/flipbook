@@ -3,6 +3,7 @@
  * Работает внутри табов «Обложка» (cover colors) и «Оформление» (page textures/colors)
  */
 import { BaseModule } from './BaseModule.js';
+import { readFileAsDataURL } from './adminHelpers.js';
 
 export class AppearanceModule extends BaseModule {
   constructor(app) {
@@ -199,21 +200,17 @@ export class AppearanceModule extends BaseModule {
     }
   }
 
-  _handleCoverBgUpload(e) {
+  async _handleCoverBgUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: e.target })) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      this.store.updateAppearanceTheme(this._editTheme, { coverBgImage: dataUrl });
-      this._renderCoverBgPreview(dataUrl);
-      this._renderJsonPreview();
-      this._showToast('Фон обложки загружен');
-    };
-    reader.readAsDataURL(file);
+    const dataUrl = await readFileAsDataURL(file);
+    this.store.updateAppearanceTheme(this._editTheme, { coverBgImage: dataUrl });
+    this._renderCoverBgPreview(dataUrl);
+    this._renderJsonPreview();
+    this._showToast('Фон обложки загружен');
     e.target.value = '';
   }
 
@@ -257,27 +254,22 @@ export class AppearanceModule extends BaseModule {
     this._renderTextureSelector(value, t?.customTextureData);
   }
 
-  _handleTextureUpload(e) {
+  async _handleTextureUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: e.target })) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
+    const dataUrl = await readFileAsDataURL(file);
+    this.store.updateAppearanceTheme(this._editTheme, {
+      pageTexture: 'custom',
+      customTextureData: dataUrl,
+    });
 
-      this.store.updateAppearanceTheme(this._editTheme, {
-        pageTexture: 'custom',
-        customTextureData: dataUrl,
-      });
-
-      this.pageTexture.value = 'custom';
-      this._renderTextureSelector('custom', dataUrl);
-      this._renderJsonPreview();
-      this._showToast('Текстура загружена');
-    };
-    reader.readAsDataURL(file);
+    this.pageTexture.value = 'custom';
+    this._renderTextureSelector('custom', dataUrl);
+    this._renderJsonPreview();
+    this._showToast('Текстура загружена');
     e.target.value = '';
   }
 

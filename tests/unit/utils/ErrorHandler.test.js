@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ErrorHandler } from '@utils/ErrorHandler.js';
+import { ErrorHandler, ErrorCategory } from '@utils/ErrorHandler.js';
 import { CONFIG } from '../../../js/config.js';
 
 const ERROR_HIDE_TIMEOUT = CONFIG.UI.ERROR_HIDE_TIMEOUT;
@@ -223,17 +223,93 @@ describe('ErrorHandler', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // ErrorCategory
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('ErrorCategory', () => {
+    it('should have network category', () => {
+      expect(ErrorCategory.NETWORK).toBe('network');
+    });
+
+    it('should have validation category', () => {
+      expect(ErrorCategory.VALIDATION).toBe('validation');
+    });
+
+    it('should have runtime category', () => {
+      expect(ErrorCategory.RUNTIME).toBe('runtime');
+    });
+
+    it('should be frozen', () => {
+      expect(Object.isFrozen(ErrorCategory)).toBe(true);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // classify()
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('classify()', () => {
+    it('should classify "Failed to fetch" TypeError as network', () => {
+      const error = new TypeError('Failed to fetch');
+      expect(ErrorHandler.classify(error)).toBe(ErrorCategory.NETWORK);
+    });
+
+    it('should classify AbortError as network', () => {
+      const error = new DOMException('The operation was aborted', 'AbortError');
+      expect(ErrorHandler.classify(error)).toBe(ErrorCategory.NETWORK);
+    });
+
+    it('should classify object with status as network', () => {
+      expect(ErrorHandler.classify({ status: 500, message: 'Internal Server Error' })).toBe(ErrorCategory.NETWORK);
+    });
+
+    it('should classify RangeError as validation', () => {
+      expect(ErrorHandler.classify(new RangeError('out of range'))).toBe(ErrorCategory.VALIDATION);
+    });
+
+    it('should classify URIError as validation', () => {
+      expect(ErrorHandler.classify(new URIError('bad uri'))).toBe(ErrorCategory.VALIDATION);
+    });
+
+    it('should classify SyntaxError as validation', () => {
+      expect(ErrorHandler.classify(new SyntaxError('unexpected token'))).toBe(ErrorCategory.VALIDATION);
+    });
+
+    it('should classify ValidationError by name as validation', () => {
+      const error = new Error('field invalid');
+      error.name = 'ValidationError';
+      expect(ErrorHandler.classify(error)).toBe(ErrorCategory.VALIDATION);
+    });
+
+    it('should classify generic Error as runtime', () => {
+      expect(ErrorHandler.classify(new Error('something broke'))).toBe(ErrorCategory.RUNTIME);
+    });
+
+    it('should classify null as runtime', () => {
+      expect(ErrorHandler.classify(null)).toBe(ErrorCategory.RUNTIME);
+    });
+
+    it('should classify undefined as runtime', () => {
+      expect(ErrorHandler.classify(undefined)).toBe(ErrorCategory.RUNTIME);
+    });
+
+    it('should classify regular TypeError (not fetch) as runtime', () => {
+      expect(ErrorHandler.classify(new TypeError('Cannot read properties of null'))).toBe(ErrorCategory.RUNTIME);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // handle()
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('handle()', () => {
-    it('should log error to console', () => {
+    it('should log error to console with category', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const error = new Error('Test error');
 
       ErrorHandler.handle(error, 'User message');
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error:', error);
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[runtime] Error:', error);
 
       consoleErrorSpy.mockRestore();
     });
@@ -268,13 +344,35 @@ describe('ErrorHandler', () => {
       consoleErrorSpy.mockRestore();
     });
 
+    it('should auto-classify network errors', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const fetchError = new TypeError('Failed to fetch');
+
+      ErrorHandler.handle(fetchError, 'Network issue');
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[network] Error:', fetchError);
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should accept explicit category override', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const error = new Error('bad input');
+
+      ErrorHandler.handle(error, 'Invalid data', ErrorCategory.VALIDATION);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[validation] Error:', error);
+
+      consoleErrorSpy.mockRestore();
+    });
+
     it('should handle Error subclasses', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const typeError = new TypeError('Type mismatch');
 
       ErrorHandler.handle(typeError, 'Type error occurred');
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error:', typeError);
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[runtime] Error:', typeError);
       expect(textElement.textContent).toBe('Type error occurred');
 
       consoleErrorSpy.mockRestore();
@@ -284,10 +382,11 @@ describe('ErrorHandler', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       ErrorHandler.handle('string error', 'String error');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error:', 'string error');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[runtime] Error:', 'string error');
 
       ErrorHandler.handle({ code: 500 }, 'Object error');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error:', { code: 500 });
+      // Object without status field → runtime
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[runtime] Error:', { code: 500 });
 
       consoleErrorSpy.mockRestore();
     });
@@ -297,7 +396,7 @@ describe('ErrorHandler', () => {
 
       ErrorHandler.handle(null, 'Null error');
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error:', null);
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[runtime] Error:', null);
       expect(textElement.textContent).toBe('Null error');
 
       consoleErrorSpy.mockRestore();

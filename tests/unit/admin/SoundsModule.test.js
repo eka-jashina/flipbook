@@ -123,7 +123,7 @@ describe('SoundsModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Допустимы только аудиофайлы');
     });
 
-    it('should upload valid audio file via FileReader', () => {
+    it('should upload valid audio file via FileReader', async () => {
       const mockReader = {
         readAsDataURL: vi.fn(function () {
           this.result = 'data:audio/mp3;base64,abc';
@@ -139,7 +139,7 @@ describe('SoundsModule', () => {
         target: { files: [{ size: 1024, type: 'audio/mp3' }], value: 'file.mp3' },
       };
 
-      mod._handleSoundUpload(event, 'pageFlip');
+      await mod._handleSoundUpload(event, 'pageFlip');
 
       expect(app.store.updateSounds).toHaveBeenCalledWith({ pageFlip: 'data:audio/mp3;base64,abc' });
       expect(app._showToast).toHaveBeenCalledWith('Звук загружен');

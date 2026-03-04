@@ -2,6 +2,7 @@
  * Модуль управления звуками
  */
 import { BaseModule } from './BaseModule.js';
+import { readFileAsDataURL } from './adminHelpers.js';
 
 /** Конфигурация звуковых карточек */
 const SOUND_CARDS = [
@@ -77,20 +78,17 @@ export class SoundsModule extends BaseModule {
     }
   }
 
-  _handleSoundUpload(e, key) {
+  async _handleSoundUpload(e, key) {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'audio/', inputEl: e.target })) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.store.updateSounds({ [key]: reader.result });
-      this._renderSounds();
-      this._renderJsonPreview();
-      this._showToast('Звук загружен');
-    };
-    reader.readAsDataURL(file);
+    const dataUrl = await readFileAsDataURL(file);
+    this.store.updateSounds({ [key]: dataUrl });
+    this._renderSounds();
+    this._renderJsonPreview();
+    this._showToast('Звук загружен');
     e.target.value = '';
   }
 

@@ -185,7 +185,7 @@ describe('AmbientsModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Допустимы только аудиофайлы');
     });
 
-    it('should store data URL and update label on success', () => {
+    it('should store data URL and update label on success', async () => {
       const mockReader = {
         readAsDataURL: vi.fn(function () {
           this.result = 'data:audio/mp3;base64,xyz';
@@ -201,7 +201,7 @@ describe('AmbientsModule', () => {
         target: { files: [{ size: 1024, type: 'audio/mp3', name: 'ambient.mp3' }], value: 'ambient.mp3' },
       };
 
-      mod._handleAmbientFileUpload(event);
+      await mod._handleAmbientFileUpload(event);
 
       expect(mod._pendingAmbientDataUrl).toBe('data:audio/mp3;base64,xyz');
       expect(mod.ambientUploadLabel.textContent).toBe('ambient.mp3');

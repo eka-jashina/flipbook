@@ -7,6 +7,7 @@ import { AlbumManager } from './AlbumManager.js';
 import { BookUploadManager } from './BookUploadManager.js';
 import { BookParser } from '../BookParser.js';
 import { QuillEditorWrapper } from './QuillEditorWrapper.js';
+import { readFileAsDataURL, setupDropzone } from './adminHelpers.js';
 
 export class ChaptersModule extends BaseModule {
   /** Максимальный размер загружаемого файла главы (10 МБ) */
@@ -84,8 +85,8 @@ export class ChaptersModule extends BaseModule {
     this.cancelModal.addEventListener('click', () => this.modal.close());
     this.chapterForm.addEventListener('submit', (e) => this._handleChapterSubmit(e));
 
-    // Загрузка файла главы
-    this.chapterFileDropzone.addEventListener('click', () => this.chapterFileInput.click());
+    // Загрузка файла главы (click + drag-and-drop)
+    setupDropzone(this.chapterFileDropzone, this.chapterFileInput, (file) => this._processChapterFile(file));
     this.chapterFileInput.addEventListener('change', (e) => this._handleChapterFileSelect(e));
     this.chapterFileRemove.addEventListener('click', () => this._removeChapterFile());
 
@@ -94,21 +95,6 @@ export class ChaptersModule extends BaseModule {
       const btn = e.target.closest('[data-input-mode]');
       if (!btn) return;
       this._switchInputMode(btn.dataset.inputMode);
-    });
-
-    // Drag-and-drop на dropzone
-    this.chapterFileDropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      this.chapterFileDropzone.classList.add('dragover');
-    });
-    this.chapterFileDropzone.addEventListener('dragleave', () => {
-      this.chapterFileDropzone.classList.remove('dragover');
-    });
-    this.chapterFileDropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      this.chapterFileDropzone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file) this._processChapterFile(file);
     });
 
     // Переключатель книг (делегирование) — клик на карточку книги
@@ -584,21 +570,17 @@ export class ChaptersModule extends BaseModule {
     this._renderBgModeSelector(value, cover.bgCustomData);
   }
 
-  _handleBgUpload(e) {
+  async _handleBgUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: e.target })) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      this.store.updateCover({ bgMode: 'custom', bgCustomData: dataUrl });
-      this._renderBgModeSelector('custom', dataUrl);
-      this._renderJsonPreview();
-      this._showToast('Фон загружен');
-    };
-    reader.readAsDataURL(file);
+    const dataUrl = await readFileAsDataURL(file);
+    this.store.updateCover({ bgMode: 'custom', bgCustomData: dataUrl });
+    this._renderBgModeSelector('custom', dataUrl);
+    this._renderJsonPreview();
+    this._showToast('Фон загружен');
     e.target.value = '';
   }
 
