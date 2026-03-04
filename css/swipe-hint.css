@@ -18,7 +18,7 @@
   align-items: center;
   justify-content: center;
   gap: 24px;
-  background: rgb(0, 0, 0, 0.6);
+  background: var(--color-overlay);
   opacity: 0;
   visibility: hidden;
   transition:
@@ -42,7 +42,7 @@
 .swipe-hint__hand {
   width: 48px;
   height: 48px;
-  color: #fff;
+  color: var(--color-accent-text);
   animation: swipe-hand 1.8s ease-in-out infinite;
 }
 
@@ -75,7 +75,7 @@
 .swipe-hint__text {
   font-size: 16px;
   font-weight: 500;
-  color: #fff;
+  color: var(--color-accent-text);
   text-align: center;
   line-height: 1.4;
 }

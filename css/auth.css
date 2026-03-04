@@ -24,7 +24,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(0, 0, 0, 0.6);
+  background: var(--color-overlay);
   backdrop-filter: blur(4px);
   animation: auth-fade-in 0.3s ease;
 }
@@ -40,7 +40,7 @@
   padding: var(--spacing-xl);
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 60px rgb(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px var(--color-overlay-light);
   animation: auth-slide-up 0.3s ease;
 }
 

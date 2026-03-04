@@ -41,7 +41,7 @@
   font-size: 100%;
   font-weight: 700;
   line-height: 1;
-  color: #a52a2a;
+  color: var(--controls-accent);
   background-color: var(--cover-front-text);
   border: none;
   border-radius: 10px;
@@ -55,7 +55,7 @@
 .controls button:focus-visible,
 .controls label:hover,
 .controls label:focus-within {
-  outline: 1px solid #a52a2a;
+  outline: 1px solid var(--controls-accent);
   transform: scale(1.2);
   transform-origin: center;
 }
@@ -148,10 +148,10 @@
   left: 50%;
   z-index: 9999;
   padding: 1em 2em;
-  color: #fff;
-  background: #f44;
+  color: var(--color-error-banner-text);
+  background: var(--color-error-banner-bg);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgb(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px var(--color-overlay-light);
   transform: translateX(-50%);
   animation: slideDown 0.3s ease-out;
 }

@@ -61,7 +61,7 @@
 }
 
 .chapter-type-badge--album {
-  background: rgb(107, 83, 64, 0.12);
+  background: var(--admin-primary-light);
   color: var(--admin-primary);
 }
 
@@ -106,7 +106,7 @@
   padding: 24px 16px;
   border: 2px dashed var(--admin-border);
   border-radius: var(--admin-radius-sm);
-  background: #f8f7f5;
+  background: var(--admin-bg-light);
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
 }
@@ -117,8 +117,8 @@
 
 .chapter-file-dropzone:hover,
 .chapter-file-dropzone.dragover {
-  border-color: var(--admin-primary, #7c6f5b);
-  background: #f0ede6;
+  border-color: var(--admin-primary);
+  background: var(--admin-bg-hover);
 }
 
 .chapter-file-dropzone.loading {

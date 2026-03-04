@@ -46,5 +46,5 @@
 }
 
 .admin-toast[data-type="warning"] {
-  background: #c2873a;
+  background: var(--admin-warning);
 }

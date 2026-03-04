@@ -169,7 +169,7 @@
 }
 
 .save-indicator--error {
-  color: var(--admin-danger, #b44a3e);
+  color: var(--admin-danger);
 }
 
 .save-indicator.fade-out {
@@ -294,7 +294,7 @@
 
 .empty-hint {
   font-size: 13px;
-  color: var(--admin-text-tertiary, #aaa);
+  color: var(--admin-text-tertiary);
 }
 
 /* === Fieldset description === */

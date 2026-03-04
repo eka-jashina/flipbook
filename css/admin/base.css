@@ -18,8 +18,8 @@ body {
 
 /* === Хедер === */
 .admin-header {
-  background: #3a2d1f;
-  color: #e8dcc8;
+  background: var(--admin-header-bg);
+  color: var(--admin-header-text);
   border-bottom: none;
   position: sticky;
   top: 0;
@@ -38,7 +38,7 @@ body {
 .admin-logo {
   font-size: 20px;
   font-weight: 700;
-  color: #e8dcc8;
+  color: var(--admin-header-text);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -49,8 +49,8 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: rgb(255, 255, 255, 0.15);
-  color: #e8dcc8;
+  background: rgb(255, 255, 255, 0.15); /* на тёмном header-фоне */
+  color: var(--admin-header-text);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -59,7 +59,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #e8dcc8;
+  color: var(--admin-header-text);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
