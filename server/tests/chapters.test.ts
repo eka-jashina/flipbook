@@ -28,6 +28,39 @@ describe('Chapters API', () => {
         .expect(200);
 
       expect(res.body.data.chapters).toEqual([]);
+      expect(res.body.data.total).toBe(0);
+      expect(res.body.data.limit).toBe(100);
+      expect(res.body.data.offset).toBe(0);
+    });
+
+    it('should support pagination via limit and offset', async () => {
+      const { agent, bookId } = await createBookWithAgent(app);
+
+      // Create 3 chapters
+      for (const title of ['Ch 1', 'Ch 2', 'Ch 3']) {
+        await agent.post(`/api/books/${bookId}/chapters`).send({ title }).expect(201);
+      }
+
+      // Get first 2
+      const page1 = await agent
+        .get(`/api/books/${bookId}/chapters?limit=2&offset=0`)
+        .expect(200);
+
+      expect(page1.body.data.chapters).toHaveLength(2);
+      expect(page1.body.data.total).toBe(3);
+      expect(page1.body.data.limit).toBe(2);
+      expect(page1.body.data.offset).toBe(0);
+      expect(page1.body.data.chapters[0].title).toBe('Ch 1');
+
+      // Get remaining
+      const page2 = await agent
+        .get(`/api/books/${bookId}/chapters?limit=2&offset=2`)
+        .expect(200);
+
+      expect(page2.body.data.chapters).toHaveLength(1);
+      expect(page2.body.data.total).toBe(3);
+      expect(page2.body.data.offset).toBe(2);
+      expect(page2.body.data.chapters[0].title).toBe('Ch 3');
     });
 
     it('should require authentication', async () => {

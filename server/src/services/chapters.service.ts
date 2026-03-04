@@ -6,29 +6,50 @@ import { withSerializableRetry } from '../utils/serializable.js';
 import { sanitizeHtml } from '../utils/sanitize.js';
 import type { ChapterListItem, ChapterDetail } from '../types/api.js';
 
+interface PaginatedChapters {
+  chapters: ChapterListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 /**
- * Get all chapters for a book (metadata, no content).
+ * Get chapters for a book with pagination (metadata, no content).
  * Book ownership is verified by requireBookOwnership middleware.
  */
 export async function getChapters(
   bookId: string,
-): Promise<ChapterListItem[]> {
+  options: { limit?: number; offset?: number } = {},
+): Promise<PaginatedChapters> {
 
   const prisma = getPrisma();
-  const chapters = await prisma.chapter.findMany({
-    where: { bookId },
-    orderBy: { position: 'asc' },
-  });
+  const limit = Math.min(options.limit ?? 100, 500);
+  const offset = options.offset ?? 0;
 
-  return chapters.map((ch) => ({
-    id: ch.id,
-    title: ch.title,
-    position: ch.position,
-    filePath: ch.filePath,
-    hasHtmlContent: ch.htmlContent !== null,
-    bg: ch.bg,
-    bgMobile: ch.bgMobile,
-  }));
+  const [chapters, total] = await Promise.all([
+    prisma.chapter.findMany({
+      where: { bookId },
+      orderBy: { position: 'asc' },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.chapter.count({ where: { bookId } }),
+  ]);
+
+  return {
+    chapters: chapters.map((ch) => ({
+      id: ch.id,
+      title: ch.title,
+      position: ch.position,
+      filePath: ch.filePath,
+      hasHtmlContent: ch.htmlContent !== null,
+      bg: ch.bg,
+      bgMobile: ch.bgMobile,
+    })),
+    total,
+    limit,
+    offset,
+  };
 }
 
 /**
