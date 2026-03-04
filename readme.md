@@ -317,11 +317,11 @@ flipbook/
 ├── server/                         # Бэкенд (Express + Prisma + PostgreSQL)
 │   ├── prisma/                     # Схема БД (14 моделей) + миграции
 │   ├── src/
-│   │   ├── routes/                 # API-маршруты (auth, books, chapters, profile, public и т.д.)
-│   │   ├── services/              # Бизнес-логика (profile, public, books и т.д.)
-│   │   ├── middleware/            # Middleware (auth, CSRF, rate limit, upload)
-│   │   ├── parsers/               # Серверные парсеры книг
-│   │   └── utils/                 # Утилиты сервера
+│   │   ├── routes/                 # API-маршруты (15 файлов: auth, books, chapters, profile, public и т.д.)
+│   │   ├── services/              # Бизнес-логика (15 файлов: profile, public, books и т.д.)
+│   │   ├── middleware/            # Middleware (7 файлов: auth, CSRF, rate limit, upload, validate)
+│   │   ├── parsers/               # Серверные парсеры книг (BaseParser + 5 форматов)
+│   │   └── utils/                 # Утилиты сервера (14 файлов: prisma, storage, mappers и т.д.)
 │   └── tests/                     # Тесты API (Vitest + supertest)
 │
 ├── k6/                             # K6 нагрузочное тестирование
@@ -341,10 +341,24 @@ flipbook/
 │   ├── integration/                # Интеграционные тесты (Vitest + jsdom)
 │   └── e2e/                        # E2E-тесты (Playwright)
 │
+├── scripts/                       # Скрипты сборки и обслуживания
+│   ├── generate-icons.js          # Генерация PWA-иконок (sharp)
+│   ├── backup-db.sh               # Резервное копирование PostgreSQL
+│   └── cleanup-s3-orphans.sh      # Очистка orphan-файлов в S3
+│
+├── infra/                         # Конфигурация инфраструктуры
+│   ├── loki-config.yaml           # Конфигурация Loki (агрегация логов)
+│   └── grafana-datasources.yaml   # Provisioning data source для Grafana
+│
+├── .github/workflows/             # CI/CD
+│   ├── deploy.yml                 # Lint → Test → E2E → Build → Deploy (GitHub Pages)
+│   └── server-tests.yml           # Тесты серверного API (PostgreSQL)
+│
 ├── .husky/                         # Git-хуки (pre-commit линтинг)
 ├── .nvmrc                          # Версия Node.js (22)
 ├── docker-compose.yml              # Docker Compose (PostgreSQL + MinIO + сервер)
 ├── docker-compose.k6.yml           # Docker Compose оверлей для K6
+├── docker-compose.observability.yml # Docker Compose оверлей (Loki + Grafana + backup)
 ├── Dockerfile                      # Full-stack Docker-образ
 └── package.json                    # Зависимости и скрипты
 ```
@@ -407,11 +421,14 @@ npm run dev
 | **Бэкенд (из server/)** | |
 | `npm run dev` | Запуск dev-сервера (порт 4000, tsx watch) |
 | `npm run test` | Тесты API (Vitest + supertest) |
+| `npm run db:backup` | Резервное копирование БД |
 | `npm run db:migrate` | Применить Prisma миграции |
 | `npm run db:seed` | Заполнить БД тестовыми данными |
 | `npm run db:studio` | Открыть Prisma Studio |
-| **Docker** | |
+| **Инфраструктура** | |
 | `docker compose up -d` | Запуск PostgreSQL + MinIO + сервер |
+| `npm run infra:observability` | Запуск стека наблюдаемости (Loki + Grafana + backup) |
+| `npm run infra:backup` | Ручное резервное копирование БД |
 
 ---
 
@@ -571,12 +588,42 @@ npm run dev            # Vite dev-сервер (порт 3000)
 | `/api/public/books/:bookId` | GET | Публичная информация о книге |
 | `/api/export`, `/api/import` | GET/POST | Экспорт/импорт конфигурации |
 
+### CI/CD (GitHub Actions)
+
+Проект использует два workflow для автоматизации:
+
+**deploy.yml** — CI/CD фронтенда (при push в `main`):
+1. **Lint** — ESLint + Stylelint
+2. **Test** — Unit/integration тесты (Vitest)
+3. **E2E** — Playwright тесты (Chromium)
+4. **Build** — Production-сборка (после прохождения lint + test)
+5. **Deploy** — Деплой на GitHub Pages
+
+**server-tests.yml** — Тесты серверного API (при изменениях в `server/`):
+- PostgreSQL 17 тестовый сервис
+- Prisma миграции + Vitest + supertest
+
+### Наблюдаемость (Observability)
+
+Стек наблюдаемости запускается отдельным docker-compose оверлеем:
+
+```bash
+npm run infra:observability
+```
+
+Включает:
+- **Loki** — агрегация логов (порт 3200, ретенция 14 дней)
+- **Grafana** — дашборды и визуализация (порт 3100, admin/admin)
+- **pg-backup** — ежедневное резервное копирование PostgreSQL (3:00 UTC, ротация 7 дней)
+- Интеграция `pino-loki` для отправки логов из сервера в Loki
+
 ### Деплой
 
 Проект поддерживает несколько вариантов деплоя:
 
 - **Docker** — root-level `Dockerfile` собирает фронтенд + сервер в единый образ
 - **Docker Compose + K6** — `docker-compose.k6.yml` оверлей для нагрузочного тестирования
+- **Docker Compose + Observability** — `docker-compose.observability.yml` оверлей для мониторинга
 - **Amvera Cloud** — конфигурация в `amvera.yml`
 - **Railway** — конфигурация в `railway.toml`
 - **GitHub Pages** — только фронтенд (автоматически через GitHub Actions)
@@ -767,6 +814,7 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 - **zod** `^3.23.0` — Валидация запросов/ответов
 - **helmet** `^8.0.0` — Заголовки безопасности
 - **pino** `^9.0.0` — Структурированное логирование
+- **pino-loki** `^2.6.0` — Отправка логов в Grafana Loki
 - **bcrypt** `^5.1.0` — Хеширование паролей
 - **csrf-csrf** `^4.0.3` — CSRF-защита
 - **express-rate-limit** `^7.0.0` — Ограничение запросов
