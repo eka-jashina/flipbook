@@ -60,4 +60,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 USER appuser
 
-CMD ["dumb-init", "sh", "-c", "npx prisma migrate deploy && exec node dist/index.js"]
+# Migration must be run separately before scaling (e.g., init container, CI step, or one-off job):
+#   docker run --rm <image> npx prisma migrate deploy
+# To run migration at startup (single-instance only), set RUN_MIGRATIONS=true
+CMD ["dumb-init", "sh", "-c", "if [ \"$RUN_MIGRATIONS\" = 'true' ]; then npx prisma migrate deploy; fi && exec node dist/index.js"]

@@ -27,7 +27,7 @@ export async function getShelf(username: string): Promise<PublicShelf> {
       avatarUrl: true,
       bio: true,
       books: {
-        where: { visibility: 'published' },
+        where: { visibility: 'published', deletedAt: null },
         orderBy: { position: 'asc' },
         take: 200,
         include: {
@@ -80,7 +80,7 @@ export async function getPublicBook(bookId: string): Promise<PublicBookDetail> {
     },
   });
 
-  if (!book || book.visibility === 'draft') {
+  if (!book || book.visibility === 'draft' || book.deletedAt !== null) {
     throw new AppError(404, 'Book not found');
   }
 
@@ -102,10 +102,10 @@ export async function getPublicChapters(bookId: string) {
 
   const book = await prisma.book.findUnique({
     where: { id: bookId },
-    select: { visibility: true },
+    select: { visibility: true, deletedAt: true },
   });
 
-  if (!book || book.visibility === 'draft') {
+  if (!book || book.visibility === 'draft' || book.deletedAt !== null) {
     throw new AppError(404, 'Book not found');
   }
 
@@ -128,10 +128,10 @@ export async function getPublicChapterContent(
 
   const book = await prisma.book.findUnique({
     where: { id: bookId },
-    select: { visibility: true },
+    select: { visibility: true, deletedAt: true },
   });
 
-  if (!book || book.visibility === 'draft') {
+  if (!book || book.visibility === 'draft' || book.deletedAt !== null) {
     throw new AppError(404, 'Book not found');
   }
 
@@ -157,9 +157,11 @@ export async function discoverBooks(
   const limit = Math.min(options.limit ?? 20, 50);
   const offset = options.offset ?? 0;
 
+  const where = { visibility: 'published' as const, deletedAt: null };
+
   const [books, total] = await Promise.all([
     prisma.book.findMany({
-      where: { visibility: 'published' },
+      where,
       orderBy: { publishedAt: 'desc' },
       skip: offset,
       take: limit,
@@ -182,7 +184,7 @@ export async function discoverBooks(
         },
       },
     }),
-    prisma.book.count({ where: { visibility: 'published' } }),
+    prisma.book.count({ where }),
   ]);
 
   return {
