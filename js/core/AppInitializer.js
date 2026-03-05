@@ -190,6 +190,14 @@ export class AppInitializer {
       embedLink.href = `${base}/book/${this.bookId}`;
       embedLink.hidden = false;
     }
+
+    // Показать watermark «Powered by Flipbook»
+    const watermark = document.getElementById('embed-watermark');
+    if (watermark) {
+      const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+      watermark.href = `${base}/`;
+      watermark.hidden = false;
+    }
   }
 
   /**

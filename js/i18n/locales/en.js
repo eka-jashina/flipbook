@@ -135,6 +135,7 @@ export default {
 
   // ─── Embed ──────────────────────────────────────────────────────────────────
   'embed.openOnFlipbook': 'Open on Flipbook',
+  'embed.poweredBy': 'Powered by Flipbook',
 
   // ─── Meta ──────────────────────────────────────────────────────────────────
   'meta.title': 'Flipbook — Interactive Reader with 3D Animation',

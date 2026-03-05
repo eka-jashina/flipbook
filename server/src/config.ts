@@ -16,9 +16,7 @@ const envSchema = z.object({
   //   Production:  ?connection_limit=20&pool_timeout=15
 
   SESSION_SECRET: z.string().min(32),
-  CSRF_SECRET: isProduction
-    ? z.string().min(32, 'CSRF_SECRET is required in production (min 32 chars)')
-    : z.string().min(32).optional(),
+  CSRF_SECRET: z.string().min(32, 'CSRF_SECRET is required (min 32 chars)'),
   SESSION_MAX_AGE: z.coerce.number().default(604800000), // 7 days
   // In production, default to secure cookies (HTTPS only)
   SESSION_SECURE: z
@@ -26,8 +24,12 @@ const envSchema = z.object({
     .transform((v) => v === 'true')
     .default(isProduction ? 'true' : 'false'),
 
-  GOOGLE_CLIENT_ID: z.string().default('placeholder'),
-  GOOGLE_CLIENT_SECRET: z.string().default('placeholder'),
+  GOOGLE_CLIENT_ID: isProduction
+    ? z.string().min(1).refine((v) => v !== 'placeholder', 'GOOGLE_CLIENT_ID must be set in production (not placeholder)')
+    : z.string().default('placeholder'),
+  GOOGLE_CLIENT_SECRET: isProduction
+    ? z.string().min(1).refine((v) => v !== 'placeholder', 'GOOGLE_CLIENT_SECRET must be set in production (not placeholder)')
+    : z.string().default('placeholder'),
   GOOGLE_CALLBACK_URL: z
     .string()
     .default('http://localhost:4000/api/auth/google/callback'),

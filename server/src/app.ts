@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import path from 'node:path';
+import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import cors from 'cors';
@@ -22,6 +23,12 @@ import { logger } from './utils/logger.js';
 import { getPrisma } from './utils/prisma.js';
 import { getS3Client } from './utils/storage.js';
 import { swaggerSpec, swaggerHtml } from './swagger.js';
+import {
+  getBookOgMeta,
+  getShelfOgMeta,
+  injectOgTags,
+  generateSitemap,
+} from './services/seo.service.js';
 
 // Routes
 import authRoutes from './routes/auth.routes.js';
@@ -229,6 +236,17 @@ export function createApp() {
     });
   });
 
+  // Dynamic sitemap.xml (generated from published books & author shelves)
+  app.get('/sitemap.xml', async (_req: Request, res: Response) => {
+    try {
+      const xml = await generateSitemap();
+      res.type('application/xml').send(xml);
+    } catch (err) {
+      logger.error({ err }, 'Failed to generate sitemap');
+      res.status(500).end();
+    }
+  });
+
   // Serve pre-built client in production
   if (config.NODE_ENV === 'production') {
     const clientDist = process.env.CLIENT_DIST_PATH
@@ -236,10 +254,58 @@ export function createApp() {
       : path.resolve(__dirname, '../../dist');
     app.use(express.static(clientDist));
 
-    // SPA fallback — skip API routes (let them 404 via errorHandler)
-    app.use((req: Request, res: Response, next: NextFunction) => {
+    const indexPath = path.join(clientDist, 'index.html');
+    let indexHtml = '';
+    try {
+      indexHtml = fs.readFileSync(indexPath, 'utf-8');
+    } catch {
+      logger.warn('index.html not found at startup — SPA OG injection disabled');
+    }
+
+    // Hreflang tags for multilingual support
+    const SUPPORTED_LANGS = ['ru', 'en', 'es', 'fr', 'de'];
+    function buildHreflangTags(canonicalPath: string): string {
+      const base = config.APP_URL.replace(/\/$/, '');
+      return SUPPORTED_LANGS.map(
+        (lang) => `<link rel="alternate" hreflang="${lang}" href="${base}${canonicalPath}?lang=${lang}">`,
+      ).join('\n    ') + `\n    <link rel="alternate" hreflang="x-default" href="${base}${canonicalPath}">`;
+    }
+
+    function injectHreflang(html: string, canonicalPath: string): string {
+      const tags = buildHreflangTags(canonicalPath);
+      return html.replace('</head>', `    ${tags}\n  </head>`);
+    }
+
+    // SPA fallback with dynamic OG meta injection for public routes
+    app.use(async (req: Request, res: Response, next: NextFunction) => {
       if (req.path.startsWith('/api/')) return next();
-      res.sendFile(path.join(clientDist, 'index.html'));
+      if (!indexHtml) return res.sendFile(indexPath);
+
+      let html = indexHtml;
+      const bookMatch = req.path.match(/^\/book\/([a-f0-9-]+)$/i);
+      const embedMatch = req.path.match(/^\/embed\/([a-f0-9-]+)$/i);
+      const bookId = bookMatch?.[1] || embedMatch?.[1];
+
+      try {
+        if (bookId) {
+          const meta = await getBookOgMeta(bookId);
+          if (meta) html = injectOgTags(html, meta);
+        } else if (req.path !== '/' && req.path !== '/account' && !req.path.startsWith('/api')) {
+          // Potential author shelf route (/:username)
+          const username = req.path.slice(1);
+          if (username && /^[a-zA-Z0-9_-]+$/.test(username)) {
+            const meta = await getShelfOgMeta(username);
+            if (meta) html = injectOgTags(html, meta);
+          }
+        }
+      } catch (err) {
+        logger.warn({ err, path: req.path }, 'OG meta injection failed — serving default HTML');
+      }
+
+      // Inject hreflang for all pages
+      html = injectHreflang(html, req.path);
+
+      res.type('html').send(html);
     });
   }
 

@@ -55,6 +55,16 @@ services:
       mc version enable myminio/flipbook-uploads;
       "
 
+  migrate:
+    build: ./server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://flipbook:flipbook_dev@postgres:5432/flipbook?connection_limit=5&pool_timeout=10
+    entrypoint: ["npx", "prisma", "migrate", "deploy"]
+
   server:
     build: ./server
     restart: unless-stopped
@@ -63,6 +73,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "4000:4000"
     security_opt:

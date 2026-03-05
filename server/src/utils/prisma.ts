@@ -27,6 +27,15 @@ export function getPrisma(): PrismaClient {
   return prisma;
 }
 
+/**
+ * Verify database connectivity and pool configuration at startup.
+ * Call this once during server initialization to fail fast on misconfiguration.
+ */
+export async function validateConnection(): Promise<void> {
+  const client = getPrisma();
+  await client.$queryRaw`SELECT 1`;
+}
+
 export async function disconnectPrisma(): Promise<void> {
   if (prisma) {
     await prisma.$disconnect();

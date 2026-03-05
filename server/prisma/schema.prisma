@@ -29,6 +29,7 @@ model User {
   readingPreferences ReadingPreferences[]
   readingSessions    ReadingSession[]
 
+  @@index([email])
   @@map("users")
 }
 

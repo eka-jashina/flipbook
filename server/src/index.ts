@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/node';
 import { loadConfig } from './config.js';
 import { createApp } from './app.js';
 import { logger } from './utils/logger.js';
-import { disconnectPrisma } from './utils/prisma.js';
+import { disconnectPrisma, validateConnection } from './utils/prisma.js';
 
 // Load configuration from environment
 const config = loadConfig();
@@ -18,6 +18,16 @@ if (config.SENTRY_DSN) {
 }
 
 const app = createApp();
+
+// Validate database connectivity before accepting traffic
+validateConnection()
+  .then(() => {
+    logger.info('Database connection verified');
+  })
+  .catch((err) => {
+    logger.fatal({ err }, 'Database connection failed — check DATABASE_URL and pool settings');
+    process.exit(1);
+  });
 
 const server = app.listen(config.PORT, () => {
   logger.info(
