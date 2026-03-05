@@ -1,12 +1,15 @@
 /**
  * LOADING INDICATOR
- * Управление оверлеем загрузки.
+ * Управление оверлеем загрузки с кольцевым прогресс-баром.
  *
  * Особенности:
- * - Отображение прогресса пагинации
+ * - Кольцевой SVG-прогресс с процентами
  * - Именованные фазы с локализованными сообщениями
  * - Простой show/hide интерфейс
  */
+
+/** Длина окружности SVG-кольца (2 * PI * 28) */
+const CIRCUMFERENCE = 2 * Math.PI * 28;
 
 export class LoadingIndicator {
   /**
@@ -16,6 +19,8 @@ export class LoadingIndicator {
   constructor(overlay, progressEl) {
     this.overlay = overlay;
     this.progressEl = progressEl;
+    this.ringFill = overlay?.querySelector('#loadingRingFill');
+    this.ringPercent = overlay?.querySelector('#loadingRingPercent');
   }
 
   /**
@@ -23,6 +28,7 @@ export class LoadingIndicator {
    */
   show() {
     this.overlay.hidden = false;
+    this._setRingProgress(0);
   }
 
   /**
@@ -58,5 +64,22 @@ export class LoadingIndicator {
     };
 
     this.setProgress(phases[phase] || `${progress}%`);
+    this._setRingProgress(progress);
+  }
+
+  /**
+   * Обновить визуальное заполнение кольца
+   * @param {number} percent - Процент (0-100)
+   * @private
+   */
+  _setRingProgress(percent) {
+    if (!this.ringFill) return;
+    const clamped = Math.max(0, Math.min(100, percent));
+    const offset = CIRCUMFERENCE - (clamped / 100) * CIRCUMFERENCE;
+    this.ringFill.setAttribute('stroke-dashoffset', String(offset));
+
+    if (this.ringPercent) {
+      this.ringPercent.textContent = clamped > 0 ? `${Math.round(clamped)}%` : '';
+    }
   }
 }

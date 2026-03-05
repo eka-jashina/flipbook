@@ -45,7 +45,7 @@
   height: 48px;
   background: var(--pod-btn-bg);
   border-radius: 12px;
-  color: #fff;
+  color: var(--color-dark-modal-text);
 }
 
 /* Контент */
@@ -91,13 +91,13 @@
 }
 
 .install-prompt__btn--dismiss:hover {
-  background: rgb(255, 255, 255, 0.1);
+  background: var(--color-overlay-on-dark);
   color: var(--text-primary, #f5f5f5);
 }
 
 .install-prompt__btn--install {
   background: linear-gradient(135deg, #6b5340 0%, #8b4513 100%);
-  color: #fff;
+  color: var(--color-dark-modal-text);
 }
 
 .install-prompt__btn--install:hover {
@@ -130,7 +130,7 @@
 }
 
 .install-prompt__close:hover {
-  background: rgb(255, 255, 255, 0.1);
+  background: var(--color-overlay-on-dark);
   opacity: 1;
 }
 
@@ -139,24 +139,24 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-theme="light"] .install-prompt {
-  background: rgb(30, 30, 46, 0.95);
-  color: #fff;
+  background: var(--color-dark-modal-bg);
+  color: var(--color-dark-modal-text);
 }
 
 [data-theme="bw"] .install-prompt {
-  background: #333;
-  color: #fff;
+  background: var(--color-bw-surface);
+  color: var(--color-dark-modal-text);
   box-shadow:
     0 8px 32px rgb(0, 0, 0, 0.5),
     0 0 0 1px rgb(255, 255, 255, 0.2);
 }
 
 [data-theme="bw"] .install-prompt__icon {
-  background: #555;
+  background: var(--color-bw-surface-alt);
 }
 
 [data-theme="bw"] .install-prompt__btn--install {
-  background: #555;
+  background: var(--color-bw-surface-alt);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -166,7 +166,7 @@
 @media (max-width: 480px) {
   .install-prompt {
     bottom: 16px;
-    padding: 14px 16px;
+    padding: 12px 16px;
     padding-right: 40px; /* Место для кнопки закрытия */
     gap: 12px;
     flex-wrap: wrap;
@@ -201,7 +201,7 @@
   }
 
   .install-prompt__btn {
-    padding: 10px 16px;
+    padding: 8px 16px;
   }
 }
 
@@ -219,7 +219,7 @@
   font-size: 14px;
   font-weight: 500;
   background: var(--pod-btn-bg);
-  color: #fff;
+  color: var(--color-dark-modal-text);
   border: none;
   border-radius: 10px;
   cursor: pointer;
@@ -251,5 +251,5 @@
 }
 
 [data-theme="bw"] .install-btn {
-  background: #555;
+  background: var(--color-bw-surface-alt);
 }

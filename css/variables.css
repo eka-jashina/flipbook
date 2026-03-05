@@ -90,14 +90,15 @@
   /* ═══════════════════════════════════════════
      КНОПКИ (Button Tokens)
      ─────────────────────────────────────────
-     Единые токены для всех кнопок auth-модалки
-     и других UI-элементов.
-
-     Варианты размеров:
-       default — основная кнопка (submit, OAuth)
-       sm      — компактная (switch-ссылка, inline)
+     Три размера:
+       sm  32px — компактные иконки, TOC
+       md  40px — вторичные кнопки, мобильные nav
+       lg  44px — основные кнопки, touch targets (WCAG)
      ═══════════════════════════════════════════ */
-  --btn-height: 44px;
+  --btn-size-sm: 32px;
+  --btn-size-md: 40px;
+  --btn-size-lg: 44px;
+  --btn-height: var(--btn-size-lg);
   --btn-padding-y: 12px;
   --btn-padding-x: 16px;
   --btn-font-size: 15px;
@@ -120,7 +121,22 @@
      ═══════════════════════════════════════════ */
   --color-overlay: rgb(0, 0, 0, 0.6);
   --color-overlay-light: rgb(0, 0, 0, 0.3);
+  --color-overlay-dim: rgb(0, 0, 0, 0.5);
   --color-overlay-heavy: rgb(0, 0, 0, 0.8);
+  --color-overlay-backdrop: rgb(0, 0, 0, 0.85);
+  --color-overlay-scrim: rgb(0, 0, 0, 0.92);
+
+  /* Светлые оверлеи (поверх тёмного фона) */
+  --color-overlay-on-dark: rgb(255, 255, 255, 0.15);
+  --color-overlay-on-dark-hover: rgb(255, 255, 255, 0.3);
+
+  /* Промо / тёмная модалка (install-prompt, offline на светлом фоне) */
+  --color-dark-modal-bg: rgb(30, 30, 46, 0.95);
+  --color-dark-modal-text: #fff;
+
+  /* B&W тема — оверлейные поверхности */
+  --color-bw-surface: #333;
+  --color-bw-surface-alt: #555;
 
   /* ═══════════════════════════════════════════
      DEBUG PANEL

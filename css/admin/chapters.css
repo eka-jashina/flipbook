@@ -72,8 +72,8 @@
 }
 
 .chapter-action-btn {
-  width: 36px;
-  height: 36px;
+  width: var(--btn-size-md);
+  height: var(--btn-size-md);
   display: flex;
   align-items: center;
   justify-content: center;

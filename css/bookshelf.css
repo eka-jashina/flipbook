@@ -565,12 +565,25 @@ body[data-screen="reader"] .bookshelf-screen {
   padding: 60px 24px;
   color: var(--shelf-text-faint);
   text-align: center;
+  animation: bookshelf-empty-in 0.5s ease-out;
+}
+
+@keyframes bookshelf-empty-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .bookshelf-empty-icon {
-  font-size: 48px;
   margin-bottom: 16px;
-  opacity: 0.6;
+  opacity: 0.4;
+  color: currentcolor;
 }
 
 .bookshelf-empty-text {

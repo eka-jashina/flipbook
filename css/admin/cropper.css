@@ -6,7 +6,7 @@
   z-index: 10000;
   display: flex;
   flex-direction: column;
-  background: rgb(0, 0, 0, 0.85);
+  background: var(--color-overlay-backdrop);
   animation: cropper-fade-in 200ms ease;
 }
 
@@ -38,14 +38,14 @@
 .photo-cropper__dimming {
   position: absolute;
   inset: 0;
-  background: rgb(0, 0, 0, 0.5);
+  background: var(--color-overlay-dim);
   pointer-events: none;
 }
 
 /* === Рамка выделения === */
 .photo-cropper__selection {
   position: absolute;
-  border: 2px solid #fff;
+  border: 2px solid var(--color-dark-modal-text);
   box-shadow: 0 0 0 1px rgb(0, 0, 0, 0.3);
   cursor: move;
 }
@@ -81,8 +81,8 @@
   position: absolute;
   width: 10px;
   height: 10px;
-  background: #fff;
-  border: 1px solid rgb(0, 0, 0, 0.3);
+  background: var(--color-dark-modal-text);
+  border: 1px solid var(--color-overlay-light);
   border-radius: 2px;
   z-index: 1;
 }
@@ -147,7 +147,7 @@
   justify-content: center;
   gap: 12px;
   padding: 16px;
-  background: rgb(0, 0, 0, 0.6);
+  background: var(--color-overlay);
 }
 
 .photo-cropper__btn {

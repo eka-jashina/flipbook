@@ -1,7 +1,7 @@
 /**
  * LOADING INDICATOR
  *
- * Мягкий, ненавязчивый индикатор загрузки.
+ * Кольцевой индикатор прогресса с процентами.
  * Цвета через токены --loading-* (variables.css / themes.css).
  */
 
@@ -21,7 +21,6 @@
   /* Полупрозрачный фон с размытием */
   background: var(--loading-overlay);
   backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
   /* Плавное появление */
   opacity: 1;
   transition: opacity 0.4s ease-out;
@@ -32,49 +31,35 @@
 }
 
 /* ═══════════════════════════════════════════
-   SPINNER (три пульсирующие точки)
+   RING PROGRESS (кольцевой прогресс-бар)
    ═══════════════════════════════════════════ */
 
-.loading-spinner {
+.loading-ring {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  width: 64px;
+  height: 64px;
 }
 
-.loading-spinner::before,
-.loading-spinner::after,
-.loading-spinner span {
-  width: 10px;
-  height: 10px;
-  background: var(--loading-dot);
-  border-radius: 50%;
-  animation: pulse-dot 1.4s ease-in-out infinite;
-  content: '';
+.loading-ring__track {
+  stroke: var(--loading-dot);
+  opacity: 0.25;
 }
 
-.loading-spinner::before {
-  animation-delay: 0s;
+.loading-ring__fill {
+  stroke: var(--loading-dot);
+  transition: stroke-dashoffset 0.3s ease;
 }
 
-.loading-spinner span {
-  animation-delay: 0.2s;
-}
-
-.loading-spinner::after {
-  animation-delay: 0.4s;
-}
-
-@keyframes pulse-dot {
-  0%, 80%, 100% {
-    transform: scale(0.6);
-    opacity: 0.4;
-  }
-
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
+.loading-ring__percent {
+  position: absolute;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--loading-text);
+  letter-spacing: -0.02em;
 }
 
 /* ═══════════════════════════════════════════
@@ -82,7 +67,7 @@
    ═══════════════════════════════════════════ */
 
 .loading-progress {
-  margin-top: 16px;
+  margin-top: 12px;
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.02em;

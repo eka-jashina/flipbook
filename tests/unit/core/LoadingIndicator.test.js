@@ -11,7 +11,7 @@ describe('LoadingIndicator', () => {
   let mockProgressEl;
 
   beforeEach(() => {
-    mockOverlay = { hidden: true };
+    mockOverlay = { hidden: true, querySelector: () => null };
     mockProgressEl = { textContent: '' };
     indicator = new LoadingIndicator(mockOverlay, mockProgressEl);
   });

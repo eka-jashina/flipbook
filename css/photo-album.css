@@ -101,7 +101,7 @@
   z-index: 2;
   padding: 0.4em 0.6em;
   font-size: 0.75em;
-  color: #fff;
+  color: var(--color-dark-modal-text);
   text-align: center;
   text-indent: 0;
   text-shadow: 0 1px 3px rgb(0, 0, 0, 0.6);
@@ -244,7 +244,7 @@
 
 .photo-album__item--frame-polaroid {
   padding: 6px 6px 20px;
-  background: #fff;
+  background: var(--color-surface);
   border-radius: 2px;
   box-shadow: 0 2px 10px rgb(0, 0, 0, 0.2);
 }
@@ -311,7 +311,7 @@ html[data-theme="dark"] .photo-album__item--frame-thin {
 }
 
 html[data-theme="dark"] .photo-album__item--frame-polaroid {
-  background: #2a2a2a;
+  background: var(--color-surface-alt);
 }
 
 html[data-theme="dark"] .photo-album__item--frame-double {
@@ -365,7 +365,7 @@ html[data-theme="dark"] .photo-album__item--frame-double {
 }
 
 .lightbox--active {
-  background: rgb(0, 0, 0, 0.92);
+  background: var(--color-overlay-scrim);
 }
 
 /* Полноэкранная картинка */
@@ -404,16 +404,16 @@ html[data-theme="dark"] .photo-album__item--frame-double {
   top: 16px;
   right: 16px;
   z-index: 2;
-  width: 44px;
-  height: 44px;
+  width: var(--btn-size-lg);
+  height: var(--btn-size-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgb(255, 255, 255, 0.15);
-  color: #fff;
+  background: var(--color-overlay-on-dark);
+  color: var(--color-dark-modal-text);
   cursor: pointer;
   opacity: 0;
   transition: opacity 200ms ease, background 200ms ease;
@@ -424,7 +424,7 @@ html[data-theme="dark"] .photo-album__item--frame-double {
 }
 
 .lightbox__close:hover {
-  background: rgb(255, 255, 255, 0.3);
+  background: var(--color-overlay-on-dark-hover);
 }
 
 /* Подпись */
@@ -464,8 +464,8 @@ html[data-theme="dark"] .photo-album__item--frame-double {
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgb(255, 255, 255, 0.15);
-  color: #fff;
+  background: var(--color-overlay-on-dark);
+  color: var(--color-dark-modal-text);
   cursor: pointer;
   opacity: 0;
   transition: opacity 200ms ease, background 200ms ease;
@@ -488,7 +488,7 @@ html[data-theme="dark"] .photo-album__item--frame-double {
 }
 
 .lightbox__nav:hover {
-  background: rgb(255, 255, 255, 0.3);
+  background: var(--color-overlay-on-dark-hover);
 }
 
 /* Счётчик фото (1 / 5) */
