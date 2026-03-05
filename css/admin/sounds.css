@@ -42,8 +42,8 @@
 .ambient-card-icon {
   font-size: 24px;
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: var(--btn-size-md);
+  height: var(--btn-size-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,6 +80,6 @@
 }
 
 .ambient-card-actions .chapter-action-btn.delete {
-  width: 32px;
-  height: 32px;
+  width: var(--btn-size-sm);
+  height: var(--btn-size-sm);
 }

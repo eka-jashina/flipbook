@@ -63,7 +63,7 @@
   width: 52px;
   height: 40px;
   gap: 2px;
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
 }
 
@@ -147,7 +147,7 @@
   position: absolute;
   inset: 0;
   z-index: 2;
-  background: rgb(255, 255, 255, 0.6);
+  background: rgb(255, 255, 255, 0.6); /* pulse overlay — контекстный, не токенизируется */
   border-radius: inherit;
   animation: album-slot-pulse 1s ease-in-out infinite;
 }
@@ -194,8 +194,8 @@
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgb(0, 0, 0, 0.6);
-  color: #fff;
+  background: var(--color-overlay);
+  color: var(--color-dark-modal-text);
   font-size: 14px;
   cursor: pointer;
   z-index: 1;
@@ -221,7 +221,7 @@
 .album-image-slot-crop:hover,
 .album-image-slot-uncrop:hover,
 .album-image-slot-rotate:hover {
-  background: rgb(0, 0, 0, 0.8);
+  background: var(--color-overlay-heavy);
 }
 
 .album-image-slot.has-image .album-image-slot-remove,
@@ -241,8 +241,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgb(0, 0, 0, 0.5);
-  color: #fff;
+  background: var(--color-overlay-dim);
+  color: var(--color-dark-modal-text);
   font-size: 11px;
   font-weight: 600;
   pointer-events: none;
@@ -277,7 +277,7 @@
 .album-image-option-select {
   flex: 1;
   min-width: 0;
-  padding: 3px 4px;
+  padding: 4px;
   border: 1px solid var(--admin-border);
   border-radius: 6px;
   background: var(--admin-surface);
@@ -341,7 +341,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .album-page-title {
@@ -417,14 +417,14 @@
 }
 
 .album-page-card .album-layouts {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 /* Ряд кнопок под списком страниц */
 .album-actions-row {
   display: flex;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .album-actions-row .album-add-page-btn {

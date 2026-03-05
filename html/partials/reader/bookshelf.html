@@ -14,7 +14,11 @@
         </button>
       </div>
       <div class="bookshelf-empty" id="bookshelf-empty" hidden>
-        <div class="bookshelf-empty-icon">📚</div>
+        <div class="bookshelf-empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="48" height="48">
+            <path fill="currentColor" d="M8 6h6v36H8a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zm8 0h4v36h-4zm6 0h4v36h-4zm10.24-.96 9.66 2.58a2 2 0 0 1 1.42 2.45l-9.32 34.86a2 2 0 0 1-2.45 1.42l-3.55-.95V6z"/>
+          </svg>
+        </div>
         <div class="bookshelf-empty-text" data-i18n="bookshelf.empty">Книги пока не добавлены</div>
         <button type="button" class="bookshelf-add-btn" data-action="add-book" data-i18n-aria-label="bookshelf.createBook" aria-label="Создать книгу">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">

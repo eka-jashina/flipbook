@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 8px 20px;
   background: var(--bg-secondary, #2a2a3e);
   color: var(--text-primary, #f5f5f5);
   border-radius: 24px;
@@ -48,14 +48,14 @@
 
 /* Адаптация под тёмную тему (уже тёмный по умолчанию) */
 [data-theme="light"] .offline-indicator {
-  background: rgb(30, 30, 46, 0.95);
-  color: #fff;
+  background: var(--color-dark-modal-bg);
+  color: var(--color-dark-modal-text);
 }
 
 /* Адаптация под ч/б тему */
 [data-theme="bw"] .offline-indicator {
-  background: #333;
-  color: #fff;
+  background: var(--color-bw-surface);
+  color: var(--color-dark-modal-text);
   box-shadow:
     0 4px 12px rgb(0, 0, 0, 0.5),
     0 0 0 1px rgb(255, 255, 255, 0.2);
