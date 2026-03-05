@@ -12,10 +12,19 @@
 // Внутреннее состояние reading session
 // ═══════════════════════════════════════════
 
+let _apiClient = null;
 let _sessionBookId = null;
 let _sessionStartTime = null;
 let _sessionStartPage = 0;
 let _sessionCurrentPage = 0;
+
+/**
+ * Установить API клиент для персистентного хранения сессий чтения на сервере.
+ * @param {import('./ApiClient.js').ApiClient|null} apiClient
+ */
+export function setAnalyticsApiClient(apiClient) {
+  _apiClient = apiClient;
+}
 
 /**
  * Отправить пользовательское событие в Plausible.
@@ -81,6 +90,17 @@ export function trackReadingSessionEnd() {
     duration_sec: durationSec,
   });
 
+  // Персистим на сервер (fire-and-forget)
+  if (_apiClient && pagesRead > 0) {
+    _apiClient.saveReadingSession(_sessionBookId, {
+      startPage: _sessionStartPage,
+      endPage: _sessionCurrentPage,
+      pagesRead,
+      durationSec,
+      startedAt: new Date(_sessionStartTime).toISOString(),
+    }).catch(() => { /* сетевые ошибки не критичны */ });
+  }
+
   // Сброс
   _sessionBookId = null;
   _sessionStartTime = null;
@@ -129,12 +149,43 @@ export function trackLanguageChanged(language) {
 }
 
 // ═══════════════════════════════════════════
-// Обработка закрытия страницы (beforeunload)
+// Core Web Vitals
+// ═══════════════════════════════════════════
+
+/**
+ * Отправить Core Web Vitals в Plausible как пользовательские события.
+ * Метрики: LCP, FID, CLS, INP, TTFB.
+ * Значения округляются до целых (мс) или 3 знаков (CLS).
+ */
+async function reportWebVitals() {
+  try {
+    const { onLCP, onFID, onCLS, onINP, onTTFB } = await import('web-vitals');
+
+    const send = (metric) => {
+      const value = metric.name === 'CLS'
+        ? metric.value.toFixed(3)
+        : Math.round(metric.value);
+      trackEvent('web_vitals', { metric: metric.name, value, rating: metric.rating });
+    };
+
+    onLCP(send);
+    onFID(send);
+    onCLS(send);
+    onINP(send);
+    onTTFB(send);
+  } catch {
+    // web-vitals не загрузился — игнорируем
+  }
+}
+
+// ═══════════════════════════════════════════
+// Инициализация
 // ═══════════════════════════════════════════
 
 /**
  * Инициализация аналитики.
  * Подписывается на beforeunload для отправки reading_session_end при закрытии.
+ * Запускает сбор Core Web Vitals.
  */
 export function initAnalytics() {
   window.addEventListener('beforeunload', () => {
@@ -146,4 +197,7 @@ export function initAnalytics() {
       trackReadingSessionEnd();
     }
   });
+
+  // Core Web Vitals (async, не блокирует запуск)
+  reportWebVitals();
 }

@@ -251,6 +251,15 @@ export const upsertProgressSchema = z.object({
   ambientVolume: z.number().min(0).max(1),
 });
 
+// ── Reading Sessions ──────────────────────────────
+export const createReadingSessionSchema = z.object({
+  startPage: z.number().int().min(0),
+  endPage: z.number().int().min(0),
+  pagesRead: z.number().int().min(0),
+  durationSec: z.number().int().min(0).max(86400), // max 24h
+  startedAt: z.string().datetime(),
+});
+
 // ── Profile ───────────────────────────────────────
 export const updateProfileSchema = z.object({
   username: usernameField.optional(),

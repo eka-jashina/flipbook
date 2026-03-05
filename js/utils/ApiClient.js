@@ -418,6 +418,21 @@ export class ApiClient {
     return this._fetchWithRetry(`/api/v1/books/${bookId}/progress`, { method: 'PUT', body: data });
   }
 
+  /** Сохранить сессию чтения */
+  async saveReadingSession(bookId, data) {
+    return this._fetchWithRetry(`/api/v1/books/${bookId}/reading-sessions`, { method: 'POST', body: data });
+  }
+
+  /** Получить историю сессий чтения */
+  async getReadingSessions(bookId, { limit = 50, offset = 0 } = {}) {
+    return this._fetchWithRetry(`/api/v1/books/${bookId}/reading-sessions?limit=${limit}&offset=${offset}`);
+  }
+
+  /** Получить статистику чтения по книге */
+  async getReadingStats(bookId) {
+    return this._fetchWithRetry(`/api/v1/books/${bookId}/reading-sessions/stats`);
+  }
+
   // ═══════════════════════════════════════════
   // Загрузка файлов
   // ═══════════════════════════════════════════

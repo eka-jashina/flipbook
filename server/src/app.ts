@@ -32,6 +32,7 @@ import soundsRoutes from './routes/sounds.routes.js';
 import ambientsRoutes from './routes/ambients.routes.js';
 import decorativeFontRoutes from './routes/decorativeFont.routes.js';
 import progressRoutes from './routes/progress.routes.js';
+import readingSessionsRoutes from './routes/readingSessions.routes.js';
 import fontsRoutes from './routes/fonts.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
@@ -201,8 +202,9 @@ export function createApp() {
   app.use('/api/v1/public', publicRoutes);
   app.use('/api/v1/books', booksRoutes);
 
-  // Progress: any authenticated user can track reading progress (no ownership required)
+  // Progress & reading sessions: any authenticated user can track (no ownership required)
   app.use('/api/v1/books/:bookId/progress', progressRoutes);
+  app.use('/api/v1/books/:bookId/reading-sessions', readingSessionsRoutes);
 
   // Book sub-resource routes — unified ownership check via middleware
   app.use('/api/v1/books/:bookId', requireAuth, requireBookOwnership);
