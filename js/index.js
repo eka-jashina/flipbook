@@ -30,6 +30,7 @@ import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
 import { initI18n, t, applyTranslations } from '@i18n';
 import { StorageManager } from './utils/StorageManager.js';
+import { initAnalytics } from './utils/Analytics.js';
 import {
   initRouteHandlers,
   handleHome, handlePublicShelf, handleReader, handleEmbed, handleAccount,
@@ -138,6 +139,9 @@ async function init() {
     if (useAPI) {
       currentUser = await checkAuth();
     }
+
+    // Инициализируем аналитику (Plausible)
+    initAnalytics();
 
     // Инициализируем i18n: язык берём из localStorage (reader-settings) или 'auto'
     const savedLang = languageStorage.getRaw() || 'auto';

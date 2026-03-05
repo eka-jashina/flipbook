@@ -6,6 +6,7 @@
 
 import { CONFIG } from "../../config.js";
 import { cssVars, announce, isValidFontSize, sanitizeFontSize } from "../../utils/index.js";
+import { trackFontChanged } from "../../utils/Analytics.js";
 
 /** Названия шрифтов для объявления screen reader */
 const FONT_NAMES = {
@@ -64,6 +65,7 @@ export class FontController {
     }
 
     cssVars.invalidateCache();
+    trackFontChanged(fontKey);
     announce(`Шрифт: ${FONT_NAMES[fontKey] || fontKey}`);
     return true;
   }

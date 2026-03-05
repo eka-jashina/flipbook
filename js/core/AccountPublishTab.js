@@ -5,6 +5,8 @@
  * Управляет видимостью книги (draft/published), описанием и ссылкой для шаринга.
  */
 
+import { trackBookPublished } from '../utils/Analytics.js';
+
 export class AccountPublishTab {
   /**
    * @param {Object} options
@@ -77,6 +79,9 @@ export class AccountPublishTab {
 
     try {
       await this._api.updateBook(activeBookId, { visibility, description });
+      if (visibility === 'published') {
+        trackBookPublished(activeBookId);
+      }
       this._showToast('Настройки публикации сохранены', 'success');
       this._updateShareLink(visibility, activeBookId);
     } catch (err) {

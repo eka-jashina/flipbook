@@ -7,6 +7,8 @@
  * Поток: GET /api/auth/me → 401 → модалка → 200 → bookshelf с книгами.
  */
 
+import { trackGuestRegistered } from '../utils/Analytics.js';
+
 export class AuthModal {
   /**
    * @param {Object} options
@@ -170,6 +172,7 @@ export class AuthModal {
         const name = this._el.querySelector('#auth-name')?.value.trim() || null;
         const username = this._el.querySelector('#auth-username')?.value.trim();
         user = await this._api.register(email, password, name, username);
+        trackGuestRegistered('email');
       }
       this.hide();
       if (this._onAuth) this._onAuth(user);

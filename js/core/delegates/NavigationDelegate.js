@@ -6,6 +6,7 @@
 import { BookState, Direction } from '../../config.js';
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 import { rateLimiters } from '../../utils/index.js';
+import { updateReadingPage } from '../../utils/Analytics.js';
 
 export class NavigationDelegate extends BaseDelegate {
   /**
@@ -186,6 +187,9 @@ export class NavigationDelegate extends BaseDelegate {
 
       // Возвращаемся в состояние OPENED
       this.stateMachine.transitionTo(BookState.OPENED);
+
+      // Аналитика — обновляем текущую страницу
+      updateReadingPage(nextIndex);
 
       // Уведомляем контроллер об изменении индекса
       this.emit(DelegateEvents.INDEX_CHANGE, nextIndex);

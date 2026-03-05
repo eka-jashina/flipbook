@@ -14,6 +14,7 @@
 
 import i18next from 'i18next';
 import { ru, en, es, fr, de } from './locales/index.js';
+import { trackLanguageChanged } from '../utils/Analytics.js';
 
 /** Список поддерживаемых языков */
 export const LANGUAGES = [
@@ -69,6 +70,7 @@ export async function setLanguage(code) {
   if (!LANGUAGE_CODES.includes(code)) return;
   await i18next.changeLanguage(code);
   document.documentElement.lang = code;
+  trackLanguageChanged(code);
   applyTranslations();
 }
 

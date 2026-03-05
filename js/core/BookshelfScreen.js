@@ -23,6 +23,7 @@
 import { ProfileHeader } from './ProfileHeader.js';
 import { adminConfigStorage } from '../config/configHelpers.js';
 import { t, applyTranslations } from '@i18n';
+import { trackBookOpened } from '../utils/Analytics.js';
 const BOOKS_PER_SHELF = 5;
 
 /** Циклическое переключение видимости */
@@ -350,6 +351,7 @@ export class BookshelfScreen {
 
       if (this._mode === 'guest') {
         // Guest mode: сразу переход к чтению
+        trackBookOpened(bookId);
         if (this.onBookSelect) this.onBookSelect(bookId);
       } else {
         // Owner mode: открыть контекстное меню
@@ -415,6 +417,7 @@ export class BookshelfScreen {
   _handleBookAction(action, bookId) {
     switch (action) {
       case 'read':
+        trackBookOpened(bookId);
         if (this.onBookSelect) this.onBookSelect(bookId);
         break;
 
