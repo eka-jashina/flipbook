@@ -42,6 +42,7 @@
   background-color: var(--bg-book);
   border-radius: 12px;
   box-shadow: var(--shadow-book);
+  cursor: default;
 
   /* 3D контекст для анимаций переворота */
   transform-style: preserve-3d;
@@ -86,10 +87,6 @@
    CURSOR HINTS
    Визуальные подсказки для пользователя
    ═══════════════════════════════════════════ */
-
-.book {
-  cursor: default;
-}
 
 /* Закрытая книга - обложка кликабельна */
 .book[data-state="closed"] .cover {

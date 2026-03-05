@@ -27,6 +27,7 @@ import { AppearanceModule } from '../admin/modules/AppearanceModule.js';
 import { FontsModule } from '../admin/modules/FontsModule.js';
 import { ExportModule } from '../admin/modules/ExportModule.js';
 import { renderModeCards } from '../admin/modeCardsData.js';
+import { AccountPublishTab } from './AccountPublishTab.js';
 
 // Динамический импорт CSS админки
 import('../../css/admin/index.css');
@@ -117,7 +118,16 @@ export class AccountScreen {
 
     this._cacheDOM();
     this._bindEvents();
-    this._bindPublishEvents();
+
+    // Вкладка публикации (выделена в отдельный модуль)
+    this._publishTab = new AccountPublishTab({
+      container: this.container,
+      apiClient: this._api,
+      store: this._store,
+      showToast: (msg, type) => this._showToast(msg, type),
+    });
+    this._publishTab.bindEvents();
+
     this._render();
   }
 
@@ -410,100 +420,8 @@ export class AccountScreen {
     });
 
     // При переходе на вкладку публикации — подгрузить данные
-    if (tabName === 'publish') {
-      this._renderPublishTab();
-    }
-  }
-
-  // ═══════════════════════════════════════════
-  // Публикация книги (вкладка Publish)
-  // ═══════════════════════════════════════════
-
-  _bindPublishEvents() {
-    const c = this.container;
-
-    this._publishVisibility = c.querySelector('#publishVisibility');
-    this._bookDescription = c.querySelector('#bookDescription');
-    this._descCharCount = c.querySelector('#descCharCount');
-    this._shareSection = c.querySelector('#shareSection');
-    this._shareLink = c.querySelector('#shareLink');
-    this._copyShareLinkBtn = c.querySelector('#copyShareLink');
-    this._savePublishBtn = c.querySelector('#savePublish');
-
-    // Счётчик символов описания
-    this._bookDescription.addEventListener('input', () => {
-      this._descCharCount.textContent = this._bookDescription.value.length;
-    });
-
-    // Копировать ссылку
-    this._copyShareLinkBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(this._shareLink.value).then(() => {
-        this._showToast('Ссылка скопирована', 'success');
-      }).catch(() => {
-        // Fallback
-        this._shareLink.select();
-        document.execCommand('copy');
-        this._showToast('Ссылка скопирована', 'success');
-      });
-    });
-
-    // Сохранить публикацию
-    this._savePublishBtn.addEventListener('click', () => this._savePublish());
-  }
-
-  /** Заполнить вкладку «Публикация» данными текущей книги */
-  async _renderPublishTab() {
-    const activeBookId = this.store.getActiveBookId?.() ?? null;
-    if (!activeBookId || !this._api) return;
-
-    try {
-      const book = await this._api.getBook(activeBookId);
-      const visibility = book.visibility || 'draft';
-      const description = book.description || '';
-
-      // Видимость
-      const radio = this._publishVisibility.querySelector(`input[value="${visibility}"]`);
-      if (radio) radio.checked = true;
-
-      // Описание
-      this._bookDescription.value = description;
-      this._descCharCount.textContent = description.length;
-
-      // Ссылка для шаринга
-      if (visibility !== 'draft') {
-        this._shareSection.hidden = false;
-        const base = location.origin + (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
-        this._shareLink.value = `${base}/book/${activeBookId}`;
-      } else {
-        this._shareSection.hidden = true;
-      }
-    } catch {
-      // Книга не найдена или ошибка — игнорируем
-    }
-  }
-
-  async _savePublish() {
-    const activeBookId = this.store.getActiveBookId?.() ?? null;
-    if (!activeBookId || !this._api) return;
-
-    const selected = this._publishVisibility.querySelector('input[name="bookVisibility"]:checked');
-    const visibility = selected?.value || 'draft';
-    const description = this._bookDescription.value.trim();
-
-    try {
-      await this._api.updateBook(activeBookId, { visibility, description });
-      this._showToast('Настройки публикации сохранены', 'success');
-
-      // Обновить ссылку для шаринга
-      if (visibility !== 'draft') {
-        this._shareSection.hidden = false;
-        const base = location.origin + (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
-        this._shareLink.value = `${base}/book/${activeBookId}`;
-      } else {
-        this._shareSection.hidden = true;
-      }
-    } catch (err) {
-      this._showToast(err.message || 'Ошибка сохранения', 'error');
+    if (tabName === 'publish' && this._publishTab) {
+      this._publishTab.render();
     }
   }
 

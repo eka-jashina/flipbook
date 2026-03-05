@@ -207,7 +207,7 @@ export class SettingsManager {
   destroy() {
     // Финальная синхронизация перед уничтожением
     if (this._dirty && this._api && this._bookId) {
-      this._syncToServer().catch(() => {});
+      this._syncToServer().catch(() => {}); // При уничтожении ошибка синхронизации не критична — данные уже сохранены локально
     }
 
     if (this._syncTimer) {
