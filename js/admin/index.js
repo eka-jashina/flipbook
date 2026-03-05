@@ -456,8 +456,8 @@ async function initAdmin() {
 
       store = await ServerAdminConfigStore.create(apiClient);
     }
-  } catch {
-    // Сервер недоступен — fallback
+  } catch (err) {
+    console.debug('AdminApp: сервер недоступен, fallback на localStorage', err);
   }
 
   // Fallback: localStorage/IndexedDB

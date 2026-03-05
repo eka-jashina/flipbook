@@ -28,6 +28,9 @@ import { FontsModule } from '../admin/modules/FontsModule.js';
 import { ExportModule } from '../admin/modules/ExportModule.js';
 import { renderModeCards } from '../admin/modeCardsData.js';
 import { AccountPublishTab } from './AccountPublishTab.js';
+import {
+  cacheUIElements, showToast, showSaveIndicator, showSaveError, confirm,
+} from './AccountScreenUI.js';
 
 // Динамический импорт CSS админки
 import('../../css/admin/index.css');
@@ -57,9 +60,9 @@ export class AccountScreen {
     this._profile = null;
     this._modules = [];
 
-    // Таймеры
-    this._toastTimer = null;
-    this._saveIndicatorTimer = null;
+    // Таймеры (мутируемые ref-объекты для AccountScreenUI)
+    this._toastTimerRef = { timer: null };
+    this._saveTimerRef = { timer: null };
     /** ID книги, созданной через «Создать вручную» (ещё не подтверждённой) */
     this._pendingBookId = null;
 
@@ -90,11 +93,11 @@ export class AccountScreen {
     this.store = this._store;
 
     // Подписка на сохранения store
-    this.store.onSave = () => this._showSaveIndicator();
+    this.store.onSave = () => showSaveIndicator(this.container, this._ui, this._saveTimerRef);
     if (this.store.onError !== undefined) {
       this.store.onError = (message) => {
         this._showToast(message, 'error');
-        this._showSaveError();
+        showSaveError(this._ui, this._saveTimerRef);
       };
     }
 
@@ -208,21 +211,8 @@ export class AccountScreen {
     this.modeCardsContainer = c.querySelector('#modeCards');
     renderModeCards(this.modeCardsContainer);
 
-    // Toast
-    this.toast = c.querySelector('#toast');
-    this.toastMessage = c.querySelector('#toastMessage');
-    this.toastIconPath = c.querySelector('#toastIconPath');
-
-    // Save indicator
-    this.saveIndicator = c.querySelector('#saveIndicator');
-    this.saveIndicatorText = c.querySelector('#saveIndicatorText');
-
-    // Confirm dialog
-    this.confirmDialog = c.querySelector('#confirmDialog');
-    this.confirmTitle = c.querySelector('#confirmTitle');
-    this.confirmMessage = c.querySelector('#confirmMessage');
-    this.confirmOk = c.querySelector('#confirmOk');
-    this.confirmCancel = c.querySelector('#confirmCancel');
+    // UI-элементы (toast, save indicator, confirm dialog)
+    this._ui = cacheUIElements(c);
 
     // DOM для модулей
     this._modules.forEach(m => m.cacheDOM());
@@ -461,103 +451,14 @@ export class AccountScreen {
     }
   }
 
-  /**
-   * Стилизованный диалог подтверждения.
-   * @param {string} message
-   * @param {Object} [opts]
-   * @param {string} [opts.title='Подтверждение']
-   * @param {string} [opts.okText='Удалить']
-   * @returns {Promise<boolean>}
-   */
-  _confirm(message, { title = 'Подтверждение', okText = 'Удалить' } = {}) {
-    this.confirmTitle.textContent = title;
-    this.confirmMessage.textContent = message;
-    this.confirmOk.textContent = okText;
-
-    return new Promise((resolve) => {
-      const cleanup = () => {
-        this.confirmOk.removeEventListener('click', onOk);
-        this.confirmCancel.removeEventListener('click', onCancel);
-        this.confirmDialog.removeEventListener('close', onClose);
-      };
-      const onOk = () => { cleanup(); this.confirmDialog.close(); resolve(true); };
-      const onCancel = () => { cleanup(); this.confirmDialog.close(); resolve(false); };
-      const onClose = () => { cleanup(); resolve(false); };
-
-      this.confirmOk.addEventListener('click', onOk);
-      this.confirmCancel.addEventListener('click', onCancel);
-      this.confirmDialog.addEventListener('close', onClose);
-
-      this.confirmDialog.showModal();
-    });
+  /** @param {string} message @param {Object} [opts] @returns {Promise<boolean>} */
+  _confirm(message, opts) {
+    return confirm(this._ui, message, opts);
   }
 
-  /** Показать индикатор «Сохранено» */
-  _showSaveIndicator() {
-    const editorView = this.container.querySelector('.screen-view[data-view="editor"]');
-    if (!editorView || !editorView.classList.contains('active')) return;
-
-    this.saveIndicator.classList.remove('fade-out', 'save-indicator--error');
-    this.saveIndicator.classList.add('visible');
-    this.saveIndicatorText.textContent = 'Сохранено';
-    this.saveIndicator.classList.add('save-indicator--saved');
-    this.saveIndicator.classList.remove('save-indicator--saving');
-
-    clearTimeout(this._saveIndicatorTimer);
-    this._saveIndicatorTimer = setTimeout(() => {
-      this.saveIndicator.classList.add('fade-out');
-      setTimeout(() => {
-        this.saveIndicator.classList.remove('visible', 'fade-out', 'save-indicator--saved');
-      }, 500);
-    }, 2000);
-  }
-
-  /** Показать ошибку сохранения */
-  _showSaveError() {
-    this.saveIndicator.classList.remove('fade-out', 'save-indicator--saved', 'save-indicator--saving');
-    this.saveIndicator.classList.add('visible', 'save-indicator--error');
-    this.saveIndicatorText.textContent = 'Ошибка сохранения';
-
-    clearTimeout(this._saveIndicatorTimer);
-    this._saveIndicatorTimer = setTimeout(() => {
-      this.saveIndicator.classList.add('fade-out');
-      setTimeout(() => {
-        this.saveIndicator.classList.remove('visible', 'fade-out', 'save-indicator--error');
-      }, 500);
-    }, 4000);
-  }
-
-  /** SVG-пути иконок для типов toast */
-  static TOAST_ICONS = {
-    success: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
-    error: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',
-    warning: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
-  };
-
-  /**
-   * @param {string} message
-   * @param {'success'|'error'|'warning'} [type]
-   */
+  /** @param {string} message @param {'success'|'error'|'warning'} [type] */
   _showToast(message, type) {
-    this.toastMessage.textContent = message;
-    this.toast.hidden = false;
-
-    if (type && AccountScreen.TOAST_ICONS[type]) {
-      this.toast.dataset.type = type;
-      this.toastIconPath.setAttribute('d', AccountScreen.TOAST_ICONS[type]);
-    } else {
-      delete this.toast.dataset.type;
-    }
-
-    requestAnimationFrame(() => {
-      this.toast.classList.add('visible');
-    });
-
-    clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => {
-      this.toast.classList.remove('visible');
-      setTimeout(() => { this.toast.hidden = true; }, 300);
-    }, 2500);
+    showToast(this._ui, message, type, this._toastTimerRef);
   }
 
   _escapeHtml(str) {

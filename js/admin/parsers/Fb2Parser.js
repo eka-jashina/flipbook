@@ -75,8 +75,8 @@ async function readFileWithEncoding(file) {
     const encoding = match[1].trim();
     try {
       return new TextDecoder(encoding).decode(buffer);
-    } catch {
-      // Неизвестная кодировка — продолжим с UTF-8
+    } catch (err) {
+      console.debug(`Fb2Parser: неизвестная кодировка "${encoding}", fallback на UTF-8`, err);
     }
   }
 

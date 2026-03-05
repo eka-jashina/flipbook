@@ -64,7 +64,7 @@ export function findZipFile(zip, path) {
       file = zip.file(decoded);
       if (file) return file;
     }
-  } catch { /* невалидный URI — пропускаем */ }
+  } catch (err) { console.debug('findZipFile: невалидный URI при декодировании', err); }
 
   // 3. URL-кодированный путь (OPF: Глава.xhtml → ZIP: %D0%93...xhtml)
   try {
@@ -73,7 +73,7 @@ export function findZipFile(zip, path) {
       file = zip.file(encoded);
       if (file) return file;
     }
-  } catch { /* */ }
+  } catch (err) { console.debug('findZipFile: ошибка кодирования пути', err); }
 
   // 4. Регистронезависимый поиск (некоторые архиваторы меняют регистр)
   const lowerPath = cleanPath.toLowerCase();
@@ -93,7 +93,7 @@ export function findZipFile(zip, path) {
         }
       }
     }
-  } catch { /* */ }
+  } catch (err) { console.debug('findZipFile: ошибка декодирования при регистронезависимом поиске', err); }
 
   return null;
 }

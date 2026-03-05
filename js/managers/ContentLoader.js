@@ -294,14 +294,16 @@ export class ContentLoader {
               db.close();
               resolve(null);
             };
-          } catch {
+          } catch (err) {
+            console.debug('ContentLoader: ошибка чтения IDB-транзакции', err);
             db.close();
             resolve(null);
           }
         };
 
         request.onerror = () => resolve(null);
-      } catch {
+      } catch (err) {
+        console.debug('ContentLoader: IndexedDB недоступен', err);
         resolve(null);
       }
     });
