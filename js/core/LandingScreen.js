@@ -92,8 +92,8 @@ export class LandingScreen {
         grid.appendChild(this._createBookCard(book));
       }
       showcase.hidden = false;
-    } catch {
-      // Витрина опциональна — при ошибке просто не показываем
+    } catch (err) {
+      console.debug('LandingScreen: ошибка загрузки витрины', err);
     }
   }
 

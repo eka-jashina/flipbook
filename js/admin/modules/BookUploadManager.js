@@ -6,6 +6,7 @@
 
 import { BookParser } from '../BookParser.js';
 import { setupDropzone } from './adminHelpers.js';
+import { trackBookImported } from '../../utils/Analytics.js';
 
 export class BookUploadManager {
   constructor(chaptersModule) {
@@ -59,6 +60,7 @@ export class BookUploadManager {
 
     try {
       const parsed = await BookParser.parse(file);
+      trackBookImported(ext.slice(1));
       this._pendingParsedBook = parsed;
 
       this.bookUploadProgress.hidden = true;

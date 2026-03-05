@@ -6,6 +6,7 @@
 
 import { CONFIG } from "../../config.js";
 import { announce, isValidTheme, isValidCSSColor, isValidFontSize } from "../../utils/index.js";
+import { trackThemeChanged } from "../../utils/Analytics.js";
 
 /** Названия тем для объявления screen reader */
 const THEME_NAMES = {
@@ -54,6 +55,7 @@ export class ThemeController {
     }
 
     this._applyAppearance();
+    trackThemeChanged(safeTheme);
     announce(THEME_NAMES[safeTheme] || safeTheme);
   }
 

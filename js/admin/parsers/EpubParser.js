@@ -149,7 +149,7 @@ async function loadEpubImages(zip, opfDir, manifest) {
     try {
       const decoded = decodeURIComponent(entry.href);
       if (decoded !== entry.href) imageMap.set(decoded, dataUrl);
-    } catch { /* */ }
+    } catch (err) { console.debug('EpubParser: ошибка декодирования href изображения', err); }
     // Часто в EPUB src="../images/foo.jpg" — нужен только basename
     const basename = entry.href.split('/').pop();
     if (basename) {
@@ -157,7 +157,7 @@ async function loadEpubImages(zip, opfDir, manifest) {
       try {
         const decodedBasename = decodeURIComponent(basename);
         if (decodedBasename !== basename) imageMap.set(decodedBasename, dataUrl);
-      } catch { /* */ }
+      } catch (err) { console.debug('EpubParser: ошибка декодирования basename изображения', err); }
     }
   }
 
@@ -394,7 +394,7 @@ export function resolveImage(src, imageMap, dir) {
   try {
     const decoded = decodeURIComponent(src);
     if (decoded !== src && imageMap.has(decoded)) return imageMap.get(decoded);
-  } catch { /* */ }
+  } catch (err) { console.debug('EpubParser: ошибка декодирования src изображения', err); }
 
   // Относительный путь от директории главы
   const resolved = resolveRelativePath(dir, src);
@@ -407,7 +407,7 @@ export function resolveImage(src, imageMap, dir) {
   try {
     const decodedBasename = decodeURIComponent(basename);
     if (decodedBasename !== basename && imageMap.has(decodedBasename)) return imageMap.get(decodedBasename);
-  } catch { /* */ }
+  } catch (err) { console.debug('EpubParser: ошибка декодирования basename', err); }
 
   return null;
 }

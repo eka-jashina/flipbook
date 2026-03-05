@@ -84,8 +84,8 @@ export class AdminConfigStore {
       if (data) {
         return mergeWithDefaults(data);
       }
-    } catch {
-      // IndexedDB недоступен — пробуем localStorage
+    } catch (err) {
+      console.debug('AdminConfigStore: IndexedDB недоступен, пробуем localStorage', err);
     }
 
     // 2. Миграция из localStorage
@@ -96,8 +96,8 @@ export class AdminConfigStore {
       // Мигрировать в IndexedDB (localStorage не удаляем — ридер читает оттуда)
       try {
         await this._idb.put(STORAGE_KEY, config);
-      } catch {
-        // Не удалось мигрировать — не критично, данные уже в памяти
+      } catch (err) {
+        console.debug('AdminConfigStore: не удалось мигрировать в IndexedDB', err);
       }
 
       return config;
@@ -486,7 +486,7 @@ export class AdminConfigStore {
 
   /** Удалить конфиг из IndexedDB и localStorage */
   clear() {
-    this._idb.delete(STORAGE_KEY).catch(() => {});
+    this._idb.delete(STORAGE_KEY).catch(() => {}); // Ошибка удаления из IDB не критична — localStorage уже очищается следом
     lsStorage.clear();
     this._config = structuredClone(DEFAULT_CONFIG);
   }

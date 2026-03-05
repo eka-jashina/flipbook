@@ -2,6 +2,7 @@
  * Модуль экспорта/импорта конфигурации
  */
 import { BaseModule } from './BaseModule.js';
+import { trackExportConfig } from '../../utils/Analytics.js';
 
 export class ExportModule extends BaseModule {
   cacheDOM() {
@@ -38,6 +39,7 @@ export class ExportModule extends BaseModule {
     a.click();
 
     URL.revokeObjectURL(url);
+    trackExportConfig();
     this._showToast('Конфигурация скачана');
   }
 

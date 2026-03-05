@@ -16,25 +16,26 @@
  *   embed  — встраиваемый режим (минимальный UI, ссылка «Открыть на Flipbook»)
  *
  * Fallback: если сервер недоступен — работа через localStorage.
+ *
+ * Обработчики маршрутов вынесены в routes/handlers.js для уменьшения размера файла.
  */
 
 import './sentry.js';
-import { BookController } from './core/BookController.js';
-import { BookshelfScreen, loadBooksFromAPI, getBookshelfData, clearActiveBook } from './core/BookshelfScreen.js';
-import { LandingScreen } from './core/LandingScreen.js';
-import { CONFIG, enrichConfigFromIDB, loadConfigFromAPI, loadPublicConfigFromAPI, setConfig } from './config.js';
 import { ApiClient } from './utils/ApiClient.js';
 import { ErrorHandler } from './utils/ErrorHandler.js';
-import { AuthModal } from './core/AuthModal.js';
 import { MigrationHelper } from './core/MigrationHelper.js';
 import { Router } from './utils/Router.js';
-import { adminConfigStorage } from './config/configHelpers.js';
 import { registerSW } from 'virtual:pwa-register';
 import { offlineIndicator } from './utils/OfflineIndicator.js';
 import { installPrompt } from './utils/InstallPrompt.js';
-import { photoLightbox } from './utils/PhotoLightbox.js';
 import { initI18n, t, applyTranslations } from '@i18n';
 import { StorageManager } from './utils/StorageManager.js';
+import { initAnalytics, setAnalyticsApiClient } from './utils/Analytics.js';
+import {
+  initRouteHandlers,
+  handleHome, handlePublicShelf, handleReader, handleEmbed, handleAccount,
+  cleanupReader, cleanupBookshelf, cleanupLanding,
+} from './routes/handlers.js';
 
 const languageStorage = new StorageManager('flipbook-language');
 
@@ -44,11 +45,13 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 // Глобальное состояние
-let app = null;
-let bookshelf = null;
-let landing = null;
-let accountScreen = null;
-let authModal = null;
+const state = {
+  app: null,
+  bookshelf: null,
+  landing: null,
+  accountScreen: null,
+  authModal: null,
+};
 let apiClient = null;
 let router = null;
 let currentUser = null;
@@ -72,442 +75,6 @@ const updateSW = registerSW({
     console.error('Ошибка регистрации Service Worker:', error);
   },
 });
-
-// ═══════════════════════════════════════════════════
-// Утилиты экранов
-// ═══════════════════════════════════════════════════
-
-/**
- * Настройка кнопки установки PWA в настройках
- */
-function setupInstallButton() {
-  const installSection = document.getElementById('install-section');
-  const installBtn = document.getElementById('install-btn');
-
-  if (!installSection || !installBtn) return;
-
-  const updateVisibility = () => {
-    installSection.hidden = !installPrompt.canInstall;
-  };
-
-  installPrompt.onStateChange((event) => {
-    if (event === 'available' || event === 'installed' || event === 'dismissed') {
-      updateVisibility();
-    }
-  });
-
-  installBtn.addEventListener('click', async () => {
-    installPrompt.resetDismissed();
-    await installPrompt.install();
-    updateVisibility();
-  });
-
-  updateVisibility();
-}
-
-/**
- * Настройка кнопки "Назад к полке"
- */
-function setupBackToShelfButton() {
-  const btn = document.getElementById('backToShelfBtn');
-  if (!btn) return;
-
-  btn.addEventListener('click', () => {
-    clearActiveBook();
-    if (router) {
-      router.navigate('/');
-    } else {
-      location.reload();
-    }
-  });
-}
-
-/**
- * Очистить ридер перед показом другого экрана.
- */
-function cleanupReader() {
-  if (app) {
-    app.destroy();
-    app = null;
-  }
-  photoLightbox.destroy();
-
-  // Убрать режим ридера (Phase 6)
-  document.body.classList.remove('embed-mode');
-  delete document.body.dataset.readerMode;
-}
-
-/**
- * Очистить полку перед показом другого экрана.
- */
-function cleanupBookshelf() {
-  if (bookshelf) {
-    bookshelf.destroy();
-    bookshelf = null;
-  }
-}
-
-/**
- * Очистить лендинг перед показом другого экрана.
- */
-function cleanupLanding() {
-  if (landing) {
-    landing.destroy();
-    landing = null;
-  }
-}
-
-/**
- * Скрыть экран кабинета перед показом другого экрана.
- * Не уничтожаем — AccountScreen переиспользуется при повторных визитах.
- */
-function hideAccount() {
-  if (accountScreen) {
-    accountScreen.hide();
-  }
-}
-
-// ═══════════════════════════════════════════════════
-// Обработчики маршрутов
-// ═══════════════════════════════════════════════════
-
-/**
- * Маршрут: / → Лендинг (гости) или redirect на /:username (авторизованные)
- */
-async function handleHome() {
-  cleanupReader();
-  cleanupLanding();
-  cleanupBookshelf();
-  hideAccount();
-
-  if (useAPI && currentUser?.username) {
-    // Авторизован → redirect на свою полку
-    router.navigate(`/${currentUser.username}`, { replace: true });
-  } else if (useAPI && !currentUser) {
-    // Гость → лендинг
-    showLanding();
-  } else {
-    // localStorage fallback — URL определяет состояние, на / всегда показываем полку
-    const { books } = getBookshelfData();
-    showBookshelf(books);
-  }
-}
-
-/**
- * Маршрут: /:username → Публичная полка автора
- * Хозяин видит все свои книги с управлением, гость — только published.
- */
-async function handlePublicShelf({ username }) {
-  cleanupReader();
-  cleanupLanding();
-  cleanupBookshelf();
-  hideAccount();
-
-  const isOwner = currentUser?.username === username;
-
-  if (isOwner) {
-    // Хозяин — показать все свои книги с управлением
-    const books = await loadBooksFromAPI(apiClient);
-    showBookshelf(books, {
-      mode: 'owner',
-      profileUser: currentUser,
-    });
-  } else {
-    // Гость (авторизованный или нет) — публичная полка
-    try {
-      const data = await apiClient.getPublicShelf(username);
-      showBookshelf(data.books || [], {
-        mode: 'guest',
-        profileUser: data.user || { username },
-      });
-    } catch (err) {
-      if (err.status === 404) {
-        // Пользователь не найден — на главную
-        router.navigate('/', { replace: true });
-      } else {
-        console.error('Ошибка загрузки публичной полки:', err);
-        router.navigate('/', { replace: true });
-      }
-    }
-  }
-}
-
-/**
- * Маршрут: /book/:bookId → Показать ридер (Phase 6: owner/guest режим)
- *
- * Определение режима:
- * - owner: currentUser && book.userId === currentUser.id (приватный API)
- * - guest: все остальные (публичный API)
- * - Неавторизованный гость: прогресс в localStorage
- * - Авторизованный не-автор: прогресс на сервер
- */
-async function handleReader({ bookId }) {
-  cleanupLanding();
-  cleanupBookshelf();
-  cleanupReader();
-  hideAccount();
-
-  document.body.dataset.screen = 'reader';
-  document.body.dataset.hasBookshelf = 'true';
-  setupBackToShelfButton();
-
-  if (useAPI) {
-    await initReaderWithMode(bookId, 'reader');
-  } else {
-    // Для localStorage fallback — устанавливаем activeBookId
-    const config = adminConfigStorage.load();
-    config.activeBookId = bookId;
-    if (!config.books) config.books = [];
-    adminConfigStorage.setFull(config);
-
-    await initReaderFallback();
-  }
-}
-
-/**
- * Маршрут: /embed/:bookId → Встраиваемый ридер (Phase 6)
- *
- * Минимальный UI: только книга + перелистывание.
- * Всегда использует публичный API (без авторизации).
- * Звуки отключены по умолчанию.
- */
-async function handleEmbed({ bookId }) {
-  cleanupLanding();
-  cleanupBookshelf();
-  cleanupReader();
-  hideAccount();
-
-  document.body.dataset.screen = 'reader';
-
-  if (useAPI) {
-    await initReaderWithMode(bookId, 'embed');
-  } else {
-    // Embed без сервера — fallback на localStorage
-    const config = adminConfigStorage.load();
-    config.activeBookId = bookId;
-    if (!config.books) config.books = [];
-    adminConfigStorage.setFull(config);
-
-    await initReaderFallback();
-  }
-}
-
-/**
- * Маршрут: /account → Личный кабинет
- */
-async function handleAccount() {
-  // Только для авторизованных
-  if (!currentUser) {
-    router.navigate('/', { replace: true });
-    return;
-  }
-
-  cleanupReader();
-  cleanupLanding();
-  cleanupBookshelf();
-
-  // Парсим query-параметры: ?tab=profile, ?edit=bookId
-  const query = router.getCurrentRoute()?.query || new URLSearchParams(location.search);
-  const tab = query.get('tab') || 'books';
-  const editBookId = query.get('edit');
-  const mode = query.get('mode');
-
-  // Динамический импорт AccountScreen (грузится один раз)
-  if (!accountScreen) {
-    const { AccountScreen } = await import('./core/AccountScreen.js');
-    accountScreen = new AccountScreen({ apiClient, router, currentUser });
-    await accountScreen.init();
-  }
-
-  accountScreen.show(tab, { editBookId, mode });
-}
-
-/**
- * Показать лендинг для гостей.
- */
-function showLanding() {
-  const container = document.getElementById('landing-screen');
-  if (!container) return;
-
-  landing = new LandingScreen({
-    container,
-    onAuth: () => {
-      // CTA нажата → показать модалку аутентификации
-      if (!authModal) {
-        authModal = new AuthModal({
-          apiClient,
-          onAuth: async (user) => {
-            currentUser = user;
-            const migration = new MigrationHelper(apiClient);
-            await migration.checkAndMigrate();
-            // Перенаправляем на свою полку
-            const target = user.username ? `/${user.username}` : '/';
-            router.navigate(target, { replace: true });
-          },
-        });
-      }
-      authModal.show();
-    },
-  });
-
-  landing.show();
-}
-
-/**
- * Показать книжный шкаф.
- * @param {Array} books
- * @param {Object} [options]
- * @param {'owner'|'guest'} [options.mode='owner']
- * @param {Object} [options.profileUser] - Данные профиля для шапки
- */
-function showBookshelf(books, { mode = 'owner', profileUser } = {}) {
-  const container = document.getElementById('bookshelf-screen');
-  if (!container) return;
-
-  document.body.dataset.hasBookshelf = 'true';
-
-  bookshelf = new BookshelfScreen({
-    container,
-    books,
-    apiClient,
-    mode,
-    profileUser,
-    router,
-    onBookSelect: (bookId) => {
-      if (router) {
-        router.navigate(`/book/${bookId}`);
-      } else {
-        location.reload();
-      }
-    },
-  });
-
-  bookshelf.render();
-  bookshelf.show();
-}
-
-// ═══════════════════════════════════════════════════
-// Инициализация ридера
-// ═══════════════════════════════════════════════════
-
-/**
- * Инициализация ридера через API с определением режима (Phase 6).
- *
- * @param {string} bookId
- * @param {'reader'|'embed'} route - Тип маршрута
- */
-async function initReaderWithMode(bookId, route) {
-  let readerMode = 'guest';
-  let config;
-  let bookOwner = null;
-  let progress = null;
-
-  if (route === 'embed') {
-    // Embed — всегда публичный API, без прогресса
-    readerMode = 'embed';
-    try {
-      const result = await loadPublicConfigFromAPI(apiClient, bookId);
-      config = result.config;
-      bookOwner = result.owner;
-    } catch (err) {
-      console.error('Ошибка загрузки книги (embed):', err);
-      return; // Не редиректим — embed работает в iframe
-    }
-  } else if (currentUser) {
-    // Авторизованный пользователь — пробуем приватный API (owner)
-    try {
-      config = await loadConfigFromAPI(apiClient, bookId);
-      readerMode = 'owner';
-      progress = await apiClient.getProgress(bookId).catch(() => null);
-    } catch (err) {
-      // Не владелец или книга не найдена в приватном API → пробуем публичный
-      if (err.status === 403 || err.status === 404) {
-        try {
-          const result = await loadPublicConfigFromAPI(apiClient, bookId);
-          config = result.config;
-          bookOwner = result.owner;
-          readerMode = 'guest';
-          // Авторизованный не-автор: прогресс на сервер
-          progress = await apiClient.getProgress(bookId).catch(() => null);
-        } catch (pubErr) {
-          console.error('Ошибка загрузки публичной книги:', pubErr);
-          router.navigate('/', { replace: true });
-          return;
-        }
-      } else {
-        console.error('Ошибка загрузки книги:', err);
-        router.navigate('/', { replace: true });
-        return;
-      }
-    }
-  } else {
-    // Неавторизованный гость — публичный API
-    readerMode = 'guest';
-    try {
-      const result = await loadPublicConfigFromAPI(apiClient, bookId);
-      config = result.config;
-      bookOwner = result.owner;
-    } catch (err) {
-      console.error('Ошибка загрузки публичной книги:', err);
-      router.navigate('/', { replace: true });
-      return;
-    }
-  }
-
-  // Embed: звуки отключены по умолчанию
-  if (readerMode === 'embed') {
-    config = {
-      ...config,
-      DEFAULT_SETTINGS: { ...config.DEFAULT_SETTINGS, soundEnabled: false },
-    };
-  }
-
-  setConfig(config);
-
-  app = new BookController(config, {
-    apiClient: readerMode === 'embed' ? null : apiClient,
-    bookId,
-    serverProgress: progress,
-    readerMode,
-    bookOwner,
-  });
-  await app.init();
-
-  const bookEl = document.querySelector('.book');
-  if (bookEl && readerMode !== 'embed') {
-    photoLightbox.attach(bookEl);
-  }
-
-  if (readerMode !== 'embed') {
-    setupInstallButton();
-  }
-
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-    window.bookApp = app;
-  }
-}
-
-/**
- * Инициализация ридера через localStorage (fallback)
- */
-async function initReaderFallback() {
-  const enriched = await enrichConfigFromIDB(CONFIG);
-  if (enriched !== CONFIG) setConfig(enriched);
-
-  app = new BookController();
-  await app.init();
-
-  const bookEl = document.querySelector('.book');
-  if (bookEl) {
-    photoLightbox.attach(bookEl);
-  }
-
-  setupInstallButton();
-
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-    window.bookApp = app;
-  }
-}
 
 // ═══════════════════════════════════════════════════
 // Авторизация
@@ -566,17 +133,33 @@ async function init() {
       const resp = await fetch('/api/health', { method: 'GET' });
       useAPI = resp.ok;
     } catch {
-      // Сервер недоступен — работаем в localStorage-режиме
+      console.debug('Health check failed — falling back to localStorage mode');
     }
 
     if (useAPI) {
       currentUser = await checkAuth();
     }
 
+    // Инициализируем аналитику (Plausible + CWV + server sessions)
+    initAnalytics();
+    if (currentUser && apiClient) {
+      setAnalyticsApiClient(apiClient);
+    }
+
     // Инициализируем i18n: язык берём из localStorage (reader-settings) или 'auto'
     const savedLang = languageStorage.getRaw() || 'auto';
     await initI18n(savedLang);
     applyTranslations();
+
+    // Инициализируем контекст для route handlers
+    initRouteHandlers({
+      state,
+      apiClient,
+      router: null, // будет установлен после создания роутера
+      get currentUser() { return currentUser; },
+      useAPI,
+      setCurrentUser: (user) => { currentUser = user; },
+    });
 
     // Создаём роутер (порядок важен: конкретные маршруты первыми, /:username — последний)
     router = new Router([
@@ -586,6 +169,16 @@ async function init() {
       { name: 'account', path: '/account', handler: handleAccount },
       { name: 'shelf', path: '/:username', handler: handlePublicShelf },
     ]);
+
+    // Обновляем router в контексте handlers
+    initRouteHandlers({
+      state,
+      apiClient,
+      router,
+      get currentUser() { return currentUser; },
+      useAPI,
+      setCurrentUser: (user) => { currentUser = user; },
+    });
 
     // Миграция: старый sessionStorage-флоу → URL-based навигация
     const migratedBookId = migrateSessionStorageToRouter();
@@ -611,16 +204,16 @@ function cleanup() {
     router.destroy();
     router = null;
   }
-  if (authModal) {
-    authModal.destroy();
-    authModal = null;
+  if (state.authModal) {
+    state.authModal.destroy();
+    state.authModal = null;
   }
   cleanupLanding();
   cleanupBookshelf();
   cleanupReader();
-  if (accountScreen) {
-    accountScreen.destroy();
-    accountScreen = null;
+  if (state.accountScreen) {
+    state.accountScreen.destroy();
+    state.accountScreen = null;
   }
   offlineIndicator.destroy();
   installPrompt.destroy();

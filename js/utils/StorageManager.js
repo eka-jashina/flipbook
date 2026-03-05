@@ -94,7 +94,8 @@ export class StorageManager {
   getRaw() {
     try {
       return localStorage.getItem(this.key);
-    } catch {
+    } catch (err) {
+      console.debug('StorageManager: localStorage недоступен для чтения', err);
       return null;
     }
   }
@@ -130,8 +131,8 @@ export class StorageManager {
         }
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
-    } catch {
-      // localStorage недоступен — игнорируем
+    } catch (err) {
+      console.debug('StorageManager.removeByPrefix: localStorage недоступен', err);
     }
   }
 

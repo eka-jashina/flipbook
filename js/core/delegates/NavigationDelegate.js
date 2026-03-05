@@ -3,9 +3,10 @@
  * Управление навигацией по книге.
  */
 
-import { BookState, Direction } from '../../config.js';
+import { CONFIG, BookState, Direction } from '../../config.js';
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
 import { rateLimiters } from '../../utils/index.js';
+import { updateReadingPage, trackChapterCompleted } from '../../utils/Analytics.js';
 
 export class NavigationDelegate extends BaseDelegate {
   /**
@@ -187,6 +188,10 @@ export class NavigationDelegate extends BaseDelegate {
       // Возвращаемся в состояние OPENED
       this.stateMachine.transitionTo(BookState.OPENED);
 
+      // Аналитика — обновляем текущую страницу и проверяем завершение главы
+      updateReadingPage(nextIndex);
+      this._checkChapterCompleted(this.currentIndex, nextIndex, direction);
+
       // Уведомляем контроллер об изменении индекса
       this.emit(DelegateEvents.INDEX_CHANGE, nextIndex);
 
@@ -199,6 +204,37 @@ export class NavigationDelegate extends BaseDelegate {
       // Используем forceTransitionTo — состояние может уже быть OPENED
       // если ошибка произошла после успешного transitionTo(OPENED)
       this.stateMachine.forceTransitionTo(BookState.OPENED);
+    }
+  }
+
+  /**
+   * Проверить, пересекла ли навигация границу главы (вперёд = предыдущая глава дочитана)
+   * @private
+   * @param {number} prevIndex
+   * @param {number} nextIndex
+   * @param {'next'|'prev'} direction
+   */
+  _checkChapterCompleted(prevIndex, nextIndex, direction) {
+    if (direction !== Direction.NEXT) return;
+
+    const starts = this.chapterStarts;
+    if (starts.length < 2) return;
+
+    // Находим главу prevIndex — если nextIndex попадает в следующую, значит предыдущая дочитана
+    for (let i = 0; i < starts.length - 1; i++) {
+      if (prevIndex >= starts[i] && nextIndex >= starts[i + 1]) {
+        trackChapterCompleted(CONFIG.BOOK_ID || 'default', i);
+        break;
+      }
+    }
+
+    // Последняя глава: дочитана, если достигли максимального индекса
+    const maxIndex = this.renderer.getMaxIndex(this.isMobile);
+    if (nextIndex >= maxIndex && starts.length > 0) {
+      const lastChapter = starts.length - 1;
+      if (prevIndex < maxIndex) {
+        trackChapterCompleted(CONFIG.BOOK_ID || 'default', lastChapter);
+      }
     }
   }
 

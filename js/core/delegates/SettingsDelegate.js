@@ -15,6 +15,7 @@ import { AudioController } from './AudioController.js';
 import { ThemeController } from './ThemeController.js';
 import { setLanguage, applyTranslations } from '@i18n';
 import { StorageManager } from '@utils/StorageManager.js';
+import { trackSettingsChanged } from '../../utils/Analytics.js';
 
 const languageStorage = new StorageManager('flipbook-language');
 
@@ -126,6 +127,9 @@ export class SettingsDelegate extends BaseDelegate {
         this._handleLanguage(value);
         break;
     }
+
+    // Аналитика
+    trackSettingsChanged(key, String(value));
 
     // Уведомляем контроллер об обновлении
     this.emit(DelegateEvents.SETTINGS_UPDATE);

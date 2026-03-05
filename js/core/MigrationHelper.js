@@ -126,13 +126,15 @@ export class MigrationHelper {
               db.close();
               resolve(null);
             };
-          } catch {
+          } catch (err) {
+            console.debug('MigrationHelper: ошибка чтения IndexedDB', err);
             db.close();
             resolve(null);
           }
         };
         request.onerror = () => resolve(null);
-      } catch {
+      } catch (err) {
+        console.debug('MigrationHelper: не удалось открыть IndexedDB', err);
         resolve(null);
       }
     });
@@ -257,13 +259,17 @@ export class MigrationHelper {
     // IndexedDB
     try {
       indexedDB.deleteDatabase(IDB_NAME);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.debug('MigrationHelper: не удалось удалить IndexedDB', err);
+    }
 
     // sessionStorage
     try {
       sessionStorage.removeItem('flipbook-reading-session');
       sessionStorage.removeItem('flipbook-admin-mode');
       sessionStorage.removeItem('flipbook-admin-edit-book');
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.debug('MigrationHelper: не удалось очистить sessionStorage', err);
+    }
   }
 }

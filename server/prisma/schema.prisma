@@ -27,6 +27,7 @@ model User {
   globalSettings     GlobalSettings?
   readingProgress    ReadingProgress[]
   readingPreferences ReadingPreferences[]
+  readingSessions    ReadingSession[]
 
   @@map("users")
 }
@@ -57,6 +58,7 @@ model Book {
   decorativeFont     DecorativeFont?
   readingProgress    ReadingProgress[]
   readingPreferences ReadingPreferences[]
+  readingSessions    ReadingSession[]
 
   @@index([userId])
   @@index([userId, position])
@@ -224,6 +226,26 @@ model ReadingProgress {
   @@unique([userId, bookId])
   @@index([userId, bookId])
   @@map("reading_progress")
+}
+
+model ReadingSession {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  bookId     String   @map("book_id") @db.Uuid
+  startPage  Int      @default(0) @map("start_page")
+  endPage    Int      @default(0) @map("end_page")
+  pagesRead  Int      @default(0) @map("pages_read")
+  durationSec Int     @default(0) @map("duration_sec")
+  startedAt  DateTime @default(now()) @map("started_at") @db.Timestamptz()
+  endedAt    DateTime @default(now()) @map("ended_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, bookId])
+  @@index([bookId, endedAt])
+  @@map("reading_sessions")
 }
 
 model ReadingPreferences {

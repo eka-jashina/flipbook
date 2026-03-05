@@ -196,8 +196,8 @@ export class SettingsManager {
       const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
       navigator.sendBeacon(`/api/books/${this._bookId}/progress`, blob);
       this._dirty = false;
-    } catch {
-      // sendBeacon может не поддерживаться — не критично
+    } catch (err) {
+      console.debug('SettingsManager: sendBeacon не поддерживается или не удался', err);
     }
   }
 
@@ -207,7 +207,7 @@ export class SettingsManager {
   destroy() {
     // Финальная синхронизация перед уничтожением
     if (this._dirty && this._api && this._bookId) {
-      this._syncToServer().catch(() => {});
+      this._syncToServer().catch(() => {}); // При уничтожении ошибка синхронизации не критична — данные уже сохранены локально
     }
 
     if (this._syncTimer) {

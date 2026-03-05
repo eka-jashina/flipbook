@@ -12,6 +12,7 @@ import { CONFIG, BookState } from '../../config.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
 import { AmbientManager } from '../../managers/AmbientManager.js';
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
+import { trackReadingSessionStart, trackReadingSessionEnd } from '../../utils/Analytics.js';
 
 export class LifecycleDelegate extends BaseDelegate {
   /**
@@ -155,7 +156,10 @@ export class LifecycleDelegate extends BaseDelegate {
 
       this.stateMachine.transitionTo(BookState.OPENED);
 
-      // ─── Этап 8: Запуск ambient звука ───
+      // ─── Этап 8: Аналитика — начало сессии чтения ───
+      trackReadingSessionStart(CONFIG.BOOK_ID || 'default', safeStartIndex);
+
+      // ─── Этап 9: Запуск ambient звука ───
       // (требует user gesture, поэтому здесь, а не при инициализации)
       this._startAmbientIfNeeded();
 
@@ -223,7 +227,10 @@ export class LifecycleDelegate extends BaseDelegate {
 
       this.renderer.clearCache();
 
-      // ─── Этап 6: Переход в CLOSED ───
+      // ─── Этап 6: Аналитика — конец сессии чтения ───
+      trackReadingSessionEnd();
+
+      // ─── Этап 7: Переход в CLOSED ───
       this.stateMachine.transitionTo(BookState.CLOSED);
 
     } catch (error) {

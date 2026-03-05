@@ -250,7 +250,8 @@ export async function processBulkFiles(manager, files, slots) {
         filterIntensity: prev?.filterIntensity ?? DEFAULT_FILTER_INTENSITY,
         rotation: prev?.rotation || 0,
       };
-    } catch {
+    } catch (err) {
+      console.debug('AlbumImageProcessor: ошибка при замене изображения', err);
       slotEl?.classList.remove('loading');
     }
   });
