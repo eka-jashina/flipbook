@@ -3,8 +3,28 @@ name: Lighthouse CI
 on:
   push:
     branches: [main]
+    paths:
+      - 'js/**'
+      - 'css/**'
+      - 'html/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'lighthouserc.json'
   pull_request:
     branches: [main]
+    paths:
+      - 'js/**'
+      - 'css/**'
+      - 'html/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'lighthouserc.json'
 
 jobs:
   lighthouse:

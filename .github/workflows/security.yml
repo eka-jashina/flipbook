@@ -6,9 +6,25 @@ name: Security Scan
 on:
   push:
     branches: ['main']
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'server/package.json'
+      - 'server/package-lock.json'
+      - 'Dockerfile'
+      - 'server/Dockerfile'
+      - '.github/workflows/security.yml'
   pull_request:
     branches: ['main']
-  # Еженедельный запуск (понедельник 06:00 UTC)
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'server/package.json'
+      - 'server/package-lock.json'
+      - 'Dockerfile'
+      - 'server/Dockerfile'
+      - '.github/workflows/security.yml'
+  # Еженедельный запуск (понедельник 06:00 UTC) — полное сканирование
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:

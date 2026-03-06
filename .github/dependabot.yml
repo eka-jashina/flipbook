@@ -1,5 +1,8 @@
 # Dependabot — автоматическое обновление зависимостей
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+#
+# Стратегия: минимум PR, максимум группировки.
+# Minor/patch объединяются в одну группу, major — отдельные PR.
 
 version: 2
 updates:
@@ -9,30 +12,20 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
+      # Все minor/patch dev-зависимости в один PR
       dev-dependencies:
         dependency-type: "development"
         update-types:
           - "minor"
           - "patch"
-      vitest:
-        patterns:
-          - "vitest"
-          - "@vitest/*"
-      playwright:
-        patterns:
-          - "@playwright/*"
-      eslint:
-        patterns:
-          - "eslint"
-          - "eslint-*"
-          - "@eslint/*"
-      vite:
-        patterns:
-          - "vite"
-          - "vite-*"
-          - "@vitejs/*"
+      # Все minor/patch production-зависимости в один PR
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Backend (server/package.json)
   - package-ecosystem: "npm"
@@ -40,31 +33,29 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
       dev-dependencies:
         dependency-type: "development"
         update-types:
           - "minor"
           - "patch"
-      prisma:
-        patterns:
-          - "prisma"
-          - "@prisma/*"
-      aws-sdk:
-        patterns:
-          - "@aws-sdk/*"
-      sentry:
-        patterns:
-          - "@sentry/*"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
 
-  # GitHub Actions
+  # GitHub Actions — обновляются редко, раз в месяц достаточно
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns:
+          - "*"
 
   # Docker
   - package-ecosystem: "docker"
