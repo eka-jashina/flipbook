@@ -172,12 +172,12 @@ export function createApp() {
     const checks: Record<string, string> = {};
     let status = 'ok';
 
-    // Database check
+    // Database check — verify both connectivity and schema presence
     try {
-      await getPrisma().$queryRaw`SELECT 1`;
+      await getPrisma().book.findFirst({ select: { id: true }, take: 1 });
       checks.database = 'ok';
     } catch (err) {
-      logger.warn({ err }, 'Health check: database unreachable');
+      logger.warn({ err }, 'Health check: database unreachable or schema missing');
       checks.database = 'error';
       status = 'degraded';
     }
