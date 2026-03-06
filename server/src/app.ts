@@ -16,6 +16,7 @@ import { getConfig } from './config.js';
 import { configurePassport } from './middleware/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { createRateLimiter } from './middleware/rateLimit.js';
+import { metricsMiddleware, register as metricsRegistry } from './middleware/metrics.js';
 import { doubleCsrfProtection } from './middleware/csrf.js';
 import { requireBookOwnership } from './middleware/bookOwnership.js';
 import { requireAuth } from './middleware/auth.js';
@@ -98,13 +99,16 @@ export function createApp() {
   // Backward-compat: redirect /api/... → /api/v1/...
   app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     // Skip paths that already contain /v1/ or are meta-endpoints (health, docs)
-    if (req.path.startsWith('/v1/') || req.path === '/health' || req.path.startsWith('/docs')) {
+    if (req.path.startsWith('/v1/') || req.path === '/health' || req.path === '/metrics' || req.path.startsWith('/docs')) {
       return next();
     }
     // Redirect with 308 (preserves method & body) for versioned clients
     const newUrl = `/api/v1${req.path}${req.url.includes('?') ? '?' + req.url.split('?')[1] : ''}`;
     res.redirect(308, newUrl);
   });
+
+  // Prometheus metrics middleware
+  app.use(metricsMiddleware);
 
   // Rate limiting
   app.use('/api/', createRateLimiter());
@@ -155,7 +159,10 @@ export function createApp() {
       logger,
       genReqId: (req) => (req as Request).id as string,
       autoLogging: {
-        ignore: (req) => (req as Request).url === '/api/health',
+        ignore: (req) => {
+          const url = (req as Request).url;
+          return url === '/api/health' || url === '/api/metrics';
+        },
       },
     }),
   );
@@ -193,6 +200,12 @@ export function createApp() {
       timestamp: new Date().toISOString(),
       checks,
     });
+  });
+
+  // Prometheus metrics endpoint (unversioned, like health)
+  app.get('/api/metrics', async (_req: Request, res: Response) => {
+    res.set('Content-Type', metricsRegistry.contentType);
+    res.end(await metricsRegistry.metrics());
   });
 
   // Swagger / OpenAPI documentation
