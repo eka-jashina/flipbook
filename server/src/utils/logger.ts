@@ -1,13 +1,34 @@
+import { createRequire } from 'node:module';
 import pino from 'pino';
+
+const require = createRequire(import.meta.url);
+
+function hasPinoPretty(): boolean {
+  try {
+    require.resolve('pino-pretty');
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const targets: pino.TransportTargetOptions[] = [];
 
 if (process.env.NODE_ENV === 'development') {
-  targets.push({
-    target: 'pino-pretty',
-    options: { colorize: true },
-    level: 'info',
-  });
+  if (hasPinoPretty()) {
+    targets.push({
+      target: 'pino-pretty',
+      options: { colorize: true },
+      level: 'info',
+    });
+  } else {
+    // pino-pretty is a devDependency — absent in Docker (npm ci --omit=dev)
+    targets.push({
+      target: 'pino/file',
+      options: { destination: 1 },
+      level: 'info',
+    });
+  }
 } else if (process.env.NODE_ENV !== 'test') {
   // Production: JSON stdout (для Docker log driver / Loki / CloudWatch)
   targets.push({
