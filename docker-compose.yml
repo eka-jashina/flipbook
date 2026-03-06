@@ -77,7 +77,9 @@ services:
       "
 
   migrate:
-    build: ./server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -92,7 +94,9 @@ services:
     entrypoint: ["npx", "prisma", "migrate", "deploy"]
 
   server:
-    build: ./server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
