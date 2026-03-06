@@ -34,7 +34,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csrf-csrf": "^4.0.3",
-    "dompurify": "^3.3.1",
+    "dompurify": "^3.3.2",
     "express": "^5.0.1",
     "express-rate-limit": "^7.0.0",
     "express-session": "^1.18.0",
@@ -52,7 +52,9 @@
     "zod": "^3.23.0"
   },
   "overrides": {
-    "tar": "^7.5.10"
+    "tar": "^7.5.10",
+    "minimatch": ">=3.1.4",
+    "fast-xml-parser": ">=5.3.8"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
