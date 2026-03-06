@@ -36,7 +36,8 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 
 COPY server/package.json server/package-lock.json* ./
-RUN npm install -g npm@latest && npm ci --omit=dev && npm cache clean --force
+RUN npm install -g npm@latest && npm ci --omit=dev && npm cache clean --force \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 # Prisma schema + generated client
 COPY --from=backend-builder /app/prisma ./prisma/
@@ -61,6 +62,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 USER appuser
 
 # Migration must be run separately before scaling (e.g., init container, CI step, or one-off job):
-#   docker run --rm <image> npx prisma migrate deploy
+#   docker run --rm <image> ./node_modules/.bin/prisma migrate deploy
 # To run migration at startup (single-instance only), set RUN_MIGRATIONS=true
 CMD ["dumb-init", "sh", "-c", "if [ \"$RUN_MIGRATIONS\" = 'true' ]; then ./node_modules/.bin/prisma migrate deploy; fi && exec node dist/index.js"]
