@@ -6,6 +6,7 @@ import {
   mapBookToPublicCard,
   mapChapterToListItem,
 } from '../utils/mappers.js';
+import { logger } from '../utils/logger.js';
 import type {
   PublicBookCard,
   PublicShelf,
@@ -159,33 +160,41 @@ export async function discoverBooks(
 
   const where = { visibility: 'published' as const, deletedAt: null };
 
-  const [books, total] = await Promise.all([
-    prisma.book.findMany({
-      where,
-      orderBy: { publishedAt: 'desc' },
-      skip: offset,
-      take: limit,
-      include: {
-        _count: { select: { chapters: true } },
-        user: {
-          select: {
-            username: true,
-            displayName: true,
-            avatarUrl: true,
-            bio: true,
+  let books: Awaited<ReturnType<typeof prisma.book.findMany>>;
+  let total: number;
+
+  try {
+    [books, total] = await Promise.all([
+      prisma.book.findMany({
+        where,
+        orderBy: { publishedAt: 'desc' },
+        skip: offset,
+        take: limit,
+        include: {
+          _count: { select: { chapters: true } },
+          user: {
+            select: {
+              username: true,
+              displayName: true,
+              avatarUrl: true,
+              bio: true,
+            },
+          },
+          appearance: {
+            select: {
+              lightCoverBgStart: true,
+              lightCoverBgEnd: true,
+              lightCoverText: true,
+            },
           },
         },
-        appearance: {
-          select: {
-            lightCoverBgStart: true,
-            lightCoverBgEnd: true,
-            lightCoverText: true,
-          },
-        },
-      },
-    }),
-    prisma.book.count({ where }),
-  ]);
+      }),
+      prisma.book.count({ where }),
+    ]);
+  } catch (err) {
+    logger.warn({ err }, 'discoverBooks: database query failed, returning empty result');
+    return { books: [], total: 0, limit, offset };
+  }
 
   return {
     books: books
