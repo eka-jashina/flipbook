@@ -91,7 +91,7 @@ services:
           memory: 256M
     environment:
       DATABASE_URL: postgresql://flipbook:flipbook_dev@postgres:5432/flipbook?connection_limit=5&pool_timeout=10
-    entrypoint: ["npx", "prisma", "migrate", "deploy"]
+    entrypoint: ["./node_modules/.bin/prisma", "migrate", "deploy"]
 
   server:
     build:
