@@ -134,12 +134,12 @@ export default {
   'error.generic': 'Une erreur est survenue',
 
   // ─── Embed ────────────────────────────────────────────────────────────────────
-  'embed.openOnFlipbook': 'Ouvrir sur Flipbook',
-  'embed.poweredBy': 'Powered by Flipbook',
+  'embed.openOnFlipbook': 'Ouvrir sur Foliant',
+  'embed.poweredBy': 'Powered by Foliant',
 
   // ─── Méta ─────────────────────────────────────────────────────────────────────
-  'meta.title': 'Flipbook — Liseuse interactive avec animation 3D',
-  'meta.description': 'Livre numérique avec animation 3D réaliste de tournage de pages. Plusieurs chapitres, personnalisation des polices, thèmes, sons d\'ambiance. PWA — fonctionne hors ligne.',
+  'meta.title': 'Foliant — Livres et albums photo interactifs avec animation 3D',
+  'meta.description': 'Créez des livres et albums photo interactifs avec un feuilletage 3D réaliste. Pour les auteurs et les photographes.',
 
   // ─── Ambiances (par défaut) ───────────────────────────────────────────────────
   'ambient.none': 'Sans son',

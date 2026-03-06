@@ -1,12 +1,16 @@
 /**
- * LANDING SCREEN
+ * LANDING SCREEN — FOLIANT
  *
  * Экран-лендинг для неавторизованных пользователей.
- * Показывает hero-секцию, витрину публичных книг, шаги «как это работает», footer.
+ * Hero с табами (книги / фотоальбомы), витрина публичных книг,
+ * секции «Для кого», «Как это работает», «Возможности», финальный CTA, footer.
  *
+ * Табы переключаются вручную + авто-слайд каждые 6 секунд.
  * Данные витрины загружаются из GET /api/public/discover.
- * CTA-кнопка открывает AuthModal.
+ * CTA-кнопки открывают AuthModal.
  */
+
+const AUTO_SLIDE_INTERVAL = 6000;
 
 export class LandingScreen {
   /**
@@ -19,6 +23,10 @@ export class LandingScreen {
     this._onAuth = onAuth;
     this._boundClick = this._handleClick.bind(this);
     this._observer = null;
+    this._autoSlideTimer = null;
+    this._tabs = [];
+    this._panels = [];
+    this._activeTab = 'books';
   }
 
   /**
@@ -28,8 +36,12 @@ export class LandingScreen {
     this.container.hidden = false;
     document.body.dataset.screen = 'landing';
 
+    this._tabs = [...this.container.querySelectorAll('.landing-tab')];
+    this._panels = [...this.container.querySelectorAll('.landing-tab-panel')];
+
     this.container.addEventListener('click', this._boundClick);
     this._setupScrollAnimations();
+    this._startAutoSlide();
 
     // Загрузить витрину публичных книг (не блокируем показ)
     this._loadShowcase();
@@ -40,6 +52,7 @@ export class LandingScreen {
    */
   hide() {
     this.container.hidden = true;
+    this._stopAutoSlide();
   }
 
   /**
@@ -47,6 +60,7 @@ export class LandingScreen {
    */
   destroy() {
     this.container.removeEventListener('click', this._boundClick);
+    this._stopAutoSlide();
     if (this._observer) {
       this._observer.disconnect();
       this._observer = null;
@@ -58,10 +72,24 @@ export class LandingScreen {
   // ═══════════════════════════════════════════
 
   _handleClick(e) {
-    const cta = e.target.closest('#landing-cta');
+    // CTA-кнопки
+    const cta = e.target.closest('.landing-cta');
     if (cta) {
       e.preventDefault();
       if (this._onAuth) this._onAuth();
+      return;
+    }
+
+    // Переключение табов
+    const tab = e.target.closest('.landing-tab');
+    if (tab) {
+      e.preventDefault();
+      const tabName = tab.dataset.tab;
+      if (tabName && tabName !== this._activeTab) {
+        this._switchTab(tabName);
+        // Сброс авто-слайда при ручном переключении
+        this._resetAutoSlide();
+      }
       return;
     }
 
@@ -70,6 +98,44 @@ export class LandingScreen {
     if (card) {
       // Пока ничего — в будущем можно переходить к /book/:id
     }
+  }
+
+  /**
+   * Переключить активный таб
+   * @param {string} tabName - 'books' | 'albums'
+   */
+  _switchTab(tabName) {
+    this._activeTab = tabName;
+
+    for (const tab of this._tabs) {
+      tab.classList.toggle('landing-tab--active', tab.dataset.tab === tabName);
+    }
+
+    for (const panel of this._panels) {
+      panel.classList.toggle('landing-tab-panel--active', panel.dataset.panel === tabName);
+    }
+  }
+
+  /**
+   * Авто-переключение табов
+   */
+  _startAutoSlide() {
+    this._stopAutoSlide();
+    this._autoSlideTimer = setInterval(() => {
+      const next = this._activeTab === 'books' ? 'albums' : 'books';
+      this._switchTab(next);
+    }, AUTO_SLIDE_INTERVAL);
+  }
+
+  _stopAutoSlide() {
+    if (this._autoSlideTimer) {
+      clearInterval(this._autoSlideTimer);
+      this._autoSlideTimer = null;
+    }
+  }
+
+  _resetAutoSlide() {
+    this._startAutoSlide();
   }
 
   /**
@@ -130,7 +196,9 @@ export class LandingScreen {
    * Анимация появления секций при скролле
    */
   _setupScrollAnimations() {
-    const sections = this.container.querySelectorAll('.landing-steps, .landing-showcase, .landing-footer');
+    const sections = this.container.querySelectorAll(
+      '.landing-audience, .landing-steps, .landing-features, .landing-showcase, .landing-final-cta, .landing-footer',
+    );
     if (!sections.length) return;
 
     this._observer = new IntersectionObserver(

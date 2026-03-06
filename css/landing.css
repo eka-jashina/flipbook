@@ -1,8 +1,8 @@
 /**
- * LANDING SCREEN
+ * LANDING SCREEN — FOLIANT
  *
- * Лендинг для неавторизованных пользователей.
- * Hero + витрина книг + «как это работает» + footer.
+ * Тёплая палитра книжной полки: тёмное дерево, золото, пергамент, бордо.
+ * Hero с табами, секция «Для кого», шаги, возможности, витрина, финальный CTA.
  */
 
 /* ═══════════════════════════════════════════
@@ -10,20 +10,26 @@
    ═══════════════════════════════════════════ */
 
 .landing-screen {
-  /* ── Компонентные токены ─────────────────── */
-  --landing-bg: #0f0f1a;
-  --landing-bg-alt: #161628;
-  --landing-bg-section: #12121f;
-  --landing-bg-footer: #0a0a14;
-  --landing-text: #e8e8f0;
-  --landing-text-secondary: rgb(232, 232, 240, 0.7);
-  --landing-text-muted: rgb(232, 232, 240, 0.6);
-  --landing-text-faint: rgb(232, 232, 240, 0.4);
-  --landing-accent: var(--color-accent);
-  --landing-accent-hover: var(--color-accent-hover);
-  --landing-accent-light: rgb(91, 106, 191, 0.12);
-  --landing-accent-text: #7b8ad8;
-  --landing-border: rgb(255, 255, 255, 0.06);
+  /* ── Палитра «Книжная полка» ─────────────── */
+  --lnd-bg: #1a120b;
+  --lnd-bg-warm: #1e1510;
+  --lnd-bg-section: #16100a;
+  --lnd-bg-card: #241a12;
+  --lnd-bg-card-hover: #2c2018;
+  --lnd-bg-footer: #120d08;
+  --lnd-gold: #c4943c;
+  --lnd-gold-light: #d4a84c;
+  --lnd-gold-dim: #8b6914;
+  --lnd-gold-glow: rgb(196, 148, 60, 0.15);
+  --lnd-gold-glow-strong: rgb(196, 148, 60, 0.25);
+  --lnd-text: #f2e9d8;
+  --lnd-text-secondary: rgb(242, 233, 216, 0.75);
+  --lnd-text-muted: rgb(242, 233, 216, 0.55);
+  --lnd-text-faint: rgb(242, 233, 216, 0.35);
+  --lnd-border: rgb(196, 148, 60, 0.12);
+  --lnd-border-card: rgb(196, 148, 60, 0.18);
+  --lnd-burgundy: #6b2f3a;
+  --lnd-leather: #3a2a1f;
 
   position: fixed;
   inset: 0;
@@ -31,9 +37,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden auto;
-  background: var(--landing-bg);
-  color: var(--landing-text);
+  background: var(--lnd-bg);
+  color: var(--lnd-text);
   scroll-behavior: smooth;
+  font-family: Georgia, 'Times New Roman', serif;
 }
 
 /* Скрытие остальных экранов при показе лендинга */
@@ -48,61 +55,272 @@ body[data-screen="landing"] .bookshelf-screen {
    ═══════════════════════════════════════════ */
 
 .landing-hero {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 80vh;
+  min-height: 100vh;
+  min-height: 100dvh;
   padding: 60px 24px;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 40%, rgb(91, 106, 191, 0.15), transparent),
-    linear-gradient(180deg, var(--landing-bg) 0%, var(--landing-bg-alt) 100%);
+  overflow: hidden;
+}
+
+/* Декоративный фон */
+.landing-hero-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.landing-hero-glow {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120%;
+  height: 80%;
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 30%,
+    rgb(196, 148, 60, 0.12) 0%,
+    rgb(107, 47, 58, 0.06) 40%,
+    transparent 70%
+  );
+}
+
+.landing-hero-particles {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgb(196, 148, 60, 0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 60%, rgb(196, 148, 60, 0.2) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 50% 15%, rgb(196, 148, 60, 0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 45%, rgb(196, 148, 60, 0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 70%, rgb(196, 148, 60, 0.15) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 20% 80%, rgb(196, 148, 60, 0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 85%, rgb(196, 148, 60, 0.15) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 25%, rgb(196, 148, 60, 0.2) 0%, transparent 100%);
+  animation: landing-twinkle 6s ease-in-out infinite alternate;
+}
+
+@keyframes landing-twinkle {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
 }
 
 .landing-hero-content {
+  position: relative;
+  z-index: 1;
   text-align: center;
   max-width: 640px;
+  flex: 1;
+}
+
+/* Логотип */
+.landing-logo {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+  filter: drop-shadow(0 2px 8px rgb(196, 148, 60, 0.3));
 }
 
 .landing-hero-title {
   margin: 0;
-  font-size: clamp(48px, 8vw, 80px);
+  font-size: clamp(52px, 9vw, 88px);
   font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 1.1;
-  background: linear-gradient(135deg, var(--landing-text) 0%, #a0a8d8 100%);
+  line-height: 1.05;
+  background: linear-gradient(
+    135deg,
+    var(--lnd-text) 0%,
+    var(--lnd-gold-light) 50%,
+    var(--lnd-gold) 100%
+  );
+  background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 12px rgb(196, 148, 60, 0.2));
 }
 
-.landing-hero-subtitle {
-  margin: 20px 0 0;
-  font-size: clamp(16px, 2.5vw, 20px);
-  line-height: 1.6;
-  color: var(--landing-text-secondary);
+.landing-hero-tagline {
+  margin: 12px 0 0;
+  font-size: clamp(17px, 2.6vw, 22px);
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--lnd-text-secondary);
+  letter-spacing: 0.02em;
 }
 
+/* Табы */
+.landing-hero-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 40px;
+  padding: 4px;
+  background: rgb(196, 148, 60, 0.08);
+  border-radius: 12px;
+  border: 1px solid var(--lnd-border);
+}
+
+.landing-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--lnd-text-muted);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.landing-tab:hover {
+  color: var(--lnd-text-secondary);
+}
+
+.landing-tab--active {
+  background: var(--lnd-gold-glow-strong);
+  color: var(--lnd-gold-light);
+  box-shadow: 0 1px 4px rgb(0, 0, 0, 0.2);
+}
+
+/* Панели табов */
+.landing-tab-panels {
+  position: relative;
+  min-height: 140px;
+  margin-top: 24px;
+}
+
+.landing-tab-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+}
+
+.landing-tab-panel--active {
+  position: relative;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.landing-tab-text {
+  margin: 0;
+  font-size: clamp(15px, 2.2vw, 17px);
+  line-height: 1.7;
+  color: var(--lnd-text-secondary);
+}
+
+/* CTA */
 .landing-cta {
   display: inline-block;
-  margin-top: 36px;
-  padding: 14px 36px;
+  margin-top: 28px;
+  padding: 14px 40px;
   border: none;
   border-radius: 10px;
-  background: var(--landing-accent);
-  color: var(--color-accent-text);
-  font-size: 17px;
+  background: linear-gradient(135deg, var(--lnd-gold) 0%, var(--lnd-gold-dim) 100%);
+  color: #fff;
+  font-size: 16px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.15s;
+  transition: all 0.25s ease;
+  box-shadow:
+    0 4px 16px rgb(196, 148, 60, 0.3),
+    0 1px 3px rgb(0, 0, 0, 0.3);
+  letter-spacing: 0.02em;
 }
 
 .landing-cta:hover {
-  background: var(--landing-accent-hover);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, var(--lnd-gold-light) 0%, var(--lnd-gold) 100%);
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 24px rgb(196, 148, 60, 0.4),
+    0 2px 6px rgb(0, 0, 0, 0.3);
 }
 
 .landing-cta:active {
   transform: translateY(0);
+  box-shadow:
+    0 2px 8px rgb(196, 148, 60, 0.3),
+    0 1px 2px rgb(0, 0, 0, 0.3);
+}
+
+.landing-cta--large {
+  padding: 16px 48px;
+  font-size: 18px;
+}
+
+/* 3D-книга (декоративная) */
+.landing-hero-illustration {
+  position: absolute;
+  right: 8%;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 0;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.landing-book-3d {
+  width: 140px;
+  height: 200px;
+  position: relative;
+  transform: perspective(600px) rotateY(-25deg) rotateX(5deg);
+  transform-style: preserve-3d;
+}
+
+.landing-book-3d__cover {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--lnd-gold-dim) 0%, #5a3d14 100%);
+  border-radius: 4px;
+  box-shadow: 4px 4px 20px rgb(0, 0, 0, 0.5);
+}
+
+.landing-book-3d__ornament {
+  position: absolute;
+  inset: 20% 15%;
+  border: 1px solid rgb(196, 148, 60, 0.3);
+  border-radius: 2px;
+}
+
+.landing-book-3d__spine {
+  position: absolute;
+  left: -16px;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  background: linear-gradient(90deg, #3a2810 0%, #5a3d14 100%);
+  border-radius: 4px 0 0 4px;
+  transform: rotateY(90deg);
+  transform-origin: right center;
+}
+
+.landing-book-3d__pages {
+  position: absolute;
+  right: -4px;
+  top: 4px;
+  bottom: 4px;
+  width: 4px;
+  background: repeating-linear-gradient(
+    0deg,
+    #f2e9d8 0,
+    #f2e9d8 1px,
+    #e0d5c0 1px,
+    #e0d5c0 2px
+  );
+  border-radius: 0 2px 2px 0;
 }
 
 /* ═══════════════════════════════════════════
@@ -110,20 +328,34 @@ body[data-screen="landing"] .bookshelf-screen {
    ═══════════════════════════════════════════ */
 
 .landing-section-title {
-  margin: 0 0 40px;
-  font-size: clamp(24px, 4vw, 32px);
+  margin: 0 0 48px;
+  font-size: clamp(26px, 4vw, 36px);
   font-weight: 700;
   text-align: center;
-  color: var(--landing-text);
+  color: var(--lnd-text);
+  position: relative;
+}
+
+.landing-section-title::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 2px;
+  margin: 16px auto 0;
+  background: linear-gradient(90deg, transparent, var(--lnd-gold), transparent);
+  border-radius: 1px;
 }
 
 /* Анимация появления при скролле */
+.landing-audience,
 .landing-steps,
+.landing-features,
 .landing-showcase,
+.landing-final-cta,
 .landing-footer {
   opacity: 0;
   transform: translateY(30px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transition: opacity 0.7s ease, transform 0.7s ease;
 }
 
 .landing-visible {
@@ -132,12 +364,242 @@ body[data-screen="landing"] .bookshelf-screen {
 }
 
 /* ═══════════════════════════════════════════
+   ДЛЯ КОГО (АУДИТОРИЯ)
+   ═══════════════════════════════════════════ */
+
+.landing-audience {
+  padding: 80px 24px;
+  background:
+    linear-gradient(180deg, var(--lnd-bg) 0%, var(--lnd-bg-section) 50%, var(--lnd-bg) 100%);
+}
+
+.landing-audience-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 32px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.landing-audience-card {
+  padding: 36px 32px;
+  background: var(--lnd-bg-card);
+  border: 1px solid var(--lnd-border-card);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-audience-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--lnd-gold-dim), var(--lnd-gold), var(--lnd-gold-dim));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.landing-audience-card:hover {
+  background: var(--lnd-bg-card-hover);
+  border-color: rgb(196, 148, 60, 0.25);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgb(0, 0, 0, 0.3);
+}
+
+.landing-audience-card:hover::before {
+  opacity: 1;
+}
+
+.landing-audience-icon {
+  margin-bottom: 20px;
+  color: var(--lnd-gold);
+}
+
+.landing-audience-title {
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--lnd-gold-light);
+}
+
+.landing-audience-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-audience-list li {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 10px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--lnd-text-secondary);
+}
+
+.landing-audience-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lnd-gold-dim);
+}
+
+.landing-audience-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* ═══════════════════════════════════════════
+   КАК ЭТО РАБОТАЕТ
+   ═══════════════════════════════════════════ */
+
+.landing-steps {
+  padding: 80px 24px;
+  background: var(--lnd-bg);
+}
+
+.landing-steps-grid {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 16px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.landing-step {
+  flex: 1;
+  max-width: 240px;
+  text-align: center;
+  padding: 24px 16px;
+  position: relative;
+}
+
+.landing-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: var(--lnd-gold-glow);
+  color: var(--lnd-gold);
+  font-size: 14px;
+  font-weight: 700;
+  border: 1px solid rgb(196, 148, 60, 0.2);
+}
+
+.landing-step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 16px;
+  border-radius: 16px;
+  background: var(--lnd-gold-glow);
+  color: var(--lnd-gold);
+  border: 1px solid var(--lnd-border);
+}
+
+.landing-step-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--lnd-gold-dim);
+  padding-top: 80px;
+  flex-shrink: 0;
+}
+
+.landing-step-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--lnd-text);
+}
+
+.landing-step-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--lnd-text-muted);
+}
+
+/* ═══════════════════════════════════════════
+   ВОЗМОЖНОСТИ
+   ═══════════════════════════════════════════ */
+
+.landing-features {
+  padding: 80px 24px;
+  background:
+    linear-gradient(180deg, var(--lnd-bg) 0%, var(--lnd-bg-section) 50%, var(--lnd-bg) 100%);
+}
+
+.landing-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.landing-feature {
+  padding: 28px 24px;
+  background: var(--lnd-bg-card);
+  border: 1px solid var(--lnd-border);
+  border-radius: 14px;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.landing-feature:hover {
+  background: var(--lnd-bg-card-hover);
+  border-color: rgb(196, 148, 60, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 24px rgb(0, 0, 0, 0.25);
+}
+
+.landing-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: var(--lnd-gold-glow);
+  color: var(--lnd-gold);
+  border: 1px solid var(--lnd-border);
+}
+
+.landing-feature-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--lnd-text);
+}
+
+.landing-feature-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--lnd-text-muted);
+}
+
+/* ═══════════════════════════════════════════
    ВИТРИНА КНИГ
    ═══════════════════════════════════════════ */
 
 .landing-showcase {
-  padding: 60px 24px 80px;
-  background: var(--landing-bg-section);
+  padding: 80px 24px;
+  background: var(--lnd-bg);
 }
 
 .landing-showcase-grid {
@@ -150,11 +612,11 @@ body[data-screen="landing"] .bookshelf-screen {
 
 .landing-book-card {
   cursor: default;
-  transition: transform 0.2s;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .landing-book-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px) scale(1.02);
 }
 
 .landing-book-cover {
@@ -167,10 +629,23 @@ body[data-screen="landing"] .bookshelf-screen {
   padding: 16px 12px;
   border-radius: 6px;
   box-shadow:
-    0 4px 12px rgb(0, 0, 0, 0.4),
-    0 1px 3px rgb(0, 0, 0, 0.3);
+    0 4px 16px rgb(0, 0, 0, 0.5),
+    0 1px 3px rgb(0, 0, 0, 0.4),
+    inset 0 1px 0 rgb(255, 255, 255, 0.05);
   text-align: center;
   overflow: hidden;
+  position: relative;
+}
+
+/* Имитация корешка книги слева */
+.landing-book-cover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: linear-gradient(90deg, rgb(0, 0, 0, 0.4), rgb(0, 0, 0, 0.1));
 }
 
 .landing-book-title {
@@ -186,54 +661,33 @@ body[data-screen="landing"] .bookshelf-screen {
 .landing-book-author {
   font-size: 11px;
   opacity: 0.8;
+  font-style: italic;
 }
 
 /* ═══════════════════════════════════════════
-   КАК ЭТО РАБОТАЕТ
+   ФИНАЛЬНЫЙ CTA
    ═══════════════════════════════════════════ */
 
-.landing-steps {
+.landing-final-cta {
   padding: 80px 24px;
-  background: var(--landing-bg);
-}
-
-.landing-steps-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.landing-step {
   text-align: center;
-  padding: 24px 16px;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 50%, var(--lnd-gold-glow) 0%, transparent 60%),
+    var(--lnd-bg-warm);
 }
 
-.landing-step-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 72px;
-  height: 72px;
-  margin-bottom: 16px;
-  border-radius: 16px;
-  background: var(--landing-accent-light);
-  color: var(--landing-accent-text);
-}
-
-.landing-step-title {
-  margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--landing-text);
-}
-
-.landing-step-desc {
+.landing-final-cta-title {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--landing-text-muted);
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 700;
+  color: var(--lnd-text);
+}
+
+.landing-final-cta-text {
+  margin: 12px 0 0;
+  font-size: 16px;
+  color: var(--lnd-text-muted);
+  font-style: italic;
 }
 
 /* ═══════════════════════════════════════════
@@ -243,14 +697,14 @@ body[data-screen="landing"] .bookshelf-screen {
 .landing-footer {
   padding: 32px 24px;
   text-align: center;
-  border-top: 1px solid var(--landing-border);
-  background: var(--landing-bg-footer);
+  border-top: 1px solid var(--lnd-border);
+  background: var(--lnd-bg-footer);
 }
 
 .landing-footer-text {
   margin: 0;
   font-size: 13px;
-  color: var(--landing-text-faint);
+  color: var(--lnd-text-faint);
 }
 
 /* ═══════════════════════════════════════════
@@ -269,13 +723,63 @@ body[data-screen="landing"] .bookshelf-screen {
 
 @media (max-width: 768px) {
   .landing-hero {
-    min-height: 70vh;
+    min-height: 90vh;
+    min-height: 90dvh;
     padding: 48px 20px;
   }
 
-  .landing-steps-grid {
+  .landing-hero-illustration {
+    display: none;
+  }
+
+  .landing-hero-tabs {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .landing-tab {
+    justify-content: center;
+  }
+
+  .landing-audience-grid {
     grid-template-columns: 1fr;
     gap: 24px;
+  }
+
+  .landing-audience {
+    padding: 60px 20px;
+  }
+
+  .landing-audience-card {
+    padding: 28px 24px;
+  }
+
+  .landing-steps-grid {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .landing-step-arrow {
+    padding-top: 0;
+    transform: rotate(90deg);
+  }
+
+  .landing-step {
+    max-width: 100%;
+  }
+
+  .landing-steps {
+    padding: 60px 20px;
+  }
+
+  .landing-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .landing-features {
+    padding: 60px 20px;
   }
 
   .landing-showcase-grid {
@@ -284,10 +788,63 @@ body[data-screen="landing"] .bookshelf-screen {
   }
 
   .landing-showcase {
-    padding: 48px 20px 60px;
-  }
-
-  .landing-steps {
     padding: 60px 20px;
   }
+
+  .landing-final-cta {
+    padding: 60px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-feature {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    text-align: left;
+    padding: 20px;
+  }
+
+  .landing-feature-icon {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .landing-tab-panels {
+    min-height: 180px;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ТЁМНАЯ ТЕМА АНИМАЦИИ «ПОЛКА»
+   Тонкая горизонтальная полоса как «полка» между секциями
+   ═══════════════════════════════════════════ */
+
+.landing-audience::before,
+.landing-features::before {
+  content: '';
+  display: block;
+  width: 200px;
+  max-width: 40%;
+  height: 1px;
+  margin: 0 auto 48px;
+  background: linear-gradient(90deg, transparent, var(--lnd-gold-dim), transparent);
+}
+
+/* ═══════════════════════════════════════════
+   ДЕКОРАТИВНЫЕ ЭЛЕМЕНТЫ
+   ═══════════════════════════════════════════ */
+
+/* Тонкие разделительные линии между секциями */
+.landing-steps::after {
+  content: '';
+  display: block;
+  width: 80px;
+  height: 1px;
+  margin: 48px auto 0;
+  background: linear-gradient(90deg, transparent, rgb(196, 148, 60, 0.3), transparent);
 }
