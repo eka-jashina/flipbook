@@ -28,19 +28,17 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-COPY server/package.json server/package-lock.json* ./
+COPY --chown=appuser:appgroup server/package.json server/package-lock.json* ./
 RUN npm install -g npm@latest && npm ci --omit=dev && npm cache clean --force \
-    && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
+    && chown -R appuser:appgroup node_modules
 
 # Copy prisma schema and generated client from builder
-COPY --from=builder /app/prisma ./prisma/
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --chown=appuser:appgroup --from=builder /app/prisma ./prisma/
+COPY --chown=appuser:appgroup --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy compiled JavaScript
-COPY --from=builder /app/dist ./dist/
-
-# Own files by non-root user
-RUN chown -R appuser:appgroup /app
+COPY --chown=appuser:appgroup --from=builder /app/dist ./dist/
 
 ENV NODE_ENV=production
 EXPOSE 4000
