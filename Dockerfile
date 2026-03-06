@@ -22,6 +22,7 @@ RUN npx prisma generate
 
 COPY server/tsconfig.json ./
 COPY server/src ./src/
+COPY shared ../shared/
 RUN npm run build
 
 # ── Stage 3: Production ─────────────────────────────────────────

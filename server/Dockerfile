@@ -3,16 +3,17 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Install dependencies (separate layer for caching)
-COPY package.json package-lock.json* ./
+COPY server/package.json server/package-lock.json* ./
 RUN npm install -g npm@latest && npm ci
 
 # Copy prisma schema and generate client
-COPY prisma ./prisma/
+COPY server/prisma ./prisma/
 RUN npx prisma generate
 
-# Copy source code and build
-COPY tsconfig.json ./
-COPY src ./src/
+# Copy source code and shared modules, then build
+COPY server/tsconfig.json ./
+COPY server/src ./src/
+COPY shared ../shared/
 RUN npm run build
 
 # ── Production stage ──────────────────────────────────────────────
@@ -27,7 +28,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY server/package.json server/package-lock.json* ./
 RUN npm install -g npm@latest && npm ci --omit=dev && npm cache clean --force \
     && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
