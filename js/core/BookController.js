@@ -43,7 +43,7 @@ export class BookController {
     this._readerMode = options.readerMode || 'owner';
     this._bookOwner = options.bookOwner || null;
 
-    // Централизованное состояние (модифицируется только контроллером/медиатором)
+    /** @type {import('../types.js').BookControllerState} Централизованное состояние */
     this.state = {
       index: 0,
       chapterStarts: []

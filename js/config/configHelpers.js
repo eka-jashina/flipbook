@@ -132,7 +132,7 @@ function getDefaultAmbients() {
 /**
  * Построить DEFAULT_SETTINGS из источника (adminDefaults / API defaults).
  * @param {Object} src - Источник настроек ({ font, fontSize, theme, ... })
- * @returns {Object}
+ * @returns {import('../types.js').DefaultSettings}
  */
 export function buildDefaultSettings(src = {}) {
   return {
@@ -153,7 +153,7 @@ export function buildDefaultSettings(src = {}) {
  * @param {'light'|'dark'} theme - Тема
  * @param {Object} src - Исходные данные темы
  * @param {Object} [fieldMap] - Маппинг полей API → CONFIG (для coverBgImageUrl → coverBgImage и т.д.)
- * @returns {Object}
+ * @returns {import('../types.js').ThemeAppearance}
  */
 export function buildAppearanceTheme(theme, src = {}, fieldMap = null) {
   const defaults = theme === 'dark' ? DARK_THEME_DEFAULTS : LIGHT_THEME_DEFAULTS;
@@ -171,7 +171,7 @@ export function buildAppearanceTheme(theme, src = {}, fieldMap = null) {
 /**
  * Построить SETTINGS_VISIBILITY из источника.
  * @param {Object} src - Источник видимости настроек
- * @returns {Object}
+ * @returns {import('../types.js').SettingsVisibility}
  */
 export function buildSettingsVisibility(src = {}) {
   return {
@@ -187,7 +187,7 @@ export function buildSettingsVisibility(src = {}) {
 /**
  * Построить SOUNDS из источника.
  * @param {Object} src - Источник звуков ({ pageFlip, bookOpen, bookClose })
- * @returns {Object}
+ * @returns {import('../types.js').SoundsConfig}
  */
 export function buildSoundsConfig(src = {}) {
   return {
