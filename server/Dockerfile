@@ -1,6 +1,7 @@
 FROM node:22-alpine AS builder
 
-WORKDIR /app
+# Mirror local repo layout so tsconfig rootDir:".." resolves consistently
+WORKDIR /project/server
 
 # Install dependencies (separate layer for caching)
 COPY server/package.json server/package-lock.json* ./
@@ -13,7 +14,7 @@ RUN npx prisma generate
 # Copy source code and shared modules, then build
 COPY server/tsconfig.json ./
 COPY server/src ./src/
-COPY shared ../shared/
+COPY shared /project/shared/
 RUN npm run build
 
 # ── Production stage ──────────────────────────────────────────────
@@ -34,11 +35,11 @@ RUN npm install -g npm@latest && npm ci --omit=dev && npm cache clean --force \
     && chown -R appuser:appgroup node_modules
 
 # Copy prisma schema and generated client from builder
-COPY --chown=appuser:appgroup --from=builder /app/prisma ./prisma/
-COPY --chown=appuser:appgroup --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --chown=appuser:appgroup --from=builder /project/server/prisma ./prisma/
+COPY --chown=appuser:appgroup --from=builder /project/server/node_modules/.prisma ./node_modules/.prisma
 
 # Copy compiled JavaScript
-COPY --chown=appuser:appgroup --from=builder /app/dist ./dist/
+COPY --chown=appuser:appgroup --from=builder /project/server/dist ./dist/
 
 ENV NODE_ENV=production
 EXPOSE 4000
@@ -53,4 +54,4 @@ USER appuser
 # Migration must be run separately before scaling (e.g., init container, CI step, or one-off job):
 #   docker run --rm <image> ./node_modules/.bin/prisma migrate deploy
 # To run migration at startup (single-instance only), set RUN_MIGRATIONS=true
-CMD ["dumb-init", "sh", "-c", "if [ \"$RUN_MIGRATIONS\" = 'true' ]; then ./node_modules/.bin/prisma migrate deploy; fi && exec node dist/index.js"]
+CMD ["dumb-init", "sh", "-c", "if [ \"$RUN_MIGRATIONS\" = 'true' ]; then ./node_modules/.bin/prisma migrate deploy; fi && exec node dist/server/src/index.js"]
