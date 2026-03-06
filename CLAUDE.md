@@ -1058,7 +1058,7 @@ Separate workflow (`server-tests.yml`) runs server API tests on `server/` change
 - Prisma migrations + Vitest + supertest
 
 Additional CI workflows:
-- **`lighthouse.yml`** — Lighthouse CI audit on push/PR to `main`: builds the project and runs 3 Lighthouse runs with quality thresholds (performance ≥ 0.9, accessibility ≥ 0.9, best-practices ≥ 0.9, SEO ≥ 0.9)
+- **`lighthouse.yml`** — Lighthouse CI audit on push/PR to `main`: builds the project and runs 3 Lighthouse runs with quality thresholds (performance ≥ 0.85, accessibility ≥ 0.85, best-practices ≥ 0.85, SEO ≥ 0.85)
 - **`security.yml`** — Security scanning on push/PR to `main` + weekly schedule: npm audit for both frontend and server, Trivy Docker image scan with SARIF upload to GitHub Security
 
 Base path configured via environment variable:
