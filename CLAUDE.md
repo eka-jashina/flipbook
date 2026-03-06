@@ -32,6 +32,12 @@ This document provides essential context for AI assistants working on this codeb
 - Mobile swipe hint for first-time users
 - Error monitoring via Sentry (client + server)
 - K6 load testing suite (smoke, load, stress, spike, soak scenarios)
+- Reading sessions tracking (pages read, duration, per-book analytics)
+- Web Vitals performance monitoring (LCP, FID, CLS via web-vitals)
+- Prometheus metrics endpoint for server monitoring
+- Lighthouse CI quality gates (performance, accessibility, best practices, SEO)
+- Security scanning (npm audit + Trivy for Docker images)
+- SEO support (robots.txt, sitemap.xml, server-side SEO service)
 
 **Live Demo:** Deployed to GitHub Pages at `/flipbook/`
 
@@ -214,6 +220,7 @@ flipbook/
 │   │       └── de.js             # German
 │   │
 │   ├── utils/                # Low-level utilities
+│   │   ├── Analytics.js      # Web Vitals performance monitoring (LCP, FID, CLS)
 │   │   ├── ApiClient.js      # HTTP API client (server communication)
 │   │   ├── CSSVariables.js   # Read CSS custom properties
 │   │   ├── MediaQueryManager.js  # Reactive media queries
@@ -234,6 +241,9 @@ flipbook/
 │   │   ├── ScreenReaderAnnouncer.js # Screen reader announcements (a11y)
 │   │   ├── SwipeHint.js      # Mobile swipe gesture hint
 │   │   └── PhotoLightbox.js  # Photo album lightbox
+│   │
+│   ├── routes/               # SPA route handlers
+│   │   └── handlers.js       # Route handler functions for Router
 │   │
 │   ├── managers/             # Business logic & data
 │   │   ├── BookStateMachine.js    # State machine (CLOSED→OPENING→OPENED⇄FLIPPING)
@@ -265,6 +275,8 @@ flipbook/
 │   │   ├── BookshelfScreen.js     # Bookshelf display (multi-book)
 │   │   ├── LandingScreen.js       # Landing page for guests (public book showcase)
 │   │   ├── AccountScreen.js       # Personal account management (books, profile, settings, export)
+│   │   ├── AccountScreenUI.js     # Account screen UI rendering helpers
+│   │   ├── AccountPublishTab.js   # Book publishing tab (visibility, description)
 │   │   ├── ProfileHeader.js       # Profile header component (avatar, name, bio)
 │   │   │
 │   │   ├── services/              # Service groups (DI bundles)
@@ -294,11 +306,17 @@ flipbook/
 │       ├── AdminConfigDefaults.js # Pure defaults constants
 │       ├── AdminConfigMigration.js # Config schema validation & normalization
 │       ├── AdminConfigStrip.js    # Config data URL stripping for localStorage
+│       ├── ServerConfigOperations.js # Server config CRUD operations
 │       ├── BookParser.js          # Book parsing dispatch
 │       ├── modeCardsData.js       # Book creation mode cards data
 │       ├── modules/               # Admin functional modules
 │       │   ├── BaseModule.js          # Abstract module base
+│       │   ├── adminHelpers.js        # Shared admin helper functions
+│       │   ├── albumConstants.js      # Album configuration constants
 │       │   ├── AlbumManager.js        # Photo album management
+│       │   ├── AlbumHtmlBuilder.js    # Album HTML generation
+│       │   ├── AlbumImageProcessor.js # Album image processing & upload
+│       │   ├── AlbumPageRenderer.js   # Album page rendering
 │       │   ├── AmbientsModule.js      # Ambient sounds config
 │       │   ├── AppearanceModule.js    # Book appearance customization
 │       │   ├── BookUploadManager.js   # Book upload handling
@@ -311,12 +329,14 @@ flipbook/
 │       │   ├── SettingsModule.js      # Global settings
 │       │   └── SoundsModule.js        # Sound effects management
 │       └── parsers/               # Book format parsers
+│           ├── BaseParser.js          # Abstract base parser
 │           ├── parserUtils.js         # Shared parser utilities
 │           ├── TxtParser.js           # Plain text (.txt)
 │           ├── DocParser.js           # Word 97-2003 (.doc)
 │           ├── DocxParser.js          # Word (.docx)
 │           ├── EpubParser.js          # EPUB (.epub)
-│           └── Fb2Parser.js           # FictionBook (.fb2)
+│           ├── Fb2Parser.js           # FictionBook (.fb2)
+│           └── OLE2Parser.js          # OLE2 binary format parser (for .doc)
 │
 ├── server/                    # Backend server (Express + Prisma + PostgreSQL)
 │   ├── Dockerfile
@@ -324,7 +344,7 @@ flipbook/
 │   ├── tsconfig.json
 │   ├── vitest.config.ts
 │   ├── prisma/
-│   │   ├── schema.prisma         # Database schema (14 models)
+│   │   ├── schema.prisma         # Database schema (16 models)
 │   │   ├── seed.ts               # Database seeding
 │   │   └── migrations/           # Prisma migrations
 │   ├── src/
@@ -338,6 +358,7 @@ flipbook/
 │   │   │   ├── bookOwnership.ts      # Book ownership verification
 │   │   │   ├── csrf.ts               # CSRF protection
 │   │   │   ├── errorHandler.ts       # Error handling
+│   │   │   ├── metrics.ts             # Prometheus metrics collection
 │   │   │   ├── rateLimit.ts          # Rate limiting
 │   │   │   ├── upload.ts             # File upload (Multer → S3)
 │   │   │   └── validate.ts           # Zod validation middleware
@@ -356,6 +377,7 @@ flipbook/
 │   │   │   ├── upload.routes.ts      # POST /api/upload
 │   │   │   ├── profile.routes.ts     # GET/PUT /api/profile
 │   │   │   ├── public.routes.ts      # GET /api/public/* (discovery, shelves)
+│   │   │   ├── readingSessions.routes.ts # POST/GET /api/reading-sessions
 │   │   │   └── exportImport.routes.ts # GET/POST /api/export, /api/import
 │   │   ├── services/             # Business logic (one per resource)
 │   │   │   ├── auth.service.ts       # Authentication
@@ -372,6 +394,8 @@ flipbook/
 │   │   │   ├── upload.service.ts     # File upload
 │   │   │   ├── profile.service.ts    # User profile management
 │   │   │   ├── public.service.ts     # Public discovery & author shelves
+│   │   │   ├── readingSessions.service.ts # Reading session tracking & analytics
+│   │   │   ├── seo.service.ts       # SEO metadata generation
 │   │   │   └── exportImport.service.ts # Export/import
 │   │   ├── parsers/              # Server-side book parsers
 │   │   │   ├── BaseParser.ts         # Abstract base parser (shared utilities, error handling)
@@ -414,16 +438,18 @@ flipbook/
 │   ├── images/               # Backgrounds & illustrations (.webp)
 │   ├── fonts/                # Custom fonts (.woff2)
 │   ├── icons/                # PWA icons (SVG, PNG, maskable)
-│   └── sounds/               # Audio (page-flip.mp3, cover-flip.mp3, ambient/)
+│   ├── sounds/               # Audio (page-flip.mp3, cover-flip.mp3, ambient/)
+│   ├── robots.txt            # SEO robots directives
+│   └── sitemap.xml           # SEO sitemap
 │
 ├── tests/                     # Frontend test suite
 │   ├── setup.js              # Test environment setup
 │   ├── helpers/              # Test utilities
 │   ├── unit/                 # Unit tests (Vitest)
-│   │   ├── utils/            # Utility tests (21 files)
+│   │   ├── utils/            # Utility tests (23 files)
 │   │   ├── managers/         # Manager tests (5 files)
-│   │   ├── core/             # Core + delegates + services tests (17 + 8 + 4 files)
-│   │   └── admin/            # Admin module tests (20 files)
+│   │   ├── core/             # Core + delegates + services tests (20 + 8 + 4 files)
+│   │   └── admin/            # Admin module tests (21 files)
 │   ├── integration/          # Integration tests (Vitest + jsdom)
 │   │   ├── smoke.test.js
 │   │   ├── flows/            # User flow tests (24 files)
@@ -432,7 +458,7 @@ flipbook/
 │   └── e2e/                  # E2E tests (Playwright)
 │       ├── fixtures/         # Test fixtures
 │       ├── pages/            # Page Object models
-│       ├── flows/            # Test scenarios (6 files incl. offline)
+│       ├── flows/            # Test scenarios (8 files incl. offline, admin-panel, multi-book)
 │       └── performance/      # Performance tests
 │
 ├── scripts/                   # Build & maintenance scripts
@@ -442,11 +468,15 @@ flipbook/
 │
 ├── infra/                     # Infrastructure configuration
 │   ├── loki-config.yaml      # Loki log aggregation config (14-day retention)
-│   └── grafana-datasources.yaml # Grafana data source provisioning
+│   ├── grafana-datasources.yaml # Grafana data source provisioning
+│   ├── grafana-alerting.yaml # Grafana alerting rules provisioning
+│   └── prometheus.yaml       # Prometheus scrape config for server metrics
 │
 ├── .github/workflows/         # CI/CD pipelines
 │   ├── deploy.yml            # Frontend: Lint → Test → E2E → Build → Deploy (GitHub Pages)
-│   └── server-tests.yml      # Server API tests (PostgreSQL service, Prisma migrations)
+│   ├── server-tests.yml      # Server API tests (PostgreSQL service, Prisma migrations)
+│   ├── lighthouse.yml        # Lighthouse CI audit (performance, a11y, SEO)
+│   └── security.yml          # Security scanning (npm audit + Trivy Docker scan)
 │
 ├── .husky/                    # Git hooks (pre-commit linting via lint-staged)
 ├── .nvmrc                     # Node.js version (22)
@@ -467,6 +497,7 @@ flipbook/
 ├── eslint.config.js          # ESLint configuration
 ├── stylelint.config.js       # Stylelint configuration
 ├── jsdoc.json                # JSDoc configuration
+├── lighthouserc.json         # Lighthouse CI configuration (quality thresholds)
 ├── .editorconfig             # Editor code style
 └── package.json              # Dependencies & scripts
 ```
@@ -549,6 +580,8 @@ DOM + CSS Animations
 | LandingScreen | `core/LandingScreen.js` | Landing page for guests (hero, public book showcase, CTA) |
 | BookshelfScreen | `core/BookshelfScreen.js` | Main start screen: bookshelf with context menu (read/edit/delete), mode selector for book creation, per-book reading progress |
 | AccountScreen | `core/AccountScreen.js` | Personal account management (books, profile, settings, export tabs) |
+| AccountScreenUI | `core/AccountScreenUI.js` | Account screen UI rendering helpers |
+| AccountPublishTab | `core/AccountPublishTab.js` | Book publishing tab (visibility, description) |
 | ProfileHeader | `core/ProfileHeader.js` | Reusable profile header component (avatar, name, bio) |
 | AuthModal | `core/AuthModal.js` | Login/register modal (email + Google OAuth) |
 | MigrationHelper | `core/MigrationHelper.js` | localStorage → server data migration |
@@ -578,8 +611,10 @@ DOM + CSS Animations
 | ProfileModule | `admin/modules/ProfileModule.js` | User profile editing (username, bio, avatar) |
 | PhotoCropper | `admin/modules/PhotoCropper.js` | Interactive photo cropping tool |
 | QuillEditorWrapper | `admin/modules/QuillEditorWrapper.js` | Quill WYSIWYG editor wrapper |
+| Analytics | `utils/Analytics.js` | Web Vitals performance monitoring (LCP, FID, CLS) |
 | IdbStorage | `utils/IdbStorage.js` | IndexedDB wrapper for large data |
 | SettingsValidator | `utils/SettingsValidator.js` | Settings validation & sanitization |
+| ServerConfigOperations | `admin/ServerConfigOperations.js` | Server config CRUD operations |
 
 ## Backend Architecture (server/)
 
@@ -590,15 +625,15 @@ DOM + CSS Animations
 - **Auth:** Passport.js (local strategy + Google OAuth)
 - **Storage:** S3-compatible (MinIO in dev, AWS S3 / compatible in prod)
 - **Validation:** Zod schemas
-- **Monitoring:** Sentry (`@sentry/node`)
+- **Monitoring:** Sentry (`@sentry/node`) + Prometheus metrics (`prom-client`)
 - **Testing:** Vitest + supertest
 
 ### Database Models (Prisma)
 
 | Model | Relationship | Purpose |
 |-------|-------------|---------|
-| User | has many Books, ReadingFonts, ReadingProgress, ReadingPreferences; has one GlobalSettings | User accounts (with profile: username, displayName, bio, avatarUrl) |
-| Book | belongs to User; has many Chapters, Ambients; has one Appearance, Sounds, DefaultSettings, DecorativeFont | Book entity (with visibility: draft/published, description) |
+| User | has many Books, ReadingFonts, ReadingProgress, ReadingPreferences, ReadingSessions; has one GlobalSettings | User accounts (with profile: username, displayName, bio, avatarUrl) |
+| Book | belongs to User; has many Chapters, Ambients, ReadingSessions; has one Appearance, Sounds, DefaultSettings, DecorativeFont | Book entity (with visibility: draft/published, description) |
 | Chapter | belongs to Book | Chapter content + background |
 | BookAppearance | belongs to Book | Light/dark theme customization |
 | BookSounds | belongs to Book | Page flip / cover sounds |
@@ -609,6 +644,7 @@ DOM + CSS Animations
 | GlobalSettings | belongs to User | Font size limits, settings visibility |
 | ReadingProgress | belongs to User + Book | Per-book reading state |
 | ReadingPreferences | belongs to User + Book | Per-book user reading preferences (font, theme, volume) |
+| ReadingSession | belongs to User + Book | Reading session tracking (pages read, duration, timestamps) |
 
 ### API Routes
 
@@ -632,6 +668,8 @@ DOM + CSS Animations
 | `/api/public/shelves/:username` | GET | Author's public book shelf |
 | `/api/public/books/:bookId` | GET | Public book details |
 | `/api/public/books/:bookId/chapters/:id` | GET | Public chapter content |
+| `/api/reading-sessions` | POST/GET | Reading session tracking & analytics |
+| `/api/metrics` | GET | Prometheus metrics endpoint |
 | `/api/export`, `/api/import` | GET/POST | Config export/import |
 
 ### Local Development
@@ -675,7 +713,7 @@ npm run dev            # Start Vite dev server (port 3000)
 ### JavaScript Patterns
 - ES Modules (import/export)
 - Classes for components
-- No external frameworks — minimal runtime dependencies (dompurify, jszip, quill, i18next, @sentry/browser)
+- No external frameworks — minimal runtime dependencies (dompurify, jszip, quill, i18next, @sentry/browser, web-vitals)
 - Async/await for asynchronous operations
 - Destructuring in function parameters
 - i18n: `data-i18n` attributes for DOM translation (supports `data-i18n-html`, `data-i18n-placeholder`, `data-i18n-aria-label`, `data-i18n-title`)
@@ -871,12 +909,12 @@ tests/
 │   ├── testUtils.js      # Unit test utilities
 │   └── integrationUtils.js # Integration test utilities
 ├── unit/                 # Unit tests
-│   ├── utils/            # Utility tests (21 files)
+│   ├── utils/            # Utility tests (23 files)
 │   ├── managers/         # Manager tests (5 files)
-│   ├── core/             # Core tests (17 files)
+│   ├── core/             # Core tests (20 files)
 │   │   ├── delegates/    # Delegate tests (8 files)
 │   │   └── services/     # Service tests (4 files)
-│   └── admin/            # Admin module tests (20 files)
+│   └── admin/            # Admin module tests (21 files)
 ├── integration/          # Integration tests
 │   ├── smoke.test.js
 │   ├── flows/            # User flow tests (24 files)
@@ -891,7 +929,7 @@ tests/
 └── e2e/                  # E2E tests (Playwright)
     ├── fixtures/         # Test fixtures
     ├── pages/            # Page Object models
-    ├── flows/            # Test scenarios (reading, navigation, settings, responsive, accessibility, offline)
+    ├── flows/            # Test scenarios (reading, navigation, settings, responsive, accessibility, offline, admin-panel, multi-book)
     └── performance/      # Performance tests
 ```
 
@@ -1019,6 +1057,10 @@ Separate workflow (`server-tests.yml`) runs server API tests on `server/` change
 - PostgreSQL 17 test service
 - Prisma migrations + Vitest + supertest
 
+Additional CI workflows:
+- **`lighthouse.yml`** — Lighthouse CI audit on push/PR to `main`: builds the project and runs 3 Lighthouse runs with quality thresholds (performance ≥ 0.9, accessibility ≥ 0.9, best-practices ≥ 0.9, SEO ≥ 0.9)
+- **`security.yml`** — Security scanning on push/PR to `main` + weekly schedule: npm audit for both frontend and server, Trivy Docker image scan with SARIF upload to GitHub Security
+
 Base path configured via environment variable:
 ```javascript
 const base = process.env.VITE_BASE_URL || '/';
@@ -1041,9 +1083,12 @@ npm run infra:backup           # Manual database backup
 
 Observability stack (`docker-compose.observability.yml`):
 - **Loki** — Log aggregation (port 3200, 14-day retention)
-- **Grafana** — Dashboards (port 3100, default: admin/admin)
+- **Prometheus** — Metrics scraping from server `/api/metrics` endpoint (port 9090)
+- **Grafana** — Dashboards + alerting (port 3100, default: admin/admin)
 - **pg-backup** — Daily PostgreSQL backup (3:00 UTC cron, 7-day rotation)
 - Server logs shipped via `pino-loki` integration
+- Server metrics exposed via `prom-client` (HTTP request duration, active connections, etc.)
+- Grafana alerting rules provisioned via `infra/grafana-alerting.yaml`
 
 DevOps scripts (`scripts/`):
 - `backup-db.sh` — PostgreSQL backup with gzip compression and configurable retention
@@ -1057,6 +1102,7 @@ DevOps scripts (`scripts/`):
 - **quill** `^2.0.3` — WYSIWYG rich text editor (admin chapter editing)
 - **i18next** `^25.8.13` — Internationalization (5 languages)
 - **@sentry/browser** `^10.40.0` — Client-side error monitoring
+- **web-vitals** `^5.1.0` — Core Web Vitals performance monitoring (LCP, FID, CLS)
 
 ### Frontend Dev Dependencies (key)
 - **vite** `^5.0.0` — Bundler
@@ -1093,6 +1139,7 @@ DevOps scripts (`scripts/`):
 - **jsdom** `^28.1.0` — Server-side DOM for sanitization
 - **jszip** `^3.10.1` — ZIP operations (export/import)
 - **@sentry/node** `^9.47.1` — Error monitoring
+- **prom-client** `^15.1.3` — Prometheus metrics collection
 
 ## Important Considerations
 

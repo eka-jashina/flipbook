@@ -53,6 +53,12 @@
 - **PWA** — установка как приложение, офлайн-доступ через Service Worker
 - **Мониторинг ошибок** — Sentry интеграция (клиент + сервер)
 - **Нагрузочное тестирование** — K6 (smoke, load, stress, spike, soak сценарии)
+- **Сессии чтения** — трекинг прочитанных страниц, длительности, аналитика по книгам
+- **Web Vitals** — мониторинг производительности (LCP, FID, CLS через web-vitals)
+- **Prometheus-метрики** — эндпоинт серверных метрик для мониторинга
+- **Lighthouse CI** — автоматические проверки качества (производительность, доступность, SEO)
+- **Сканирование безопасности** — npm audit + Trivy для Docker-образов
+- **SEO** — robots.txt, sitemap.xml, серверный SEO-сервис
 
 ---
 
@@ -143,6 +149,7 @@ flipbook/
 │   │       ├── ru.js / en.js / es.js / fr.js / de.js
 │   │
 │   ├── utils/                      # Низкоуровневые утилиты
+│   │   ├── Analytics.js            # Web Vitals мониторинг (LCP, FID, CLS)
 │   │   ├── ApiClient.js            # HTTP API клиент (связь с сервером)
 │   │   ├── Router.js               # SPA-роутер (History API)
 │   │   ├── EventEmitter.js         # Реализация паттерна Observer
@@ -163,6 +170,9 @@ flipbook/
 │   │   ├── ScreenReaderAnnouncer.js # Анонсы для скринридеров
 │   │   ├── SwipeHint.js            # Подсказка жеста свайпа (мобильные)
 │   │   └── PhotoLightbox.js        # Лайтбокс фотоальбома
+│   │
+│   ├── routes/                     # Обработчики SPA-маршрутов
+│   │   └── handlers.js             # Функции-обработчики для Router
 │   │
 │   ├── managers/                   # Бизнес-логика и данные
 │   │   ├── BookStateMachine.js     # Конечный автомат состояний
@@ -194,6 +204,8 @@ flipbook/
 │   │   ├── LandingScreen.js        # Лендинг для гостей (витрина публичных книг)
 │   │   ├── BookshelfScreen.js      # Экран книжной полки (мультикнижность)
 │   │   ├── AccountScreen.js        # Личный кабинет (книги, профиль, настройки, экспорт)
+│   │   ├── AccountScreenUI.js     # Хелперы рендеринга UI кабинета
+│   │   ├── AccountPublishTab.js   # Вкладка публикации книг (видимость, описание)
 │   │   ├── ProfileHeader.js        # Компонент профиля (аватар, имя, био)
 │   │   │
 │   │   ├── services/               # Сервисные группы (DI)
@@ -223,11 +235,17 @@ flipbook/
 │       ├── AdminConfigDefaults.js  # Константы дефолтных значений конфига
 │       ├── AdminConfigMigration.js # Валидация и нормализация схемы конфига
 │       ├── AdminConfigStrip.js     # Стриппинг data URL для localStorage
+│       ├── ServerConfigOperations.js # Серверные CRUD-операции конфига
 │       ├── BookParser.js           # Диспетчер парсинга книг
 │       ├── modeCardsData.js        # Данные карточек режимов создания книг
 │       ├── modules/                # Функциональные модули админки
 │       │   ├── BaseModule.js           # Абстрактный базовый модуль
+│       │   ├── adminHelpers.js        # Общие хелперы админ-панели
+│       │   ├── albumConstants.js      # Константы конфигурации альбома
 │       │   ├── AlbumManager.js         # Управление фотоальбомом
+│       │   ├── AlbumHtmlBuilder.js    # Генерация HTML альбома
+│       │   ├── AlbumImageProcessor.js # Обработка и загрузка изображений альбома
+│       │   ├── AlbumPageRenderer.js   # Рендеринг страниц альбома
 │       │   ├── AmbientsModule.js       # Настройка ambient-звуков
 │       │   ├── AppearanceModule.js     # Кастомизация оформления книги
 │       │   ├── BookUploadManager.js    # Загрузка книг
@@ -240,12 +258,14 @@ flipbook/
 │       │   ├── SettingsModule.js       # Глобальные настройки
 │       │   └── SoundsModule.js         # Управление звуковыми эффектами
 │       └── parsers/                # Парсеры форматов книг
+│           ├── BaseParser.js          # Абстрактный базовый парсер
 │           ├── parserUtils.js          # Общие утилиты парсеров
 │           ├── TxtParser.js            # Парсер .txt
 │           ├── DocParser.js            # Парсер .doc (Word 97-2003)
 │           ├── DocxParser.js           # Парсер .docx
 │           ├── EpubParser.js           # Парсер .epub
-│           └── Fb2Parser.js            # Парсер .fb2
+│           ├── Fb2Parser.js            # Парсер .fb2
+│           └── OLE2Parser.js           # Парсер OLE2-формата (для .doc)
 │
 ├── css/                            # Модульная CSS-архитектура
 │   ├── index.css                   # Входная точка (импорты)
@@ -315,11 +335,11 @@ flipbook/
 │           └── templates.html      # Шаблоны
 │
 ├── server/                         # Бэкенд (Express + Prisma + PostgreSQL)
-│   ├── prisma/                     # Схема БД (14 моделей) + миграции
+│   ├── prisma/                     # Схема БД (16 моделей) + миграции
 │   ├── src/
-│   │   ├── routes/                 # API-маршруты (15 файлов: auth, books, chapters, profile, public и т.д.)
-│   │   ├── services/              # Бизнес-логика (15 файлов: profile, public, books и т.д.)
-│   │   ├── middleware/            # Middleware (7 файлов: auth, CSRF, rate limit, upload, validate)
+│   │   ├── routes/                 # API-маршруты (16 файлов: auth, books, chapters, profile, public, readingSessions и т.д.)
+│   │   ├── services/              # Бизнес-логика (17 файлов: profile, public, readingSessions, seo, books и т.д.)
+│   │   ├── middleware/            # Middleware (8 файлов: auth, CSRF, rate limit, upload, validate, metrics)
 │   │   ├── parsers/               # Серверные парсеры книг (BaseParser + 5 форматов)
 │   │   └── utils/                 # Утилиты сервера (14 файлов: prisma, storage, mappers и т.д.)
 │   └── tests/                     # Тесты API (Vitest + supertest)
@@ -334,7 +354,9 @@ flipbook/
 │   ├── images/                     # Фоны и иллюстрации (.webp)
 │   ├── fonts/                      # Кастомные шрифты (.woff2)
 │   ├── icons/                      # PWA-иконки (SVG, PNG)
-│   └── sounds/                     # Аудио (перелистывание, ambient)
+│   ├── sounds/                     # Аудио (перелистывание, ambient)
+│   ├── robots.txt                  # SEO-директивы для роботов
+│   └── sitemap.xml                 # SEO-карта сайта
 │
 ├── tests/                          # Фронтенд-тесты
 │   ├── unit/                       # Юнит-тесты (Vitest)
@@ -348,11 +370,15 @@ flipbook/
 │
 ├── infra/                         # Конфигурация инфраструктуры
 │   ├── loki-config.yaml           # Конфигурация Loki (агрегация логов)
-│   └── grafana-datasources.yaml   # Provisioning data source для Grafana
+│   ├── grafana-datasources.yaml   # Provisioning data source для Grafana
+│   ├── grafana-alerting.yaml      # Правила алертинга Grafana
+│   └── prometheus.yaml            # Конфигурация Prometheus (scrape метрик)
 │
 ├── .github/workflows/             # CI/CD
 │   ├── deploy.yml                 # Lint → Test → E2E → Build → Deploy (GitHub Pages)
-│   └── server-tests.yml           # Тесты серверного API (PostgreSQL)
+│   ├── server-tests.yml           # Тесты серверного API (PostgreSQL)
+│   ├── lighthouse.yml             # Lighthouse CI аудит (производительность, доступность, SEO)
+│   └── security.yml               # Сканирование безопасности (npm audit + Trivy)
 │
 ├── .husky/                         # Git-хуки (pre-commit линтинг)
 ├── .nvmrc                          # Версия Node.js (22)
@@ -360,6 +386,7 @@ flipbook/
 ├── docker-compose.k6.yml           # Docker Compose оверлей для K6
 ├── docker-compose.observability.yml # Docker Compose оверлей (Loki + Grafana + backup)
 ├── Dockerfile                      # Full-stack Docker-образ
+├── lighthouserc.json               # Конфигурация Lighthouse CI (пороги качества)
 └── package.json                    # Зависимости и скрипты
 ```
 
@@ -450,6 +477,8 @@ npm run dev
 | **LandingScreen** | `core/LandingScreen.js` | Лендинг для гостей (витрина публичных книг, CTA) |
 | **BookshelfScreen** | `core/BookshelfScreen.js` | Экран книжной полки (мультикнижность) |
 | **AccountScreen** | `core/AccountScreen.js` | Личный кабинет (книги, профиль, настройки, экспорт) |
+| **AccountScreenUI** | `core/AccountScreenUI.js` | Хелперы рендеринга UI кабинета |
+| **AccountPublishTab** | `core/AccountPublishTab.js` | Вкладка публикации книг (видимость, описание) |
 | **ProfileHeader** | `core/ProfileHeader.js` | Компонент профиля (аватар, имя, био) |
 | **AuthModal** | `core/AuthModal.js` | Модалка логина/регистрации (email + Google OAuth) |
 | **MigrationHelper** | `core/MigrationHelper.js` | Миграция данных localStorage → сервер |
@@ -482,8 +511,10 @@ npm run dev
 | **ProfileModule** | `admin/modules/ProfileModule.js` | Управление профилем (username, био, аватар) |
 | **PhotoCropper** | `admin/modules/PhotoCropper.js` | Интерактивный инструмент обрезки фото |
 | **QuillEditorWrapper** | `admin/modules/QuillEditorWrapper.js` | Обёртка WYSIWYG-редактора Quill |
+| **Analytics** | `utils/Analytics.js` | Web Vitals мониторинг производительности (LCP, FID, CLS) |
 | **IdbStorage** | `utils/IdbStorage.js` | IndexedDB-обёртка для крупных данных |
 | **SettingsValidator** | `utils/SettingsValidator.js` | Валидация и санитизация настроек |
+| **ServerConfigOperations** | `admin/ServerConfigOperations.js` | Серверные CRUD-операции конфига |
 
 ---
 
@@ -535,6 +566,7 @@ npm run dev
 - **S3** — хранилище файлов (MinIO в dev, AWS S3 / совместимые в prod)
 - **Zod** — валидация запросов
 - **Vitest + supertest** — тестирование API
+- **prom-client** — Prometheus-метрики
 
 ### Быстрый старт (full-stack)
 
@@ -586,11 +618,13 @@ npm run dev            # Vite dev-сервер (порт 3000)
 | `/api/public/discover` | GET | Каталог опубликованных книг (пагинация) |
 | `/api/public/shelves/:username` | GET | Публичная полка автора |
 | `/api/public/books/:bookId` | GET | Публичная информация о книге |
+| `/api/reading-sessions` | POST/GET | Трекинг сессий чтения и аналитика |
+| `/api/metrics` | GET | Эндпоинт Prometheus-метрик |
 | `/api/export`, `/api/import` | GET/POST | Экспорт/импорт конфигурации |
 
 ### CI/CD (GitHub Actions)
 
-Проект использует два workflow для автоматизации:
+Проект использует четыре workflow для автоматизации:
 
 **deploy.yml** — CI/CD фронтенда (при push в `main`):
 1. **Lint** — ESLint + Stylelint
@@ -603,6 +637,14 @@ npm run dev            # Vite dev-сервер (порт 3000)
 - PostgreSQL 17 тестовый сервис
 - Prisma миграции + Vitest + supertest
 
+**lighthouse.yml** — Lighthouse CI аудит (при push/PR в `main`):
+- Сборка проекта + 3 прогона Lighthouse
+- Пороги качества: производительность ≥ 0.9, доступность ≥ 0.9, best-practices ≥ 0.9, SEO ≥ 0.9
+
+**security.yml** — Сканирование безопасности (при push/PR в `main` + еженедельно):
+- npm audit для фронтенда и сервера
+- Trivy-сканирование Docker-образа с загрузкой SARIF в GitHub Security
+
 ### Наблюдаемость (Observability)
 
 Стек наблюдаемости запускается отдельным docker-compose оверлеем:
@@ -613,9 +655,12 @@ npm run infra:observability
 
 Включает:
 - **Loki** — агрегация логов (порт 3200, ретенция 14 дней)
-- **Grafana** — дашборды и визуализация (порт 3100, admin/admin)
+- **Prometheus** — сбор метрик с сервера `/api/metrics` (порт 9090)
+- **Grafana** — дашборды, визуализация и алертинг (порт 3100, admin/admin)
 - **pg-backup** — ежедневное резервное копирование PostgreSQL (3:00 UTC, ротация 7 дней)
 - Интеграция `pino-loki` для отправки логов из сервера в Loki
+- Серверные метрики через `prom-client` (длительность HTTP-запросов, активные соединения)
+- Правила алертинга Grafana через `infra/grafana-alerting.yaml`
 
 ### Деплой
 
@@ -794,6 +839,7 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 - **quill** `^2.0.3` — WYSIWYG-редактор (редактирование глав в личном кабинете)
 - **i18next** `^25.8.13` — Интернационализация (5 языков)
 - **@sentry/browser** `^10.40.0` — Мониторинг ошибок (клиент)
+- **web-vitals** `^5.1.0` — Мониторинг Core Web Vitals (LCP, FID, CLS)
 
 ### Frontend Dev Dependencies (ключевые)
 - **vite** `^5.0.0` — Бандлер
@@ -819,6 +865,7 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 - **csrf-csrf** `^4.0.3` — CSRF-защита
 - **express-rate-limit** `^7.0.0` — Ограничение запросов
 - **@sentry/node** `^9.47.1` — Мониторинг ошибок
+- **prom-client** `^15.1.3` — Сбор Prometheus-метрик
 
 ---
 
