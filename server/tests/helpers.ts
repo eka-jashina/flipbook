@@ -79,5 +79,6 @@ export async function cleanDatabase() {
   await prisma.globalSettings.deleteMany();
   await prisma.user.deleteMany();
   // Clean session table (managed by connect-pg-simple, not Prisma)
-  await prisma.$executeRawUnsafe('DELETE FROM "session"');
+  // Table may not exist in test environments where the session store hasn't initialized
+  await prisma.$executeRawUnsafe('DELETE FROM "session"').catch(() => {});
 }
