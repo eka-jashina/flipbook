@@ -134,12 +134,12 @@ export default {
   'error.generic': 'An error occurred',
 
   // ─── Embed ──────────────────────────────────────────────────────────────────
-  'embed.openOnFlipbook': 'Open on Flipbook',
-  'embed.poweredBy': 'Powered by Flipbook',
+  'embed.openOnFlipbook': 'Open on Foliant',
+  'embed.poweredBy': 'Powered by Foliant',
 
   // ─── Meta ──────────────────────────────────────────────────────────────────
-  'meta.title': 'Flipbook — Interactive Reader with 3D Animation',
-  'meta.description': 'An e-book with realistic 3D page-flip animations. Multiple chapters, customizable fonts, themes, and background sounds. PWA — works offline.',
+  'meta.title': 'Foliant — Interactive Books & Photo Albums with 3D Page Flip',
+  'meta.description': 'Create interactive books and photo albums with realistic 3D page-flip animations. For authors and photographers.',
 
   // ─── Ambients (defaults) ──────────────────────────────────────────────────────
   'ambient.none': 'No sound',
