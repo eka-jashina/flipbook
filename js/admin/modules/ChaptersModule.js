@@ -1,20 +1,21 @@
 /**
  * Модуль управления главами, обложкой и книгами
- * Делегирует фотоальбом → AlbumManager, загрузку книг → BookUploadManager
+ * Делегирует:
+ *   фотоальбом → AlbumManager
+ *   загрузку книг → BookUploadManager
+ *   переключатель книг → BookSelectorManager
+ *   обложку → CoverManager
+ *   файлы глав → ChapterFileHandler
  */
 import { BaseModule } from './BaseModule.js';
 import { AlbumManager } from './AlbumManager.js';
 import { BookUploadManager } from './BookUploadManager.js';
-import { BookParser } from '../BookParser.js';
+import { BookSelectorManager } from './BookSelectorManager.js';
+import { CoverManager } from './CoverManager.js';
+import { ChapterFileHandler } from './ChapterFileHandler.js';
 import { QuillEditorWrapper } from './QuillEditorWrapper.js';
-import { readFileAsDataURL, setupDropzone } from './adminHelpers.js';
 
 export class ChaptersModule extends BaseModule {
-  /** Максимальный размер загружаемого файла главы (10 МБ) */
-  static CHAPTER_FILE_MAX_SIZE = 10 * 1024 * 1024;
-  /** Допустимые расширения */
-  static CHAPTER_FILE_EXTENSIONS = ['.doc', '.docx', '.html', '.htm', '.txt'];
-
   constructor(app) {
     super(app);
     this._editingIndex = null;
@@ -24,8 +25,13 @@ export class ChaptersModule extends BaseModule {
     this._editor = new QuillEditorWrapper();
     /** @type {'upload'|'editor'} Текущий режим ввода контента */
     this._inputMode = 'upload';
+
+    // Делегаты
     this._album = new AlbumManager(this);
     this._bookUpload = new BookUploadManager(this);
+    this._bookSelector = new BookSelectorManager(this);
+    this._cover = new CoverManager(this);
+    this._fileHandler = new ChapterFileHandler(this);
   }
 
   cacheDOM() {
@@ -34,22 +40,6 @@ export class ChaptersModule extends BaseModule {
     this.chaptersEmpty = document.getElementById('chaptersEmpty');
     this.addChapterBtn = document.getElementById('addChapter');
     this.addAlbumBtn = document.getElementById('addAlbum');
-
-    // Переключатель книг (bookshelf view)
-    this.bookSelector = document.getElementById('bookSelector');
-    this.deleteBookBtn = document.getElementById('deleteBook');
-
-    // Обложка (в editor → cover tab)
-    this.coverTitle = document.getElementById('coverTitle');
-    this.coverAuthor = document.getElementById('coverAuthor');
-    this.bgCoverMode = document.getElementById('bgCoverMode');
-    this.bgCoverOptions = document.querySelectorAll('.texture-option[data-bg-mode]');
-    this.bgCoverFileInput = document.getElementById('bgCoverFileInput');
-    this.bgCoverThumb = document.getElementById('bgCoverThumb');
-    this.bgCoverCustomInfo = document.getElementById('bgCoverCustomInfo');
-    this.bgCoverCustomName = document.getElementById('bgCoverCustomName');
-    this.bgCoverRemove = document.getElementById('bgCoverRemove');
-    this.saveCoverBtn = document.getElementById('saveCover');
 
     // Модальное окно главы
     this.modal = document.getElementById('chapterModal');
@@ -61,13 +51,6 @@ export class ChaptersModule extends BaseModule {
     this.inputBg = document.getElementById('chapterBg');
     this.inputBgMobile = document.getElementById('chapterBgMobile');
 
-    // Загрузка файла главы
-    this.chapterFileInput = document.getElementById('chapterFileInput');
-    this.chapterFileDropzone = document.getElementById('chapterFileDropzone');
-    this.chapterFileInfo = document.getElementById('chapterFileInfo');
-    this.chapterFileName = document.getElementById('chapterFileName');
-    this.chapterFileRemove = document.getElementById('chapterFileRemove');
-
     // Переключатель режима ввода (файл / редактор)
     this.chapterInputToggle = document.getElementById('chapterInputToggle');
     this.chapterUploadPanel = document.getElementById('chapterUploadPanel');
@@ -75,8 +58,30 @@ export class ChaptersModule extends BaseModule {
     this.chapterEditorContainer = document.getElementById('chapterEditorContainer');
 
     // Делегаты
+    this._bookSelector.cacheDOM();
+    this._cover.cacheDOM();
+    this._fileHandler.cacheDOM();
     this._album.cacheDOM();
     this._bookUpload.cacheDOM();
+
+    // Прокси-ссылки на DOM-элементы делегатов (совместимость с тестами)
+    this.bookSelector = this._bookSelector.bookSelector;
+    this.deleteBookBtn = this._bookSelector.deleteBookBtn;
+    this.coverTitle = this._cover.coverTitle;
+    this.coverAuthor = this._cover.coverAuthor;
+    this.bgCoverMode = this._cover.bgCoverMode;
+    this.bgCoverOptions = this._cover.bgCoverOptions;
+    this.bgCoverFileInput = this._cover.bgCoverFileInput;
+    this.bgCoverThumb = this._cover.bgCoverThumb;
+    this.bgCoverCustomInfo = this._cover.bgCoverCustomInfo;
+    this.bgCoverCustomName = this._cover.bgCoverCustomName;
+    this.bgCoverRemove = this._cover.bgCoverRemove;
+    this.saveCoverBtn = this._cover.saveCoverBtn;
+    this.chapterFileInput = this._fileHandler.chapterFileInput;
+    this.chapterFileDropzone = this._fileHandler.chapterFileDropzone;
+    this.chapterFileInfo = this._fileHandler.chapterFileInfo;
+    this.chapterFileName = this._fileHandler.chapterFileName;
+    this.chapterFileRemove = this._fileHandler.chapterFileRemove;
   }
 
   bindEvents() {
@@ -85,70 +90,12 @@ export class ChaptersModule extends BaseModule {
     this.cancelModal.addEventListener('click', () => this.modal.close());
     this.chapterForm.addEventListener('submit', (e) => this._handleChapterSubmit(e));
 
-    // Загрузка файла главы (click + drag-and-drop)
-    setupDropzone(this.chapterFileDropzone, this.chapterFileInput, (file) => this._processChapterFile(file));
-    this.chapterFileInput.addEventListener('change', (e) => this._handleChapterFileSelect(e));
-    this.chapterFileRemove.addEventListener('click', () => this._removeChapterFile());
-
     // Переключатель режима ввода (файл / редактор)
     this.chapterInputToggle.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-input-mode]');
       if (!btn) return;
       this._switchInputMode(btn.dataset.inputMode);
     });
-
-    // Переключатель книг (делегирование) — клик на карточку книги
-    this.bookSelector.addEventListener('click', (e) => {
-      // Сортировка книг (вверх/вниз)
-      const moveBtn = e.target.closest('[data-book-move]');
-      if (moveBtn) {
-        e.stopPropagation();
-        const index = parseInt(moveBtn.dataset.bookIndex, 10);
-        const direction = moveBtn.dataset.bookMove;
-        const newIndex = direction === 'up' ? index - 1 : index + 1;
-        this.store.moveBook(index, newIndex);
-        this._renderBookSelector();
-        this._renderJsonPreview();
-        this._showToast('Порядок изменён');
-        return;
-      }
-
-      const card = e.target.closest('[data-book-id]');
-      if (!card) return;
-
-      const deleteBtn = e.target.closest('[data-book-delete]');
-      if (deleteBtn) {
-        e.stopPropagation();
-        this._handleDeleteBook(deleteBtn.dataset.bookDelete);
-        return;
-      }
-
-      // Выбрать книгу и открыть редактор
-      this._handleSelectBook(card.dataset.bookId);
-    });
-
-    // Клавиатурная навигация для карточек книг (Enter / Space)
-    this.bookSelector.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      const card = e.target.closest('[data-book-id]');
-      if (!card) return;
-      e.preventDefault();
-      this._handleSelectBook(card.dataset.bookId);
-    });
-
-    // Удаление активной книги (кнопка в editor)
-    this.deleteBookBtn.addEventListener('click', () => {
-      this._handleDeleteBook(this.store.getActiveBookId());
-    });
-
-    // Обложка — фон-подложка (mode selector)
-    this.bgCoverOptions.forEach(btn => {
-      btn.addEventListener('click', () => this._selectBgMode(btn.dataset.bgMode));
-    });
-    this.bgCoverFileInput.addEventListener('change', (e) => this._handleBgUpload(e));
-    this.bgCoverRemove.addEventListener('click', () => this._removeBgCustom());
-
-    this.saveCoverBtn.addEventListener('click', () => this._saveCover());
 
     // Альбом — кнопка в табе «Главы» (переход в album view)
     this.addAlbumBtn.addEventListener('click', () => {
@@ -157,24 +104,20 @@ export class ChaptersModule extends BaseModule {
     });
 
     // Делегаты
+    this._bookSelector.bindEvents();
+    this._cover.bindEvents();
+    this._fileHandler.bindEvents();
     this._album.bindEvents();
     this._bookUpload.bindEvents();
   }
 
   render() {
-    this._renderBookSelector();
-    this._renderCover();
+    this._bookSelector.render();
+    this._cover.render();
     this._renderChapters();
   }
 
-  // --- Рендер ---
-
-  _renderCover() {
-    const cover = this.store.getCover();
-    this.coverTitle.value = cover.title;
-    this.coverAuthor.value = cover.author;
-    this._renderBgModeSelector(cover.bgMode || 'default', cover.bgCustomData);
-  }
+  // --- Рендер списка глав ---
 
   _renderChapters() {
     const chapters = this.store.getChapters();
@@ -267,67 +210,12 @@ export class ChaptersModule extends BaseModule {
     };
   }
 
-  // --- Переключатель книг (bookshelf) ---
-
-  _renderBookSelector() {
-    const books = this.store.getBooks();
-    const activeId = this.store.getActiveBookId();
-
-    this.bookSelector.innerHTML = books.map((b, i) => `
-      <div class="book-card${b.id === activeId ? ' active' : ''}" data-book-id="${this._escapeHtml(b.id)}" tabindex="0" role="button" aria-label="${this._escapeHtml(b.title || 'Без названия')}">
-        <div class="book-card-info">
-          <div class="book-card-title">${this._escapeHtml(b.title || 'Без названия')}</div>
-          <div class="book-card-meta">${this._escapeHtml(b.author || '')}${b.author ? ' · ' : ''}${b.chaptersCount} гл.</div>
-        </div>
-        <div class="book-card-actions">
-          ${books.length > 1 ? `<div class="book-card-sort">
-            ${i > 0 ? `<button class="chapter-action-btn" data-book-move="up" data-book-index="${i}" title="Влево">
-              <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-            </button>` : ''}
-            ${i < books.length - 1 ? `<button class="chapter-action-btn" data-book-move="down" data-book-index="${i}" title="Вправо">
-              <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-            </button>` : ''}
-          </div>` : ''}
-          ${b.id === activeId ? '<span class="book-card-active-badge">Активна</span>' : ''}
-          ${books.length > 1 ? `<button class="chapter-action-btn delete" data-book-delete="${this._escapeHtml(b.id)}" title="Удалить книгу">
-            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-          </button>` : ''}
-        </div>
-      </div>
-    `).join('');
-
-    this.deleteBookBtn.hidden = books.length <= 1;
-  }
-
-  _handleSelectBook(bookId) {
-    if (bookId !== this.store.getActiveBookId()) {
-      this.store.setActiveBook(bookId);
-      this.app._render();
-    }
-    this.app.openEditor();
-  }
-
-  async _handleDeleteBook(bookId) {
-    const books = this.store.getBooks();
-    if (books.length <= 1) {
-      this._showToast('Нельзя удалить единственную книгу');
-      return;
-    }
-    const book = books.find(b => b.id === bookId);
-    if (!await this._confirm(`Удалить книгу «${book?.title || bookId}»?`)) return;
-
-    this.store.removeBook(bookId);
-    this.app._render();
-    this.app._showView('bookshelf');
-    this._showToast('Книга удалена');
-  }
-
   // --- Модальное окно главы ---
 
   async _openModal(editIndex = null) {
     this._editingIndex = editIndex;
     this._pendingHtmlContent = null;
-    this.chapterFileInput.value = '';
+    this._fileHandler.chapterFileInput.value = '';
 
     // Уничтожить предыдущий экземпляр редактора
     if (this._editor.isInitialized) {
@@ -343,24 +231,22 @@ export class ChaptersModule extends BaseModule {
       this.inputBgMobile.value = ch.bgMobile || '';
 
       if (ch.htmlContent) {
-        // Встроенный контент — открыть в редакторе
         this._pendingHtmlContent = ch.htmlContent;
-        this._resetChapterFileUI();
+        this._fileHandler.resetUI();
         await this._switchInputMode('editor');
         this._editor.setHTML(ch.htmlContent);
       } else if (ch.file) {
-        // URL-путь — показать имя файла в режиме загрузки
         await this._switchInputMode('upload');
-        this._showChapterFileInfo(ch.file);
+        this._fileHandler.showFileInfo(ch.file);
       } else {
         await this._switchInputMode('upload');
-        this._resetChapterFileUI();
+        this._fileHandler.resetUI();
       }
     } else {
       this.modalTitle.textContent = 'Добавить главу';
       this.chapterForm.reset();
       await this._switchInputMode('upload');
-      this._resetChapterFileUI();
+      this._fileHandler.resetUI();
     }
 
     this.modal.showModal();
@@ -372,32 +258,23 @@ export class ChaptersModule extends BaseModule {
    * @param {'upload'|'editor'} mode
    */
   async _switchInputMode(mode) {
-    if (mode === this._inputMode && mode === 'upload') {
-      // Уже в режиме загрузки — ничего не делать
-      return;
-    }
+    if (mode === this._inputMode && mode === 'upload') return;
 
     this._inputMode = mode;
 
-    // Переключить active на кнопках
     const buttons = this.chapterInputToggle.querySelectorAll('[data-input-mode]');
     buttons.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.inputMode === mode);
     });
 
-    // Переключить панели
     this.chapterUploadPanel.hidden = (mode !== 'upload');
     this.chapterEditorPanel.hidden = (mode !== 'editor');
-
-    // Ширина модального окна
     this.modal.classList.toggle('editor-active', mode === 'editor');
 
-    // Ленивая инициализация Quill при первом переключении в режим редактора
     if (mode === 'editor' && !this._editor.isInitialized) {
       await this._editor.init(this.chapterEditorContainer);
     }
 
-    // Загрузить pending-контент в редактор при переключении
     if (mode === 'editor' && this._pendingHtmlContent) {
       this._editor.setHTML(this._pendingHtmlContent);
     }
@@ -415,17 +292,14 @@ export class ChaptersModule extends BaseModule {
       bgMobile: this.inputBgMobile.value.trim(),
     };
 
-    // Собрать HTML из WYSIWYG-редактора, если он активен и содержит контент
     if (this._inputMode === 'editor' && this._editor.isInitialized && !this._editor.isEmpty()) {
       this._pendingHtmlContent = this._editor.getHTML();
     }
 
-    // Загруженный / существующий HTML-контент
     if (this._pendingHtmlContent) {
       chapter.htmlContent = this._pendingHtmlContent;
     }
 
-    // При редактировании: сохранить file path если нет нового контента
     if (this._editingIndex !== null && !chapter.htmlContent) {
       const existing = this.store.getChapters()[this._editingIndex];
       if (existing.file) {
@@ -443,7 +317,6 @@ export class ChaptersModule extends BaseModule {
       this._showToast('Глава добавлена');
     }
 
-    // Очистить состояние
     this._pendingHtmlContent = null;
     if (this._editor.isInitialized) {
       this._editor.destroy();
@@ -453,156 +326,44 @@ export class ChaptersModule extends BaseModule {
     this._renderJsonPreview();
   }
 
-  // --- Загрузка файла главы ---
+  // --- Прокси-методы для делегатов (совместимость с тестами и внешними вызовами) ---
 
-  _handleChapterFileSelect(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    this._processChapterFile(file);
-  }
+  /** @see BookSelectorManager#render */
+  _renderBookSelector() { this._bookSelector.render(); }
 
-  async _processChapterFile(file) {
-    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+  /** @see BookSelectorManager#_handleSelectBook */
+  _handleSelectBook(bookId) { this._bookSelector._handleSelectBook(bookId); }
 
-    if (!ChaptersModule.CHAPTER_FILE_EXTENSIONS.includes(ext)) {
-      this._showToast(`Допустимые форматы: ${ChaptersModule.CHAPTER_FILE_EXTENSIONS.join(', ')}`);
-      this.chapterFileInput.value = '';
-      return;
-    }
+  /** @see BookSelectorManager#_handleDeleteBook */
+  _handleDeleteBook(bookId) { return this._bookSelector._handleDeleteBook(bookId); }
 
-    if (file.size > ChaptersModule.CHAPTER_FILE_MAX_SIZE) {
-      this._showToast(`Файл слишком большой (макс. ${ChaptersModule.CHAPTER_FILE_MAX_SIZE / (1024 * 1024)} МБ)`);
-      this.chapterFileInput.value = '';
-      return;
-    }
+  /** @see CoverManager#render */
+  _renderCover() { this._cover.render(); }
 
-    try {
-      this.chapterFileDropzone.classList.add('loading');
+  /** @see CoverManager#_renderBgModeSelector */
+  _renderBgModeSelector(mode, data) { this._cover._renderBgModeSelector(mode, data); }
 
-      let html;
-      if (ext === '.html' || ext === '.htm') {
-        html = await file.text();
-      } else {
-        // doc, docx, txt — через BookParser
-        const parsed = await BookParser.parse(file);
-        html = parsed.chapters.map(ch => ch.html).join('\n');
-      }
+  /** @see CoverManager#_selectBgMode */
+  _selectBgMode(value) { this._cover._selectBgMode(value); }
 
-      if (!html || !html.trim()) {
-        this._showToast('Файл пуст или не удалось извлечь контент');
-        return;
-      }
+  /** @see CoverManager#_handleBgUpload */
+  _handleBgUpload(e) { return this._cover._handleBgUpload(e); }
 
-      this._pendingHtmlContent = html;
-      this._showChapterFileInfo(file.name);
-      this._showToast('Файл загружен');
-    } catch (err) {
-      this._showToast(`Ошибка чтения файла: ${err.message}`);
-    } finally {
-      this.chapterFileDropzone.classList.remove('loading');
-      this.chapterFileInput.value = '';
-    }
-  }
+  /** @see CoverManager#_removeBgCustom */
+  _removeBgCustom() { this._cover._removeBgCustom(); }
 
-  _removeChapterFile() {
-    this._pendingHtmlContent = null;
-    this.chapterFileInput.value = '';
+  /** @see CoverManager#_saveCover */
+  _saveCover() { this._cover._saveCover(); }
 
-    // Очистить редактор, если инициализирован
-    if (this._editor.isInitialized) {
-      this._editor.clear();
-    }
+  /** @see ChapterFileHandler#processFile */
+  _processChapterFile(file) { return this._fileHandler.processFile(file); }
 
-    // При редактировании — сбросить существующий контент
-    if (this._editingIndex !== null) {
-      const existing = this.store.getChapters()[this._editingIndex];
-      if (existing.file) {
-        // Есть URL-путь — вернуть его отображение
-        this._showChapterFileInfo(existing.file);
-        return;
-      }
-    }
+  /** @see ChapterFileHandler#removeFile */
+  _removeChapterFile() { this._fileHandler.removeFile(); }
 
-    this._resetChapterFileUI();
-  }
+  /** @see ChapterFileHandler#showFileInfo */
+  _showChapterFileInfo(name) { this._fileHandler.showFileInfo(name); }
 
-  _showChapterFileInfo(name) {
-    this.chapterFileDropzone.hidden = true;
-    this.chapterFileInfo.hidden = false;
-    this.chapterFileName.textContent = name;
-  }
-
-  _resetChapterFileUI() {
-    this.chapterFileDropzone.hidden = false;
-    this.chapterFileInfo.hidden = true;
-    this.chapterFileName.textContent = '';
-  }
-
-  // --- Обложка / фон-подложка ---
-
-  _renderBgModeSelector(modeValue, customData) {
-    const uploadOption = this.bgCoverOptions[this.bgCoverOptions.length - 1]?.closest('label');
-
-    this.bgCoverOptions.forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.bgMode === modeValue);
-    });
-
-    if (uploadOption) {
-      uploadOption.classList.toggle('active', modeValue === 'custom');
-    }
-
-    this.bgCoverMode.value = modeValue;
-
-    if (customData) {
-      this.bgCoverThumb.style.backgroundImage = `url(${customData})`;
-      this.bgCoverThumb.classList.add('has-image');
-      this.bgCoverCustomInfo.hidden = false;
-      this.bgCoverCustomName.textContent = 'Своё изображение';
-    } else {
-      this.bgCoverThumb.style.backgroundImage = '';
-      this.bgCoverThumb.classList.remove('has-image');
-      this.bgCoverCustomInfo.hidden = true;
-    }
-  }
-
-  _selectBgMode(value) {
-    const cover = this.store.getCover();
-    this._renderBgModeSelector(value, cover.bgCustomData);
-  }
-
-  async _handleBgUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: e.target })) return;
-
-    const dataUrl = await readFileAsDataURL(file);
-    this.store.updateCover({ bgMode: 'custom', bgCustomData: dataUrl });
-    this._renderBgModeSelector('custom', dataUrl);
-    this._renderJsonPreview();
-    this._showToast('Фон загружен');
-    e.target.value = '';
-  }
-
-  _removeBgCustom() {
-    this.store.updateCover({ bgMode: 'default', bgCustomData: null });
-    this._renderBgModeSelector('default', null);
-    this._renderJsonPreview();
-    this._showToast('Своё изображение удалено');
-  }
-
-  _saveCover() {
-    this.store.updateCover({
-      title: this.coverTitle.value.trim(),
-      author: this.coverAuthor.value.trim(),
-      bgMode: this.bgCoverMode.value,
-    });
-
-    // Обновить заголовок редактора
-    this.app.editorTitle.textContent = this.coverTitle.value.trim() || 'Редактор книги';
-
-    this._renderBookSelector();
-    this._renderJsonPreview();
-    this._showToast('Обложка сохранена');
-  }
+  /** @see ChapterFileHandler#resetUI */
+  _resetChapterFileUI() { this._fileHandler.resetUI(); }
 }
