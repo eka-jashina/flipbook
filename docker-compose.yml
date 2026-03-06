@@ -15,6 +15,14 @@ services:
       - /run
     security_opt:
       - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U flipbook"]
       interval: 5s
@@ -35,6 +43,14 @@ services:
       - minio_data:/data
     security_opt:
       - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
@@ -47,6 +63,11 @@ services:
       minio:
         condition: service_healthy
     restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
     entrypoint: >
       /bin/sh -c "
       mc alias set myminio http://minio:9000 minioadmin minioadmin;
@@ -61,6 +82,11 @@ services:
       postgres:
         condition: service_healthy
     restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
     environment:
       DATABASE_URL: postgresql://flipbook:flipbook_dev@postgres:5432/flipbook?connection_limit=5&pool_timeout=10
     entrypoint: ["npx", "prisma", "migrate", "deploy"]
@@ -79,6 +105,14 @@ services:
       - "4000:4000"
     security_opt:
       - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"]
       interval: 10s
