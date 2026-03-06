@@ -284,6 +284,7 @@ export default defineConfig(({ command, mode }) => {
         '@managers': '/js/managers',
         '@core': '/js/core',
         '@i18n': '/js/i18n',
+        '@shared': '/shared',
         '@css': '/css',
         '@images': '/images',
         '@fonts': '/fonts',
