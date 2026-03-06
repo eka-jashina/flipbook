@@ -19,7 +19,7 @@ const SYNC_DEBOUNCE = 5000;
 export class SettingsManager {
   /**
    * @param {StorageManager} storage - Менеджер хранилища
-   * @param {Object} defaults - Значения по умолчанию
+   * @param {import('../types.js').DefaultSettings} defaults - Значения по умолчанию
    * @param {Object} [options]
    * @param {import('../utils/ApiClient.js').ApiClient} [options.apiClient] - API клиент (Фаза 3)
    * @param {string} [options.bookId] - ID книги для sync прогресса

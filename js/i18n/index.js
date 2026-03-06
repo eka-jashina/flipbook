@@ -10,10 +10,13 @@
  * - detectLanguage() — определить язык браузера
  * - applyTranslations(root?) — обновить DOM-элементы с data-i18n атрибутами
  * - LANGUAGES — список доступных языков
+ *
+ * Локали загружаются лениво: при инициализации грузятся только
+ * fallback (ru) и выбранный язык. Остальные — при переключении.
  */
 
 import i18next from 'i18next';
-import { ru, en, es, fr, de } from './locales/index.js';
+import { ru, loadLocale } from './locales/index.js';
 import { trackLanguageChanged } from '../utils/Analytics.js';
 
 /** Список поддерживаемых языков */
@@ -35,17 +38,22 @@ const LANGUAGE_CODES = LANGUAGES.map(l => l.code);
 export async function initI18n(language = 'ru') {
   const lng = language === 'auto' ? detectLanguage() : language;
 
+  // Базовый ресурс — fallback всегда доступен
+  const resources = {
+    ru: { translation: ru },
+  };
+
+  // Лениво загрузить выбранный язык (если не ru)
+  if (lng !== 'ru') {
+    const translations = await loadLocale(lng);
+    resources[lng] = { translation: translations };
+  }
+
   await i18next.init({
     lng,
     fallbackLng: 'ru',
     interpolation: { escapeValue: false },
-    resources: {
-      ru: { translation: ru },
-      en: { translation: en },
-      es: { translation: es },
-      fr: { translation: fr },
-      de: { translation: de },
-    },
+    resources,
   });
 
   document.documentElement.lang = lng;
@@ -68,6 +76,13 @@ export function t(key, params) {
  */
 export async function setLanguage(code) {
   if (!LANGUAGE_CODES.includes(code)) return;
+
+  // Лениво загрузить локаль если ещё не добавлена в i18next
+  if (!i18next.hasResourceBundle(code, 'translation')) {
+    const translations = await loadLocale(code);
+    i18next.addResourceBundle(code, 'translation', translations);
+  }
+
   await i18next.changeLanguage(code);
   document.documentElement.lang = code;
   trackLanguageChanged(code);

@@ -110,6 +110,7 @@ export default defineConfig({
       '@core': resolve(__dirname, './js/core'),
       '@css': resolve(__dirname, './css'),
       '@i18n': resolve(__dirname, './js/i18n'),
+      '@shared': resolve(__dirname, './shared'),
     },
   },
 });

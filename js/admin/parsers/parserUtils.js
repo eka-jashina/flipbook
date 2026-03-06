@@ -1,23 +1,16 @@
 /**
- * Общие утилиты для парсеров книг
+ * Утилиты для парсеров книг (клиентская сторона)
+ *
+ * Платформо-независимые функции реэкспортируются из @shared/parsers.
+ * DOM-зависимые функции (parseXml, parseHtml) реализованы здесь
+ * с использованием браузерного DOMParser API.
  */
 
-/**
- * Экранирование HTML
- * @param {string} str
- * @returns {string}
- */
-export function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+// Реэкспорт из shared
+export { escapeHtml, getTextContent } from '@shared/parsers/parserUtils.js';
 
 /**
- * Парсинг XML-строки
+ * Парсинг XML-строки (браузерный DOMParser)
  * @param {string} xmlString
  * @returns {Document}
  */
@@ -35,22 +28,11 @@ export function parseXml(xmlString) {
 }
 
 /**
- * Парсинг HTML-строки
+ * Парсинг HTML-строки (браузерный DOMParser)
  * @param {string} htmlString
  * @returns {Document}
  */
 export function parseHtml(htmlString) {
   const parser = new DOMParser();
   return parser.parseFromString(htmlString, 'text/html');
-}
-
-/**
- * Получить текстовое содержимое элемента по селектору
- * @param {Document} doc
- * @param {string} selector
- * @returns {string}
- */
-export function getTextContent(doc, selector) {
-  const el = doc.querySelector(selector);
-  return el?.textContent?.trim() || '';
 }

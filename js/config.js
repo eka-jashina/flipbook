@@ -41,8 +41,8 @@ export { enrichConfigFromIDB } from './config/enrichConfigFromIDB.js';
  * Чистая функция: принимает adminConfig явно, без обращения к localStorage.
  * Используйте её в тестах и везде, где нужна воспроизводимость результата.
  *
- * @param {Object|null} adminConfig - Конфиг из AdminConfigStore или null для дефолтного
- * @returns {Readonly<Object>} Замороженный объект конфигурации
+ * @param {import('./types.js').AdminConfig|null} adminConfig - Конфиг из AdminConfigStore или null для дефолтного
+ * @returns {Readonly<import('./types.js').AppConfig>} Замороженный объект конфигурации
  */
 export function createConfig(adminConfig = null) {
   const activeBook = getActiveBook(adminConfig);
@@ -143,7 +143,7 @@ export function createConfig(adminConfig = null) {
  * @param {Object} bookDetail - Полная информация о книге из GET /api/books/:bookId
  * @param {Object|null} globalSettings - Глобальные настройки из GET /api/settings
  * @param {Array} readingFonts - Шрифты для чтения из GET /api/fonts
- * @returns {Readonly<Object>}
+ * @returns {Readonly<import('./types.js').AppConfig>}
  */
 export function createConfigFromAPI(bookDetail, globalSettings, readingFonts) {
   // Главы: из API (id, title, filePath, hasHtmlContent, bg, bgMobile)
@@ -257,7 +257,7 @@ export async function loadPublicConfigFromAPI(apiClient, bookId) {
 /**
  * Внутреннее хранилище конфигурации.
  * Заменяемо через setConfig() для тестирования и runtime-обновлений.
- * @type {Readonly<Object>}
+ * @type {Readonly<import('./types.js').AppConfig>}
  */
 let _activeConfig = createConfig(loadAdminConfig());
 
@@ -275,7 +275,7 @@ export const CONFIG = _activeConfig;
  * актуальный объект, даже после вызова setConfig().
  *
  * Рекомендуется для новых компонентов и тестов.
- * @returns {Readonly<Object>}
+ * @returns {Readonly<import('./types.js').AppConfig>}
  */
 export function getConfig() {
   return _activeConfig;
@@ -295,7 +295,7 @@ const REQUIRED_CONFIG_KEYS = [
  * - При переключении книги (runtime): setConfig(createConfig(newAdminConfig))
  * - При загрузке с сервера: setConfig(createConfigFromAPI(...))
  *
- * @param {Readonly<Object>} config - Новый объект конфигурации
+ * @param {Readonly<import('./types.js').AppConfig>} config - Новый объект конфигурации
  * @throws {Error} Если конфигурация не содержит обязательных ключей
  */
 export function setConfig(config) {
