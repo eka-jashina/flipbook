@@ -65,15 +65,6 @@ html[data-theme="dark"] {
    ТЁМНАЯ ТЕМА - КОМПОНЕНТЫ
    ═══════════════════════════════════════════ */
 
-/* Auth-модалка — усиленная тень на тёмном фоне */
-html[data-theme="dark"] .auth-modal {
-  box-shadow: 0 20px 60px rgb(0, 0, 0, 0.6);
-}
-
-html[data-theme="dark"] .auth-overlay {
-  background: rgb(0, 0, 0, 0.75);
-}
-
 /* Страницы - убираем текстуру */
 html[data-theme="dark"] .page,
 html[data-theme="dark"] .side {
@@ -145,12 +136,6 @@ html[data-theme="bw"] {
 /* ═══════════════════════════════════════════
    ЧЁРНО-БЕЛАЯ ТЕМА - КОМПОНЕНТЫ
    ═══════════════════════════════════════════ */
-
-/* Auth-модалка — строгая рамка, без тени */
-html[data-theme="bw"] .auth-modal {
-  box-shadow: none;
-  border: 2px solid #000;
-}
 
 /* Страницы - убираем текстуру */
 html[data-theme="bw"] .page,

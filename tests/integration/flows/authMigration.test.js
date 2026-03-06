@@ -667,15 +667,13 @@ describe('Auth + Migration Integration', () => {
       expect(importData.books[1].appearance).toBeNull();
     });
 
-    it('should not close AuthModal on Escape key', async () => {
+    it('should close AuthModal on Escape key', async () => {
       const authModal = new AuthModal({ apiClient: mockApi, onAuth: vi.fn() });
       authModal.show();
 
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
-      // Modal still shown — auth is mandatory
-      expect(document.querySelector('.auth-overlay')).not.toBeNull();
-      authModal.destroy();
+      expect(document.querySelector('.auth-overlay')).toBeNull();
     });
 
     it('should re-render AuthModal on mode switch without duplicating', () => {

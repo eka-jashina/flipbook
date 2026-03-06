@@ -302,12 +302,12 @@ describe('AuthModal', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('keyboard', () => {
-    it('should not close on Escape (mandatory auth)', () => {
+    it('should close on Escape', () => {
       modal.show();
 
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
-      expect(modal._el).not.toBeNull();
+      expect(modal._el).toBeNull();
     });
   });
 

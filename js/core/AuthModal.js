@@ -14,10 +14,12 @@ export class AuthModal {
    * @param {Object} options
    * @param {import('../utils/ApiClient.js').ApiClient} options.apiClient
    * @param {Function} options.onAuth - Колбэк после успешной авторизации (user)
+   * @param {Function} [options.onClose] - Колбэк при закрытии модалки без авторизации
    */
-  constructor({ apiClient, onAuth }) {
+  constructor({ apiClient, onAuth, onClose }) {
     this._api = apiClient;
     this._onAuth = onAuth;
+    this._onClose = onClose || null;
     this._mode = 'login'; // 'login' | 'register'
     this._el = null;
     this._boundKeydown = this._onKeydown.bind(this);
@@ -71,6 +73,7 @@ export class AuthModal {
     const isLogin = this._mode === 'login';
     return `
       <div class="auth-modal" role="dialog" aria-modal="true" aria-label="${isLogin ? 'Вход' : 'Регистрация'}">
+        <button type="button" class="auth-close-btn" aria-label="Закрыть" data-action="close">&times;</button>
         <div class="auth-modal-header">
           <h2 class="auth-modal-title">${isLogin ? 'Вход' : 'Регистрация'}</h2>
           <p class="auth-modal-subtitle">${isLogin ? 'Войдите в свой аккаунт' : 'Создайте новый аккаунт'}</p>
@@ -124,6 +127,7 @@ export class AuthModal {
   _bindFormEvents() {
     const form = this._el.querySelector('.auth-form');
     const switchBtn = this._el.querySelector('[data-action="switch"]');
+    const closeBtn = this._el.querySelector('[data-action="close"]');
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -134,6 +138,18 @@ export class AuthModal {
       this._mode = this._mode === 'login' ? 'register' : 'login';
       this._render();
     });
+
+    closeBtn.addEventListener('click', () => this._close());
+
+    // Клик по оверлею (вне модалки) — закрыть
+    this._el.addEventListener('click', (e) => {
+      if (e.target === this._el) this._close();
+    });
+  }
+
+  _close() {
+    this.hide();
+    if (this._onClose) this._onClose();
   }
 
   async _handleSubmit() {
@@ -195,7 +211,7 @@ export class AuthModal {
 
   _onKeydown(e) {
     if (e.key === 'Escape') {
-      // Не закрываем модалку по Escape — авторизация обязательна
+      this._close();
     }
   }
 }
