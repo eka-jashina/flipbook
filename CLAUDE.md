@@ -39,7 +39,7 @@ This document provides essential context for AI assistants working on this codeb
 - Security scanning (npm audit + Trivy for Docker images)
 - SEO support (robots.txt, sitemap.xml, server-side SEO service)
 
-**Live Demo:** Deployed to GitHub Pages at `/flipbook/`
+**Live Demo:** Deployed on Amvera Cloud
 
 ## Quick Reference
 
@@ -106,9 +106,7 @@ npm run docs         # Generate API documentation to docs/
 npm run docs:serve   # Generate and serve docs on port 3001
 
 # Deployment
-npm run deploy       # Build + deploy to Netlify
-npm run deploy:netlify # Deploy dist/ to Netlify
-npm run deploy:vercel  # Deploy to Vercel
+npm run deploy       # Production build (then git push amvera main)
 ```
 
 ### Requirements
@@ -473,7 +471,7 @@ flipbook/
 │   └── prometheus.yaml       # Prometheus scrape config for server metrics
 │
 ├── .github/workflows/         # CI/CD pipelines
-│   ├── deploy.yml            # Frontend: Lint → Test → E2E → Build → Deploy (GitHub Pages)
+│   ├── deploy.yml            # CI: Lint → Test → E2E → Build
 │   ├── server-tests.yml      # Server API tests (PostgreSQL service, Prisma migrations)
 │   ├── lighthouse.yml        # Lighthouse CI audit (performance, a11y, SEO)
 │   └── security.yml          # Security scanning (npm audit + Trivy Docker scan)
@@ -485,8 +483,7 @@ flipbook/
 ├── docker-compose.k6.yml     # Docker Compose overlay for K6 load testing
 ├── docker-compose.observability.yml # Docker Compose overlay (Loki + Grafana + DB backup)
 ├── amvera.yml                # Amvera Cloud deployment config
-├── railway.toml              # Railway deployment config
-├── DEPLOYMENT.md             # Deployment guide (Amvera + Cloud.ru S3)
+├── DEPLOYMENT.md             # Deployment guide (Amvera Cloud + Cloud.ru S3)
 ├── PROJECT_REVIEW.md         # Project review & analysis document
 ├── vite.config.js            # Vite configuration
 ├── vite-plugin-mobile-backgrounds.js # Custom plugin for mobile backgrounds
@@ -1044,35 +1041,22 @@ Build includes:
 - Manual chunks (utils, managers, delegates, account)
 - PWA Service Worker generation (Workbox)
 
-### GitHub Pages Deployment
+### CI Workflows
 
-Automatic via GitHub Actions (`deploy.yml`) on push to `main`:
-1. **Lint** — ESLint + Stylelint (10 min timeout)
-2. **Test** — Unit + integration tests (10 min timeout, parallel with lint)
-3. **E2E** — Playwright tests on Chromium (15 min timeout)
-4. **Build** — Production build (after lint + test + e2e pass)
-5. **Deploy** — Upload to GitHub Pages
+GitHub Actions workflows for quality gates:
+- **`deploy.yml`** — CI: Lint → Test → E2E → Build on push to `main`
+- **`server-tests.yml`** — Server API tests on `server/` changes (PostgreSQL 17, Prisma migrations)
+- **`lighthouse.yml`** — Lighthouse CI audit (performance, a11y, best-practices, SEO ≥ 0.85)
+- **`security.yml`** — Security scanning (npm audit + Trivy Docker image scan)
 
-Separate workflow (`server-tests.yml`) runs server API tests on `server/` changes:
-- PostgreSQL 17 test service
-- Prisma migrations + Vitest + supertest
-
-Additional CI workflows:
-- **`lighthouse.yml`** — Lighthouse CI audit on push/PR to `main`: builds the project and runs 3 Lighthouse runs with quality thresholds (performance ≥ 0.85, accessibility ≥ 0.85, best-practices ≥ 0.85, SEO ≥ 0.85)
-- **`security.yml`** — Security scanning on push/PR to `main` + weekly schedule: npm audit for both frontend and server, Trivy Docker image scan with SARIF upload to GitHub Security
-
-Base path configured via environment variable:
-```javascript
-const base = process.env.VITE_BASE_URL || '/';
-// GitHub Pages: set VITE_BASE_URL=/flipbook/ in CI
-```
-
-### Full-Stack Deployment
+### Amvera Cloud Deployment
 
 A root-level `Dockerfile` builds both frontend and server into a single image:
 - Multi-stage build: frontend (Vite) → server (tsc) → production image
-- Configured for Amvera Cloud (`amvera.yml`) and Railway (`railway.toml`)
+- Configured for Amvera Cloud (`amvera.yml`)
 - See `DEPLOYMENT.md` for step-by-step guide (Amvera + Cloud.ru S3)
+
+Deploy: `git push amvera main` — Amvera auto-builds and restarts the container.
 
 ### Observability & Infrastructure
 

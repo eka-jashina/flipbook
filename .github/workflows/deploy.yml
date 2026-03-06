@@ -1,7 +1,7 @@
-# GitHub Actions workflow для деплоя на GitHub Pages
-# Автоматически деплоит при push в main ветку
+# GitHub Actions workflow для CI (lint, test, e2e, build)
+# Запускается при push в main ветку
 
-name: Deploy to GitHub Pages
+name: CI
 
 on:
   # Запускается при push в main
@@ -11,15 +11,12 @@ on:
   # Позволяет запустить вручную из вкладки Actions
   workflow_dispatch:
 
-# Права для работы с GitHub Pages
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Запускать только один деплой одновременно
+# Запускать только один CI одновременно
 concurrency:
-  group: 'pages'
+  group: 'ci'
   cancel-in-progress: true
 
 jobs:
@@ -68,7 +65,7 @@ jobs:
       - name: Run unit and integration tests
         run: npm run test:run
 
-  # E2E тесты (Playwright, Chromium) — информационный, не блокирует деплой
+  # E2E тесты (Playwright, Chromium) — информационный, не блокирует сборку
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -94,7 +91,6 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          VITE_BASE_URL: /
 
       - name: Run E2E tests
         run: npx playwright test --project=chromium
@@ -107,7 +103,7 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
-  # Сборка
+  # Сборка (проверка, что production build проходит)
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -130,24 +126,3 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          VITE_BASE_URL: /flipbook/
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
-  # Деплой
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    runs-on: ubuntu-latest
-    needs: build
-    timeout-minutes: 5
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
