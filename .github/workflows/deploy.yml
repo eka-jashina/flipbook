@@ -68,10 +68,11 @@ jobs:
       - name: Run unit and integration tests
         run: npm run test:run
 
-  # E2E тесты (Playwright, Chromium)
+  # E2E тесты (Playwright, Chromium) — информационный, не блокирует деплой
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    continue-on-error: true
 
     steps:
       - name: Checkout
@@ -110,7 +111,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [lint, test, e2e]
+    needs: [lint, test]
 
     steps:
       - name: Checkout

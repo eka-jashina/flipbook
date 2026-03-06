@@ -4,7 +4,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createReadingSessionSchema } from '../schemas.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { ok } from '../utils/response.js';
+import { ok, created } from '../utils/response.js';
 
 const router = Router({ mergeParams: true });
 router.use(requireAuth);
@@ -12,7 +12,7 @@ router.use(requireAuth);
 // POST /api/v1/books/:bookId/reading-sessions — создать запись о сессии
 router.post('/', validate(createReadingSessionSchema), asyncHandler(async (req, res) => {
   const session = await createReadingSession(req.params.bookId as string, req.user!.id, req.body);
-  ok(res, { session }, 201);
+  created(res, { session });
 }));
 
 // GET /api/v1/books/:bookId/reading-sessions — история сессий (с пагинацией)
