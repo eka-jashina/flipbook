@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { z } from 'zod';
 
 const isProduction = process.env.NODE_ENV === 'production';
