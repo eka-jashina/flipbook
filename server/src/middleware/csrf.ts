@@ -16,7 +16,7 @@ function getCsrf(): CsrfFunctions {
     // when saveUninitialized is false, breaking the double-submit flow.
     getSessionIdentifier: (req) => {
       const r = req as Request;
-      return r.session?.passport?.user ? r.sessionID : 'anonymous';
+      return (r.session as Record<string, any>)?.passport?.user ? r.sessionID : 'anonymous';
     },
     cookieName: '__csrf',
     cookieOptions: {
