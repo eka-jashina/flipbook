@@ -330,8 +330,8 @@ export class BookshelfScreen {
  * @returns {Promise<Array>} Массив книг
  */
 export async function loadBooksFromAPI(apiClient) {
-  const books = await apiClient.getBooks();
-  return books;
+  const result = await apiClient.getBooks();
+  return result.books || [];
 }
 
 /**

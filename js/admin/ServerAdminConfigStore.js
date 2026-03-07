@@ -60,7 +60,8 @@ export class ServerAdminConfigStore {
   }
 
   async _init() {
-    this._books = await this._api.getBooks();
+    const result = await this._api.getBooks();
+    this._books = result.books || [];
     if (this._books.length > 0) {
       this._activeBookId = this._books[0].id;
     }
@@ -348,7 +349,8 @@ export class ServerAdminConfigStore {
     try {
       const parsed = JSON.parse(jsonString);
       await this._api.importConfig(parsed);
-      this._books = await this._api.getBooks();
+      const refreshed = await this._api.getBooks();
+      this._books = refreshed.books || [];
       if (this._books.length > 0) this._activeBookId = this._books[0].id;
       this._save();
     } catch (err) { this._handleError('Не удалось импортировать конфигурацию', err); throw err; }

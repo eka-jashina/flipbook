@@ -145,6 +145,10 @@ export async function handleHome() {
 
   if (ctx.useAPI && ctx.currentUser?.username) {
     ctx.router.navigate(`/${ctx.currentUser.username}`, { replace: true });
+  } else if (ctx.useAPI && ctx.currentUser) {
+    // Авторизован, но без username — загружаем книги через API
+    const books = await loadBooksFromAPI(ctx.apiClient);
+    showBookshelf(books);
   } else if (ctx.useAPI && !ctx.currentUser) {
     showLanding();
   } else {
