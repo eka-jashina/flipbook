@@ -28,7 +28,7 @@ router.get(
   '/',
   validateQuery(listChaptersQuerySchema),
   asyncHandler(async (req, res) => {
-    const { limit, offset } = req.query as { limit?: number; offset?: number };
+    const { limit, offset } = res.locals.query as { limit?: number; offset?: number };
     const result = await getChapters(req.params.bookId as string, { limit, offset });
     ok(res, result);
   }),

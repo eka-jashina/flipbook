@@ -23,7 +23,10 @@ export function validate(schema: ZodSchema) {
 export function validateQuery(schema: ZodSchema) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
-      req.query = schema.parse(req.query);
+      // In Express 5 req.query is read-only (getter).
+      // Parse for validation & coercion, store result in res.locals.
+      const parsed = schema.parse(req.query);
+      _res.locals.query = parsed;
       next();
     } catch (err) {
       next(err);
