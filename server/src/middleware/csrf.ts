@@ -10,8 +10,14 @@ function getCsrf(): CsrfFunctions {
   const config = getConfig();
   _csrf = doubleCsrf({
     getSecret: () => config.CSRF_SECRET,
-    // Bind CSRF token to user session for per-user isolation
-    getSessionIdentifier: (req) => (req as Request).sessionID || 'anonymous',
+    // Bind CSRF token to user session for per-user isolation.
+    // For anonymous users (no saved session / no connect.sid cookie),
+    // use a stable identifier — ephemeral sessionID changes every request
+    // when saveUninitialized is false, breaking the double-submit flow.
+    getSessionIdentifier: (req) => {
+      const r = req as Request;
+      return r.session?.passport?.user ? r.sessionID : 'anonymous';
+    },
     cookieName: '__csrf',
     cookieOptions: {
       httpOnly: true,
