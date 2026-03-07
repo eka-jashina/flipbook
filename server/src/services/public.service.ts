@@ -160,11 +160,8 @@ export async function discoverBooks(
 
   const where = { visibility: 'published' as const, deletedAt: null };
 
-  let books: Awaited<ReturnType<typeof prisma.book.findMany>>;
-  let total: number;
-
   try {
-    [books, total] = await Promise.all([
+    const [books, total] = await Promise.all([
       prisma.book.findMany({
         where,
         orderBy: { publishedAt: 'desc' },
@@ -191,20 +188,20 @@ export async function discoverBooks(
       }),
       prisma.book.count({ where }),
     ]);
+
+    return {
+      books: books
+        .filter((b) => b.user.username !== null)
+        .map((book) => ({
+          ...mapBookToPublicCard(book),
+          owner: mapUserToPublicAuthor(book.user),
+        })),
+      total,
+      limit,
+      offset,
+    };
   } catch (err) {
     logger.warn({ err }, 'discoverBooks: database query failed, returning empty result');
     return { books: [], total: 0, limit, offset };
   }
-
-  return {
-    books: books
-      .filter((b) => b.user.username !== null)
-      .map((book) => ({
-        ...mapBookToPublicCard(book),
-        owner: mapUserToPublicAuthor(book.user),
-      })),
-    total,
-    limit,
-    offset,
-  };
 }
