@@ -26,7 +26,7 @@ router.get(
   '/',
   validateQuery(listBooksQuerySchema),
   asyncHandler(async (req, res) => {
-    const { limit, offset } = req.query as { limit?: number; offset?: number };
+    const { limit, offset } = res.locals.query as { limit?: number; offset?: number };
     const result = await getUserBooks(req.user!.id, { limit, offset });
     ok(res, result);
   }),
