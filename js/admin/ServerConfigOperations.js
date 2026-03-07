@@ -19,7 +19,8 @@
  * @returns {Promise<Array>}
  */
 export async function fetchChapters(api, bookId) {
-  const chapters = await api.getChapters(bookId);
+  const result = await api.getChapters(bookId);
+  const chapters = result.chapters || result;
   return chapters.map(ch => ({
     id: ch.id,
     title: ch.title,
@@ -55,7 +56,8 @@ export async function createChapter(api, bookId, chapter) {
  * @param {Object} chapter
  */
 export async function updateChapterByIndex(api, bookId, index, chapter) {
-  const chapters = await api.getChapters(bookId);
+  const result = await api.getChapters(bookId);
+  const chapters = result.chapters || result;
   if (index < 0 || index >= chapters.length) return;
   const chapterId = chapters[index].id;
 
@@ -75,7 +77,8 @@ export async function updateChapterByIndex(api, bookId, index, chapter) {
  * @param {number} index
  */
 export async function removeChapterByIndex(api, bookId, index) {
-  const chapters = await api.getChapters(bookId);
+  const result = await api.getChapters(bookId);
+  const chapters = result.chapters || result;
   if (index < 0 || index >= chapters.length) return;
   await api.deleteChapter(bookId, chapters[index].id);
 }
@@ -88,7 +91,8 @@ export async function removeChapterByIndex(api, bookId, index) {
  * @param {number} toIndex
  */
 export async function moveChapterByIndex(api, bookId, fromIndex, toIndex) {
-  const chapters = await api.getChapters(bookId);
+  const result = await api.getChapters(bookId);
+  const chapters = result.chapters || result;
   if (fromIndex < 0 || fromIndex >= chapters.length) return;
   if (toIndex < 0 || toIndex >= chapters.length) return;
 
@@ -108,7 +112,8 @@ export async function moveChapterByIndex(api, bookId, fromIndex, toIndex) {
  * @returns {Promise<Array>}
  */
 export async function fetchAmbients(api, bookId) {
-  const ambients = await api.getAmbients(bookId);
+  const result = await api.getAmbients(bookId);
+  const ambients = result.ambients || result;
   return ambients.map(a => ({
     id: a.ambientKey || a.id,
     label: a.label,
@@ -147,7 +152,8 @@ export async function createAmbient(api, bookId, ambient) {
  * @param {Object} data
  */
 export async function updateAmbientByIndex(api, bookId, index, data) {
-  const ambients = await api.getAmbients(bookId);
+  const result = await api.getAmbients(bookId);
+  const ambients = result.ambients || result;
   if (index < 0 || index >= ambients.length) return;
 
   const updateData = {};
@@ -167,7 +173,8 @@ export async function updateAmbientByIndex(api, bookId, index, data) {
  * @param {number} index
  */
 export async function removeAmbientByIndex(api, bookId, index) {
-  const ambients = await api.getAmbients(bookId);
+  const result = await api.getAmbients(bookId);
+  const ambients = result.ambients || result;
   if (index < 0 || index >= ambients.length) return;
   await api.deleteAmbient(bookId, ambients[index].id);
 }
@@ -180,7 +187,8 @@ export async function removeAmbientByIndex(api, bookId, index) {
  * @returns {Promise<Array>}
  */
 export async function fetchReadingFonts(api) {
-  const fonts = await api.getFonts();
+  const result = await api.getFonts();
+  const fonts = result.fonts || result;
   return fonts.map(f => ({
     id: f.fontKey || f.id,
     label: f.label,
@@ -215,7 +223,8 @@ export async function createReadingFont(api, font) {
  * @param {Object} data
  */
 export async function updateReadingFontByIndex(api, index, data) {
-  const fonts = await api.getFonts();
+  const result = await api.getFonts();
+  const fonts = result.fonts || result;
   if (index < 0 || index >= fonts.length) return;
 
   const updateData = {};
@@ -233,7 +242,8 @@ export async function updateReadingFontByIndex(api, index, data) {
  * @param {number} index
  */
 export async function removeReadingFontByIndex(api, index) {
-  const fonts = await api.getFonts();
+  const result = await api.getFonts();
+  const fonts = result.fonts || result;
   if (index < 0 || index >= fonts.length) return;
   await api.deleteFont(fonts[index].id);
 }
