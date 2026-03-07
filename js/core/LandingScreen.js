@@ -8,9 +8,15 @@
  * Табы переключаются вручную + авто-слайд каждые 6 секунд.
  * Данные витрины загружаются из GET /api/public/discover.
  * CTA-кнопки открывают AuthModal.
+ *
+ * Переключатель языка позволяет гостям менять язык интерфейса.
  */
 
+import { t, setLanguage, getLanguage, applyTranslations } from '@i18n';
+import { StorageManager } from '../utils/StorageManager.js';
+
 const AUTO_SLIDE_INTERVAL = 6000;
+const languageStorage = new StorageManager('flipbook-language');
 
 export class LandingScreen {
   /**
@@ -22,11 +28,13 @@ export class LandingScreen {
     this.container = container;
     this._onAuth = onAuth;
     this._boundClick = this._handleClick.bind(this);
+    this._boundLangChange = this._handleLanguageChange.bind(this);
     this._observer = null;
     this._autoSlideTimer = null;
     this._tabs = [];
     this._panels = [];
     this._activeTab = 'books';
+    this._langSelect = null;
   }
 
   /**
@@ -40,6 +48,17 @@ export class LandingScreen {
     this._panels = [...this.container.querySelectorAll('.landing-tab-panel')];
 
     this.container.addEventListener('click', this._boundClick);
+
+    // Переключатель языка
+    this._langSelect = this.container.querySelector('#landing-lang-select');
+    if (this._langSelect) {
+      this._langSelect.value = getLanguage();
+      this._langSelect.addEventListener('change', this._boundLangChange);
+    }
+
+    // Применить переводы к лендингу
+    applyTranslations(this.container);
+
     this._setupScrollAnimations();
     this._startAutoSlide();
 
@@ -60,6 +79,10 @@ export class LandingScreen {
    */
   destroy() {
     this.container.removeEventListener('click', this._boundClick);
+    if (this._langSelect) {
+      this._langSelect.removeEventListener('change', this._boundLangChange);
+      this._langSelect = null;
+    }
     this._stopAutoSlide();
     if (this._observer) {
       this._observer.disconnect();
@@ -70,6 +93,17 @@ export class LandingScreen {
   // ═══════════════════════════════════════════
   // PRIVATE
   // ═══════════════════════════════════════════
+
+  /**
+   * Смена языка из селектора на лендинге
+   * @param {Event} e
+   */
+  async _handleLanguageChange(e) {
+    const code = e.target.value;
+    await setLanguage(code);
+    languageStorage.setRaw(code);
+    applyTranslations(this.container);
+  }
 
   _handleClick(e) {
     // CTA-кнопки
@@ -184,7 +218,7 @@ export class LandingScreen {
 
     card.innerHTML = `
       <div class="landing-book-cover" style="${coverStyle}; color: ${textColor}">
-        <span class="landing-book-title">${this._escapeHtml(book.title || 'Без названия')}</span>
+        <span class="landing-book-title">${this._escapeHtml(book.title || t('landing.noTitle'))}</span>
         ${book.author ? `<span class="landing-book-author">${this._escapeHtml(book.author)}</span>` : ''}
       </div>
     `;
