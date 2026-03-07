@@ -718,6 +718,49 @@ body[data-screen="landing"] .bookshelf-screen {
 }
 
 /* ═══════════════════════════════════════════
+   ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА
+   ═══════════════════════════════════════════ */
+
+.landing-lang {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 10;
+}
+
+.landing-lang-select {
+  appearance: none;
+  background: rgb(36, 26, 18, 0.7);
+  color: var(--lnd-text-secondary);
+  border: 1px solid var(--lnd-border-card);
+  border-radius: 6px;
+  padding: 6px 28px 6px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s, color 0.2s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c4943c' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.landing-lang-select:hover {
+  border-color: var(--lnd-gold-dim);
+  color: var(--lnd-text);
+}
+
+.landing-lang-select:focus-visible {
+  outline: 2px solid var(--lnd-gold);
+  outline-offset: 2px;
+}
+
+.landing-lang-select option {
+  background: #241a12;
+  color: var(--lnd-text);
+}
+
+/* ═══════════════════════════════════════════
    МОБИЛЬНАЯ АДАПТИВНОСТЬ
    ═══════════════════════════════════════════ */
 
