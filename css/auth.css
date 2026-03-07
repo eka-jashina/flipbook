@@ -2,16 +2,34 @@
  * AUTH MODAL STYLES
  *
  * Модальное окно аутентификации (логин/регистрация).
- * Показывается поверх bookshelf при 401.
- *
- * Theme-aware: все цвета через --color-* токены,
- * переопределённые в themes.css для dark / bw.
+ * Тёплая книжная палитра, согласованная с лендингом:
+ * тёмное дерево, золото, пергамент.
  *
  * Spacing:  --spacing-{2xs..3xl}  (см. variables.css)
  * Buttons:  --btn-*               (см. variables.css)
  * Radii:    --radius-{sm,md,lg}
- * Colors:   --color-{accent,surface,text-*,border,error-*,divider}
  */
+
+/* ═══════════════════════════════════════════
+   ПАЛИТРА (локальные токены)
+   ═══════════════════════════════════════════ */
+
+.auth-overlay {
+  --auth-bg: #241a12;
+  --auth-bg-alt: #1e1510;
+  --auth-text: #f2e9d8;
+  --auth-text-secondary: rgb(242, 233, 216, 0.7);
+  --auth-text-muted: rgb(242, 233, 216, 0.45);
+  --auth-gold: #c4943c;
+  --auth-gold-hover: #d4a84c;
+  --auth-gold-dim: rgb(196, 148, 60, 0.2);
+  --auth-border: rgb(196, 148, 60, 0.18);
+  --auth-border-hover: rgb(196, 148, 60, 0.35);
+  --auth-input-bg: rgb(255, 255, 255, 0.06);
+  --auth-input-bg-focus: rgb(255, 255, 255, 0.1);
+  --auth-error-bg: rgb(180, 40, 40, 0.2);
+  --auth-error-text: #f08080;
+}
 
 /* ═══════════════════════════════════════════
    ОВЕРЛЕЙ (backdrop)
@@ -24,8 +42,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-overlay);
-  backdrop-filter: blur(4px);
+  background: rgb(10, 7, 4, 0.85);
+  backdrop-filter: blur(6px);
   animation: auth-fade-in 0.3s ease;
 }
 
@@ -34,14 +52,53 @@
    ═══════════════════════════════════════════ */
 
 .auth-modal {
+  position: relative;
   width: 100%;
   max-width: 400px;
   margin: var(--spacing-md);
   padding: var(--spacing-xl);
-  background: var(--color-surface);
+  background: var(--auth-bg);
+  border: 1px solid var(--auth-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 60px var(--color-overlay-light);
+  box-shadow:
+    0 4px 24px rgb(0, 0, 0, 0.4),
+    0 20px 60px rgb(0, 0, 0, 0.5);
   animation: auth-slide-up 0.3s ease;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+/* ═══════════════════════════════════════════
+   КНОПКА ЗАКРЫТИЯ
+   ═══════════════════════════════════════════ */
+
+.auth-close-btn {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--auth-text-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.auth-close-btn:hover {
+  color: var(--auth-text);
+  background: rgb(255, 255, 255, 0.08);
+}
+
+.auth-close-btn:focus-visible {
+  outline: 2px solid var(--auth-gold);
+  outline-offset: 2px;
 }
 
 /* ═══════════════════════════════════════════
@@ -57,13 +114,13 @@
   margin: 0;
   font-size: 24px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--auth-gold);
 }
 
 .auth-modal-subtitle {
   margin: var(--spacing-xs) 0 0;
   font-size: 14px;
-  color: var(--color-text-secondary);
+  color: var(--auth-text-secondary);
 }
 
 /* ═══════════════════════════════════════════
@@ -85,7 +142,12 @@
 .auth-label {
   font-size: var(--btn-sm-font-size);
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: var(--auth-text-secondary);
+}
+
+.auth-hint {
+  font-size: 12px;
+  color: var(--auth-text-muted);
 }
 
 /* ═══════════════════════════════════════════
@@ -94,24 +156,24 @@
 
 .auth-input {
   padding: var(--btn-sm-padding-y) var(--btn-sm-padding-x);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--auth-border);
   border-radius: var(--btn-radius);
   font-size: var(--btn-font-size);
   font-family: inherit;
-  color: var(--color-text-primary);
-  background: var(--color-surface-alt);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  color: var(--auth-text);
+  background: var(--auth-input-bg);
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
 }
 
 .auth-input:focus {
   outline: none;
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-focus);
-  background: var(--color-surface);
+  border-color: var(--auth-gold);
+  box-shadow: 0 0 0 3px var(--auth-gold-dim);
+  background: var(--auth-input-bg-focus);
 }
 
 .auth-input::placeholder {
-  color: var(--color-text-placeholder);
+  color: var(--auth-text-muted);
 }
 
 /* ═══════════════════════════════════════════
@@ -121,44 +183,40 @@
 .auth-error {
   padding: var(--spacing-sm) var(--btn-sm-padding-x);
   border-radius: var(--radius-sm);
-  background: var(--color-error-bg);
-  color: var(--color-error-text);
+  background: var(--auth-error-bg);
+  color: var(--auth-error-text);
   font-size: var(--btn-sm-font-size);
   line-height: 1.4;
 }
 
 /* ═══════════════════════════════════════════
-   КНОПКА SUBMIT (primary)
-   ─────────────────────────────────────────
-   Использует --btn-* токены из variables.css.
-   Цвет текста: --color-accent-text — theme-aware
-   (light/bw: #fff, dark: тёмный для контраста).
+   КНОПКА SUBMIT (primary — золото)
    ═══════════════════════════════════════════ */
 
 .auth-submit {
   padding: var(--btn-padding-y);
   border: none;
   border-radius: var(--btn-radius);
-  background: var(--color-accent);
-  color: var(--color-accent-text);
+  background: var(--auth-gold);
+  color: #1a120b;
   font-size: var(--btn-font-size);
   font-weight: var(--btn-font-weight);
   font-family: inherit;
   cursor: pointer;
-  transition: var(--btn-transition);
+  transition: background-color 0.2s, box-shadow 0.2s;
 }
 
 .auth-submit:hover:not(:disabled) {
-  background: var(--color-accent-hover);
+  background: var(--auth-gold-hover);
 }
 
 .auth-submit:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--color-accent-focus);
+  box-shadow: 0 0 0 3px var(--auth-gold-dim);
 }
 
 .auth-submit:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
@@ -171,7 +229,7 @@
   align-items: center;
   gap: var(--spacing-sm);
   margin: var(--spacing-lg) 0 var(--spacing-md);
-  color: var(--color-text-tertiary);
+  color: var(--auth-text-muted);
   font-size: var(--btn-sm-font-size);
 }
 
@@ -180,13 +238,11 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--color-divider);
+  background: var(--auth-border);
 }
 
 /* ═══════════════════════════════════════════
-   КНОПКА GOOGLE OAUTH (secondary/outline)
-   ─────────────────────────────────────────
-   Outline-стиль: border + surface background.
+   КНОПКА GOOGLE OAUTH (outline — тёплый)
    ═══════════════════════════════════════════ */
 
 .auth-google-btn {
@@ -196,26 +252,26 @@
   gap: var(--spacing-sm);
   width: 100%;
   padding: var(--btn-padding-y) var(--btn-padding-x);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--auth-border);
   border-radius: var(--btn-radius);
-  background: var(--color-surface);
-  color: var(--color-text-primary);
+  background: var(--auth-input-bg);
+  color: var(--auth-text);
   font-size: var(--btn-font-size);
   font-weight: 500;
   font-family: inherit;
   text-decoration: none;
   cursor: pointer;
-  transition: var(--btn-transition);
+  transition: background-color 0.2s, border-color 0.2s;
 }
 
 .auth-google-btn:hover {
-  background: var(--color-surface-hover);
-  border-color: var(--color-border-hover);
+  background: rgb(255, 255, 255, 0.1);
+  border-color: var(--auth-border-hover);
 }
 
 .auth-google-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--color-accent-focus);
+  box-shadow: 0 0 0 3px var(--auth-gold-dim);
 }
 
 .auth-google-icon {
@@ -230,13 +286,13 @@
   margin-top: var(--spacing-md);
   text-align: center;
   font-size: var(--btn-sm-font-size);
-  color: var(--color-text-secondary);
+  color: var(--auth-text-secondary);
 }
 
 .auth-switch-btn {
   background: none;
   border: none;
-  color: var(--color-accent);
+  color: var(--auth-gold);
   font-size: var(--btn-sm-font-size);
   font-family: inherit;
   cursor: pointer;
@@ -245,11 +301,11 @@
 }
 
 .auth-switch-btn:hover {
-  color: var(--color-accent-hover);
+  color: var(--auth-gold-hover);
 }
 
 .auth-switch-btn:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--auth-gold);
   outline-offset: 2px;
   border-radius: var(--spacing-2xs);
 }

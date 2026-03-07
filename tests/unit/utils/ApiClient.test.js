@@ -28,6 +28,8 @@ describe('ApiClient', () => {
     client = new ApiClient({ onUnauthorized });
     // Мокаем _delay чтобы не ждать реальных задержек
     client._delay = vi.fn().mockResolvedValue();
+    // Предустанавливаем CSRF-токен чтобы тесты не делали лишний fetch
+    client._csrfToken = 'test-csrf-token';
   });
 
   afterEach(() => {
@@ -91,7 +93,7 @@ describe('ApiClient', () => {
       await client._fetch('/api/test', { method: 'POST', body: { key: 'value' } });
 
       expect(global.fetch).toHaveBeenCalledWith('/api/test', expect.objectContaining({
-        headers: { 'Content-Type': 'application/json' },
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ key: 'value' }),
       }));
     });
