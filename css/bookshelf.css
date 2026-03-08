@@ -876,6 +876,27 @@ body[data-screen="account"] .bookshelf-screen {
   border-color: rgb(232, 220, 200, 0.3);
 }
 
+.profile-header-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--shelf-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--shelf-text-dim);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.profile-header-logout:hover {
+  background: rgb(180, 74, 62, 0.15);
+  border-color: var(--shelf-danger);
+  color: var(--shelf-danger);
+}
+
 /* ═══════════════════════════════════════════
    АДАПТИВНОСТЬ
    ═══════════════════════════════════════════ */

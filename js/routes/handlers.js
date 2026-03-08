@@ -100,6 +100,17 @@ function setupBackToShelfButton() {
   });
 }
 
+async function handleLogout() {
+  try {
+    await ctx.apiClient.logout();
+  } catch (err) {
+    console.error('Ошибка при выходе:', err);
+  }
+  ctx.setCurrentUser(null);
+  cleanupReader(); cleanupBookshelf(); hideAccount();
+  ctx.router.navigate('/', { replace: true });
+}
+
 function showBookshelf(books, { mode = 'owner', profileUser } = {}) {
   const container = document.getElementById('bookshelf-screen');
   if (!container) return;
@@ -111,6 +122,7 @@ function showBookshelf(books, { mode = 'owner', profileUser } = {}) {
       if (ctx.router) ctx.router.navigate(`/book/${bookId}`);
       else location.reload();
     },
+    onLogout: ctx.useAPI ? handleLogout : undefined,
   });
   ctx.state.bookshelf.render();
   ctx.state.bookshelf.show();

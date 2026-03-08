@@ -80,6 +80,8 @@ export default {
   'bookshelf.deleteConfirm': '«{{title}}» löschen?',
   'bookshelf.booksCount_one': '{{count}} Buch',
   'bookshelf.booksCount_other': '{{count}} Bücher',
+  'bookshelf.editProfile': 'Profil bearbeiten',
+  'bookshelf.logout': 'Abmelden',
 
   // ─── Authentifizierung ─────────────────────────────────────────────────────
   'auth.loginTitle': 'Anmelden',
