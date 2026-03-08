@@ -56,6 +56,8 @@ function cleanupBookshelf() {
     ctx.state.bookshelf.destroy();
     ctx.state.bookshelf = null;
   }
+  const el = document.getElementById('bookshelf-screen');
+  if (el) el.hidden = true;
 }
 
 function cleanupLanding() {
