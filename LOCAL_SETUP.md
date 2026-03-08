@@ -17,6 +17,8 @@
 9. [Частые проблемы и решения](#9-частые-проблемы-и-решения)
 10. [Полезные команды](#10-полезные-команды)
 11. [Остановка и очистка](#11-остановка-и-очистка)
+12. [Ежедневный запуск](#ежедневный-запуск-сценарий-включила-комп--начала-работать)
+13. [Шпаргалка: порты и диагностика](#шпаргалка-порты-процессы-и-диагностика)
 
 ---
 
@@ -556,4 +558,129 @@ docker compose ps   # все healthy
 npm run dev
 
 # 6. Открыть http://localhost:3000 — готово!
+```
+
+---
+
+## Ежедневный запуск (сценарий «включила комп — начала работать»)
+
+Проект уже склонирован и зависимости установлены. Нужно просто всё поднять.
+
+### Шаг 1. Запусти Docker Desktop
+
+Открой приложение Docker Desktop и дождись, пока иконка в трее перестанет анимироваться (зелёный индикатор = готов).
+
+### Шаг 2. Подними инфраструктуру
+
+```bash
+cd ~/Documents/GitHub/flipbook
+docker compose up -d
+```
+
+Это запустит PostgreSQL (порт 5432), MinIO (порт 9000) и бэкенд (порт 4000).
+
+### Шаг 3. Запусти фронтенд
+
+```bash
+npm run dev
+```
+
+Vite стартует на порту 3000, откроется браузер. **Готово, работай.**
+
+### Шаг 4. Завершение работы
+
+```bash
+# Останови Vite — Ctrl+C в терминале
+# Останови контейнеры:
+docker compose down
+```
+
+### Если бэкенд запускаешь локально (не в Docker)
+
+Нужны **два терминала**:
+
+```bash
+# Терминал 1: бэкенд
+docker compose stop server          # Останови Docker-версию
+cd server && npm run dev            # Запусти локально (порт 4000)
+
+# Терминал 2: фронтенд
+npm run dev                         # Порт 3000
+```
+
+---
+
+## Шпаргалка: порты, процессы и диагностика
+
+### Кто занял порт?
+
+```bash
+# Git Bash
+netstat -ano | findstr :3000
+
+# PowerShell
+Get-NetTCPConnection -LocalPort 3000
+```
+
+### Что за процесс по PID?
+
+```bash
+# Git Bash (двойные слэши — обязательно!)
+tasklist //FI "PID eq 1234"
+
+# CMD / PowerShell (одинарные)
+tasklist /FI "PID eq 1234"
+```
+
+### Убить процесс
+
+```bash
+# Git Bash
+taskkill //F //PID 1234
+
+# CMD / PowerShell
+taskkill /F /PID 1234
+```
+
+### Git Bash — ловушка со слэшами
+
+Git Bash превращает `/F` в `C:/Program Files/Git/F`. Всегда используй `//`:
+
+| CMD / PowerShell | Git Bash |
+|------------------|----------|
+| `tasklist /FI` | `tasklist //FI` |
+| `taskkill /F /PID` | `taskkill //F //PID` |
+
+### Типичные процессы на портах
+
+| Процесс | Что это | Убивать? |
+|----------|---------|----------|
+| `node.exe` | Vite / Express dev-сервер | Да, если мешает |
+| `com.docker.backend.exe` | Docker Desktop | Лучше `docker compose down` |
+| `wslrelay.exe` | Проброс портов WSL → Windows | Нет, системный |
+
+### Порты проекта
+
+| Порт | Сервис | Как запускается |
+|------|--------|-----------------|
+| 3000 | Vite (фронтенд) | `npm run dev` |
+| 4000 | Express (бэкенд) | `docker compose up -d` или `cd server && npm run dev` |
+| 4173 | Vite preview | `npm run preview` |
+| 5432 | PostgreSQL | `docker compose up -d` |
+| 9000 | MinIO (S3 API) | `docker compose up -d` |
+| 9001 | MinIO (веб-панель) | `docker compose up -d` |
+
+### Быстрая диагностика «порт занят»
+
+```bash
+# 1. Найти PID
+netstat -ano | findstr :3000
+
+# 2. Узнать процесс
+tasklist //FI "PID eq <PID>"
+
+# 3. Решить
+#    node.exe              → taskkill //F //PID <PID>
+#    com.docker.backend    → docker compose down
+#    wslrelay              → не трогать, это нормально
 ```
