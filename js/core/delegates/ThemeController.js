@@ -4,7 +4,7 @@
  * Выделен из SettingsDelegate для снижения cyclomatic complexity.
  */
 
-import { CONFIG } from "../../config.js";
+import { getConfig } from "../../config.js";
 import { announce, isValidTheme, isValidCSSColor, isValidFontSize } from "../../utils/index.js";
 import { trackThemeChanged } from "../../utils/Analytics.js";
 
@@ -71,7 +71,7 @@ export class ThemeController {
     const html = this._dom.get("html");
     if (!html) return;
 
-    const a = CONFIG.APPEARANCE;
+    const a = getConfig().APPEARANCE;
     if (!a) return;
 
     const cover = this._dom.get("cover");
@@ -130,7 +130,7 @@ export class ThemeController {
    * @private
    */
   _applySettingsVisibility() {
-    const v = CONFIG.SETTINGS_VISIBILITY;
+    const v = getConfig().SETTINGS_VISIBILITY;
     if (!v) return;
 
     const sections = document.querySelectorAll('[data-setting]');

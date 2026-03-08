@@ -23,15 +23,16 @@ vi.mock('../../../../js/utils/index.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../../js/config.js', () => ({
-  CONFIG: {
+vi.mock('../../../../js/config.js', () => {
+  const cfg = {
     FONTS: {
       georgia: 'Georgia, serif',
       merriweather: "'Merriweather', serif",
       times: "'Times New Roman', serif",
     },
-  },
-}));
+  };
+  return { CONFIG: cfg, getConfig: () => cfg };
+});
 
 const { SettingsDelegate } = await import('../../../../js/core/delegates/SettingsDelegate.js');
 const { DelegateEvents } = await import('../../../../js/core/delegates/BaseDelegate.js');
