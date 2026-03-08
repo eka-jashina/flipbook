@@ -140,7 +140,18 @@ export class ApiClient {
 
     if (!response.ok) {
       const message = data?.message || data?.error || `Ошибка сервера: ${response.status}`;
-      throw new ApiError(response.status, message, data?.details);
+      const error = new ApiError(response.status, message, data?.details);
+
+      // Сохранить Retry-After для 429 (в мс)
+      if (response.status === 429) {
+        const retryHeader = response.headers.get('retry-after');
+        if (retryHeader) {
+          const seconds = Number(retryHeader);
+          error.retryAfter = Number.isFinite(seconds) ? seconds * 1000 : null;
+        }
+      }
+
+      throw error;
     }
 
     // Unwrap standard { data } envelope from API responses
@@ -180,7 +191,15 @@ export class ApiClient {
       } catch (err) {
         lastError = err;
 
-        // Не ретраим клиентские ошибки (4xx) — они не исправятся повтором
+        // 429 Too Many Requests — ретраим с учётом Retry-After
+        if (err.status === 429) {
+          if (attempt >= maxRetries) break;
+          const retryAfter = err.retryAfter || initialDelay * Math.pow(2, attempt);
+          await this._delay(retryAfter);
+          continue;
+        }
+
+        // Не ретраим остальные клиентские ошибки (4xx) — они не исправятся повтором
         if (err.status && err.status >= 400 && err.status < 500) {
           throw err;
         }
