@@ -512,9 +512,11 @@ body[data-has-bookshelf="true"] .back-to-shelf-btn {
   display: inline-flex;
 }
 
-/* Прячем ридер когда показана полка */
+/* Прячем ридер когда показана полка или аккаунт */
 body[data-screen="bookshelf"] .scene,
-body[data-screen="bookshelf"] .chapter-bg {
+body[data-screen="bookshelf"] .chapter-bg,
+body[data-screen="account"] .scene,
+body[data-screen="account"] .chapter-bg {
   display: none;
 }
 
