@@ -68,10 +68,11 @@ export class AlbumManager {
   }
 
   /** Открыть для редактирования существующего альбома */
-  openForEdit(chapterIndex) {
+  async openForEdit(chapterIndex) {
     this._editingChapterIndex = chapterIndex;
     this._isDirty = false;
-    const chapter = this.store.getChapters()[chapterIndex];
+    const chapters = await this.store.getChapters();
+    const chapter = chapters[chapterIndex];
     if (!chapter?.albumData) return;
 
     const data = chapter.albumData;
@@ -208,8 +209,9 @@ export class AlbumManager {
 
     if (this._editingChapterIndex !== null) {
       // Редактирование существующего альбома
-      const existing = this.store.getChapters()[this._editingChapterIndex];
-      this.store.updateChapter(this._editingChapterIndex, {
+      const chapters = await this.store.getChapters();
+      const existing = chapters[this._editingChapterIndex];
+      await this.store.updateChapter(this._editingChapterIndex, {
         ...existing,
         title: title,
         htmlContent,

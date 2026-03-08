@@ -72,13 +72,13 @@ export class SettingsModule extends BaseModule {
     });
   }
 
-  render() {
-    this._renderSettings();
-    this._renderSettingsVisibility();
+  async render() {
+    await this._renderSettings();
+    await this._renderSettingsVisibility();
   }
 
-  _renderSettings() {
-    const s = this.store.getDefaultSettings();
+  async _renderSettings() {
+    const s = await this.store.getDefaultSettings();
 
     this.defaultFont.value = s.font;
     this.defaultFontSize.value = s.fontSize;
@@ -94,7 +94,8 @@ export class SettingsModule extends BaseModule {
     this.volumeValue.textContent = `${Math.round(s.soundVolume * 100)}%`;
 
     // Динамически заполнить кнопки амбиентов (только видимые)
-    const ambients = this.store.getAmbients().filter(a => a.visible);
+    const allAmbients = await this.store.getAmbients();
+    const ambients = allAmbients.filter(a => a.visible);
     this.defaultAmbientGroup.innerHTML = ambients.map(a =>
       `<button class="setting-ambient-btn${a.id === s.ambientType ? ' active' : ''}" type="button" data-ambient="${this._escapeHtml(a.id)}">${this._escapeHtml(a.icon)} ${this._escapeHtml(a.shortLabel || a.label)}</button>`
     ).join('');
@@ -110,8 +111,8 @@ export class SettingsModule extends BaseModule {
     `).join('');
   }
 
-  _renderSettingsVisibility() {
-    const v = this.store.getSettingsVisibility();
+  async _renderSettingsVisibility() {
+    const v = await this.store.getSettingsVisibility();
     const inputs = this.visibilityToggles.querySelectorAll('[data-visibility]');
     inputs.forEach(input => {
       const key = input.dataset.visibility;
@@ -138,8 +139,8 @@ export class SettingsModule extends BaseModule {
     this._showToast('Настройки сохранены');
   }
 
-  _resetSettings() {
-    this.store.updateDefaultSettings({
+  async _resetSettings() {
+    await this.store.updateDefaultSettings({
       font: 'georgia',
       fontSize: 18,
       theme: 'light',
@@ -149,7 +150,7 @@ export class SettingsModule extends BaseModule {
       ambientVolume: 0.5,
     });
 
-    this.store.updateSettingsVisibility({
+    await this.store.updateSettingsVisibility({
       fontSize: true,
       theme: true,
       font: true,
@@ -158,15 +159,16 @@ export class SettingsModule extends BaseModule {
       ambient: true,
     });
 
-    this._renderSettings();
-    this._renderSettingsVisibility();
+    await this._renderSettings();
+    await this._renderSettingsVisibility();
     this._renderJsonPreview();
     this._showToast('Настройки сброшены');
   }
 
   /** Обновить select шрифтов в настройках по умолчанию */
-  updateFontSelect() {
-    const fonts = this.store.getReadingFonts().filter(f => f.enabled);
+  async updateFontSelect() {
+    const allFonts = await this.store.getReadingFonts();
+    const fonts = allFonts.filter(f => f.enabled);
     const current = this.defaultFont.value;
     this.defaultFont.innerHTML = fonts.map(f =>
       `<option value="${this._escapeHtml(f.id)}">${this._escapeHtml(f.label)}</option>`

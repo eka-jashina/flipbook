@@ -38,8 +38,8 @@ export class CoverManager {
   }
 
   /** Рендер обложки */
-  render() {
-    const cover = this._host.store.getCover();
+  async render() {
+    const cover = await this._host.store.getCover();
     this.coverTitle.value = cover.title;
     this.coverAuthor.value = cover.author;
     this._renderBgModeSelector(cover.bgMode || 'default', cover.bgCustomData);
@@ -70,8 +70,8 @@ export class CoverManager {
     }
   }
 
-  _selectBgMode(value) {
-    const cover = this._host.store.getCover();
+  async _selectBgMode(value) {
+    const cover = await this._host.store.getCover();
     this._renderBgModeSelector(value, cover.bgCustomData);
   }
 

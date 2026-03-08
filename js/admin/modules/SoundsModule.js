@@ -56,12 +56,12 @@ export class SoundsModule extends BaseModule {
     this.resetSoundsBtn.addEventListener('click', () => this._resetSounds());
   }
 
-  render() {
-    this._renderSounds();
+  async render() {
+    await this._renderSounds();
   }
 
-  _renderSounds() {
-    const sounds = this.store.getSounds();
+  async _renderSounds() {
+    const sounds = await this.store.getSounds();
 
     for (const { key, defaultHint } of SOUND_CARDS) {
       const input = this._fields[key];
@@ -92,14 +92,14 @@ export class SoundsModule extends BaseModule {
     e.target.value = '';
   }
 
-  _saveSounds() {
+  async _saveSounds() {
     const update = {};
     for (const { key } of SOUND_CARDS) {
       const value = this._fields[key].value.trim();
       if (value) update[key] = value;
     }
 
-    const current = this.store.getSounds();
+    const current = await this.store.getSounds();
     this.store.updateSounds({
       pageFlip: update.pageFlip || current.pageFlip,
       bookOpen: update.bookOpen || current.bookOpen,

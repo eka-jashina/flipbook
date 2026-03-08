@@ -131,7 +131,7 @@ export class AccountScreen {
     });
     this._publishTab.bindEvents();
 
-    this._render();
+    await this._render();
   }
 
   /**
@@ -141,7 +141,7 @@ export class AccountScreen {
    * @param {string} [options.editBookId] - Если задан, открыть редактор этой книги
    * @param {string} [options.mode] - Режим (upload/manual/album)
    */
-  show(tab = 'books', { editBookId, mode } = {}) {
+  async show(tab = 'books', { editBookId, mode } = {}) {
     this.container.hidden = false;
     document.body.dataset.screen = 'account';
 
@@ -149,7 +149,7 @@ export class AccountScreen {
 
     if (editBookId) {
       this.store.setActiveBook(editBookId);
-      this._render();
+      await this._render();
       this.openEditor();
     } else if (mode) {
       this._switchTab('books');
@@ -298,8 +298,10 @@ export class AccountScreen {
   // Рендер
   // ═══════════════════════════════════════════
 
-  _render() {
-    this._modules.forEach(m => m.render());
+  async _render() {
+    for (const m of this._modules) {
+      await m.render();
+    }
     if (this._profile) this._profile.render();
   }
 
@@ -351,7 +353,7 @@ export class AccountScreen {
         this._showView('upload');
         break;
       case 'edit': {
-        this._render();
+        await this._render();
         await this.openEditor();
         break;
       }
@@ -364,7 +366,7 @@ export class AccountScreen {
         const bookId = created?.id || `book_${Date.now()}`;
         this.store.setActiveBook(bookId);
         this._pendingBookId = bookId;
-        this._render();
+        await this._render();
         await this.openEditor();
         break;
       }
@@ -377,7 +379,7 @@ export class AccountScreen {
         const albumBookId = albumCreated?.id || `book_${Date.now()}`;
         this.store.setActiveBook(albumBookId);
         this._pendingBookId = albumBookId;
-        this._render();
+        await this._render();
         this._showView('album');
         this.chapters._album.openInView();
         break;
@@ -447,7 +449,7 @@ export class AccountScreen {
 
     if (isUnchanged) {
       await this.store.removeBook(bookId);
-      this._render();
+      await this._render();
     }
   }
 
