@@ -227,11 +227,12 @@ export function createConfigFromAPI(bookDetail, globalSettings, readingFonts) {
  * @returns {Promise<Readonly<Object>>} CONFIG
  */
 export async function loadConfigFromAPI(apiClient, bookId) {
-  const [bookDetail, globalSettings, readingFonts] = await Promise.all([
+  const [bookDetail, globalSettings, fontsResult] = await Promise.all([
     apiClient.getBook(bookId),
     apiClient.getSettings().catch(() => null),
-    apiClient.getFonts().catch(() => []),
+    apiClient.getFonts().catch(() => ({ fonts: [] })),
   ]);
+  const readingFonts = fontsResult.fonts || fontsResult;
 
   return createConfigFromAPI(bookDetail, globalSettings, readingFonts);
 }

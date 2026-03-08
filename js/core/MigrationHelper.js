@@ -36,7 +36,8 @@ export class MigrationHelper {
    */
   async checkAndMigrate() {
     // 1. Проверить, есть ли книги на сервере
-    const books = await this._api.getBooks();
+    const result = await this._api.getBooks();
+    const books = result.books || result;
     if (books.length > 0) {
       // Сервер не пуст — миграция не нужна, очищаем локальные данные
       this._clearLocalData();
