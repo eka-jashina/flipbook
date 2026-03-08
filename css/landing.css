@@ -50,6 +50,13 @@ body[data-screen="landing"] .bookshelf-screen {
   display: none;
 }
 
+/* Скрытие лендинга при показе других экранов */
+body[data-screen="reader"] .landing-screen,
+body[data-screen="bookshelf"] .landing-screen,
+body[data-screen="account"] .landing-screen {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════
    HERO
    ═══════════════════════════════════════════ */
