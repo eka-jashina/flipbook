@@ -518,7 +518,8 @@ body[data-screen="bookshelf"] .chapter-bg {
   display: none;
 }
 
-body[data-screen="reader"] .bookshelf-screen {
+body[data-screen="reader"] .bookshelf-screen,
+body[data-screen="account"] .bookshelf-screen {
   display: none;
 }
 

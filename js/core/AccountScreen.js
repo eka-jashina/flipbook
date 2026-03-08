@@ -150,7 +150,7 @@ export class AccountScreen {
     if (editBookId) {
       this.store.setActiveBook(editBookId);
       await this._render();
-      this.openEditor();
+      await this.openEditor();
     } else if (mode) {
       this._switchTab('books');
       this._handleModeSelect(mode);

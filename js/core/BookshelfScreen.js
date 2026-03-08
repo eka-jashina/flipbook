@@ -170,6 +170,7 @@ export class BookshelfScreen {
       this._profileHeader.destroy();
       this._profileHeader = null;
     }
+    this.container.hidden = true;
   }
 
   // ═══════════════════════════════════════════
