@@ -55,6 +55,7 @@
     /* Дерево — основа */
     linear-gradient(180deg, var(--shelf-wood-wall) 0%, var(--shelf-wood-base) 40%, var(--shelf-wood-deep) 100%);
   transition: opacity 0.4s ease, visibility 0.4s ease;
+  animation: screen-fade-in 0.4s ease both;
 }
 
 .bookshelf-screen[hidden] {
