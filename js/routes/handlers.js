@@ -65,6 +65,8 @@ function cleanupLanding() {
     ctx.state.landing.destroy();
     ctx.state.landing = null;
   }
+  const el = document.getElementById('landing-screen');
+  if (el) el.hidden = true;
 }
 
 function hideAccount() {
