@@ -111,16 +111,16 @@ export class ChaptersModule extends BaseModule {
     this._bookUpload.bindEvents();
   }
 
-  render() {
+  async render() {
     this._bookSelector.render();
-    this._cover.render();
-    this._renderChapters();
+    await this._cover.render();
+    await this._renderChapters();
   }
 
   // --- Рендер списка глав ---
 
-  _renderChapters() {
-    const chapters = this.store.getChapters();
+  async _renderChapters() {
+    const chapters = await this.store.getChapters();
 
     if (chapters.length === 0) {
       this.chaptersList.innerHTML = '';
@@ -167,7 +167,7 @@ export class ChaptersModule extends BaseModule {
     }).join('');
 
     // Делегирование событий на кнопки
-    this.chaptersList.onclick = (e) => {
+    this.chaptersList.onclick = async (e) => {
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
 
@@ -176,32 +176,33 @@ export class ChaptersModule extends BaseModule {
 
       switch (action) {
         case 'up':
-          this.store.moveChapter(index, index - 1);
-          this._renderChapters();
+          await this.store.moveChapter(index, index - 1);
+          await this._renderChapters();
           this._renderJsonPreview();
           this._showToast('Порядок изменён');
           break;
         case 'down':
-          this.store.moveChapter(index, index + 1);
-          this._renderChapters();
+          await this.store.moveChapter(index, index + 1);
+          await this._renderChapters();
           this._renderJsonPreview();
           this._showToast('Порядок изменён');
           break;
         case 'edit': {
-          const chapter = this.store.getChapters()[index];
+          const chapters = await this.store.getChapters();
+          const chapter = chapters[index];
           if (chapter?.albumData) {
             this.app._showView('album');
-            this._album.openForEdit(index);
+            await this._album.openForEdit(index);
           } else {
             this._openModal(index);
           }
           break;
         }
         case 'delete':
-          this._confirm('Удалить эту главу?').then((ok) => {
+          this._confirm('Удалить эту главу?').then(async (ok) => {
             if (!ok) return;
-            this.store.removeChapter(index);
-            this._renderChapters();
+            await this.store.removeChapter(index);
+            await this._renderChapters();
             this._renderJsonPreview();
             this._showToast('Глава удалена');
           });
@@ -223,7 +224,8 @@ export class ChaptersModule extends BaseModule {
     }
 
     if (editIndex !== null) {
-      const ch = this.store.getChapters()[editIndex];
+      const chapters = await this.store.getChapters();
+      const ch = chapters[editIndex];
       this.modalTitle.textContent = 'Редактировать главу';
       this.inputId.value = ch.id;
       this.inputTitle.value = ch.title || '';
@@ -280,7 +282,7 @@ export class ChaptersModule extends BaseModule {
     }
   }
 
-  _handleChapterSubmit(e) {
+  async _handleChapterSubmit(e) {
     e.preventDefault();
 
     const chapterTitle = this.inputTitle.value.trim();
@@ -301,8 +303,9 @@ export class ChaptersModule extends BaseModule {
     }
 
     if (this._editingIndex !== null && !chapter.htmlContent) {
-      const existing = this.store.getChapters()[this._editingIndex];
-      if (existing.file) {
+      const chapters = await this.store.getChapters();
+      const existing = chapters[this._editingIndex];
+      if (existing?.file) {
         chapter.file = existing.file;
       }
     }
@@ -310,10 +313,10 @@ export class ChaptersModule extends BaseModule {
     if (!chapter.id || (!chapter.file && !chapter.htmlContent)) return;
 
     if (this._editingIndex !== null) {
-      this.store.updateChapter(this._editingIndex, chapter);
+      await this.store.updateChapter(this._editingIndex, chapter);
       this._showToast('Глава обновлена');
     } else {
-      this.store.addChapter(chapter);
+      await this.store.addChapter(chapter);
       this._showToast('Глава добавлена');
     }
 
@@ -322,7 +325,7 @@ export class ChaptersModule extends BaseModule {
       this._editor.destroy();
     }
     this.modal.close();
-    this._renderChapters();
+    await this._renderChapters();
     this._renderJsonPreview();
   }
 

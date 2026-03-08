@@ -233,7 +233,7 @@ export async function handleAccount() {
     ctx.state.accountScreen = new AccountScreen({ apiClient: ctx.apiClient, router: ctx.router, currentUser: ctx.currentUser });
     await ctx.state.accountScreen.init();
   }
-  ctx.state.accountScreen.show(tab, { editBookId, mode });
+  await ctx.state.accountScreen.show(tab, { editBookId, mode });
 }
 
 // ─── Инициализация ридера ───────────────────────────────────────────────────

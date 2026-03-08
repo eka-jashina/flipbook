@@ -32,12 +32,12 @@ export class AmbientsModule extends BaseModule {
     this.ambientFileUpload.addEventListener('change', (e) => this._handleAmbientFileUpload(e));
   }
 
-  render() {
-    this._renderAmbients();
+  async render() {
+    await this._renderAmbients();
   }
 
-  _renderAmbients() {
-    const ambients = this.store.getAmbients();
+  async _renderAmbients() {
+    const ambients = await this.store.getAmbients();
 
     this.ambientCards.innerHTML = ambients.map((a, i) => {
       const isNone = a.id === 'none';
@@ -73,13 +73,13 @@ export class AmbientsModule extends BaseModule {
     }).join('');
 
     // Делегирование событий
-    this.ambientCards.onclick = (e) => {
+    this.ambientCards.onclick = async (e) => {
       const toggle = e.target.closest('[data-ambient-toggle]');
       if (toggle) {
         const idx = parseInt(toggle.dataset.ambientToggle, 10);
-        this.store.updateAmbient(idx, { visible: toggle.checked });
-        this._renderAmbients();
-        this.app.settings.render();
+        await this.store.updateAmbient(idx, { visible: toggle.checked });
+        await this._renderAmbients();
+        await this.app.settings.render();
         this._renderJsonPreview();
         this._showToast(toggle.checked ? 'Атмосфера показана' : 'Атмосфера скрыта');
         return;
@@ -93,11 +93,11 @@ export class AmbientsModule extends BaseModule {
 
       const deleteBtn = e.target.closest('[data-ambient-delete]');
       if (deleteBtn) {
-        this._confirm('Удалить эту атмосферу?').then((ok) => {
+        this._confirm('Удалить эту атмосферу?').then(async (ok) => {
           if (!ok) return;
-          this.store.removeAmbient(parseInt(deleteBtn.dataset.ambientDelete, 10));
-          this._renderAmbients();
-          this.app.settings.render();
+          await this.store.removeAmbient(parseInt(deleteBtn.dataset.ambientDelete, 10));
+          await this._renderAmbients();
+          await this.app.settings.render();
           this._renderJsonPreview();
           this._showToast('Атмосфера удалена');
         });
@@ -105,13 +105,14 @@ export class AmbientsModule extends BaseModule {
     };
   }
 
-  _openAmbientModal(editIndex = null) {
+  async _openAmbientModal(editIndex = null) {
     this._editingAmbientIndex = editIndex;
     this._pendingAmbientDataUrl = null;
     this.ambientUploadLabel.textContent = 'Выбрать файл';
 
     if (editIndex !== null) {
-      const a = this.store.getAmbients()[editIndex];
+      const ambients = await this.store.getAmbients();
+      const a = ambients[editIndex];
       this.ambientModalTitle.textContent = 'Редактировать атмосферу';
       this.ambientLabelInput.value = a.label;
       this.ambientIconInput.value = a.icon;
@@ -141,7 +142,7 @@ export class AmbientsModule extends BaseModule {
     e.target.value = '';
   }
 
-  _handleAmbientSubmit(e) {
+  async _handleAmbientSubmit(e) {
     e.preventDefault();
 
     const label = this.ambientLabelInput.value.trim();
@@ -156,9 +157,13 @@ export class AmbientsModule extends BaseModule {
       return;
     }
 
-    const id = this._editingAmbientIndex !== null
-      ? this.store.getAmbients()[this._editingAmbientIndex].id
-      : `custom_${Date.now()}`;
+    let id;
+    if (this._editingAmbientIndex !== null) {
+      const ambients = await this.store.getAmbients();
+      id = ambients[this._editingAmbientIndex].id;
+    } else {
+      id = `custom_${Date.now()}`;
+    }
 
     const shortLabel = label.length > 8 ? label.slice(0, 8) : label;
 

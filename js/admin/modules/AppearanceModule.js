@@ -97,14 +97,14 @@ export class AppearanceModule extends BaseModule {
     this.savePlatformBtn.addEventListener('click', () => this._savePlatform());
   }
 
-  render() {
-    this._renderAppearance();
+  async render() {
+    await this._renderAppearance();
   }
 
   // --- Оформление ---
 
-  _switchEditTheme(theme) {
-    this._saveCurrentThemeFromForm();
+  async _switchEditTheme(theme) {
+    await this._saveCurrentThemeFromForm();
     this._editTheme = theme;
     this.themeBtns.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.editTheme === theme);
@@ -128,8 +128,8 @@ export class AppearanceModule extends BaseModule {
     this.store.updateAppearanceTheme(this._editTheme, data);
   }
 
-  _renderAppearance() {
-    const a = this.store.getAppearance();
+  async _renderAppearance() {
+    const a = await this.store.getAppearance();
 
     // Platform font limits
     this.fontMin.value = a.fontMin;
@@ -138,12 +138,12 @@ export class AppearanceModule extends BaseModule {
     this.fontMaxValue.textContent = `${a.fontMax}px`;
 
     // Per-theme поля
-    this._renderAppearanceThemeFields();
-    this._updateAppearancePreview();
+    await this._renderAppearanceThemeFields();
+    await this._updateAppearancePreview();
   }
 
-  _renderAppearanceThemeFields() {
-    const a = this.store.getAppearance();
+  async _renderAppearanceThemeFields() {
+    const a = await this.store.getAppearance();
     const t = a[this._editTheme] || a.light;
 
     this.coverBgStart.value = t.coverBgStart;
@@ -158,15 +158,15 @@ export class AppearanceModule extends BaseModule {
     this.bgAppSwatch.style.background = t.bgApp;
   }
 
-  _updateAppearancePreview() {
+  async _updateAppearancePreview() {
     const bg = `linear-gradient(135deg, ${this.coverBgStart.value}, ${this.coverBgEnd.value})`;
     this.coverTextPreview.style.background = bg;
     this.coverTextPreview.style.color = this.coverText.value;
-    const cover = this.store.getCover();
+    const cover = await this.store.getCover();
     this.coverTextPreview.textContent = cover.title || 'Заголовок';
 
     // Live preview — обложка
-    const a = this.store.getAppearance();
+    const a = await this.store.getAppearance();
     const t = a[this._editTheme] || a.light;
 
     this.previewCover.style.background = bg;
@@ -248,9 +248,10 @@ export class AppearanceModule extends BaseModule {
     }
   }
 
-  _selectTexture(value) {
+  async _selectTexture(value) {
     this.pageTexture.value = value;
-    const t = this.store.getAppearance()[this._editTheme];
+    const a = await this.store.getAppearance();
+    const t = a[this._editTheme];
     this._renderTextureSelector(value, t?.customTextureData);
   }
 

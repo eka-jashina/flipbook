@@ -48,15 +48,15 @@ export class FontsModule extends BaseModule {
     this.readingFontFileUpload.addEventListener('change', (e) => this._handleReadingFontFileUpload(e));
   }
 
-  render() {
-    this._renderDecorativeFont();
-    this._renderReadingFonts();
+  async render() {
+    await this._renderDecorativeFont();
+    await this._renderReadingFonts();
   }
 
   // --- Декоративный шрифт ---
 
-  _renderDecorativeFont() {
-    const font = this.store.getDecorativeFont();
+  async _renderDecorativeFont() {
+    const font = await this.store.getDecorativeFont();
 
     if (font) {
       this.decorativeFontInfo.hidden = false;
@@ -94,8 +94,8 @@ export class FontsModule extends BaseModule {
 
   // --- Шрифты для чтения ---
 
-  _renderReadingFonts() {
-    const fonts = this.store.getReadingFonts();
+  async _renderReadingFonts() {
+    const fonts = await this.store.getReadingFonts();
 
     // Загрузить кастомные шрифты для предпросмотра
     fonts.forEach((f, i) => {
@@ -131,20 +131,20 @@ export class FontsModule extends BaseModule {
     }).join('');
 
     // Делегирование событий
-    this.readingFontsList.onclick = (e) => {
+    this.readingFontsList.onclick = async (e) => {
       const toggle = e.target.closest('[data-font-toggle]');
       if (toggle) {
         const idx = parseInt(toggle.dataset.fontToggle, 10);
-        const fonts = this.store.getReadingFonts();
+        const fonts = await this.store.getReadingFonts();
         const enabledCount = fonts.filter(f => f.enabled).length;
         if (enabledCount <= 1 && !toggle.checked) {
           toggle.checked = true;
           this._showToast('Нельзя отключить последний шрифт');
           return;
         }
-        this.store.updateReadingFont(idx, { enabled: toggle.checked });
-        this._renderReadingFonts();
-        this.app.settings.render();
+        await this.store.updateReadingFont(idx, { enabled: toggle.checked });
+        await this._renderReadingFonts();
+        await this.app.settings.render();
         this._renderJsonPreview();
         this._showToast(toggle.checked ? 'Шрифт включён' : 'Шрифт отключён');
         return;
@@ -152,11 +152,11 @@ export class FontsModule extends BaseModule {
 
       const deleteBtn = e.target.closest('[data-font-delete]');
       if (deleteBtn) {
-        this._confirm('Удалить этот шрифт?').then((ok) => {
+        this._confirm('Удалить этот шрифт?').then(async (ok) => {
           if (!ok) return;
-          this.store.removeReadingFont(parseInt(deleteBtn.dataset.fontDelete, 10));
-          this._renderReadingFonts();
-          this.app.settings.render();
+          await this.store.removeReadingFont(parseInt(deleteBtn.dataset.fontDelete, 10));
+          await this._renderReadingFonts();
+          await this.app.settings.render();
           this._renderJsonPreview();
           this._showToast('Шрифт удалён');
         });
