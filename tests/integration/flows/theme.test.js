@@ -14,8 +14,8 @@ import { ThemeController } from '../../../js/core/delegates/ThemeController.js';
 import { SettingsManager } from '../../../js/managers/SettingsManager.js';
 
 // Mock CONFIG with appearance data
-vi.mock('../../../js/config.js', () => ({
-  CONFIG: {
+vi.mock('../../../js/config.js', () => {
+  const cfg = {
     APPEARANCE: {
       coverTitle: 'Test Book',
       coverAuthor: 'Test Author',
@@ -46,8 +46,9 @@ vi.mock('../../../js/config.js', () => ({
       sound: true,
       ambient: false,
     },
-  },
-}));
+  };
+  return { CONFIG: cfg, getConfig: () => cfg };
+});
 
 // Mock utils
 vi.mock('../../../js/utils/index.js', async (importOriginal) => {
