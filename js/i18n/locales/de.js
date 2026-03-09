@@ -18,6 +18,7 @@ export default {
   'common.copy': 'Kopieren',
   'common.saved': 'Gespeichert',
   'common.confirmation': 'Bestätigung',
+  'common.back': 'Zurück',
 
   // ─── Reader ────────────────────────────────────────────────────────────────
   'reader.bookControl': 'Buchsteuerung',
@@ -419,6 +420,12 @@ export default {
   'admin.album.photosWillDelete_one': 'wird {{count}} Foto gelöscht',
   'admin.album.photosWillDelete_other': 'werden {{count}} Fotos gelöscht',
   'admin.album.confirmContinue': 'Fortfahren?',
+  'admin.album.titleLabel': 'Titel (für Inhaltsverzeichnis)',
+  'admin.album.titlePlaceholder': 'Illustrationen',
+  'admin.album.hideTitleLabel': 'Titel auf der Seite ausblenden',
+  'admin.album.hideTitleHint': 'Der Titel wird nur im Inhaltsverzeichnis sichtbar sein',
+  'admin.album.addPage': '+ Seite hinzufügen',
+  'admin.album.bulkUpload': 'Fotos hochladen',
 
   // ─── Admin: Buch hochladen ─────────────────────────────────────────────────
   'admin.upload.unsupported': 'Nicht unterstütztes Format. Unterstützt werden: {{formats}}',
@@ -439,6 +446,7 @@ export default {
   'admin.mode.albumDesc': 'Layouts, Fotos, Beschriftungen — visueller Editor',
 
   // ─── Admin: Allgemein ──────────────────────────────────────────────────────
+  'admin.badge': 'Konto',
   'admin.saveError': 'Fehler beim Speichern',
   'admin.newBook': 'Neues Buch',
   'admin.albumBook': 'Fotoalbum',
@@ -494,6 +502,8 @@ export default {
   'admin.profile.avatarLabel': 'Avatar',
   'admin.profile.avatarUpload': 'Foto hochladen',
   'admin.profile.avatarHint': 'PNG, JPEG oder WebP. Empfohlene Größe: 200×200px.',
+  'admin.profile.displayNamePlaceholder': 'Wie heißen Sie?',
+  'admin.profile.avatarRemove': 'Entfernen',
   'admin.profile.saveButton': 'Profil speichern',
 
   // ─── API-Fehler ────────────────────────────────────────────────────────────

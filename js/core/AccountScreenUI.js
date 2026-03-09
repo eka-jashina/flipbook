@@ -8,6 +8,8 @@
  * Методы привязываются к экземпляру AccountScreen через mixin-паттерн.
  */
 
+import { t } from '@i18n';
+
 /** SVG-пути иконок для типов toast */
 const TOAST_ICONS = {
   success: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
@@ -76,7 +78,7 @@ export function showSaveIndicator(container, ui, timerRef) {
 
   ui.saveIndicator.classList.remove('fade-out', 'save-indicator--error');
   ui.saveIndicator.classList.add('visible');
-  ui.saveIndicatorText.textContent = 'Сохранено';
+  ui.saveIndicatorText.textContent = t('common.saved');
   ui.saveIndicator.classList.add('save-indicator--saved');
   ui.saveIndicator.classList.remove('save-indicator--saving');
 
@@ -97,7 +99,7 @@ export function showSaveIndicator(container, ui, timerRef) {
 export function showSaveError(ui, timerRef) {
   ui.saveIndicator.classList.remove('fade-out', 'save-indicator--saved', 'save-indicator--saving');
   ui.saveIndicator.classList.add('visible', 'save-indicator--error');
-  ui.saveIndicatorText.textContent = 'Ошибка сохранения';
+  ui.saveIndicatorText.textContent = t('admin.saveError');
 
   clearTimeout(timerRef.timer);
   timerRef.timer = setTimeout(() => {
@@ -117,7 +119,7 @@ export function showSaveError(ui, timerRef) {
  * @param {string} [opts.okText='Удалить']
  * @returns {Promise<boolean>}
  */
-export function confirm(ui, message, { title = 'Подтверждение', okText = 'Удалить' } = {}) {
+export function confirm(ui, message, { title = t('common.confirmation'), okText = t('common.delete') } = {}) {
   ui.confirmTitle.textContent = title;
   ui.confirmMessage.textContent = message;
   ui.confirmOk.textContent = okText;
