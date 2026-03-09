@@ -60,6 +60,7 @@ router.post(
       displayName: userResponse.displayName,
       avatarUrl: userResponse.avatarUrl,
       username: userResponse.username,
+      bio: userResponse.bio ?? null,
       googleId: null,
       hasPassword: userResponse.hasPassword,
     };
