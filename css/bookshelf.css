@@ -499,8 +499,8 @@
   flex-shrink: 0;
 }
 
-/* Показываем только если есть полка */
-body[data-has-bookshelf="true"] .back-to-shelf-btn {
+/* Показываем только если есть полка и пользователь — владелец */
+body[data-has-bookshelf="true"][data-reader-mode="owner"] .back-to-shelf-btn {
   display: inline-flex;
 }
 
