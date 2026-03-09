@@ -187,7 +187,7 @@ export async function handleHome() {
     const books = await loadBooksFromAPI(ctx.apiClient);
     await screenTransition('to-shelf', () => {
       cleanupReader(); cleanupLanding(); cleanupBookshelf(); hideAccount();
-      showBookshelf(books);
+      showBookshelf(books, { mode: 'owner', profileUser: ctx.currentUser });
     });
   } else if (ctx.useAPI && !ctx.currentUser) {
     await screenTransition('to-landing', () => {
