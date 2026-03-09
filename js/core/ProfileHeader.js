@@ -77,8 +77,26 @@ export class ProfileHeader {
 
     // Аватар
     const avatar = frag.querySelector('.profile-header-avatar');
-    avatar.style.background = `hsl(${hue}, 45%, 45%)`;
-    frag.querySelector('.profile-header-initial').textContent = initial;
+    const initialEl = frag.querySelector('.profile-header-initial');
+
+    initialEl.textContent = initial;
+
+    if (this._user.avatarUrl) {
+      const img = document.createElement('img');
+      img.src = this._user.avatarUrl;
+      img.alt = name;
+      img.className = 'profile-header-avatar-img';
+      img.addEventListener('error', () => {
+        img.remove();
+        avatar.style.background = `hsl(${hue}, 45%, 45%)`;
+        initialEl.hidden = false;
+      });
+      avatar.style.background = 'transparent';
+      initialEl.hidden = true;
+      avatar.prepend(img);
+    } else {
+      avatar.style.background = `hsl(${hue}, 45%, 45%)`;
+    }
 
     // Имя, username, bio
     frag.querySelector('.profile-header-name').textContent = name;
