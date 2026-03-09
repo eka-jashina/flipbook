@@ -76,11 +76,14 @@ export function createApp() {
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'script-src': ["'self'", 'https://plausible.io'],
         'img-src': imgSrc,
         'media-src': mediaSrc,
         'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        'connect-src': ["'self'", 'https://*.ingest.sentry.io', 'https://plausible.io'],
         'frame-ancestors': ["'self'", '*'],
+        'form-action': ["'none'"],
       },
     },
   }));
