@@ -209,6 +209,10 @@ export class AppInitializer {
     const editBtn = document.getElementById('reader-edit-btn');
     if (editBtn) editBtn.hidden = true;
 
+    // Скрыть кнопку «К полке» (для owner mode)
+    const backBtn = document.getElementById('backToShelfBtn');
+    if (backBtn) backBtn.hidden = true;
+
     // Показать информацию об авторе
     this._showAuthorInfo();
   }
