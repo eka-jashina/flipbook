@@ -125,7 +125,7 @@ body.embed-mode .book-wrap {
    ═══════════════════════════════════════════ */
 
 .reader-edit-btn {
-  display: inline-flex;
+  display: none;
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
@@ -137,6 +137,11 @@ body.embed-mode .book-wrap {
   border-radius: 20px;
   transition: all 0.2s ease;
   cursor: pointer;
+}
+
+/* Показываем только для владельца */
+body[data-reader-mode="owner"] .reader-edit-btn {
+  display: inline-flex;
 }
 
 .reader-edit-btn:hover {

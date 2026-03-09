@@ -205,13 +205,8 @@ export class AppInitializer {
    * @private
    */
   _setupGuestMode() {
-    // Скрыть кнопку «Редактировать» (для owner mode)
-    const editBtn = document.getElementById('reader-edit-btn');
-    if (editBtn) editBtn.hidden = true;
-
-    // Скрыть кнопку «К полке» (для owner mode)
-    const backBtn = document.getElementById('backToShelfBtn');
-    if (backBtn) backBtn.hidden = true;
+    // Кнопки «Редактировать» и «К полке» скрыты через CSS
+    // (body[data-reader-mode="owner"] показывает их только для владельца)
 
     // Показать информацию об авторе
     this._showAuthorInfo();
