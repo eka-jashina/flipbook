@@ -9,9 +9,9 @@ import { FontsModule } from '../../../js/admin/modules/FontsModule.js';
 function createMockApp() {
   return {
     store: {
-      getDecorativeFont: vi.fn(() => null),
+      getDecorativeFont: vi.fn().mockResolvedValue(null),
       setDecorativeFont: vi.fn(),
-      getReadingFonts: vi.fn(() => [
+      getReadingFonts: vi.fn().mockResolvedValue([
         { id: 'georgia', label: 'Georgia', family: 'Georgia, serif', builtin: true, enabled: true },
         { id: 'inter', label: 'Inter', family: 'Inter, sans-serif', builtin: true, enabled: true },
         { id: 'custom1', label: 'MyFont', family: '"MyFont", serif', builtin: false, enabled: true, dataUrl: 'data:font;base64,abc' },
@@ -86,17 +86,17 @@ describe('FontsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_renderDecorativeFont()', () => {
-    it('should hide info when no decorative font', () => {
-      mod._renderDecorativeFont();
+    it('should hide info when no decorative font', async () => {
+      await mod._renderDecorativeFont();
 
       expect(mod.decorativeFontInfo.hidden).toBe(true);
       expect(mod.decorativeFontSample.style.fontFamily).toBe('');
     });
 
-    it('should show info and preview when decorative font exists', () => {
-      app.store.getDecorativeFont.mockReturnValue({ name: 'Fancy', dataUrl: 'data:font;base64,xyz' });
+    it('should show info and preview when decorative font exists', async () => {
+      app.store.getDecorativeFont.mockResolvedValue({ name: 'Fancy', dataUrl: 'data:font;base64,xyz' });
 
-      mod._renderDecorativeFont();
+      await mod._renderDecorativeFont();
 
       expect(mod.decorativeFontInfo.hidden).toBe(false);
       expect(mod.decorativeFontName.textContent).toBe('Fancy');
@@ -192,42 +192,42 @@ describe('FontsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_renderReadingFonts()', () => {
-    it('should render font cards', () => {
-      mod._renderReadingFonts();
+    it('should render font cards', async () => {
+      await mod._renderReadingFonts();
 
       const cards = mod.readingFontsList.querySelectorAll('.reading-font-card');
       expect(cards.length).toBe(3);
     });
 
-    it('should show "Встроенный" for builtin fonts', () => {
-      mod._renderReadingFonts();
+    it('should show "Встроенный" for builtin fonts', async () => {
+      await mod._renderReadingFonts();
 
       const metas = mod.readingFontsList.querySelectorAll('.reading-font-meta');
       expect(metas[0].textContent).toBe('Встроенный');
     });
 
-    it('should show "Пользовательский" for custom fonts', () => {
-      mod._renderReadingFonts();
+    it('should show "Пользовательский" for custom fonts', async () => {
+      await mod._renderReadingFonts();
 
       const metas = mod.readingFontsList.querySelectorAll('.reading-font-meta');
       expect(metas[2].textContent).toBe('Пользовательский');
     });
 
-    it('should show delete button only for non-builtin fonts', () => {
-      mod._renderReadingFonts();
+    it('should show delete button only for non-builtin fonts', async () => {
+      await mod._renderReadingFonts();
 
       const deleteBtns = mod.readingFontsList.querySelectorAll('[data-font-delete]');
       expect(deleteBtns.length).toBe(1);
     });
 
-    it('should load custom font preview for non-builtin fonts with dataUrl', () => {
-      mod._renderReadingFonts();
+    it('should load custom font preview for non-builtin fonts with dataUrl', async () => {
+      await mod._renderReadingFonts();
 
       expect(mod._loadCustomFontPreview).toHaveBeenCalledWith('CustomReading_2', 'data:font;base64,abc');
     });
 
-    it('should update font select in settings', () => {
-      mod._renderReadingFonts();
+    it('should update font select in settings', async () => {
+      await mod._renderReadingFonts();
       expect(app.settings.updateFontSelect).toHaveBeenCalled();
     });
   });

@@ -25,7 +25,7 @@ const { ChaptersModule } = await import('../../../js/admin/modules/ChaptersModul
 function createMockApp() {
   return {
     store: {
-      getChapters: vi.fn(() => [
+      getChapters: vi.fn().mockResolvedValue([
         { id: 'part_1', file: 'content/part_1.html', bg: 'bg1.webp', bgMobile: 'bg1-m.webp' },
         { id: 'part_2', file: 'content/part_2.html', bg: 'bg2.webp', bgMobile: 'bg2-m.webp' },
       ]),
@@ -33,7 +33,7 @@ function createMockApp() {
       updateChapter: vi.fn(),
       removeChapter: vi.fn(),
       moveChapter: vi.fn(),
-      getCover: vi.fn(() => ({ title: 'О хоббитах', author: 'Толкин', bgMode: 'default', bgCustomData: null })),
+      getCover: vi.fn().mockResolvedValue({ title: 'О хоббитах', author: 'Толкин', bgMode: 'default', bgCustomData: null }),
       updateCover: vi.fn(),
       getBooks: vi.fn(() => [
         { id: 'default', title: 'О хоббитах', author: 'Толкин', chaptersCount: 3 },
@@ -158,8 +158,8 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_renderCover()', () => {
-    it('should populate cover fields from store', () => {
-      mod._renderCover();
+    it('should populate cover fields from store', async () => {
+      await mod._renderCover();
 
       expect(mod.coverTitle.value).toBe('О хоббитах');
       expect(mod.coverAuthor.value).toBe('Толкин');
@@ -172,24 +172,24 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_renderChapters()', () => {
-    it('should render chapter cards', () => {
-      mod._renderChapters();
+    it('should render chapter cards', async () => {
+      await mod._renderChapters();
 
       const cards = mod.chaptersList.querySelectorAll('.chapter-card');
       expect(cards.length).toBe(2);
     });
 
-    it('should show empty state when no chapters', () => {
-      app.store.getChapters.mockReturnValue([]);
+    it('should show empty state when no chapters', async () => {
+      app.store.getChapters.mockResolvedValue([]);
 
-      mod._renderChapters();
+      await mod._renderChapters();
 
       expect(mod.chaptersEmpty.hidden).toBe(false);
       expect(mod.chaptersList.innerHTML).toBe('');
     });
 
-    it('should show chapter ID and file path', () => {
-      mod._renderChapters();
+    it('should show chapter ID and file path', async () => {
+      await mod._renderChapters();
 
       const titles = mod.chaptersList.querySelectorAll('.chapter-title');
       const metas = mod.chaptersList.querySelectorAll('.chapter-meta');
@@ -197,19 +197,19 @@ describe('ChaptersModule', () => {
       expect(metas[0].textContent).toBe('content/part_1.html');
     });
 
-    it('should show "Встроенный контент" for chapters with htmlContent', () => {
-      app.store.getChapters.mockReturnValue([
+    it('should show "Встроенный контент" for chapters with htmlContent', async () => {
+      app.store.getChapters.mockResolvedValue([
         { id: 'album', file: '', htmlContent: '<article>...</article>', bg: '', bgMobile: '' },
       ]);
 
-      mod._renderChapters();
+      await mod._renderChapters();
 
       const meta = mod.chaptersList.querySelector('.chapter-meta');
       expect(meta.textContent).toBe('Встроенный контент');
     });
 
-    it('should not show up button for first chapter', () => {
-      mod._renderChapters();
+    it('should not show up button for first chapter', async () => {
+      await mod._renderChapters();
 
       const upBtns = mod.chaptersList.querySelectorAll('[data-action="up"]');
       // First chapter has no up button, second has one
@@ -217,8 +217,8 @@ describe('ChaptersModule', () => {
       expect(upBtns[0].dataset.index).toBe('1');
     });
 
-    it('should not show down button for last chapter', () => {
-      mod._renderChapters();
+    it('should not show down button for last chapter', async () => {
+      await mod._renderChapters();
 
       const downBtns = mod.chaptersList.querySelectorAll('[data-action="down"]');
       expect(downBtns.length).toBe(1);
@@ -293,14 +293,14 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_handleChapterSubmit()', () => {
-    it('should add new chapter', () => {
+    it('should add new chapter', async () => {
       mod.inputId.value = 'part_3';
       mod._pendingHtmlContent = '<article><p>Content</p></article>';
       mod.inputBg.value = 'bg3.webp';
       mod.inputBgMobile.value = '';
       vi.spyOn(mod.modal, 'close');
 
-      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
       expect(app.store.addChapter).toHaveBeenCalledWith({
         id: 'part_3',
@@ -314,14 +314,14 @@ describe('ChaptersModule', () => {
       expect(mod.modal.close).toHaveBeenCalled();
     });
 
-    it('should update existing chapter in edit mode', () => {
+    it('should update existing chapter in edit mode', async () => {
       mod._editingIndex = 0;
       mod.inputId.value = 'part_1_updated';
       mod.inputBg.value = '';
       mod.inputBgMobile.value = '';
       vi.spyOn(mod.modal, 'close');
 
-      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
       expect(app.store.updateChapter).toHaveBeenCalledWith(0, expect.objectContaining({
         id: 'part_1_updated',
@@ -330,26 +330,26 @@ describe('ChaptersModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Глава обновлена');
     });
 
-    it('should reject if id is empty', () => {
+    it('should reject if id is empty', async () => {
       mod.inputId.value = '';
       mod._pendingHtmlContent = '<article>content</article>';
 
-      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
       expect(app.store.addChapter).not.toHaveBeenCalled();
     });
 
-    it('should reject if both file and htmlContent are empty', () => {
+    it('should reject if both file and htmlContent are empty', async () => {
       mod.inputId.value = 'test';
       mod._pendingHtmlContent = null;
 
-      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
       expect(app.store.addChapter).not.toHaveBeenCalled();
     });
 
-    it('should preserve htmlContent when editing chapter without file', () => {
-      app.store.getChapters.mockReturnValue([
+    it('should preserve htmlContent when editing chapter without file', async () => {
+      app.store.getChapters.mockResolvedValue([
         { id: 'album', file: '', htmlContent: '<article>...</article>', bg: '', bgMobile: '' },
       ]);
       mod._editingIndex = 0;
@@ -359,7 +359,7 @@ describe('ChaptersModule', () => {
       mod.inputBgMobile.value = '';
       vi.spyOn(mod.modal, 'close');
 
-      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
       const chapter = app.store.updateChapter.mock.calls[0][1];
       expect(chapter.htmlContent).toBe('<article>...</article>');
@@ -418,7 +418,7 @@ describe('ChaptersModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_handleChapterSubmit() with editor', () => {
-    it('should collect HTML from editor when in editor mode', () => {
+    it('should collect HTML from editor when in editor mode', async () => {
       mod._inputMode = 'editor';
       mod._editor.isInitialized = true;
       mod._editor.isEmpty = vi.fn(() => false);
@@ -428,14 +428,14 @@ describe('ChaptersModule', () => {
       mod.inputBgMobile.value = '';
       vi.spyOn(mod.modal, 'close');
 
-      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
       expect(app.store.addChapter).toHaveBeenCalledWith(expect.objectContaining({
         htmlContent: '<p>Editor content</p>',
       }));
     });
 
-    it('should destroy editor after submit', () => {
+    it('should destroy editor after submit', async () => {
       mod._inputMode = 'editor';
       mod._editor.isInitialized = true;
       mod._editor.isEmpty = vi.fn(() => false);
@@ -443,12 +443,12 @@ describe('ChaptersModule', () => {
       mod.inputId.value = 'test';
       vi.spyOn(mod.modal, 'close');
 
-      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
       expect(mod._editor.destroy).toHaveBeenCalled();
     });
 
-    it('should not collect from editor when in upload mode', () => {
+    it('should not collect from editor when in upload mode', async () => {
       mod._inputMode = 'upload';
       mod._editor.isInitialized = true;
       mod._editor.isEmpty = vi.fn(() => false);
@@ -457,7 +457,7 @@ describe('ChaptersModule', () => {
       mod._pendingHtmlContent = '<article>File content</article>';
       vi.spyOn(mod.modal, 'close');
 
-      mod._handleChapterSubmit({ preventDefault: vi.fn() });
+      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
       expect(mod._editor.getHTML).not.toHaveBeenCalled();
       expect(app.store.addChapter).toHaveBeenCalledWith(expect.objectContaining({
@@ -472,7 +472,7 @@ describe('ChaptersModule', () => {
 
   describe('_openModal() with editor', () => {
     it('should open editor mode for chapter with htmlContent', async () => {
-      app.store.getChapters.mockReturnValue([
+      app.store.getChapters.mockResolvedValue([
         { id: 'inline', title: 'Inline', file: '', htmlContent: '<p>Inline HTML</p>', bg: '', bgMobile: '' },
       ]);
 
@@ -924,12 +924,12 @@ describe('ChaptersModule', () => {
   });
 
   describe('_selectBgMode()', () => {
-    it('should update bg mode selector from store', () => {
-      app.store.getCover.mockReturnValue({
+    it('should update bg mode selector from store', async () => {
+      app.store.getCover.mockResolvedValue({
         title: 'T', author: 'A', bgMode: 'custom', bgCustomData: 'data:img',
       });
 
-      mod._selectBgMode('custom');
+      await mod._selectBgMode('custom');
 
       expect(mod.bgCoverMode.value).toBe('custom');
     });

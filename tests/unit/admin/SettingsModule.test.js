@@ -9,7 +9,7 @@ import { SettingsModule } from '../../../js/admin/modules/SettingsModule.js';
 function createMockApp() {
   return {
     store: {
-      getDefaultSettings: vi.fn(() => ({
+      getDefaultSettings: vi.fn().mockResolvedValue({
         font: 'georgia',
         fontSize: 18,
         theme: 'light',
@@ -17,23 +17,23 @@ function createMockApp() {
         soundVolume: 0.3,
         ambientType: 'none',
         ambientVolume: 0.5,
-      })),
-      updateDefaultSettings: vi.fn(),
-      getAmbients: vi.fn(() => [
+      }),
+      updateDefaultSettings: vi.fn().mockResolvedValue(undefined),
+      getAmbients: vi.fn().mockResolvedValue([
         { id: 'none', label: 'Без звука', shortLabel: 'Без', icon: '✕', visible: true },
         { id: 'rain', label: 'Дождь', shortLabel: 'Дождь', icon: '🌧️', visible: true },
         { id: 'fireplace', label: 'Камин', shortLabel: 'Камин', icon: '🔥', visible: false },
       ]),
-      getSettingsVisibility: vi.fn(() => ({
+      getSettingsVisibility: vi.fn().mockResolvedValue({
         fontSize: true,
         theme: true,
         font: true,
         fullscreen: true,
         sound: true,
         ambient: true,
-      })),
-      updateSettingsVisibility: vi.fn(),
-      getReadingFonts: vi.fn(() => [
+      }),
+      updateSettingsVisibility: vi.fn().mockResolvedValue(undefined),
+      getReadingFonts: vi.fn().mockResolvedValue([
         { id: 'georgia', label: 'Georgia', family: 'Georgia, serif', builtin: true, enabled: true },
         { id: 'inter', label: 'Inter', family: 'Inter, sans-serif', builtin: true, enabled: true },
         { id: 'disabled', label: 'Disabled', family: 'Disabled', builtin: true, enabled: false },
@@ -92,8 +92,8 @@ describe('SettingsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_renderSettings()', () => {
-    it('should populate form with default settings', () => {
-      mod._renderSettings();
+    it('should populate form with default settings', async () => {
+      await mod._renderSettings();
 
       expect(mod.defaultFont.value).toBe('georgia');
       expect(mod.defaultFontSize.value).toBe('18');
@@ -103,8 +103,8 @@ describe('SettingsModule', () => {
       expect(mod.volumeValue.textContent).toBe('30%');
     });
 
-    it('should set active theme button', () => {
-      mod._renderSettings();
+    it('should set active theme button', async () => {
+      await mod._renderSettings();
 
       const lightBtn = document.querySelector('[data-theme="light"]');
       const darkBtn = document.querySelector('[data-theme="dark"]');
@@ -112,29 +112,29 @@ describe('SettingsModule', () => {
       expect(darkBtn.classList.contains('active')).toBe(false);
     });
 
-    it('should render only visible ambient buttons', () => {
-      mod._renderSettings();
+    it('should render only visible ambient buttons', async () => {
+      await mod._renderSettings();
 
       const buttons = mod.defaultAmbientGroup.querySelectorAll('.setting-ambient-btn');
       // 'fireplace' is not visible, so only 2
       expect(buttons.length).toBe(2);
     });
 
-    it('should mark active ambient button', () => {
-      mod._renderSettings();
+    it('should mark active ambient button', async () => {
+      await mod._renderSettings();
 
       const activeBtn = mod.defaultAmbientGroup.querySelector('.setting-ambient-btn.active');
       expect(activeBtn).not.toBeNull();
       expect(activeBtn.dataset.ambient).toBe('none');
     });
 
-    it('should show "Выключен" when sound disabled', () => {
-      app.store.getDefaultSettings.mockReturnValue({
+    it('should show "Выключен" when sound disabled', async () => {
+      app.store.getDefaultSettings.mockResolvedValue({
         font: 'georgia', fontSize: 18, theme: 'light',
         soundEnabled: false, soundVolume: 0.3, ambientType: 'none', ambientVolume: 0.5,
       });
 
-      mod._renderSettings();
+      await mod._renderSettings();
 
       expect(mod.soundLabel.textContent).toBe('Выключен');
     });
@@ -145,13 +145,13 @@ describe('SettingsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_renderSettingsVisibility()', () => {
-    it('should set checkbox states from store', () => {
-      app.store.getSettingsVisibility.mockReturnValue({
+    it('should set checkbox states from store', async () => {
+      app.store.getSettingsVisibility.mockResolvedValue({
         fontSize: false, theme: true, font: true,
         fullscreen: false, sound: true, ambient: true,
       });
 
-      mod._renderSettingsVisibility();
+      await mod._renderSettingsVisibility();
 
       const fontSizeToggle = document.querySelector('[data-visibility="fontSize"]');
       const themeToggle = document.querySelector('[data-visibility="theme"]');
@@ -165,8 +165,8 @@ describe('SettingsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_saveSettings()', () => {
-    it('should save settings from form to store', () => {
-      mod._renderSettings();
+    it('should save settings from form to store', async () => {
+      await mod._renderSettings();
 
       mod.defaultFont.value = 'inter';
       mod.defaultFontSize.value = '20';
@@ -186,8 +186,8 @@ describe('SettingsModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Настройки сохранены');
     });
 
-    it('should convert volume from percentage to decimal', () => {
-      mod._renderSettings();
+    it('should convert volume from percentage to decimal', async () => {
+      await mod._renderSettings();
       mod.defaultVolume.value = '75';
 
       mod._saveSettings();
@@ -202,8 +202,8 @@ describe('SettingsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_resetSettings()', () => {
-    it('should reset to default settings', () => {
-      mod._resetSettings();
+    it('should reset to default settings', async () => {
+      await mod._resetSettings();
 
       expect(app.store.updateDefaultSettings).toHaveBeenCalledWith({
         font: 'georgia',
@@ -229,8 +229,8 @@ describe('SettingsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('updateFontSelect()', () => {
-    it('should populate select with enabled fonts only', () => {
-      mod.updateFontSelect();
+    it('should populate select with enabled fonts only', async () => {
+      await mod.updateFontSelect();
 
       const options = mod.defaultFont.querySelectorAll('option');
       expect(options.length).toBe(2); // georgia, inter (disabled is excluded)
@@ -238,16 +238,16 @@ describe('SettingsModule', () => {
       expect(options[1].value).toBe('inter');
     });
 
-    it('should preserve current selection if font still exists', () => {
+    it('should preserve current selection if font still exists', async () => {
       mod.defaultFont.value = 'georgia';
-      mod.updateFontSelect();
+      await mod.updateFontSelect();
       // georgia still enabled — value preserved
       expect(mod.defaultFont.value).toBe('georgia');
     });
 
-    it('should fallback to first font if current is removed', () => {
+    it('should fallback to first font if current is removed', async () => {
       mod.defaultFont.value = 'nonexistent';
-      mod.updateFontSelect();
+      await mod.updateFontSelect();
       expect(mod.defaultFont.value).toBe('georgia');
     });
   });

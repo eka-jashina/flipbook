@@ -53,10 +53,10 @@ describe('Admin Panel Flow Integration', () => {
 
   const createMockApi = () => ({
     // Books
-    getBooks: vi.fn().mockResolvedValue([
+    getBooks: vi.fn().mockResolvedValue({ books: [
       makeBook('b1', 'Первая книга', 'Автор 1', 3),
       makeBook('b2', 'Вторая книга', 'Автор 2', 1),
-    ]),
+    ]}),
     getBook: vi.fn().mockResolvedValue({
       id: 'b1', title: 'Первая книга', author: 'Автор 1',
       cover: { bg: '', bgMobile: '', bgMode: 'default' },
@@ -69,11 +69,11 @@ describe('Admin Panel Flow Integration', () => {
     reorderBooks: vi.fn().mockResolvedValue({}),
 
     // Chapters
-    getChapters: vi.fn().mockResolvedValue([
+    getChapters: vi.fn().mockResolvedValue({ chapters: [
       makeChapter('c1', 'Глава 1', { hasHtmlContent: true }),
       makeChapter('c2', 'Глава 2'),
       makeChapter('c3', 'Глава 3'),
-    ]),
+    ]}),
     createChapter: vi.fn().mockResolvedValue({ id: 'c-new' }),
     updateChapter: vi.fn().mockResolvedValue({}),
     deleteChapter: vi.fn().mockResolvedValue({}),
@@ -88,10 +88,10 @@ describe('Admin Panel Flow Integration', () => {
     updateSounds: vi.fn().mockResolvedValue({}),
 
     // Ambients
-    getAmbients: vi.fn().mockResolvedValue([
+    getAmbients: vi.fn().mockResolvedValue({ ambients: [
       makeAmbient('a1', 'Дождь', { ambientKey: 'rain', icon: '🌧️', builtin: true }),
       makeAmbient('a2', 'Камин', { ambientKey: 'fireplace', icon: '🔥', builtin: true }),
-    ]),
+    ]}),
     createAmbient: vi.fn().mockResolvedValue({ id: 'a-new' }),
     updateAmbient: vi.fn().mockResolvedValue({}),
     deleteAmbient: vi.fn().mockResolvedValue({}),
@@ -106,10 +106,10 @@ describe('Admin Panel Flow Integration', () => {
     updateAppearanceTheme: vi.fn().mockResolvedValue({}),
 
     // Fonts
-    getFonts: vi.fn().mockResolvedValue([
+    getFonts: vi.fn().mockResolvedValue({ fonts: [
       makeFont('f1', 'Georgia', 'Georgia, serif', { fontKey: 'georgia', builtin: true }),
       makeFont('f2', 'Inter', 'Inter, sans-serif', { fontKey: 'inter', builtin: true }),
-    ]),
+    ]}),
     createFont: vi.fn().mockResolvedValue({ id: 'f-new' }),
     updateFont: vi.fn().mockResolvedValue({}),
     deleteFont: vi.fn().mockResolvedValue({}),
@@ -623,8 +623,8 @@ describe('Admin Panel Flow Integration', () => {
     it('should import config and reload books', async () => {
       const importData = { books: [{ title: 'Imported' }], readingFonts: [] };
       mockApi.getBooks
-        .mockResolvedValueOnce([makeBook('b1', 'Первая'), makeBook('b2', 'Вторая')]) // init
-        .mockResolvedValueOnce([makeBook('b-imp', 'Imported')]); // after import
+        .mockResolvedValueOnce({ books: [makeBook('b1', 'Первая'), makeBook('b2', 'Вторая')] }) // init
+        .mockResolvedValueOnce({ books: [makeBook('b-imp', 'Imported')] }); // after import
 
       // Re-create store to reset mock calls
       store = await ServerAdminConfigStore.create(mockApi);
@@ -827,7 +827,7 @@ describe('Admin Panel Flow Integration', () => {
     });
 
     it('should handle empty books on init', async () => {
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
       const emptyStore = await ServerAdminConfigStore.create(mockApi);
 
       expect(emptyStore.getActiveBookId()).toBeNull();

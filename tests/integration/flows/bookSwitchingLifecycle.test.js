@@ -85,17 +85,17 @@ describe('Book Switching Lifecycle Integration', () => {
   });
 
   const createMockApi = () => ({
-    getBooks: vi.fn().mockResolvedValue([
+    getBooks: vi.fn().mockResolvedValue({ books: [
       { id: 'book-a', title: 'Книга A', author: 'Автор A', chaptersCount: 2 },
       { id: 'book-b', title: 'Книга B', author: 'Автор B', chaptersCount: 1 },
-    ]),
+    ]}),
     getBook: vi.fn().mockImplementation((bookId) => {
       if (bookId === 'book-a') return Promise.resolve(bookDetailA);
       if (bookId === 'book-b') return Promise.resolve(bookDetailB);
       return Promise.reject(new Error('Not found'));
     }),
     getSettings: vi.fn().mockResolvedValue(globalSettings),
-    getFonts: vi.fn().mockResolvedValue(readingFonts),
+    getFonts: vi.fn().mockResolvedValue({ fonts: readingFonts }),
     getProgress: vi.fn().mockResolvedValue({ page: 0, chapter: 0 }),
     saveProgress: vi.fn().mockResolvedValue({}),
     deleteBook: vi.fn().mockResolvedValue({}),

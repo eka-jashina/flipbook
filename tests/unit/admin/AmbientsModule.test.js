@@ -9,7 +9,7 @@ import { AmbientsModule } from '../../../js/admin/modules/AmbientsModule.js';
 function createMockApp() {
   return {
     store: {
-      getAmbients: vi.fn(() => [
+      getAmbients: vi.fn().mockResolvedValue([
         { id: 'none', label: 'Без звука', icon: '✕', file: null, visible: true, builtin: true },
         { id: 'rain', label: 'Дождь', icon: '🌧️', file: 'sounds/ambient/rain.mp3', visible: true, builtin: true },
         { id: 'custom1', label: 'Океан', icon: '🌊', file: 'ocean.mp3', visible: true, builtin: false },
@@ -75,23 +75,23 @@ describe('AmbientsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_renderAmbients()', () => {
-    it('should render ambient cards from store', () => {
-      mod._renderAmbients();
+    it('should render ambient cards from store', async () => {
+      await mod._renderAmbients();
 
       const cards = mod.ambientCards.querySelectorAll('.ambient-card');
       expect(cards.length).toBe(3);
     });
 
-    it('should show toggle for non-none ambients', () => {
-      mod._renderAmbients();
+    it('should show toggle for non-none ambients', async () => {
+      await mod._renderAmbients();
 
       const toggles = mod.ambientCards.querySelectorAll('[data-ambient-toggle]');
       // 'none' has no toggle, rain and custom1 have toggles
       expect(toggles.length).toBe(2);
     });
 
-    it('should show edit/delete buttons for custom ambients only', () => {
-      mod._renderAmbients();
+    it('should show edit/delete buttons for custom ambients only', async () => {
+      await mod._renderAmbients();
 
       const editBtns = mod.ambientCards.querySelectorAll('[data-ambient-edit]');
       const deleteBtns = mod.ambientCards.querySelectorAll('[data-ambient-delete]');
@@ -100,23 +100,23 @@ describe('AmbientsModule', () => {
       expect(deleteBtns.length).toBe(1);
     });
 
-    it('should show "Загруженный файл" for data URL files', () => {
-      app.store.getAmbients.mockReturnValue([
+    it('should show "Загруженный файл" for data URL files', async () => {
+      app.store.getAmbients.mockResolvedValue([
         { id: 'test', label: 'Test', icon: '🎵', file: 'data:audio/mp3;base64,abc', visible: true, builtin: false },
       ]);
 
-      mod._renderAmbients();
+      await mod._renderAmbients();
 
       const meta = mod.ambientCards.querySelector('.ambient-card-meta');
       expect(meta.textContent).toBe('Загруженный файл');
     });
 
-    it('should show "Нет файла" when file is null', () => {
-      app.store.getAmbients.mockReturnValue([
+    it('should show "Нет файла" when file is null', async () => {
+      app.store.getAmbients.mockResolvedValue([
         { id: 'none', label: 'Без звука', icon: '✕', file: null, visible: true, builtin: true },
       ]);
 
-      mod._renderAmbients();
+      await mod._renderAmbients();
 
       const meta = mod.ambientCards.querySelector('.ambient-card-meta');
       expect(meta.textContent).toBe('Нет файла');
@@ -128,18 +128,18 @@ describe('AmbientsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_openAmbientModal()', () => {
-    it('should open modal for new ambient', () => {
+    it('should open modal for new ambient', async () => {
       const showModalSpy = vi.spyOn(mod.ambientModal, 'showModal');
 
-      mod._openAmbientModal();
+      await mod._openAmbientModal();
 
       expect(mod._editingAmbientIndex).toBeNull();
       expect(mod.ambientModalTitle.textContent).toBe('Добавить атмосферу');
       expect(showModalSpy).toHaveBeenCalled();
     });
 
-    it('should open modal for editing existing ambient', () => {
-      mod._openAmbientModal(2); // custom1
+    it('should open modal for editing existing ambient', async () => {
+      await mod._openAmbientModal(2); // custom1
 
       expect(mod._editingAmbientIndex).toBe(2);
       expect(mod.ambientModalTitle.textContent).toBe('Редактировать атмосферу');
@@ -148,12 +148,12 @@ describe('AmbientsModule', () => {
       expect(mod.ambientFileInput.value).toBe('ocean.mp3');
     });
 
-    it('should show file label for data URL in edit mode', () => {
-      app.store.getAmbients.mockReturnValue([
+    it('should show file label for data URL in edit mode', async () => {
+      app.store.getAmbients.mockResolvedValue([
         { id: 'test', label: 'Test', icon: '🎵', file: 'data:audio/mp3;base64,abc', visible: true, builtin: false },
       ]);
 
-      mod._openAmbientModal(0);
+      await mod._openAmbientModal(0);
 
       expect(mod._pendingAmbientDataUrl).toBe('data:audio/mp3;base64,abc');
       expect(mod.ambientUploadLabel.textContent).toBe('Файл загружен');
@@ -215,14 +215,14 @@ describe('AmbientsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_handleAmbientSubmit()', () => {
-    it('should add new ambient to store', () => {
+    it('should add new ambient to store', async () => {
       mod.ambientLabelInput.value = 'Лес';
       mod.ambientIconInput.value = '🌲';
       mod.ambientFileInput.value = 'forest.mp3';
       vi.spyOn(mod.ambientModal, 'close');
 
       const event = { preventDefault: vi.fn() };
-      mod._handleAmbientSubmit(event);
+      await mod._handleAmbientSubmit(event);
 
       expect(event.preventDefault).toHaveBeenCalled();
       expect(app.store.addAmbient).toHaveBeenCalledWith(
@@ -237,7 +237,7 @@ describe('AmbientsModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Атмосфера добавлена');
     });
 
-    it('should update existing ambient in edit mode', () => {
+    it('should update existing ambient in edit mode', async () => {
       mod._editingAmbientIndex = 2;
       mod.ambientLabelInput.value = 'Океан обновлённый';
       mod.ambientIconInput.value = '🌊';
@@ -245,7 +245,7 @@ describe('AmbientsModule', () => {
       vi.spyOn(mod.ambientModal, 'close');
 
       const event = { preventDefault: vi.fn() };
-      mod._handleAmbientSubmit(event);
+      await mod._handleAmbientSubmit(event);
 
       expect(app.store.updateAmbient).toHaveBeenCalledWith(2,
         expect.objectContaining({
@@ -256,46 +256,46 @@ describe('AmbientsModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Атмосфера обновлена');
     });
 
-    it('should truncate shortLabel to 8 characters', () => {
+    it('should truncate shortLabel to 8 characters', async () => {
       mod.ambientLabelInput.value = 'Очень длинное название';
       mod.ambientIconInput.value = '🎵';
       mod.ambientFileInput.value = 'file.mp3';
 
-      mod._handleAmbientSubmit({ preventDefault: vi.fn() });
+      await mod._handleAmbientSubmit({ preventDefault: vi.fn() });
 
       const ambient = app.store.addAmbient.mock.calls[0][0];
       expect(ambient.shortLabel).toBe('Очень дл');
       expect(ambient.shortLabel.length).toBeLessThanOrEqual(8);
     });
 
-    it('should reject if label or icon is empty', () => {
+    it('should reject if label or icon is empty', async () => {
       mod.ambientLabelInput.value = '';
       mod.ambientIconInput.value = '';
 
-      mod._handleAmbientSubmit({ preventDefault: vi.fn() });
+      await mod._handleAmbientSubmit({ preventDefault: vi.fn() });
 
       expect(app.store.addAmbient).not.toHaveBeenCalled();
     });
 
-    it('should reject if no file provided', () => {
+    it('should reject if no file provided', async () => {
       mod.ambientLabelInput.value = 'Test';
       mod.ambientIconInput.value = '🎵';
       mod.ambientFileInput.value = '';
       mod._pendingAmbientDataUrl = null;
 
-      mod._handleAmbientSubmit({ preventDefault: vi.fn() });
+      await mod._handleAmbientSubmit({ preventDefault: vi.fn() });
 
       expect(app._showToast).toHaveBeenCalledWith('Укажите путь к файлу или загрузите аудио');
       expect(app.store.addAmbient).not.toHaveBeenCalled();
     });
 
-    it('should prefer pending data URL over file path', () => {
+    it('should prefer pending data URL over file path', async () => {
       mod.ambientLabelInput.value = 'Test';
       mod.ambientIconInput.value = '🎵';
       mod.ambientFileInput.value = 'path.mp3';
       mod._pendingAmbientDataUrl = 'data:audio/mp3;base64,abc';
 
-      mod._handleAmbientSubmit({ preventDefault: vi.fn() });
+      await mod._handleAmbientSubmit({ preventDefault: vi.fn() });
 
       const ambient = app.store.addAmbient.mock.calls[0][0];
       expect(ambient.file).toBe('data:audio/mp3;base64,abc');

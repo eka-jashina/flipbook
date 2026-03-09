@@ -481,9 +481,9 @@ describe('Bookshelf Screen Integration', () => {
   describe('loadBooksFromAPI()', () => {
     it('should fetch books from API client', async () => {
       const mockApi = {
-        getBooks: vi.fn().mockResolvedValue([
+        getBooks: vi.fn().mockResolvedValue({ books: [
           { id: 'b1', title: 'API Book' },
-        ]),
+        ]}),
       };
 
       const books = await loadBooksFromAPI(mockApi);
