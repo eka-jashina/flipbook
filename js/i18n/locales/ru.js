@@ -452,6 +452,10 @@ export default {
   'admin.saveError': 'Ошибка сохранения',
   'admin.newBook': 'Новая книга',
   'admin.albumBook': 'Фотоальбом',
+  'admin.badge': 'Личный кабинет',
+  'admin.back': 'Назад',
+  'admin.tabsAria': 'Разделы личного кабинета',
+  'admin.editorTabsAria': 'Разделы редактора книги',
 
   // ─── Админ: Навигация ───────────────────────────────────────────────────────
   'admin.tabs.myBooks': 'Мои книги',
@@ -507,6 +511,7 @@ export default {
   'admin.profile.displayNamePlaceholder': 'Как вас зовут?',
   'admin.profile.avatarRemove': 'Удалить',
   'admin.profile.saveButton': 'Сохранить профиль',
+  'admin.profile.displayNamePlaceholder': 'Как вас зовут?',
 
   // ─── API ошибки ─────────────────────────────────────────────────────────────
   'api.error.createBook': 'Не удалось создать книгу',
