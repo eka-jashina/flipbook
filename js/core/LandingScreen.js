@@ -207,22 +207,30 @@ export class LandingScreen {
     card.className = 'landing-book-card';
     card.dataset.bookId = book.id;
 
+    const tmpl = document.getElementById('tmpl-landing-book-card');
+    const frag = tmpl.content.cloneNode(true);
+
     const bgStart = book.appearance?.light?.coverBgStart || '#3a2d1f';
     const bgEnd = book.appearance?.light?.coverBgEnd || '#2a2016';
     const textColor = book.appearance?.light?.coverText || '#f2e9d8';
     const coverBgImage = book.appearance?.light?.coverBgImage;
 
-    const coverStyle = coverBgImage
-      ? `background: linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url('${coverBgImage}') center/cover`
-      : `background: linear-gradient(135deg, ${bgStart}, ${bgEnd})`;
+    const cover = frag.querySelector('.landing-book-cover');
+    cover.style.background = coverBgImage
+      ? `linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url('${coverBgImage}') center/cover`
+      : `linear-gradient(135deg, ${bgStart}, ${bgEnd})`;
+    cover.style.color = textColor;
 
-    card.innerHTML = `
-      <div class="landing-book-cover" style="${coverStyle}; color: ${textColor}">
-        <span class="landing-book-title">${this._escapeHtml(book.title || t('landing.noTitle'))}</span>
-        ${book.author ? `<span class="landing-book-author">${this._escapeHtml(book.author)}</span>` : ''}
-      </div>
-    `;
+    frag.querySelector('.landing-book-title').textContent = book.title || t('landing.noTitle');
 
+    const authorEl = frag.querySelector('.landing-book-author');
+    if (book.author) {
+      authorEl.textContent = book.author;
+    } else {
+      authorEl.remove();
+    }
+
+    card.appendChild(frag);
     return card;
   }
 
@@ -252,14 +260,4 @@ export class LandingScreen {
     }
   }
 
-  /**
-   * Экранирование HTML
-   * @param {string} text
-   * @returns {string}
-   */
-  _escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

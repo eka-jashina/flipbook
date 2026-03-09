@@ -82,6 +82,47 @@ describe('Auth + Migration Integration', () => {
     sessionStorage.clear();
     localData = null;
     mockApi = createMockApi();
+
+    // Шаблон модалки аутентификации
+    const authTmpl = document.createElement('template');
+    authTmpl.id = 'tmpl-auth-modal';
+    authTmpl.innerHTML = `
+      <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Вход">
+        <button type="button" class="auth-close-btn" aria-label="Закрыть" data-action="close">&times;</button>
+        <div class="auth-modal-header">
+          <h2 class="auth-modal-title">Вход</h2>
+          <p class="auth-modal-subtitle">Войдите в свой аккаунт</p>
+        </div>
+        <form class="auth-form" novalidate>
+          <div class="auth-field" data-register-only hidden>
+            <label for="auth-username" class="auth-label">Имя пользователя</label>
+            <input type="text" id="auth-username" class="auth-input" placeholder="my-name" autocomplete="username" required
+              pattern="^[a-z0-9][a-z0-9-]{2,39}$" minlength="3" maxlength="40">
+          </div>
+          <div class="auth-field" data-register-only hidden>
+            <label for="auth-name" class="auth-label">Отображаемое имя</label>
+            <input type="text" id="auth-name" class="auth-input" placeholder="Ваше имя" autocomplete="name">
+          </div>
+          <div class="auth-field">
+            <label for="auth-email" class="auth-label">Email</label>
+            <input type="email" id="auth-email" class="auth-input" placeholder="email@example.com" autocomplete="email" required>
+          </div>
+          <div class="auth-field">
+            <label for="auth-password" class="auth-label">Пароль</label>
+            <input type="password" id="auth-password" class="auth-input" placeholder="Ваш пароль" autocomplete="current-password" required minlength="8">
+          </div>
+          <div class="auth-error" id="auth-error" hidden></div>
+          <button type="submit" class="auth-submit">Войти</button>
+        </form>
+        <div class="auth-divider"><span>или</span></div>
+        <a href="/api/auth/google" class="auth-google-btn">Войти через Google</a>
+        <div class="auth-switch">
+          <span class="auth-switch-text">Нет аккаунта?</span>
+          <button type="button" class="auth-switch-btn" data-action="switch">Зарегистрироваться</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(authTmpl);
   });
 
   afterEach(() => {
