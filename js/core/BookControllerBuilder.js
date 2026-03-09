@@ -78,7 +78,8 @@ export function buildBookComponents({ state, apiClient = null, bookId = null, se
 
   const core = ComponentFactory.createCoreServices();
   const factory = new ComponentFactory(core);
-  const settings = factory.createSettingsManager({ apiClient, bookId });
+  const publicMode = readerMode === 'guest' || readerMode === 'embed';
+  const settings = factory.createSettingsManager(publicMode ? {} : { apiClient, bookId });
 
   if (serverProgress) {
     settings.applyServerProgress(serverProgress);
@@ -86,7 +87,6 @@ export function buildBookComponents({ state, apiClient = null, bookId = null, se
 
   const audio = factory.createAudioServices(settings);
   const render = factory.createRenderServices();
-  const publicMode = readerMode === 'guest' || readerMode === 'embed';
   const content = factory.createContentServices({ apiClient, bookId, publicMode });
 
   audio.setupAmbientLoadingCallbacks(core.dom.get('ambientPills'));
