@@ -132,23 +132,11 @@ function renderPageImageSlots(manager, container, page, pageIndex) {
     const slot = document.createElement('div');
     slot.className = `album-image-slot${img ? ' has-image' : ''}`;
 
-    slot.innerHTML = `
-      <span class="album-image-slot-placeholder">
-        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/></svg>
-        Фото ${i + 1}
-      </span>
-      <span class="album-image-slot-num">${i + 1}</span>
-      <button class="album-image-slot-rotate" type="button" title="Повернуть на 90°">
-        <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47zM7.1 18.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32zM13 4.07V1L8.45 5.55 13 10V6.09c2.84.48 5 2.94 5 5.91s-2.16 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93s-3.05-7.44-7-7.93z"/></svg>
-      </button>
-      <button class="album-image-slot-crop" type="button" title="Кадрировать">
-        <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/></svg>
-      </button>
-      <button class="album-image-slot-uncrop" type="button" title="Сбросить кадрирование">
-        <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
-      </button>
-      <button class="album-image-slot-remove" type="button" title="Удалить">&times;</button>
-    `;
+    const tmpl = document.getElementById('tmpl-album-image-slot');
+    const slotContent = tmpl.content.cloneNode(true);
+    slotContent.querySelector('.album-image-slot-placeholder-text').textContent = `Фото ${i + 1}`;
+    slotContent.querySelector('.album-image-slot-num').textContent = i + 1;
+    slot.appendChild(slotContent);
 
     if (img) {
       const imgEl = document.createElement('img');
