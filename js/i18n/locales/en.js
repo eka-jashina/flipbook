@@ -419,6 +419,12 @@ export default {
   'admin.album.photosWillDelete_one': 'will delete {{count}} photo',
   'admin.album.photosWillDelete_other': 'will delete {{count}} photos',
   'admin.album.confirmContinue': 'Continue?',
+  'admin.album.titleLabel': 'Title (for table of contents)',
+  'admin.album.titlePlaceholder': 'Illustrations',
+  'admin.album.hideTitle': 'Hide title on page',
+  'admin.album.hideTitleHint': 'Title will only be visible in the table of contents',
+  'admin.album.addPage': '+ Add page',
+  'admin.album.uploadPhotos': 'Upload photos',
 
   // ─── Admin: Book Upload ────────────────────────────────────────────────────────
   'admin.upload.unsupported': 'Unsupported format. Supported: {{formats}}',
@@ -442,6 +448,10 @@ export default {
   'admin.saveError': 'Save error',
   'admin.newBook': 'New Book',
   'admin.albumBook': 'Photo Album',
+  'admin.badge': 'Account',
+  'admin.back': 'Back',
+  'admin.tabsAria': 'Account sections',
+  'admin.editorTabsAria': 'Book editor sections',
 
   // ─── Admin: Navigation ────────────────────────────────────────────────────────
   'admin.tabs.myBooks': 'My Books',
@@ -495,6 +505,7 @@ export default {
   'admin.profile.avatarUpload': 'Upload photo',
   'admin.profile.avatarHint': 'PNG, JPEG, or WebP. Recommended size: 200x200px.',
   'admin.profile.saveButton': 'Save profile',
+  'admin.profile.displayNamePlaceholder': 'What\'s your name?',
 
   // ─── API Errors ──────────────────────────────────────────────────────────────
   'api.error.createBook': 'Failed to create book',

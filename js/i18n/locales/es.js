@@ -419,6 +419,12 @@ export default {
   'admin.album.photosWillDelete_one': 'se eliminará {{count}} foto',
   'admin.album.photosWillDelete_other': 'se eliminarán {{count}} fotos',
   'admin.album.confirmContinue': '¿Continuar?',
+  'admin.album.titleLabel': 'Nombre (para el índice)',
+  'admin.album.titlePlaceholder': 'Ilustraciones',
+  'admin.album.hideTitle': 'Ocultar título en la página',
+  'admin.album.hideTitleHint': 'El título solo será visible en el índice',
+  'admin.album.addPage': '+ Añadir página',
+  'admin.album.uploadPhotos': 'Subir fotos',
 
   // ─── Admin: Subida de libro ────────────────────────────────────────────────
   'admin.upload.unsupported': 'Formato no compatible. Compatibles: {{formats}}',
@@ -442,6 +448,10 @@ export default {
   'admin.saveError': 'Error al guardar',
   'admin.newBook': 'Nuevo libro',
   'admin.albumBook': 'Álbum de fotos',
+  'admin.badge': 'Cuenta',
+  'admin.back': 'Atrás',
+  'admin.tabsAria': 'Secciones de la cuenta',
+  'admin.editorTabsAria': 'Secciones del editor de libros',
 
   // ─── Admin: Navegación ────────────────────────────────────────────────────
   'admin.tabs.myBooks': 'Mis libros',
@@ -495,6 +505,7 @@ export default {
   'admin.profile.avatarUpload': 'Subir foto',
   'admin.profile.avatarHint': 'PNG, JPEG o WebP. Tamaño recomendado: 200×200px.',
   'admin.profile.saveButton': 'Guardar perfil',
+  'admin.profile.displayNamePlaceholder': '¿Cómo te llamas?',
 
   // ─── Errores de API ───────────────────────────────────────────────────────
   'api.error.createBook': 'No se pudo crear el libro',

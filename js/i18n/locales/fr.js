@@ -419,6 +419,12 @@ export default {
   'admin.album.photosWillDelete_one': '{{count}} photo sera supprimée',
   'admin.album.photosWillDelete_other': '{{count}} photos seront supprimées',
   'admin.album.confirmContinue': 'Continuer ?',
+  'admin.album.titleLabel': 'Titre (pour la table des matières)',
+  'admin.album.titlePlaceholder': 'Illustrations',
+  'admin.album.hideTitle': 'Masquer le titre sur la page',
+  'admin.album.hideTitleHint': 'Le titre ne sera visible que dans la table des matières',
+  'admin.album.addPage': '+ Ajouter une page',
+  'admin.album.uploadPhotos': 'Télécharger des photos',
 
   // ─── Admin : Téléchargement de livre ──────────────────────────────────────────
   'admin.upload.unsupported': 'Format non pris en charge. Formats acceptés : {{formats}}',
@@ -442,6 +448,10 @@ export default {
   'admin.saveError': 'Erreur d\'enregistrement',
   'admin.newBook': 'Nouveau livre',
   'admin.albumBook': 'Album photo',
+  'admin.badge': 'Compte',
+  'admin.back': 'Retour',
+  'admin.tabsAria': 'Sections du compte',
+  'admin.editorTabsAria': 'Sections de l\'éditeur de livres',
 
   // ─── Admin : Navigation ───────────────────────────────────────────────────────
   'admin.tabs.myBooks': 'Mes livres',
@@ -495,6 +505,7 @@ export default {
   'admin.profile.avatarUpload': 'Télécharger une photo',
   'admin.profile.avatarHint': 'PNG, JPEG ou WebP. Taille recommandée : 200x200px.',
   'admin.profile.saveButton': 'Enregistrer le profil',
+  'admin.profile.displayNamePlaceholder': 'Comment vous appelez-vous ?',
 
   // ─── Erreurs API ──────────────────────────────────────────────────────────────
   'api.error.createBook': 'Impossible de créer le livre',

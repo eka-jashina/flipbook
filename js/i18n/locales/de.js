@@ -419,6 +419,12 @@ export default {
   'admin.album.photosWillDelete_one': 'wird {{count}} Foto gelöscht',
   'admin.album.photosWillDelete_other': 'werden {{count}} Fotos gelöscht',
   'admin.album.confirmContinue': 'Fortfahren?',
+  'admin.album.titleLabel': 'Titel (für das Inhaltsverzeichnis)',
+  'admin.album.titlePlaceholder': 'Illustrationen',
+  'admin.album.hideTitle': 'Titel auf der Seite ausblenden',
+  'admin.album.hideTitleHint': 'Der Titel wird nur im Inhaltsverzeichnis angezeigt',
+  'admin.album.addPage': '+ Seite hinzufügen',
+  'admin.album.uploadPhotos': 'Fotos hochladen',
 
   // ─── Admin: Buch hochladen ─────────────────────────────────────────────────
   'admin.upload.unsupported': 'Nicht unterstütztes Format. Unterstützt werden: {{formats}}',
@@ -442,6 +448,10 @@ export default {
   'admin.saveError': 'Fehler beim Speichern',
   'admin.newBook': 'Neues Buch',
   'admin.albumBook': 'Fotoalbum',
+  'admin.badge': 'Konto',
+  'admin.back': 'Zurück',
+  'admin.tabsAria': 'Kontoabschnitte',
+  'admin.editorTabsAria': 'Bucheditor-Abschnitte',
 
   // ─── Admin: Navigation ─────────────────────────────────────────────────────
   'admin.tabs.myBooks': 'Meine Bücher',
@@ -495,6 +505,7 @@ export default {
   'admin.profile.avatarUpload': 'Foto hochladen',
   'admin.profile.avatarHint': 'PNG, JPEG oder WebP. Empfohlene Größe: 200×200px.',
   'admin.profile.saveButton': 'Profil speichern',
+  'admin.profile.displayNamePlaceholder': 'Wie heißen Sie?',
 
   // ─── API-Fehler ────────────────────────────────────────────────────────────
   'api.error.createBook': 'Buch konnte nicht erstellt werden',

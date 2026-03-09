@@ -17,6 +17,7 @@
  *   4. Экспорт     — Config export/import
  */
 
+import { t } from '@i18n';
 import { ServerAdminConfigStore } from '../admin/ServerAdminConfigStore.js';
 import { AdminConfigStore } from '../admin/AdminConfigStore.js';
 import { ChaptersModule } from '../admin/modules/ChaptersModule.js';
@@ -360,7 +361,7 @@ export class AccountScreen {
       case 'manual': {
         const created = await this.store.addBook({
           id: `book_${Date.now()}`,
-          cover: { title: 'Новая книга', author: '', bg: '', bgMobile: '' },
+          cover: { title: t('admin.newBook'), author: '', bg: '', bgMobile: '' },
           chapters: [],
         });
         const bookId = created?.id || `book_${Date.now()}`;
@@ -373,7 +374,7 @@ export class AccountScreen {
       case 'album': {
         const albumCreated = await this.store.addBook({
           id: `book_${Date.now()}`,
-          cover: { title: 'Фотоальбом', author: '', bg: '', bgMobile: '' },
+          cover: { title: t('admin.albumBook'), author: '', bg: '', bgMobile: '' },
           chapters: [],
         });
         const albumBookId = albumCreated?.id || `book_${Date.now()}`;
@@ -390,7 +391,7 @@ export class AccountScreen {
   /** Открыть редактор для текущей активной книги */
   async openEditor() {
     const cover = await this.store.getCover();
-    this.editorTitle.textContent = cover.title || 'Редактор книги';
+    this.editorTitle.textContent = cover.title || t('admin.bookEditor');
     this._switchEditorTab('cover');
     this._showView('editor');
   }
@@ -444,7 +445,7 @@ export class AccountScreen {
     const chapters = await this.store.getChapters();
     const cover = await this.store.getCover();
     const isUnchanged = chapters.length === 0
-      && (cover.title === 'Новая книга' || cover.title === 'Фотоальбом')
+      && (cover.title === t('admin.newBook') || cover.title === t('admin.albumBook'))
       && !cover.author;
 
     if (isUnchanged) {

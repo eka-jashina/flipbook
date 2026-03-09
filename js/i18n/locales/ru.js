@@ -421,6 +421,12 @@ export default {
   'admin.album.photosWillDelete_few': 'будут удалены {{count}} фото',
   'admin.album.photosWillDelete_many': 'будут удалены {{count}} фото',
   'admin.album.confirmContinue': 'Продолжить?',
+  'admin.album.titleLabel': 'Название (для оглавления)',
+  'admin.album.titlePlaceholder': 'Иллюстрации',
+  'admin.album.hideTitle': 'Скрыть заголовок на странице',
+  'admin.album.hideTitleHint': 'Заголовок будет виден только в оглавлении',
+  'admin.album.addPage': '+ Добавить страницу',
+  'admin.album.uploadPhotos': 'Загрузить фото',
 
   // ─── Админ: Загрузка книги ──────────────────────────────────────────────────
   'admin.upload.unsupported': 'Неподдерживаемый формат. Поддерживаются: {{formats}}',
@@ -444,6 +450,10 @@ export default {
   'admin.saveError': 'Ошибка сохранения',
   'admin.newBook': 'Новая книга',
   'admin.albumBook': 'Фотоальбом',
+  'admin.badge': 'Личный кабинет',
+  'admin.back': 'Назад',
+  'admin.tabsAria': 'Разделы личного кабинета',
+  'admin.editorTabsAria': 'Разделы редактора книги',
 
   // ─── Админ: Навигация ───────────────────────────────────────────────────────
   'admin.tabs.myBooks': 'Мои книги',
@@ -497,6 +507,7 @@ export default {
   'admin.profile.avatarUpload': 'Загрузить фото',
   'admin.profile.avatarHint': 'PNG, JPEG или WebP. Рекомендуемый размер: 200×200px.',
   'admin.profile.saveButton': 'Сохранить профиль',
+  'admin.profile.displayNamePlaceholder': 'Как вас зовут?',
 
   // ─── API ошибки ─────────────────────────────────────────────────────────────
   'api.error.createBook': 'Не удалось создать книгу',
