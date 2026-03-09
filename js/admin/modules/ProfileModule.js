@@ -181,8 +181,8 @@ export class ProfileModule extends BaseModule {
 
     try {
       const result = await this._api.uploadImage(file);
-      this._pendingAvatarUrl = result.url;
-      this._renderAvatarPreview(result.url);
+      this._pendingAvatarUrl = result.fileUrl;
+      this._renderAvatarPreview(result.fileUrl);
       this._renderProfilePreview();
     } catch {
       this._showToast('Ошибка загрузки аватара', 'error');
