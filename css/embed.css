@@ -91,23 +91,26 @@ body.embed-mode .book-wrap {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  font-size: 13px;
-  color: var(--text-secondary, #888);
+  padding: 8px 14px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: inherit;
   text-decoration: none;
-  border-radius: 6px;
-  transition: background-color 0.15s, color 0.15s;
+  background: var(--pod-btn-bg);
+  border: var(--pod-border);
+  border-radius: 20px;
+  transition: all 0.2s ease;
   cursor: pointer;
 }
 
 .reader-author-info:hover {
-  background-color: var(--bg-hover, rgb(0 0 0 / 0.05));
-  color: var(--text-primary, #333);
+  color: var(--pod-btn-color-hover, inherit);
+  background: var(--pod-btn-bg-hover);
+  transform: scale(1.02);
 }
 
 .reader-author-info svg {
   flex-shrink: 0;
-  opacity: 0.6;
 }
 
 .reader-author-name {
@@ -125,22 +128,23 @@ body.embed-mode .book-wrap {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  font-size: 13px;
-  color: var(--text-secondary, #888);
-  background: none;
-  border: none;
-  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: inherit;
+  background: var(--pod-btn-bg);
+  border: var(--pod-border);
+  border-radius: 20px;
+  transition: all 0.2s ease;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
 }
 
 .reader-edit-btn:hover {
-  background-color: var(--bg-hover, rgb(0 0 0 / 0.05));
-  color: var(--text-primary, #333);
+  color: var(--pod-btn-color-hover, inherit);
+  background: var(--pod-btn-bg-hover);
+  transform: scale(1.02);
 }
 
 .reader-edit-btn svg {
   flex-shrink: 0;
-  opacity: 0.6;
 }
