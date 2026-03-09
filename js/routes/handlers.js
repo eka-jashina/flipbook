@@ -218,7 +218,7 @@ export async function handlePublicShelf({ username }) {
       const data = await ctx.apiClient.getPublicShelf(username);
       await screenTransition('to-shelf', () => {
         cleanupReader(); cleanupLanding(); cleanupBookshelf(); hideAccount();
-        showBookshelf(data.books || [], { mode: 'guest', profileUser: data.user || { username } });
+        showBookshelf(data.books || [], { mode: 'guest', profileUser: data.author || { username } });
       });
     } catch (err) {
       if (err.status === 404) {
