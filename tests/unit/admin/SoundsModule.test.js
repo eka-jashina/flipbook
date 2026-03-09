@@ -9,11 +9,11 @@ import { SoundsModule } from '../../../js/admin/modules/SoundsModule.js';
 function createMockApp() {
   return {
     store: {
-      getSounds: vi.fn(() => ({
+      getSounds: vi.fn().mockResolvedValue({
         pageFlip: 'sounds/page-flip.mp3',
         bookOpen: 'sounds/cover-flip.mp3',
         bookClose: 'sounds/cover-flip.mp3',
-      })),
+      }),
       updateSounds: vi.fn(),
     },
     _showToast: vi.fn(),
@@ -68,29 +68,29 @@ describe('SoundsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_renderSounds()', () => {
-    it('should populate inputs with store sounds', () => {
-      mod._renderSounds();
+    it('should populate inputs with store sounds', async () => {
+      await mod._renderSounds();
 
       expect(mod._fields.pageFlip.value).toBe('sounds/page-flip.mp3');
       expect(mod._fields.bookOpen.value).toBe('sounds/cover-flip.mp3');
       expect(mod._fields.bookClose.value).toBe('sounds/cover-flip.mp3');
     });
 
-    it('should show default hint for file paths', () => {
-      mod._renderSounds();
+    it('should show default hint for file paths', async () => {
+      await mod._renderSounds();
 
       expect(mod._hints.pageFlip.textContent).toBe('Дефолт: sounds/page-flip.mp3');
       expect(mod._hints.bookOpen.textContent).toBe('Дефолт: sounds/cover-flip.mp3');
     });
 
-    it('should show "Загруженный файл" hint for data URLs', () => {
-      app.store.getSounds.mockReturnValue({
+    it('should show "Загруженный файл" hint for data URLs', async () => {
+      app.store.getSounds.mockResolvedValue({
         pageFlip: 'data:audio/mp3;base64,abc',
         bookOpen: 'sounds/cover-flip.mp3',
         bookClose: 'sounds/cover-flip.mp3',
       });
 
-      mod._renderSounds();
+      await mod._renderSounds();
 
       expect(mod._fields.pageFlip.value).toBe('');
       expect(mod._hints.pageFlip.textContent).toBe('Загруженный файл');
@@ -160,12 +160,12 @@ describe('SoundsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_saveSounds()', () => {
-    it('should save input values to store', () => {
+    it('should save input values to store', async () => {
       mod._fields.pageFlip.value = 'custom/flip.mp3';
       mod._fields.bookOpen.value = 'custom/open.mp3';
       mod._fields.bookClose.value = '';
 
-      mod._saveSounds();
+      await mod._saveSounds();
 
       expect(app.store.updateSounds).toHaveBeenCalledWith({
         pageFlip: 'custom/flip.mp3',
@@ -175,12 +175,12 @@ describe('SoundsModule', () => {
       expect(app._showToast).toHaveBeenCalledWith('Звуки сохранены');
     });
 
-    it('should keep current values for empty inputs', () => {
+    it('should keep current values for empty inputs', async () => {
       mod._fields.pageFlip.value = '';
       mod._fields.bookOpen.value = '';
       mod._fields.bookClose.value = '';
 
-      mod._saveSounds();
+      await mod._saveSounds();
 
       expect(app.store.updateSounds).toHaveBeenCalledWith({
         pageFlip: 'sounds/page-flip.mp3',
@@ -195,8 +195,8 @@ describe('SoundsModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_resetSounds()', () => {
-    it('should reset to default sound paths', () => {
-      mod._resetSounds();
+    it('should reset to default sound paths', async () => {
+      await mod._resetSounds();
 
       expect(app.store.updateSounds).toHaveBeenCalledWith({
         pageFlip: 'sounds/page-flip.mp3',

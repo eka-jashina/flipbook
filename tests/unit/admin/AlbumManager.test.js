@@ -1515,7 +1515,7 @@ describe('AlbumManager', () => {
   // ─────────────────────────────────────────────────────────────────────────
 
   describe('openForEdit()', () => {
-    it('should load album data from chapter', () => {
+    it('should load album data from chapter', async () => {
       const chapters = [
         {
           id: 'album_1',
@@ -1526,9 +1526,9 @@ describe('AlbumManager', () => {
           },
         },
       ];
-      mockModule.store.getChapters = vi.fn(() => chapters);
+      mockModule.store.getChapters = vi.fn().mockResolvedValue(chapters);
 
-      manager.openForEdit(0);
+      await manager.openForEdit(0);
 
       expect(manager.albumTitleInput.value).toBe('My Album');
       expect(manager.albumHideTitle.checked).toBe(false);
@@ -1537,22 +1537,22 @@ describe('AlbumManager', () => {
       expect(manager._editingChapterIndex).toBe(0);
     });
 
-    it('should not proceed if chapter has no albumData', () => {
-      mockModule.store.getChapters = vi.fn(() => [{ id: 'ch', file: 'f.html' }]);
+    it('should not proceed if chapter has no albumData', async () => {
+      mockModule.store.getChapters = vi.fn().mockResolvedValue([{ id: 'ch', file: 'f.html' }]);
 
-      manager.openForEdit(0);
+      await manager.openForEdit(0);
 
       expect(manager._albumPages).toEqual([]);
     });
 
-    it('should deep clone album pages', () => {
+    it('should deep clone album pages', async () => {
       const origPages = [makePage('1', [makeImage()])];
-      mockModule.store.getChapters = vi.fn(() => [{
+      mockModule.store.getChapters = vi.fn().mockResolvedValue([{
         id: 'album_1',
         albumData: { title: 'A', hideTitle: true, pages: origPages },
       }]);
 
-      manager.openForEdit(0);
+      await manager.openForEdit(0);
 
       manager._albumPages[0].layout = '4';
       expect(origPages[0].layout).toBe('1');
@@ -1735,9 +1735,9 @@ describe('AlbumManager', () => {
   // ─────────────────────────────────────────────────────────────────────────
 
   describe('_handleAlbumSubmit() — edit mode', () => {
-    it('should update existing chapter instead of adding', () => {
+    it('should update existing chapter instead of adding', async () => {
       mockModule.store.updateChapter = vi.fn();
-      mockModule.store.getChapters = vi.fn(() => [{
+      mockModule.store.getChapters = vi.fn().mockResolvedValue([{
         id: 'album_1', file: '', htmlContent: '<old>', bg: 'bg.webp', bgMobile: 'bgm.webp',
         albumData: { title: 'Old', pages: [] },
       }]);
@@ -1746,7 +1746,7 @@ describe('AlbumManager', () => {
       manager._albumPages = [makePage('1', [makeImage()])];
       manager.albumTitleInput.value = 'Updated Album';
 
-      manager._handleAlbumSubmit();
+      await manager._handleAlbumSubmit();
 
       expect(mockModule.store.updateChapter).toHaveBeenCalledWith(
         0,

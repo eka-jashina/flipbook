@@ -17,7 +17,7 @@ describe('ServerAdminConfigStore', () => {
 
   function createMockApi() {
     return {
-      getBooks: vi.fn().mockResolvedValue([...mockBooks]),
+      getBooks: vi.fn().mockResolvedValue({ books: [...mockBooks] }),
       createBook: vi.fn().mockResolvedValue({ id: 'b3', title: 'New', author: '', position: 2 }),
       getBook: vi.fn().mockResolvedValue({
         id: 'b1', title: 'Book 1', author: 'Author 1',
@@ -26,17 +26,17 @@ describe('ServerAdminConfigStore', () => {
       updateBook: vi.fn().mockResolvedValue({ id: 'b1' }),
       deleteBook: vi.fn().mockResolvedValue(null),
       reorderBooks: vi.fn().mockResolvedValue(null),
-      getChapters: vi.fn().mockResolvedValue([
+      getChapters: vi.fn().mockResolvedValue({ chapters: [
         { id: 'c1', title: 'Ch1', position: 0 },
         { id: 'c2', title: 'Ch2', position: 1 },
-      ]),
+      ] }),
       createChapter: vi.fn().mockResolvedValue({ id: 'c3' }),
       updateChapter: vi.fn().mockResolvedValue({ id: 'c1' }),
       deleteChapter: vi.fn().mockResolvedValue(null),
       reorderChapters: vi.fn().mockResolvedValue(null),
-      getAmbients: vi.fn().mockResolvedValue([
+      getAmbients: vi.fn().mockResolvedValue({ ambients: [
         { id: 'a1', label: 'Rain', position: 0 },
-      ]),
+      ] }),
       createAmbient: vi.fn().mockResolvedValue({ id: 'a2' }),
       updateAmbient: vi.fn().mockResolvedValue({}),
       deleteAmbient: vi.fn().mockResolvedValue(null),
@@ -48,9 +48,9 @@ describe('ServerAdminConfigStore', () => {
       getDecorativeFont: vi.fn().mockResolvedValue(null),
       setDecorativeFont: vi.fn().mockResolvedValue({}),
       deleteDecorativeFont: vi.fn().mockResolvedValue(null),
-      getFonts: vi.fn().mockResolvedValue([
+      getFonts: vi.fn().mockResolvedValue({ fonts: [
         { id: 'f1', label: 'Georgia', family: 'Georgia, serif', position: 0 },
-      ]),
+      ] }),
       createFont: vi.fn().mockResolvedValue({ id: 'f2' }),
       updateFont: vi.fn().mockResolvedValue({}),
       deleteFont: vi.fn().mockResolvedValue(null),
@@ -81,7 +81,7 @@ describe('ServerAdminConfigStore', () => {
     });
 
     it('should handle empty books list', async () => {
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
       const emptyStore = await ServerAdminConfigStore.create(mockApi);
 
       expect(emptyStore.getActiveBookId()).toBeNull();

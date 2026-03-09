@@ -9,7 +9,7 @@ import { AppearanceModule } from '../../../js/admin/modules/AppearanceModule.js'
 function createMockApp() {
   return {
     store: {
-      getAppearance: vi.fn(() => ({
+      getAppearance: vi.fn().mockResolvedValue({
         fontMin: 14,
         fontMax: 22,
         light: {
@@ -32,10 +32,10 @@ function createMockApp() {
           bgPage: '#1e1e1e',
           bgApp: '#121212',
         },
-      })),
+      }),
       updateAppearanceGlobal: vi.fn(),
       updateAppearanceTheme: vi.fn(),
-      getCover: vi.fn(() => ({ title: 'О хоббитах', author: 'Толкин' })),
+      getCover: vi.fn().mockResolvedValue({ title: 'О хоббитах', author: 'Толкин' }),
     },
     _showToast: vi.fn(),
     _escapeHtml: vi.fn((s) => s),
@@ -111,8 +111,8 @@ describe('AppearanceModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_renderAppearance()', () => {
-    it('should populate global font range fields', () => {
-      mod._renderAppearance();
+    it('should populate global font range fields', async () => {
+      await mod._renderAppearance();
 
       expect(mod.fontMin.value).toBe('14');
       expect(mod.fontMinValue.textContent).toBe('14px');
@@ -120,8 +120,8 @@ describe('AppearanceModule', () => {
       expect(mod.fontMaxValue.textContent).toBe('22px');
     });
 
-    it('should load light theme fields by default', () => {
-      mod._renderAppearance();
+    it('should load light theme fields by default', async () => {
+      await mod._renderAppearance();
 
       expect(mod.coverBgStart.value).toBe('#3a2d1f');
       expect(mod.coverBgEnd.value).toBe('#2a2016');
@@ -134,23 +134,23 @@ describe('AppearanceModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_switchEditTheme()', () => {
-    it('should save current theme and switch to dark', () => {
-      mod._switchEditTheme('dark');
+    it('should save current theme and switch to dark', async () => {
+      await mod._switchEditTheme('dark');
 
       expect(mod._editTheme).toBe('dark');
       expect(app.store.updateAppearanceTheme).toHaveBeenCalledWith('light', expect.any(Object));
     });
 
-    it('should load dark theme fields after switching', () => {
-      mod._switchEditTheme('dark');
+    it('should load dark theme fields after switching', async () => {
+      await mod._switchEditTheme('dark');
 
       expect(mod.coverBgStart.value).toBe('#111111');
       expect(mod.coverBgEnd.value).toBe('#000000');
       expect(mod.coverText.value).toBe('#eaeaea');
     });
 
-    it('should toggle active class on theme buttons', () => {
-      mod._switchEditTheme('dark');
+    it('should toggle active class on theme buttons', async () => {
+      await mod._switchEditTheme('dark');
 
       const lightBtn = document.querySelector('[data-edit-theme="light"]');
       const darkBtn = document.querySelector('[data-edit-theme="dark"]');
@@ -158,8 +158,8 @@ describe('AppearanceModule', () => {
       expect(darkBtn.classList.contains('active')).toBe(true);
     });
 
-    it('should toggle active class on single theme switch', () => {
-      mod._switchEditTheme('dark');
+    it('should toggle active class on single theme switch', async () => {
+      await mod._switchEditTheme('dark');
 
       const btns = document.querySelectorAll('#appearanceThemeSwitch .appearance-theme-btn');
       expect(btns[0].classList.contains('active')).toBe(false);
@@ -172,25 +172,25 @@ describe('AppearanceModule', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_updateAppearancePreview()', () => {
-    it('should set gradient background and text color', () => {
+    it('should set gradient background and text color', async () => {
       mod.coverBgStart.value = '#ff0000';
       mod.coverBgEnd.value = '#0000ff';
       mod.coverText.value = '#ffffff';
 
-      mod._updateAppearancePreview();
+      await mod._updateAppearancePreview();
 
       expect(mod.coverTextPreview.style.background).toContain('linear-gradient');
       expect(mod.coverTextPreview.style.color).toBe('rgb(255, 255, 255)');
     });
 
-    it('should show book title in preview', () => {
-      mod._updateAppearancePreview();
+    it('should show book title in preview', async () => {
+      await mod._updateAppearancePreview();
       expect(mod.coverTextPreview.textContent).toBe('О хоббитах');
     });
 
-    it('should show fallback text if no title', () => {
-      app.store.getCover.mockReturnValue({ title: '', author: '' });
-      mod._updateAppearancePreview();
+    it('should show fallback text if no title', async () => {
+      app.store.getCover.mockResolvedValue({ title: '', author: '' });
+      await mod._updateAppearancePreview();
       expect(mod.coverTextPreview.textContent).toBe('Заголовок');
     });
   });

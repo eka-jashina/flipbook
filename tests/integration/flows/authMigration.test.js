@@ -33,14 +33,14 @@ describe('Auth + Migration Integration', () => {
     getMe: vi.fn().mockResolvedValue(null), // 401 by default
     login: vi.fn().mockResolvedValue(mockUser),
     register: vi.fn().mockResolvedValue(mockUser),
-    getBooks: vi.fn().mockResolvedValue([]),
+    getBooks: vi.fn().mockResolvedValue({ books: [] }),
     getBook: vi.fn(),
     createBook: vi.fn(),
     deleteBook: vi.fn(),
     importConfig: vi.fn().mockResolvedValue({ success: true }),
     exportConfig: vi.fn(),
     getSettings: vi.fn().mockResolvedValue(null),
-    getFonts: vi.fn().mockResolvedValue([]),
+    getFonts: vi.fn().mockResolvedValue({ fonts: [] }),
     ...overrides,
   });
 
@@ -231,7 +231,7 @@ describe('Auth + Migration Integration', () => {
 
   describe('MigrationHelper: local data migration', () => {
     it('should skip migration when server has books', async () => {
-      mockApi.getBooks.mockResolvedValue([{ id: 'server-book-1', title: 'Existing' }]);
+      mockApi.getBooks.mockResolvedValue({ books: [{ id: 'server-book-1', title: 'Existing' }] });
       localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(createLocalConfig()));
 
       const migration = new MigrationHelper(mockApi);
@@ -244,7 +244,7 @@ describe('Auth + Migration Integration', () => {
     });
 
     it('should skip migration when no local data exists', async () => {
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
 
       const migration = new MigrationHelper(mockApi);
       const result = await migration.checkAndMigrate();
@@ -254,7 +254,7 @@ describe('Auth + Migration Integration', () => {
     });
 
     it('should skip migration for default book without chapters', async () => {
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
       localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify({
         books: [{ id: 'default', chapters: [] }],
       }));
@@ -269,7 +269,7 @@ describe('Auth + Migration Integration', () => {
     });
 
     it('should import local data to server when user confirms', async () => {
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
       const config = createLocalConfig();
       localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
       localStorage.setItem('reader-settings:book-local-1', JSON.stringify({ page: 5 }));
@@ -299,7 +299,7 @@ describe('Auth + Migration Integration', () => {
     });
 
     it('should clear local data when user declines migration', async () => {
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
       localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(createLocalConfig()));
       localStorage.setItem('reader-settings:book-local-1', JSON.stringify({ page: 5 }));
 
@@ -317,7 +317,7 @@ describe('Auth + Migration Integration', () => {
     });
 
     it('should preserve local data when import fails', async () => {
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
       localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(createLocalConfig()));
 
       vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -332,7 +332,7 @@ describe('Auth + Migration Integration', () => {
     });
 
     it('should convert local config to correct import format', async () => {
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
       const config = createLocalConfig();
       localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
 
@@ -447,8 +447,8 @@ describe('Auth + Migration Integration', () => {
         { id: 'srv-1', title: 'Мой роман', author: 'Автор', chaptersCount: 2 },
       ];
       mockApi.getBooks
-        .mockResolvedValueOnce([])  // First call: migration check (empty)
-        .mockResolvedValueOnce(serverBooks); // Second call: load bookshelf
+        .mockResolvedValueOnce({ books: [] })  // First call: migration check (empty)
+        .mockResolvedValueOnce({ books: serverBooks }); // Second call: load bookshelf
 
       vi.spyOn(window, 'confirm').mockReturnValue(true);
 
@@ -501,7 +501,7 @@ describe('Auth + Migration Integration', () => {
 
     it('should handle new user: login → no migration → empty bookshelf', async () => {
       // No local data, server empty
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
 
       // Auth
       let authUser = null;
@@ -547,7 +547,7 @@ describe('Auth + Migration Integration', () => {
         { id: 'b1', title: 'Book 1', author: 'Author 1', chaptersCount: 3 },
         { id: 'b2', title: 'Book 2', author: 'Author 2', chaptersCount: 5 },
       ];
-      mockApi.getBooks.mockResolvedValue(serverBooks);
+      mockApi.getBooks.mockResolvedValue({ books: serverBooks });
 
       // Auth
       let authUser = null;
@@ -599,7 +599,7 @@ describe('Auth + Migration Integration', () => {
 
   describe('Edge cases', () => {
     it('should handle corrupted localStorage during migration', async () => {
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
       localStorage.setItem(ADMIN_CONFIG_KEY, '{corrupted-json');
 
       const migration = new MigrationHelper(mockApi);
@@ -611,7 +611,7 @@ describe('Auth + Migration Integration', () => {
     });
 
     it('should clear sessionStorage keys during migration cleanup', async () => {
-      mockApi.getBooks.mockResolvedValue([{ id: 'b1' }]);
+      mockApi.getBooks.mockResolvedValue({ books: [{ id: 'b1' }] });
       sessionStorage.setItem('flipbook-reading-session', '1');
       sessionStorage.setItem('flipbook-admin-mode', 'edit');
       sessionStorage.setItem('flipbook-admin-edit-book', 'book-1');
@@ -625,7 +625,7 @@ describe('Auth + Migration Integration', () => {
     });
 
     it('should clear multiple reader-settings keys', async () => {
-      mockApi.getBooks.mockResolvedValue([{ id: 'b1' }]);
+      mockApi.getBooks.mockResolvedValue({ books: [{ id: 'b1' }] });
       localStorage.setItem('reader-settings', JSON.stringify({ page: 0 }));
       localStorage.setItem('reader-settings:book-1', JSON.stringify({ page: 5 }));
       localStorage.setItem('reader-settings:book-2', JSON.stringify({ page: 10 }));
@@ -641,7 +641,7 @@ describe('Auth + Migration Integration', () => {
     });
 
     it('should handle multi-book local config with appearance themes', async () => {
-      mockApi.getBooks.mockResolvedValue([]);
+      mockApi.getBooks.mockResolvedValue({ books: [] });
       vi.spyOn(window, 'confirm').mockReturnValue(true);
 
       const config = createLocalConfig();
