@@ -39,6 +39,25 @@ export function initRouteHandlers(appContext) {
   ctx = appContext;
 }
 
+// ─── Переходы между экранами ─────────────────────────────────────────────────
+
+/**
+ * Выполнить смену экрана с плавным переходом (View Transitions API).
+ * Fallback: мгновенная смена для неподдерживаемых браузеров.
+ * @param {string} vtName - Имя перехода (to-landing, to-shelf, to-reader, to-account)
+ * @param {Function} callback - DOM-мутации (cleanup + show)
+ */
+function screenTransition(vtName, callback) {
+  if ('startViewTransition' in document) {
+    document.documentElement.dataset.vt = vtName;
+    const vt = document.startViewTransition(() => callback());
+    vt.finished.finally(() => delete document.documentElement.dataset.vt);
+    return vt.updateCallbackDone;
+  }
+  callback();
+  return Promise.resolve();
+}
+
 // ─── Утилиты экранов ────────────────────────────────────────────────────────
 
 function cleanupReader() {
@@ -100,6 +119,19 @@ function setupBackToShelfButton() {
   });
 }
 
+async function handleLogout() {
+  try {
+    await ctx.apiClient.logout();
+  } catch (err) {
+    console.error('Ошибка при выходе:', err);
+  }
+  ctx.setCurrentUser(null);
+  await screenTransition('to-landing', () => {
+    cleanupReader(); cleanupBookshelf(); hideAccount();
+  });
+  ctx.router.navigate('/', { replace: true });
+}
+
 function showBookshelf(books, { mode = 'owner', profileUser } = {}) {
   const container = document.getElementById('bookshelf-screen');
   if (!container) return;
@@ -111,9 +143,12 @@ function showBookshelf(books, { mode = 'owner', profileUser } = {}) {
       if (ctx.router) ctx.router.navigate(`/book/${bookId}`);
       else location.reload();
     },
+    onLogout: ctx.useAPI ? handleLogout : undefined,
   });
   ctx.state.bookshelf.render();
-  ctx.state.bookshelf.show();
+  // show() без View Transitions — переход управляется screenTransition()
+  container.hidden = false;
+  document.body.dataset.screen = 'bookshelf';
 }
 
 function showLanding() {
@@ -145,34 +180,46 @@ function showLanding() {
 
 /** Маршрут: / → Лендинг (гости) или redirect на /:username (авторизованные) */
 export async function handleHome() {
-  cleanupReader(); cleanupLanding(); cleanupBookshelf(); hideAccount();
-
   if (ctx.useAPI && ctx.currentUser?.username) {
+    cleanupReader(); cleanupLanding(); cleanupBookshelf(); hideAccount();
     ctx.router.navigate(`/${ctx.currentUser.username}`, { replace: true });
   } else if (ctx.useAPI && ctx.currentUser) {
-    // Авторизован, но без username — загружаем книги через API
     const books = await loadBooksFromAPI(ctx.apiClient);
-    showBookshelf(books);
+    await screenTransition('to-shelf', () => {
+      cleanupReader(); cleanupLanding(); cleanupBookshelf(); hideAccount();
+      showBookshelf(books);
+    });
   } else if (ctx.useAPI && !ctx.currentUser) {
-    showLanding();
+    await screenTransition('to-landing', () => {
+      cleanupReader(); cleanupLanding(); cleanupBookshelf(); hideAccount();
+      showLanding();
+    });
   } else {
     const { books } = getBookshelfData();
-    showBookshelf(books);
+    await screenTransition('to-shelf', () => {
+      cleanupReader(); cleanupLanding(); cleanupBookshelf(); hideAccount();
+      showBookshelf(books);
+    });
   }
 }
 
 /** Маршрут: /:username → Публичная полка автора */
 export async function handlePublicShelf({ username }) {
-  cleanupReader(); cleanupLanding(); cleanupBookshelf(); hideAccount();
   const isOwner = ctx.currentUser?.username === username;
 
   if (isOwner) {
     const books = await loadBooksFromAPI(ctx.apiClient);
-    showBookshelf(books, { mode: 'owner', profileUser: ctx.currentUser });
+    await screenTransition('to-shelf', () => {
+      cleanupReader(); cleanupLanding(); cleanupBookshelf(); hideAccount();
+      showBookshelf(books, { mode: 'owner', profileUser: ctx.currentUser });
+    });
   } else {
     try {
       const data = await ctx.apiClient.getPublicShelf(username);
-      showBookshelf(data.books || [], { mode: 'guest', profileUser: data.user || { username } });
+      await screenTransition('to-shelf', () => {
+        cleanupReader(); cleanupLanding(); cleanupBookshelf(); hideAccount();
+        showBookshelf(data.books || [], { mode: 'guest', profileUser: data.user || { username } });
+      });
     } catch (err) {
       if (err.status === 404) {
         ctx.router.navigate('/', { replace: true });
@@ -186,9 +233,11 @@ export async function handlePublicShelf({ username }) {
 
 /** Маршрут: /book/:bookId → Показать ридер */
 export async function handleReader({ bookId }) {
-  cleanupLanding(); cleanupBookshelf(); cleanupReader(); hideAccount();
-  document.body.dataset.screen = 'reader';
-  document.body.dataset.hasBookshelf = 'true';
+  await screenTransition('to-reader', () => {
+    cleanupLanding(); cleanupBookshelf(); cleanupReader(); hideAccount();
+    document.body.dataset.screen = 'reader';
+    document.body.dataset.hasBookshelf = 'true';
+  });
   setupBackToShelfButton();
 
   if (ctx.useAPI) {
@@ -204,8 +253,10 @@ export async function handleReader({ bookId }) {
 
 /** Маршрут: /embed/:bookId → Встраиваемый ридер */
 export async function handleEmbed({ bookId }) {
-  cleanupLanding(); cleanupBookshelf(); cleanupReader(); hideAccount();
-  document.body.dataset.screen = 'reader';
+  await screenTransition('to-reader', () => {
+    cleanupLanding(); cleanupBookshelf(); cleanupReader(); hideAccount();
+    document.body.dataset.screen = 'reader';
+  });
 
   if (ctx.useAPI) {
     await initReaderWithMode(bookId, 'embed');
@@ -225,8 +276,6 @@ export async function handleAccount() {
     return;
   }
 
-  cleanupReader(); cleanupLanding(); cleanupBookshelf();
-
   const query = ctx.router.getCurrentRoute()?.query || new URLSearchParams(location.search);
   const tab = query.get('tab') || 'books';
   const editBookId = query.get('edit');
@@ -237,7 +286,11 @@ export async function handleAccount() {
     ctx.state.accountScreen = new AccountScreen({ apiClient: ctx.apiClient, router: ctx.router, currentUser: ctx.currentUser });
     await ctx.state.accountScreen.init();
   }
-  await ctx.state.accountScreen.show(tab, { editBookId, mode });
+
+  await screenTransition('to-account', () => {
+    cleanupReader(); cleanupLanding(); cleanupBookshelf();
+    ctx.state.accountScreen.show(tab, { editBookId, mode });
+  });
 }
 
 // ─── Инициализация ридера ───────────────────────────────────────────────────

@@ -13,11 +13,13 @@ export class ProfileHeader {
    * @param {Object} options.user - Данные пользователя { username, displayName, bio }
    * @param {boolean} options.isOwner - Это хозяин профиля?
    * @param {Function} [options.onEditProfile] - Колбэк при клике «Редактировать профиль»
+   * @param {Function} [options.onLogout] - Колбэк при клике «Выйти»
    */
-  constructor({ user, isOwner, onEditProfile }) {
+  constructor({ user, isOwner, onEditProfile, onLogout }) {
     this._user = user;
     this._isOwner = isOwner;
     this._onEditProfile = onEditProfile;
+    this._onLogout = onLogout;
     this._el = null;
   }
 
@@ -39,6 +41,12 @@ export class ProfileHeader {
       if (editBtn) {
         editBtn.addEventListener('click', () => {
           if (this._onEditProfile) this._onEditProfile();
+        });
+      }
+      const logoutBtn = el.querySelector('.profile-header-logout');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          if (this._onLogout) this._onLogout();
         });
       }
     }
@@ -78,8 +86,12 @@ export class ProfileHeader {
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
             <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
           </svg>
-          Редактировать профиль
-        </button>` : ''}
+          <span data-i18n="bookshelf.editProfile">Редактировать профиль</span>
+        </button>
+        ${this._onLogout ? `
+        <button type="button" class="profile-header-logout" data-i18n="bookshelf.logout">
+          Выйти
+        </button>` : ''}` : ''}
     `;
   }
 

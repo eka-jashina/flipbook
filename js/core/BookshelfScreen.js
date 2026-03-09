@@ -45,9 +45,10 @@ export class BookshelfScreen {
    * @param {'owner'|'guest'} [options.mode='owner'] - Режим отображения
    * @param {Object} [options.profileUser] - Данные профиля для шапки { username, displayName, bio }
    * @param {Function} [options.onEditProfile] - Колбэк при клике «Редактировать профиль»
+   * @param {Function} [options.onLogout] - Колбэк при клике «Выйти»
    * @param {import('../utils/Router.js').Router} [options.router] - SPA-роутер
    */
-  constructor({ container, books, onBookSelect, apiClient, mode = 'owner', profileUser, onEditProfile, router }) {
+  constructor({ container, books, onBookSelect, apiClient, mode = 'owner', profileUser, onEditProfile, onLogout, router }) {
     this.container = container;
     this.books = books;
     this.onBookSelect = onBookSelect;
@@ -55,6 +56,7 @@ export class BookshelfScreen {
     this._mode = mode;
     this._profileUser = profileUser || null;
     this._onEditProfile = onEditProfile;
+    this._onLogout = onLogout;
     this._router = router || null;
     this._boundHandleClick = this._handleClick.bind(this);
     this._profileHeader = null;
@@ -89,6 +91,7 @@ export class BookshelfScreen {
         onEditProfile: this._onEditProfile || (isOwner && this._router
           ? () => this._router.navigate('/account?tab=profile')
           : undefined),
+        onLogout: isOwner ? this._onLogout : undefined,
       });
       this._profileHeader.render(this.container);
     }
@@ -128,35 +131,19 @@ export class BookshelfScreen {
   }
 
   /**
-   * Показать экран
+   * Показать экран.
+   * View Transitions управляются централизованно в route handlers.
    */
   show() {
-    if ('startViewTransition' in document) {
-      document.documentElement.dataset.vt = 'to-shelf';
-      const t = document.startViewTransition(() => {
-        this.container.hidden = false;
-        document.body.dataset.screen = 'bookshelf';
-      });
-      t.finished.finally(() => delete document.documentElement.dataset.vt);
-    } else {
-      this.container.hidden = false;
-      document.body.dataset.screen = 'bookshelf';
-    }
+    this.container.hidden = false;
+    document.body.dataset.screen = 'bookshelf';
   }
 
   /**
    * Скрыть экран
    */
   hide() {
-    if ('startViewTransition' in document) {
-      document.documentElement.dataset.vt = 'to-reader';
-      const t = document.startViewTransition(() => {
-        document.body.dataset.screen = 'reader';
-      });
-      t.finished.finally(() => delete document.documentElement.dataset.vt);
-    } else {
-      document.body.dataset.screen = 'reader';
-    }
+    document.body.dataset.screen = 'reader';
   }
 
   /**

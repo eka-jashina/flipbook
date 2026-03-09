@@ -81,6 +81,8 @@ export default {
   'bookshelf.booksCount_one': '{{count}} книга',
   'bookshelf.booksCount_few': '{{count}} книги',
   'bookshelf.booksCount_many': '{{count}} книг',
+  'bookshelf.editProfile': 'Редактировать профиль',
+  'bookshelf.logout': 'Выйти',
 
   // ─── Авторизация ────────────────────────────────────────────────────────────
   'auth.loginTitle': 'Вход',
