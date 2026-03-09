@@ -18,6 +18,7 @@ export default {
   'common.copy': 'Копировать',
   'common.saved': 'Сохранено',
   'common.confirmation': 'Подтверждение',
+  'common.back': 'Назад',
 
   // ─── Ридер ──────────────────────────────────────────────────────────────────
   'reader.bookControl': 'Управление книгой',
@@ -421,6 +422,12 @@ export default {
   'admin.album.photosWillDelete_few': 'будут удалены {{count}} фото',
   'admin.album.photosWillDelete_many': 'будут удалены {{count}} фото',
   'admin.album.confirmContinue': 'Продолжить?',
+  'admin.album.titleLabel': 'Название (для оглавления)',
+  'admin.album.titlePlaceholder': 'Иллюстрации',
+  'admin.album.hideTitleLabel': 'Скрыть заголовок на странице',
+  'admin.album.hideTitleHint': 'Заголовок будет виден только в оглавлении',
+  'admin.album.addPage': '+ Добавить страницу',
+  'admin.album.bulkUpload': 'Загрузить фото',
 
   // ─── Админ: Загрузка книги ──────────────────────────────────────────────────
   'admin.upload.unsupported': 'Неподдерживаемый формат. Поддерживаются: {{formats}}',
@@ -441,6 +448,7 @@ export default {
   'admin.mode.albumDesc': 'Раскладки, фото, подписи — визуальный редактор',
 
   // ─── Админ: Общее ──────────────────────────────────────────────────────────
+  'admin.badge': 'Личный кабинет',
   'admin.saveError': 'Ошибка сохранения',
   'admin.newBook': 'Новая книга',
   'admin.albumBook': 'Фотоальбом',
@@ -496,6 +504,8 @@ export default {
   'admin.profile.avatarLabel': 'Аватар',
   'admin.profile.avatarUpload': 'Загрузить фото',
   'admin.profile.avatarHint': 'PNG, JPEG или WebP. Рекомендуемый размер: 200×200px.',
+  'admin.profile.displayNamePlaceholder': 'Как вас зовут?',
+  'admin.profile.avatarRemove': 'Удалить',
   'admin.profile.saveButton': 'Сохранить профиль',
 
   // ─── API ошибки ─────────────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ export default {
   'common.copy': 'Copier',
   'common.saved': 'Enregistré',
   'common.confirmation': 'Confirmation',
+  'common.back': 'Retour',
 
   // ─── Lecteur ──────────────────────────────────────────────────────────────────
   'reader.bookControl': 'Contrôle du livre',
@@ -419,6 +420,12 @@ export default {
   'admin.album.photosWillDelete_one': '{{count}} photo sera supprimée',
   'admin.album.photosWillDelete_other': '{{count}} photos seront supprimées',
   'admin.album.confirmContinue': 'Continuer ?',
+  'admin.album.titleLabel': 'Titre (pour la table des matières)',
+  'admin.album.titlePlaceholder': 'Illustrations',
+  'admin.album.hideTitleLabel': 'Masquer le titre sur la page',
+  'admin.album.hideTitleHint': 'Le titre ne sera visible que dans la table des matières',
+  'admin.album.addPage': '+ Ajouter une page',
+  'admin.album.bulkUpload': 'Télécharger des photos',
 
   // ─── Admin : Téléchargement de livre ──────────────────────────────────────────
   'admin.upload.unsupported': 'Format non pris en charge. Formats acceptés : {{formats}}',
@@ -439,6 +446,7 @@ export default {
   'admin.mode.albumDesc': 'Mises en page, photos, légendes — éditeur visuel',
 
   // ─── Admin : Général ──────────────────────────────────────────────────────────
+  'admin.badge': 'Compte',
   'admin.saveError': 'Erreur d\'enregistrement',
   'admin.newBook': 'Nouveau livre',
   'admin.albumBook': 'Album photo',
@@ -494,6 +502,8 @@ export default {
   'admin.profile.avatarLabel': 'Avatar',
   'admin.profile.avatarUpload': 'Télécharger une photo',
   'admin.profile.avatarHint': 'PNG, JPEG ou WebP. Taille recommandée : 200x200px.',
+  'admin.profile.displayNamePlaceholder': 'Quel est votre nom ?',
+  'admin.profile.avatarRemove': 'Supprimer',
   'admin.profile.saveButton': 'Enregistrer le profil',
 
   // ─── Erreurs API ──────────────────────────────────────────────────────────────

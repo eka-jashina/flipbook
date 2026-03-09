@@ -18,6 +18,7 @@ export default {
   'common.copy': 'Copy',
   'common.saved': 'Saved',
   'common.confirmation': 'Confirmation',
+  'common.back': 'Back',
 
   // ─── Reader ──────────────────────────────────────────────────────────────────
   'reader.bookControl': 'Book controls',
@@ -419,6 +420,12 @@ export default {
   'admin.album.photosWillDelete_one': 'will delete {{count}} photo',
   'admin.album.photosWillDelete_other': 'will delete {{count}} photos',
   'admin.album.confirmContinue': 'Continue?',
+  'admin.album.titleLabel': 'Title (for table of contents)',
+  'admin.album.titlePlaceholder': 'Illustrations',
+  'admin.album.hideTitleLabel': 'Hide title on page',
+  'admin.album.hideTitleHint': 'Title will only be visible in the table of contents',
+  'admin.album.addPage': '+ Add page',
+  'admin.album.bulkUpload': 'Upload photos',
 
   // ─── Admin: Book Upload ────────────────────────────────────────────────────────
   'admin.upload.unsupported': 'Unsupported format. Supported: {{formats}}',
@@ -439,6 +446,7 @@ export default {
   'admin.mode.albumDesc': 'Layouts, photos, captions — visual editor',
 
   // ─── Admin: General ──────────────────────────────────────────────────────────
+  'admin.badge': 'Account',
   'admin.saveError': 'Save error',
   'admin.newBook': 'New Book',
   'admin.albumBook': 'Photo Album',
@@ -494,6 +502,8 @@ export default {
   'admin.profile.avatarLabel': 'Avatar',
   'admin.profile.avatarUpload': 'Upload photo',
   'admin.profile.avatarHint': 'PNG, JPEG, or WebP. Recommended size: 200x200px.',
+  'admin.profile.displayNamePlaceholder': 'What is your name?',
+  'admin.profile.avatarRemove': 'Remove',
   'admin.profile.saveButton': 'Save profile',
 
   // ─── API Errors ──────────────────────────────────────────────────────────────
