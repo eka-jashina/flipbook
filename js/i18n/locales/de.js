@@ -450,6 +450,10 @@ export default {
   'admin.saveError': 'Fehler beim Speichern',
   'admin.newBook': 'Neues Buch',
   'admin.albumBook': 'Fotoalbum',
+  'admin.badge': 'Konto',
+  'admin.back': 'Zurück',
+  'admin.tabsAria': 'Kontoabschnitte',
+  'admin.editorTabsAria': 'Bucheditor-Abschnitte',
 
   // ─── Admin: Navigation ─────────────────────────────────────────────────────
   'admin.tabs.myBooks': 'Meine Bücher',
@@ -505,6 +509,7 @@ export default {
   'admin.profile.displayNamePlaceholder': 'Wie heißen Sie?',
   'admin.profile.avatarRemove': 'Entfernen',
   'admin.profile.saveButton': 'Profil speichern',
+  'admin.profile.displayNamePlaceholder': 'Wie heißen Sie?',
 
   // ─── API-Fehler ────────────────────────────────────────────────────────────
   'api.error.createBook': 'Buch konnte nicht erstellt werden',

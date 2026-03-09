@@ -450,6 +450,10 @@ export default {
   'admin.saveError': 'Error al guardar',
   'admin.newBook': 'Nuevo libro',
   'admin.albumBook': 'Álbum de fotos',
+  'admin.badge': 'Cuenta',
+  'admin.back': 'Atrás',
+  'admin.tabsAria': 'Secciones de la cuenta',
+  'admin.editorTabsAria': 'Secciones del editor de libros',
 
   // ─── Admin: Navegación ────────────────────────────────────────────────────
   'admin.tabs.myBooks': 'Mis libros',
@@ -505,6 +509,7 @@ export default {
   'admin.profile.displayNamePlaceholder': '¿Cómo se llama?',
   'admin.profile.avatarRemove': 'Eliminar',
   'admin.profile.saveButton': 'Guardar perfil',
+  'admin.profile.displayNamePlaceholder': '¿Cómo te llamas?',
 
   // ─── Errores de API ───────────────────────────────────────────────────────
   'api.error.createBook': 'No se pudo crear el libro',

@@ -450,6 +450,10 @@ export default {
   'admin.saveError': 'Save error',
   'admin.newBook': 'New Book',
   'admin.albumBook': 'Photo Album',
+  'admin.badge': 'Account',
+  'admin.back': 'Back',
+  'admin.tabsAria': 'Account sections',
+  'admin.editorTabsAria': 'Book editor sections',
 
   // ─── Admin: Navigation ────────────────────────────────────────────────────────
   'admin.tabs.myBooks': 'My Books',
@@ -505,6 +509,7 @@ export default {
   'admin.profile.displayNamePlaceholder': 'What is your name?',
   'admin.profile.avatarRemove': 'Remove',
   'admin.profile.saveButton': 'Save profile',
+  'admin.profile.displayNamePlaceholder': 'What\'s your name?',
 
   // ─── API Errors ──────────────────────────────────────────────────────────────
   'api.error.createBook': 'Failed to create book',
