@@ -302,7 +302,7 @@ export class AccountScreen {
     for (const m of this._modules) {
       await m.render();
     }
-    if (this._profile) this._profile.render();
+    if (this._profile) await this._profile.render();
   }
 
   _renderJsonPreview() {

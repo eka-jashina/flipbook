@@ -57,9 +57,24 @@ export class ProfileModule extends BaseModule {
     this._saveBtn.addEventListener('click', () => this._save());
   }
 
-  render() {
+  async render() {
     if (!this._currentUser) return;
     this._pendingAvatarUrl = undefined;
+
+    // Загрузить актуальные данные профиля с сервера
+    try {
+      const profile = await this._api.getProfile();
+      if (profile) {
+        Object.assign(this._currentUser, {
+          username: profile.username ?? this._currentUser.username,
+          displayName: profile.displayName ?? null,
+          bio: profile.bio ?? null,
+          avatarUrl: profile.avatarUrl ?? null,
+        });
+      }
+    } catch {
+      // Если запрос не удался — используем локальные данные
+    }
 
     const { username, displayName, bio, avatarUrl } = this._currentUser;
 

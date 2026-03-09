@@ -16,6 +16,7 @@ declare global {
       displayName: string | null;
       avatarUrl: string | null;
       username: string | null;
+      bio: string | null;
       googleId: string | null;
       hasPassword: boolean;
     }
@@ -29,6 +30,7 @@ function toSessionUser(dbUser: {
   displayName: string | null;
   avatarUrl: string | null;
   username: string | null;
+  bio: string | null;
   googleId: string | null;
   passwordHash: string | null;
 }): Express.User {
@@ -38,6 +40,7 @@ function toSessionUser(dbUser: {
     displayName: dbUser.displayName,
     avatarUrl: dbUser.avatarUrl,
     username: dbUser.username,
+    bio: dbUser.bio,
     googleId: dbUser.googleId,
     hasPassword: dbUser.passwordHash !== null,
   };
@@ -63,6 +66,7 @@ export function configurePassport(): void {
           displayName: true,
           avatarUrl: true,
           username: true,
+          bio: true,
           googleId: true,
           passwordHash: true,
         },
