@@ -1,7 +1,7 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import viteCompression from 'vite-plugin-compression';
+import { compression } from 'vite-plugin-compression2';
 import { ViteImageOptimizer } from 'vite-plugin-image-optimizer';
 import autoprefixer from 'autoprefixer';
 import mobileBackgrounds from './vite-plugin-mobile-backgrounds.js';
@@ -73,43 +73,19 @@ export default defineConfig(({ command, mode }) => {
           main: resolve(__dirname, 'index.html'),
         },
         output: {
-          manualChunks: {
-            'utils': [
-              './js/utils/CSSVariables.js',
-              './js/utils/MediaQueryManager.js',
-              './js/utils/EventEmitter.js',
-              './js/utils/EventListenerManager.js',
-              './js/utils/TimerManager.js',
-              './js/utils/LRUCache.js',
-              './js/utils/TransitionHelper.js',
-              './js/utils/HTMLSanitizer.js',
-              './js/utils/ErrorHandler.js',
-              './js/utils/StorageManager.js',
-            ],
-            'managers': [
-              './js/managers/BookStateMachine.js',
-              './js/managers/SettingsManager.js',
-              './js/managers/BackgroundManager.js',
-              './js/managers/ContentLoader.js',
-              './js/managers/AsyncPaginator.js',
-            ],
-            'delegates': [
-              './js/core/delegates/NavigationDelegate.js',
-              './js/core/delegates/SettingsDelegate.js',
-              './js/core/delegates/FontController.js',
-              './js/core/delegates/AudioController.js',
-              './js/core/delegates/ThemeController.js',
-              './js/core/delegates/LifecycleDelegate.js',
-              './js/core/delegates/ChapterDelegate.js',
-              './js/core/delegates/DragDelegate.js',
-              './js/core/delegates/DragDOMPreparer.js',
-            ],
-            'account': [
-              './js/core/AccountScreen.js',
-              './js/admin/ServerAdminConfigStore.js',
-              './js/admin/AdminConfigStore.js',
-              './js/admin/modules/ProfileModule.js',
-            ],
+          manualChunks(id) {
+            if (/js\/utils\/(CSSVariables|MediaQueryManager|EventEmitter|EventListenerManager|TimerManager|LRUCache|TransitionHelper|HTMLSanitizer|ErrorHandler|StorageManager)\.js/.test(id)) {
+              return 'utils';
+            }
+            if (/js\/managers\/(BookStateMachine|SettingsManager|BackgroundManager|ContentLoader|AsyncPaginator)\.js/.test(id)) {
+              return 'managers';
+            }
+            if (/js\/core\/delegates\/(NavigationDelegate|SettingsDelegate|FontController|AudioController|ThemeController|LifecycleDelegate|ChapterDelegate|DragDelegate|DragDOMPreparer)\.js/.test(id)) {
+              return 'delegates';
+            }
+            if (/js\/(core\/AccountScreen|admin\/ServerAdminConfigStore|admin\/AdminConfigStore|admin\/modules\/ProfileModule)\.js/.test(id)) {
+              return 'account';
+            }
           },
           
           entryFileNames: 'assets/js/[name]-[hash].js',
@@ -224,24 +200,16 @@ export default defineConfig(({ command, mode }) => {
         },
       }),
 
-      // Gzip сжатие
-      viteCompression({
-        verbose: true,
-        disable: false,
+      // Gzip + Brotli сжатие
+      compression({
         threshold: 10240,
         algorithm: 'gzip',
-        ext: '.gz',
-        deleteOriginFile: false,
+        exclude: [/\.(br|gz)$/],
       }),
-
-      // Brotli сжатие
-      viteCompression({
-        verbose: true,
-        disable: false,
+      compression({
         threshold: 10240,
         algorithm: 'brotliCompress',
-        ext: '.br',
-        deleteOriginFile: false,
+        exclude: [/\.(br|gz)$/],
       }),
 
       // Оптимизация изображений (Sharp + SVGO)
