@@ -70,6 +70,7 @@ export default {
   'bookshelf.emptyGuest': 'Книг пока нет',
   'bookshelf.menuRead': 'Читать',
   'bookshelf.menuEdit': 'Редактировать',
+  'bookshelf.menuVisibility': 'Видимость',
   'bookshelf.menuPublish': 'Опубликовать',
   'bookshelf.menuDelete': 'Удалить',
   'bookshelf.visibilityDraft': 'Черновик',

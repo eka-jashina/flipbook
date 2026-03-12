@@ -3,7 +3,7 @@
  * Использует HTML <template> элементы для создания DOM.
  */
 import { t } from '@i18n';
-import { BOOKS_PER_SHELF, VISIBILITY_NEXT, visibilityLabel } from './bookshelfUtils.js';
+import { BOOKS_PER_SHELF, visibilityLabel } from './bookshelfUtils.js';
 
 export class BookCardRenderer {
   /**
@@ -109,11 +109,9 @@ export class BookCardRenderer {
       menuItems.forEach(item => {
         item.dataset.bookId = book.id;
       });
-      const visLabel = frag.querySelector('[data-visibility-label]');
-      if (visLabel) {
-        const nextVis = VISIBILITY_NEXT[visibility];
-        visLabel.textContent = visibilityLabel(nextVis);
-      }
+      // Отметить текущую видимость
+      const activeVis = frag.querySelector(`[data-visibility="${visibility}"]`);
+      if (activeVis) activeVis.classList.add('is-active');
     } else {
       const menu = frag.querySelector('.bookshelf-book-menu');
       if (menu) menu.remove();
