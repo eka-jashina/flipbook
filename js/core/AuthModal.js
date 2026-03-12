@@ -7,6 +7,7 @@
  * Поток: GET /api/auth/me → 401 → модалка → 200 → bookshelf с книгами.
  */
 
+import { t, applyTranslations } from '@i18n';
 import { trackGuestRegistered } from '../utils/Analytics.js';
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9-]{2,39}$/;
@@ -89,11 +90,16 @@ export class AuthModal {
    */
   _applyMode(root) {
     const isLogin = this._mode === 'login';
-    const modal = root.querySelector('.auth-modal');
-    modal.setAttribute('aria-label', isLogin ? 'Вход' : 'Регистрация');
 
-    root.querySelector('.auth-modal-title').textContent = isLogin ? 'Вход' : 'Регистрация';
-    root.querySelector('.auth-modal-subtitle').textContent = isLogin ? 'Войдите в свой аккаунт' : 'Создайте новый аккаунт';
+    // Обновить data-i18n атрибуты для режимо-зависимых элементов
+    const modal = root.querySelector('.auth-modal');
+    modal.setAttribute('data-i18n-aria-label', isLogin ? 'auth.loginTitle' : 'auth.registerTitle');
+
+    const title = root.querySelector('.auth-modal-title');
+    title.setAttribute('data-i18n', isLogin ? 'auth.loginTitle' : 'auth.registerTitle');
+
+    const subtitle = root.querySelector('.auth-modal-subtitle');
+    subtitle.setAttribute('data-i18n', isLogin ? 'auth.loginSubtitle' : 'auth.registerSubtitle');
 
     // Поля только для регистрации
     for (const field of root.querySelectorAll('[data-register-only]')) {
@@ -102,14 +108,21 @@ export class AuthModal {
 
     // Пароль: разный placeholder и autocomplete
     const pwd = root.querySelector('#auth-password');
-    pwd.placeholder = isLogin ? 'Ваш пароль' : 'Минимум 8 символов';
+    pwd.setAttribute('data-i18n-placeholder', isLogin ? 'auth.passwordLoginPlaceholder' : 'auth.passwordRegisterPlaceholder');
     pwd.autocomplete = isLogin ? 'current-password' : 'new-password';
 
-    root.querySelector('.auth-submit').textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
+    const submit = root.querySelector('.auth-submit');
+    submit.setAttribute('data-i18n', isLogin ? 'auth.loginButton' : 'auth.registerButton');
 
     // Текст переключения режима
-    root.querySelector('.auth-switch-text').textContent = isLogin ? 'Нет аккаунта?' : 'Уже есть аккаунт?';
-    root.querySelector('.auth-switch-btn').textContent = isLogin ? 'Зарегистрироваться' : 'Войти';
+    const switchText = root.querySelector('.auth-switch-text');
+    switchText.setAttribute('data-i18n', isLogin ? 'auth.noAccountQuestion' : 'auth.hasAccountQuestion');
+
+    const switchBtn = root.querySelector('.auth-switch-btn');
+    switchBtn.setAttribute('data-i18n', isLogin ? 'auth.switchToRegister' : 'auth.switchToLogin');
+
+    // Применить переводы к обновлённым data-i18n атрибутам
+    applyTranslations(modal);
   }
 
   // ═══════════════════════════════════════════
@@ -159,28 +172,28 @@ export class AuthModal {
 
     // Клиентская валидация
     if (!email) {
-      this._showError(errorEl, 'Введите email');
+      this._showError(errorEl, t('auth.emailRequired'));
       return;
     }
     if (password.length < 8) {
-      this._showError(errorEl, 'Пароль должен содержать минимум 8 символов');
+      this._showError(errorEl, t('auth.passwordLength'));
       return;
     }
     if (this._mode === 'register') {
       const username = this._el.querySelector('#auth-username')?.value.trim();
       if (!username || !USERNAME_RE.test(username)) {
-        this._showError(errorEl, 'Имя пользователя: латиница, цифры, дефис, 3-40 символов');
+        this._showError(errorEl, t('auth.usernameInvalid'));
         return;
       }
       if (!this._usernameAvailable) {
-        this._showError(errorEl, 'Имя пользователя недоступно');
+        this._showError(errorEl, t('auth.usernameUnavailable'));
         return;
       }
     }
 
     // Блокируем кнопку
     submitBtn.disabled = true;
-    submitBtn.textContent = this._mode === 'login' ? 'Вход...' : 'Регистрация...';
+    submitBtn.textContent = this._mode === 'login' ? t('auth.loginLoading') : t('auth.registerLoading');
     errorEl.hidden = true;
 
     try {
@@ -196,9 +209,9 @@ export class AuthModal {
       this.hide();
       if (this._onAuth) this._onAuth(user);
     } catch (err) {
-      this._showError(errorEl, err.message || 'Произошла ошибка');
+      this._showError(errorEl, err.message || t('auth.genericError'));
       submitBtn.disabled = false;
-      submitBtn.textContent = this._mode === 'login' ? 'Войти' : 'Зарегистрироваться';
+      submitBtn.textContent = this._mode === 'login' ? t('auth.loginButton') : t('auth.registerButton');
     }
   }
 
@@ -221,11 +234,11 @@ export class AuthModal {
     }
 
     if (!USERNAME_RE.test(value)) {
-      this._showUsernameStatus(validationEl, 'Некорректный формат', 'error');
+      this._showUsernameStatus(validationEl, t('auth.usernameInvalidFormat'), 'error');
       return;
     }
 
-    this._showUsernameStatus(validationEl, 'Проверяю...', 'neutral');
+    this._showUsernameStatus(validationEl, t('auth.usernameChecking'), 'neutral');
     clearTimeout(this._checkTimer);
     this._checkTimer = setTimeout(() => this._checkUsername(value), CHECK_DEBOUNCE);
   }
@@ -244,13 +257,13 @@ export class AuthModal {
 
       if (result.available) {
         this._usernameAvailable = true;
-        this._showUsernameStatus(validationEl, 'Доступен', 'success');
+        this._showUsernameStatus(validationEl, t('auth.usernameAvailable'), 'success');
       } else {
         this._usernameAvailable = false;
-        this._showUsernameStatus(validationEl, 'Уже занят', 'error');
+        this._showUsernameStatus(validationEl, t('auth.usernameUnavailable'), 'error');
       }
     } catch {
-      this._showUsernameStatus(validationEl, 'Ошибка проверки', 'error');
+      this._showUsernameStatus(validationEl, t('auth.usernameCheckError'), 'error');
     }
   }
 
