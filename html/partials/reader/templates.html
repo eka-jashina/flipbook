@@ -70,36 +70,36 @@
 
     <!-- Модалка аутентификации (логин / регистрация) -->
     <template id="tmpl-auth-modal">
-      <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Вход">
-        <button type="button" class="auth-close-btn" aria-label="Закрыть" data-action="close">&times;</button>
+      <div class="auth-modal" role="dialog" aria-modal="true" data-i18n-aria-label="auth.loginTitle">
+        <button type="button" class="auth-close-btn" data-i18n-aria-label="auth.close" aria-label="Закрыть" data-action="close">&times;</button>
         <div class="auth-modal-header">
-          <h2 class="auth-modal-title">Вход</h2>
-          <p class="auth-modal-subtitle">Войдите в свой аккаунт</p>
+          <h2 class="auth-modal-title" data-i18n="auth.loginTitle">Вход</h2>
+          <p class="auth-modal-subtitle" data-i18n="auth.loginSubtitle">Войдите в свой аккаунт</p>
         </div>
         <form class="auth-form" novalidate>
           <div class="auth-field" data-register-only hidden>
-            <label for="auth-username" class="auth-label">Имя пользователя <span class="auth-required">*</span></label>
-            <input type="text" id="auth-username" class="auth-input" placeholder="my-name" autocomplete="username" required
+            <label for="auth-username" class="auth-label"><span data-i18n="auth.usernameLabel">Имя пользователя</span> <span class="auth-required">*</span></label>
+            <input type="text" id="auth-username" class="auth-input" data-i18n-placeholder="auth.usernamePlaceholder" placeholder="my-name" autocomplete="username" required
               pattern="^[a-z0-9][a-z0-9-]{2,39}$" minlength="3" maxlength="40">
-            <span class="auth-hint">Латиница, цифры, дефис. От 3 до 40 символов. Нельзя изменить позже.</span>
+            <span class="auth-hint" data-i18n="auth.usernameHintFull">Латиница, цифры, дефис. От 3 до 40 символов. Нельзя изменить позже.</span>
             <span class="auth-username-validation" id="auth-username-validation" hidden></span>
           </div>
           <div class="auth-field" data-register-only hidden>
-            <label for="auth-name" class="auth-label">Отображаемое имя</label>
-            <input type="text" id="auth-name" class="auth-input" placeholder="Ваше имя" autocomplete="name">
+            <label for="auth-name" class="auth-label" data-i18n="auth.displayNameLabel">Отображаемое имя</label>
+            <input type="text" id="auth-name" class="auth-input" data-i18n-placeholder="auth.displayNamePlaceholder" placeholder="Ваше имя" autocomplete="name">
           </div>
           <div class="auth-field">
-            <label for="auth-email" class="auth-label">Email</label>
-            <input type="email" id="auth-email" class="auth-input" placeholder="email@example.com" autocomplete="email" required>
+            <label for="auth-email" class="auth-label" data-i18n="auth.emailLabel">Email</label>
+            <input type="email" id="auth-email" class="auth-input" data-i18n-placeholder="auth.emailPlaceholder" placeholder="email@example.com" autocomplete="email" required>
           </div>
           <div class="auth-field">
-            <label for="auth-password" class="auth-label">Пароль</label>
-            <input type="password" id="auth-password" class="auth-input" placeholder="Ваш пароль" autocomplete="current-password" required minlength="8">
+            <label for="auth-password" class="auth-label" data-i18n="auth.passwordLabel">Пароль</label>
+            <input type="password" id="auth-password" class="auth-input" data-i18n-placeholder="auth.passwordLoginPlaceholder" placeholder="Ваш пароль" autocomplete="current-password" required minlength="8">
           </div>
           <div class="auth-error" id="auth-error" hidden></div>
-          <button type="submit" class="auth-submit">Войти</button>
+          <button type="submit" class="auth-submit" data-i18n="auth.loginButton">Войти</button>
         </form>
-        <div class="auth-divider"><span>или</span></div>
+        <div class="auth-divider"><span data-i18n="auth.or">или</span></div>
         <a href="/api/auth/google" class="auth-google-btn">
           <svg class="auth-google-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -107,11 +107,11 @@
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
-          Войти через Google
+          <span data-i18n="auth.googleButton">Войти через Google</span>
         </a>
         <div class="auth-switch">
-          <span class="auth-switch-text">Нет аккаунта?</span>
-          <button type="button" class="auth-switch-btn" data-action="switch">Зарегистрироваться</button>
+          <span class="auth-switch-text" data-i18n="auth.noAccountQuestion">Нет аккаунта?</span>
+          <button type="button" class="auth-switch-btn" data-i18n="auth.switchToRegister" data-action="switch">Зарегистрироваться</button>
         </div>
       </div>
     </template>
