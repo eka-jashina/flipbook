@@ -1,10 +1,12 @@
 /**
  * Операции с книгами на полке (API + localStorage)
- * Переключение видимости, удаление книг.
+ * Установка видимости, удаление книг.
  */
 import { adminConfigStorage } from '../config/configHelpers.js';
 import { t } from '@i18n';
 import { VISIBILITY_NEXT } from './bookshelfUtils.js';
+
+const VALID_VISIBILITY = new Set(Object.keys(VISIBILITY_NEXT));
 
 /**
  * Переключить видимость книги (draft → published → unlisted → draft)
@@ -20,10 +22,29 @@ export async function toggleVisibility(bookId, books, apiClient) {
   const currentVis = book.visibility || 'draft';
   const nextVis = VISIBILITY_NEXT[currentVis] || 'draft';
 
+  return setVisibility(bookId, nextVis, books, apiClient);
+}
+
+/**
+ * Установить конкретную видимость книги
+ * @param {string} bookId
+ * @param {'draft'|'published'|'unlisted'} visibility
+ * @param {Array} books - Массив книг (мутируется при успехе)
+ * @param {import('../utils/ApiClient.js').ApiClient|null} apiClient
+ * @returns {Promise<boolean>} true если видимость изменена
+ */
+export async function setVisibility(bookId, visibility, books, apiClient) {
+  if (!VALID_VISIBILITY.has(visibility)) return false;
+
+  const book = books.find(b => b.id === bookId);
+  if (!book) return false;
+
+  if ((book.visibility || 'draft') === visibility) return false;
+
   if (apiClient) {
     try {
-      await apiClient.updateBook(bookId, { visibility: nextVis });
-      book.visibility = nextVis;
+      await apiClient.updateBook(bookId, { visibility });
+      book.visibility = visibility;
       return true;
     } catch (err) {
       console.error('Ошибка смены видимости:', err);

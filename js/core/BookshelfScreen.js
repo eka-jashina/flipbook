@@ -29,7 +29,7 @@
 import { ProfileHeader } from './ProfileHeader.js';
 import { BookCardRenderer } from './BookCardRenderer.js';
 import { BookContextMenu } from './BookContextMenu.js';
-import { toggleVisibility, deleteBook } from './BookOperations.js';
+import { toggleVisibility, setVisibility, deleteBook } from './BookOperations.js';
 import { getDefaultBook, formatBooksCount } from './bookshelfUtils.js';
 import { adminConfigStorage } from '../config/configHelpers.js';
 import { t, applyTranslations } from '@i18n';
@@ -184,8 +184,9 @@ export class BookshelfScreen {
     if (menuItem && this._mode === 'owner') {
       const action = menuItem.dataset.bookAction;
       const bookId = menuItem.dataset.bookId;
+      const visibility = menuItem.dataset.visibility;
       this._closeBookMenu();
-      this._handleBookAction(action, bookId);
+      this._handleBookAction(action, bookId, visibility);
       return;
     }
 
@@ -214,7 +215,7 @@ export class BookshelfScreen {
    * Обработка действия с книгой
    * @private
    */
-  _handleBookAction(action, bookId) {
+  _handleBookAction(action, bookId, visibility) {
     switch (action) {
       case 'read':
         trackBookOpened(bookId);
@@ -231,6 +232,10 @@ export class BookshelfScreen {
         this._handleToggleVisibility(bookId);
         break;
 
+      case 'set-visibility':
+        this._handleSetVisibility(bookId, visibility);
+        break;
+
       case 'delete':
         this._deleteBook(bookId);
         break;
@@ -240,6 +245,15 @@ export class BookshelfScreen {
   /** @private */
   async _handleToggleVisibility(bookId) {
     const changed = await toggleVisibility(bookId, this.books, this._api);
+    if (changed) {
+      this.container.removeEventListener('click', this._boundHandleClick);
+      this.render();
+    }
+  }
+
+  /** @private */
+  async _handleSetVisibility(bookId, visibility) {
+    const changed = await setVisibility(bookId, visibility, this.books, this._api);
     if (changed) {
       this.container.removeEventListener('click', this._boundHandleClick);
       this.render();

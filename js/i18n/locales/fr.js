@@ -70,6 +70,7 @@ export default {
   'bookshelf.emptyGuest': 'Aucun livre pour le moment',
   'bookshelf.menuRead': 'Lire',
   'bookshelf.menuEdit': 'Modifier',
+  'bookshelf.menuVisibility': 'Visibilité',
   'bookshelf.menuPublish': 'Publier',
   'bookshelf.menuDelete': 'Supprimer',
   'bookshelf.visibilityDraft': 'Brouillon',

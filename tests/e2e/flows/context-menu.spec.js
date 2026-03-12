@@ -130,7 +130,7 @@ test.describe('Bookshelf Context Menu', () => {
 
       await expect(page.locator('[data-book-action="read"]').first()).toBeVisible({ timeout: 3000 });
       await expect(page.locator('[data-book-action="edit"]').first()).toBeVisible();
-      await expect(page.locator('[data-book-action="visibility"]').first()).toBeVisible();
+      await expect(page.locator('[data-book-action="set-visibility"]').first()).toBeVisible();
       await expect(page.locator('[data-book-action="delete"]').first()).toBeVisible();
     });
 
@@ -206,7 +206,7 @@ test.describe('Bookshelf Context Menu', () => {
       expect(url).toMatch(/\/account/);
     });
 
-    test('should toggle visibility on "Visibility" action', async ({ page }) => {
+    test('should set visibility on "set-visibility" action', async ({ page }) => {
       const books = [createTestBook('b1', { visibility: 'draft' })];
       await seedAdminConfig(page, buildAdminConfig(books));
       await goToBookshelf(page);
@@ -215,11 +215,16 @@ test.describe('Bookshelf Context Menu', () => {
       await expect(bookBtn).toBeVisible({ timeout: 10000 });
       await bookBtn.click();
 
-      const visBtn = page.locator('[data-book-action="visibility"]').first();
-      await expect(visBtn).toBeVisible({ timeout: 3000 });
-      await visBtn.click();
+      // Draft should be marked as active
+      const draftBtn = page.locator('[data-book-action="set-visibility"][data-visibility="draft"]').first();
+      await expect(draftBtn).toHaveClass(/is-active/, { timeout: 3000 });
 
-      // Visibility should cycle: draft → unlisted (or published)
+      // Click "Published" option
+      const publishBtn = page.locator('[data-book-action="set-visibility"][data-visibility="published"]').first();
+      await expect(publishBtn).toBeVisible({ timeout: 3000 });
+      await publishBtn.click();
+
+      // Visibility should change to published
       await page.waitForTimeout(500);
 
       // Verify config updated
