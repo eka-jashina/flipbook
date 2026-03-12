@@ -84,7 +84,7 @@ export class ApiClient {
    * @throws {ApiError}
    */
   async _fetch(path, options = {}) {
-    const { headers: extraHeaders, body, ...rest } = options;
+    const { headers: extraHeaders, body, suppressUnauthorized, ...rest } = options;
 
     const headers = { ...extraHeaders };
     if (body && !(body instanceof FormData)) {
@@ -116,11 +116,19 @@ export class ApiClient {
     }
 
     // 401 — не авторизован
+    // suppressUnauthorized=true используется для login/register, чтобы не вызывать
+    // _onUnauthorized (который предназначен для истёкших сессий, а не для неверных учётных данных)
     if (response.status === 401) {
-      if (this._onUnauthorized) {
+      let message = 'Необходима авторизация';
+      try {
+        const errorBody = await response.json();
+        if (errorBody?.message) message = errorBody.message;
+      } catch { /* игнорируем ошибки парсинга */ }
+
+      if (this._onUnauthorized && !suppressUnauthorized) {
         this._onUnauthorized();
       }
-      throw new ApiError(401, 'Необходима авторизация');
+      throw new ApiError(401, message);
     }
 
     // 204 No Content
@@ -230,6 +238,7 @@ export class ApiClient {
     const data = await this._fetch('/api/v1/auth/register', {
       method: 'POST',
       body: { email, password, displayName, username },
+      suppressUnauthorized: true,
     });
     return data.user;
   }
@@ -239,6 +248,7 @@ export class ApiClient {
     const data = await this._fetch('/api/v1/auth/login', {
       method: 'POST',
       body: { email, password },
+      suppressUnauthorized: true,
     });
     return data.user;
   }
