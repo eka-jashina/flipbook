@@ -9,6 +9,9 @@
 
 import { trackGuestRegistered } from '../utils/Analytics.js';
 
+const USERNAME_RE = /^[a-z0-9][a-z0-9-]{2,39}$/;
+const CHECK_DEBOUNCE = 400;
+
 export class AuthModal {
   /**
    * @param {Object} options
@@ -23,6 +26,9 @@ export class AuthModal {
     this._mode = 'login'; // 'login' | 'register'
     this._el = null;
     this._boundKeydown = this._onKeydown.bind(this);
+    this._checkTimer = null;
+    this._lastCheckedUsername = null;
+    this._usernameAvailable = false;
   }
 
   /**
@@ -40,6 +46,7 @@ export class AuthModal {
    */
   hide() {
     if (!this._el) return;
+    clearTimeout(this._checkTimer);
     document.removeEventListener('keydown', this._boundKeydown);
     this._el.remove();
     this._el = null;
@@ -131,6 +138,12 @@ export class AuthModal {
     this._el.addEventListener('click', (e) => {
       if (e.target === this._el) this._close();
     });
+
+    // Живая валидация username
+    const usernameInput = this._el.querySelector('#auth-username');
+    if (usernameInput) {
+      usernameInput.addEventListener('input', () => this._onUsernameInput());
+    }
   }
 
   _close() {
@@ -155,8 +168,12 @@ export class AuthModal {
     }
     if (this._mode === 'register') {
       const username = this._el.querySelector('#auth-username')?.value.trim();
-      if (!username || !/^[a-z0-9][a-z0-9-]{2,39}$/.test(username)) {
+      if (!username || !USERNAME_RE.test(username)) {
         this._showError(errorEl, 'Имя пользователя: латиница, цифры, дефис, 3-40 символов');
+        return;
+      }
+      if (!this._usernameAvailable) {
+        this._showError(errorEl, 'Имя пользователя недоступно');
         return;
       }
     }
@@ -183,6 +200,68 @@ export class AuthModal {
       submitBtn.disabled = false;
       submitBtn.textContent = this._mode === 'login' ? 'Войти' : 'Зарегистрироваться';
     }
+  }
+
+  // ═══════════════════════════════════════════
+  // Валидация username
+  // ═══════════════════════════════════════════
+
+  _onUsernameInput() {
+    const input = this._el.querySelector('#auth-username');
+    const value = input.value.trim().toLowerCase();
+    input.value = value;
+    this._usernameAvailable = false;
+
+    const validationEl = this._el.querySelector('#auth-username-validation');
+    if (!validationEl) return;
+
+    if (!value) {
+      this._showUsernameStatus(validationEl, '', 'neutral');
+      return;
+    }
+
+    if (!USERNAME_RE.test(value)) {
+      this._showUsernameStatus(validationEl, 'Некорректный формат', 'error');
+      return;
+    }
+
+    this._showUsernameStatus(validationEl, 'Проверяю...', 'neutral');
+    clearTimeout(this._checkTimer);
+    this._checkTimer = setTimeout(() => this._checkUsername(value), CHECK_DEBOUNCE);
+  }
+
+  async _checkUsername(username) {
+    if (this._lastCheckedUsername === username) return;
+    this._lastCheckedUsername = username;
+
+    const validationEl = this._el?.querySelector('#auth-username-validation');
+    if (!validationEl) return;
+
+    try {
+      const result = await this._api.checkUsernamePublic(username);
+      const input = this._el?.querySelector('#auth-username');
+      if (!input || input.value.trim().toLowerCase() !== username) return;
+
+      if (result.available) {
+        this._usernameAvailable = true;
+        this._showUsernameStatus(validationEl, 'Доступен', 'success');
+      } else {
+        this._usernameAvailable = false;
+        this._showUsernameStatus(validationEl, 'Уже занят', 'error');
+      }
+    } catch {
+      this._showUsernameStatus(validationEl, 'Ошибка проверки', 'error');
+    }
+  }
+
+  _showUsernameStatus(el, text, type) {
+    if (!text) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.textContent = text;
+    el.className = `auth-username-validation auth-username-validation--${type}`;
   }
 
   _showError(el, message) {

@@ -33,6 +33,7 @@ describe('Auth + Migration Integration', () => {
     getMe: vi.fn().mockResolvedValue(null), // 401 by default
     login: vi.fn().mockResolvedValue(mockUser),
     register: vi.fn().mockResolvedValue(mockUser),
+    checkUsernamePublic: vi.fn().mockResolvedValue({ available: true }),
     getBooks: vi.fn().mockResolvedValue({ books: [] }),
     getBook: vi.fn(),
     createBook: vi.fn(),
@@ -98,6 +99,7 @@ describe('Auth + Migration Integration', () => {
             <label for="auth-username" class="auth-label">Имя пользователя</label>
             <input type="text" id="auth-username" class="auth-input" placeholder="my-name" autocomplete="username" required
               pattern="^[a-z0-9][a-z0-9-]{2,39}$" minlength="3" maxlength="40">
+            <span class="auth-username-validation" id="auth-username-validation" hidden></span>
           </div>
           <div class="auth-field" data-register-only hidden>
             <label for="auth-name" class="auth-label">Отображаемое имя</label>
@@ -184,8 +186,19 @@ describe('Auth + Migration Integration', () => {
         expect(document.querySelector('.auth-modal-title').textContent).toBe('Регистрация');
       });
 
-      // Fill register form
-      document.querySelector('#auth-username').value = 'testuser';
+      // Fill register form — trigger input event for username availability check
+      const usernameInput = document.querySelector('#auth-username');
+      usernameInput.value = 'testuser';
+      usernameInput.dispatchEvent(new Event('input'));
+
+      // Wait for username availability check to complete
+      await vi.waitFor(() => {
+        expect(mockApi.checkUsernamePublic).toHaveBeenCalledWith('testuser');
+      });
+      await vi.waitFor(() => {
+        expect(authModal._usernameAvailable).toBe(true);
+      });
+
       document.querySelector('#auth-name').value = 'Test User';
       document.querySelector('#auth-email').value = 'new@test.com';
       document.querySelector('#auth-password').value = 'newpass123';

@@ -150,6 +150,27 @@
   color: var(--auth-text-muted);
 }
 
+.auth-required {
+  color: var(--auth-error-text);
+}
+
+.auth-username-validation {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.auth-username-validation--success {
+  color: #66bb6a;
+}
+
+.auth-username-validation--error {
+  color: var(--auth-error-text);
+}
+
+.auth-username-validation--neutral {
+  color: var(--auth-text-muted);
+}
+
 /* ═══════════════════════════════════════════
    ИНПУТЫ
    ═══════════════════════════════════════════ */

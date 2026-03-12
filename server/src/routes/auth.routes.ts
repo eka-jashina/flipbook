@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import passport from 'passport';
 import { registerUser, formatUser, createPasswordResetToken, resetPasswordWithToken } from '../services/auth.service.js';
+import { isUsernameAvailable } from '../services/profile.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createAuthRateLimiter } from '../middleware/rateLimit.js';
@@ -179,6 +180,19 @@ router.post(
     const { token, password } = req.body;
     await resetPasswordWithToken(token, password);
     ok(res, { message: 'Password has been reset successfully' });
+  }),
+);
+
+/**
+ * GET /api/auth/check-username/:username — Public username availability check (for registration)
+ */
+router.get(
+  '/check-username/:username',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const username = req.params.username as string;
+    const available = await isUsernameAvailable(username);
+    ok(res, { username, available });
   }),
 );
 

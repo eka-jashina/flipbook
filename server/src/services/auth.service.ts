@@ -30,8 +30,8 @@ export const formatUser = mapUserToDto;
 export async function registerUser(
   email: string,
   password: string,
-  displayName?: string,
-  username?: string,
+  displayName: string | undefined,
+  username: string,
 ): Promise<UserResponse> {
   const prisma = getPrisma();
 
@@ -46,14 +46,12 @@ export async function registerUser(
     throw new AppError(409, 'User with this email already exists');
   }
 
-  // Check for existing username
-  if (username) {
-    const existingUsername = await prisma.user.findUnique({
-      where: { username },
-    });
-    if (existingUsername) {
-      throw new AppError(409, 'Username is already taken');
-    }
+  // Check for existing username (always required)
+  const existingUsername = await prisma.user.findUnique({
+    where: { username },
+  });
+  if (existingUsername) {
+    throw new AppError(409, 'Username is already taken');
   }
 
   const passwordHash = await hashPassword(password);
@@ -63,7 +61,7 @@ export async function registerUser(
       email: normalizedEmail,
       passwordHash,
       displayName: displayName || null,
-      username: username || null,
+      username,
     },
   });
 

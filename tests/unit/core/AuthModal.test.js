@@ -28,6 +28,7 @@ describe('AuthModal', () => {
             <input type="text" id="auth-username" class="auth-input" placeholder="my-name" autocomplete="username" required
               pattern="^[a-z0-9][a-z0-9-]{2,39}$" minlength="3" maxlength="40">
             <span class="auth-hint">Латиница, цифры, дефис. От 3 до 40 символов.</span>
+            <span class="auth-username-validation" id="auth-username-validation" hidden></span>
           </div>
           <div class="auth-field" data-register-only hidden>
             <label for="auth-name" class="auth-label">Отображаемое имя</label>
@@ -65,6 +66,7 @@ describe('AuthModal', () => {
     mockApi = {
       login: vi.fn().mockResolvedValue({ id: 1, email: 'test@test.com' }),
       register: vi.fn().mockResolvedValue({ id: 2, email: 'new@test.com' }),
+      checkUsernamePublic: vi.fn().mockResolvedValue({ available: true }),
     };
     onAuth = vi.fn();
     modal = new AuthModal({ apiClient: mockApi, onAuth });
@@ -285,7 +287,18 @@ describe('AuthModal', () => {
       modal.show();
       modal._el.querySelector('[data-action="switch"]').click();
 
-      modal._el.querySelector('#auth-username').value = 'testuser';
+      const usernameInput = modal._el.querySelector('#auth-username');
+      usernameInput.value = 'testuser';
+      usernameInput.dispatchEvent(new Event('input'));
+
+      // Ждём проверки username (debounce + async check)
+      await vi.waitFor(() => {
+        expect(mockApi.checkUsernamePublic).toHaveBeenCalledWith('testuser');
+      });
+      await vi.waitFor(() => {
+        expect(modal._usernameAvailable).toBe(true);
+      });
+
       modal._el.querySelector('#auth-name').value = 'Test User';
       modal._el.querySelector('#auth-email').value = 'new@test.com';
       modal._el.querySelector('#auth-password').value = 'password123';
@@ -335,7 +348,15 @@ describe('AuthModal', () => {
       modal.show();
       modal._el.querySelector('[data-action="switch"]').click();
 
-      modal._el.querySelector('#auth-username').value = 'testuser';
+      const usernameInput = modal._el.querySelector('#auth-username');
+      usernameInput.value = 'testuser';
+      usernameInput.dispatchEvent(new Event('input'));
+
+      // Ждём проверки username
+      await vi.waitFor(() => {
+        expect(modal._usernameAvailable).toBe(true);
+      });
+
       modal._el.querySelector('#auth-name').value = '';
       modal._el.querySelector('#auth-email').value = 'new@test.com';
       modal._el.querySelector('#auth-password').value = 'password123';

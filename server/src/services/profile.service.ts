@@ -33,11 +33,11 @@ export async function getProfile(userId: string): Promise<UserResponse> {
 
 /**
  * Update the current user's profile.
+ * Username cannot be changed after registration.
  */
 export async function updateProfile(
   userId: string,
   data: {
-    username?: string;
     displayName?: string | null;
     bio?: string | null;
     avatarUrl?: string | null;
@@ -45,25 +45,9 @@ export async function updateProfile(
 ): Promise<UserResponse> {
   const prisma = getPrisma();
 
-  // If username is being changed, check availability
-  if (data.username !== undefined) {
-    const available = await isUsernameAvailable(data.username);
-    if (!available) {
-      // Check if user already owns this username
-      const current = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { username: true },
-      });
-      if (current?.username !== data.username) {
-        throw new AppError(409, 'Username is already taken');
-      }
-    }
-  }
-
   const user = await prisma.user.update({
     where: { id: userId },
     data: {
-      ...(data.username !== undefined && { username: data.username }),
       ...(data.displayName !== undefined && { displayName: data.displayName }),
       ...(data.bio !== undefined && { bio: data.bio }),
       ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
