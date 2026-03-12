@@ -128,15 +128,15 @@ router.post('/logout', (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * GET /api/auth/me — Get current authenticated user
+ * GET /api/auth/me — Get current authenticated user (or null for guests)
+ *
+ * Returns 200 with { user: null } when not authenticated — this is intentional.
+ * The endpoint is used as a session probe (SPA auth check), not a protected resource.
+ * Returning 401 would incorrectly imply "access denied" and pollute browser console.
  */
-router.get(
-  '/me',
-  requireAuth,
-  (req: Request, res: Response) => {
-    ok(res, { user: formatUser(req.user!) });
-  },
-);
+router.get('/me', (req: Request, res: Response) => {
+  ok(res, { user: req.isAuthenticated() ? formatUser(req.user!) : null });
+});
 
 /**
  * GET /api/auth/csrf-token — Get CSRF token for SPA
