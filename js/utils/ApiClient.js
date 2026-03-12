@@ -84,7 +84,7 @@ export class ApiClient {
    * @throws {ApiError}
    */
   async _fetch(path, options = {}) {
-    const { headers: extraHeaders, body, ...rest } = options;
+    const { headers: extraHeaders, body, silent, ...rest } = options;
 
     const headers = { ...extraHeaders };
     if (body && !(body instanceof FormData)) {
@@ -117,7 +117,7 @@ export class ApiClient {
 
     // 401 — не авторизован
     if (response.status === 401) {
-      if (this._onUnauthorized) {
+      if (this._onUnauthorized && !silent) {
         this._onUnauthorized();
       }
       throw new ApiError(401, 'Необходима авторизация');
@@ -222,7 +222,7 @@ export class ApiClient {
   /** Получить текущего пользователя (или null если не авторизован) */
   async getMe() {
     try {
-      const data = await this._fetch('/api/v1/auth/me');
+      const data = await this._fetch('/api/v1/auth/me', { silent: true });
       return data.user;
     } catch (err) {
       if (err.status === 401) return null;
