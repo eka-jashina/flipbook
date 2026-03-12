@@ -11,16 +11,11 @@
 
 import { BaseModule } from './BaseModule.js';
 
-const USERNAME_RE = /^[a-z0-9][a-z0-9-]{2,39}$/;
-const CHECK_DEBOUNCE = 400; // мс
-
 export class ProfileModule extends BaseModule {
   constructor(app) {
     super(app);
     this._api = app._api;
     this._currentUser = app._currentUser;
-    this._checkTimer = null;
-    this._lastCheckedUsername = null;
     /** Pending avatar URL (не сохранённый на сервер). null = удалить, undefined = без изменений */
     this._pendingAvatarUrl = undefined;
   }
@@ -41,8 +36,8 @@ export class ProfileModule extends BaseModule {
   }
 
   bindEvents() {
-    // Username — live validation
-    this._usernameInput.addEventListener('input', () => this._onUsernameInput());
+    // Username — read-only (устанавливается при регистрации)
+    this._usernameInput.disabled = true;
 
     // Bio — счётчик символов
     this._bioInput.addEventListener('input', () => {
@@ -90,79 +85,15 @@ export class ProfileModule extends BaseModule {
     // Превью профиля
     this._renderProfilePreview();
 
-    // Скрыть валидацию
+    // Показать подсказку что username нельзя менять
     this._usernameValidation.hidden = true;
+    if (username) {
+      this._usernameHint.textContent = 'Имя пользователя нельзя изменить после регистрации.';
+    }
   }
 
   destroy() {
-    clearTimeout(this._checkTimer);
-  }
-
-  // ═══════════════════════════════════════════
-  // Username validation
-  // ═══════════════════════════════════════════
-
-  _onUsernameInput() {
-    const value = this._usernameInput.value.trim().toLowerCase();
-    this._usernameInput.value = value;
-
-    // Обновить превью
-    this._renderProfilePreview();
-
-    // Базовая валидация формата
-    if (!value) {
-      this._showUsernameStatus('', 'neutral');
-      return;
-    }
-
-    if (!USERNAME_RE.test(value)) {
-      this._showUsernameStatus('Некорректный формат', 'error');
-      return;
-    }
-
-    // Если совпадает с текущим username — ОК
-    if (value === this._currentUser.username) {
-      this._showUsernameStatus('Ваш текущий username', 'success');
-      return;
-    }
-
-    // Debounced проверка на сервере
-    this._showUsernameStatus('Проверяю...', 'neutral');
-    clearTimeout(this._checkTimer);
-    this._checkTimer = setTimeout(() => this._checkUsername(value), CHECK_DEBOUNCE);
-  }
-
-  async _checkUsername(username) {
-    if (this._lastCheckedUsername === username) return;
-    this._lastCheckedUsername = username;
-
-    try {
-      const result = await this._api.checkUsername(username);
-      // Проверить, что инпут не изменился пока шёл запрос
-      if (this._usernameInput.value.trim().toLowerCase() !== username) return;
-
-      if (result.available) {
-        this._showUsernameStatus('Доступен', 'success');
-      } else {
-        this._showUsernameStatus('Уже занят', 'error');
-      }
-    } catch {
-      this._showUsernameStatus('Ошибка проверки', 'error');
-    }
-  }
-
-  /**
-   * @param {string} text
-   * @param {'success'|'error'|'neutral'} type
-   */
-  _showUsernameStatus(text, type) {
-    if (!text) {
-      this._usernameValidation.hidden = true;
-      return;
-    }
-    this._usernameValidation.hidden = false;
-    this._usernameValidation.textContent = text;
-    this._usernameValidation.className = `form-validation form-validation--${type}`;
+    // no-op
   }
 
   // ═══════════════════════════════════════════
@@ -251,21 +182,13 @@ export class ProfileModule extends BaseModule {
   // ═══════════════════════════════════════════
 
   async _save() {
-    const username = this._usernameInput.value.trim().toLowerCase();
     const displayName = this._displayNameInput.value.trim() || null;
     const bio = this._bioInput.value.trim() || null;
     const avatarUrl = this._pendingAvatarUrl !== undefined
       ? this._pendingAvatarUrl
       : (this._currentUser.avatarUrl || null);
 
-    // Валидация username
-    if (username && !USERNAME_RE.test(username)) {
-      this._showToast('Некорректный формат username', 'error');
-      return;
-    }
-
     const data = {};
-    if (username) data.username = username;
     if (displayName !== undefined) data.displayName = displayName;
     if (bio !== undefined) data.bio = bio;
     data.avatarUrl = avatarUrl;

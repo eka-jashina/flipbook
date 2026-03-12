@@ -69,10 +69,11 @@
         </div>
         <form class="auth-form" novalidate>
           <div class="auth-field" data-register-only hidden>
-            <label for="auth-username" class="auth-label">Имя пользователя</label>
+            <label for="auth-username" class="auth-label">Имя пользователя <span class="auth-required">*</span></label>
             <input type="text" id="auth-username" class="auth-input" placeholder="my-name" autocomplete="username" required
               pattern="^[a-z0-9][a-z0-9-]{2,39}$" minlength="3" maxlength="40">
-            <span class="auth-hint">Латиница, цифры, дефис. От 3 до 40 символов.</span>
+            <span class="auth-hint">Латиница, цифры, дефис. От 3 до 40 символов. Нельзя изменить позже.</span>
+            <span class="auth-username-validation" id="auth-username-validation" hidden></span>
           </div>
           <div class="auth-field" data-register-only hidden>
             <label for="auth-name" class="auth-label">Отображаемое имя</label>

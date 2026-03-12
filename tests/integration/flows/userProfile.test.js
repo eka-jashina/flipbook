@@ -138,111 +138,19 @@ describe('User Profile Integration', () => {
       expect(mockApi.getProfile).not.toHaveBeenCalled();
     });
 
-    // ── Username validation ──────────────────────────────────────
+    // ── Username (read-only after registration) ──────────────────
 
-    describe('Username validation', () => {
-      it('should show neutral status for empty input', async () => {
+    describe('Username (read-only)', () => {
+      it('should disable username input', async () => {
         await createModule();
 
-        mod._usernameInput.value = '';
-        mod._usernameInput.dispatchEvent(new Event('input'));
-
-        expect(mod._usernameValidation.hidden).toBe(true);
+        expect(mod._usernameInput.disabled).toBe(true);
       });
 
-      it('should show error for invalid format', async () => {
+      it('should show read-only hint when username is set', async () => {
         await createModule();
 
-        mod._usernameInput.value = 'UPPER!case';
-        mod._usernameInput.dispatchEvent(new Event('input'));
-
-        expect(mod._usernameValidation.hidden).toBe(false);
-        expect(mod._usernameValidation.textContent).toBe('Некорректный формат');
-        expect(mod._usernameValidation.className).toContain('error');
-      });
-
-      it('should show "current username" for matching own username', async () => {
-        await createModule();
-
-        mod._usernameInput.value = 'johndoe';
-        mod._usernameInput.dispatchEvent(new Event('input'));
-
-        expect(mod._usernameValidation.textContent).toBe('Ваш текущий username');
-        expect(mod._usernameValidation.className).toContain('success');
-      });
-
-      it('should debounce server check for new valid username', async () => {
-        await createModule();
-        vi.useFakeTimers();
-
-        mod._usernameInput.value = 'newuser';
-        mod._usernameInput.dispatchEvent(new Event('input'));
-
-        expect(mod._usernameValidation.textContent).toBe('Проверяю...');
-        expect(mockApi.checkUsername).not.toHaveBeenCalled();
-
-        // Advance past debounce (async variant flushes microtasks too)
-        await vi.advanceTimersByTimeAsync(400);
-
-        expect(mockApi.checkUsername).toHaveBeenCalledWith('newuser');
-        expect(mod._usernameValidation.textContent).toBe('Доступен');
-        expect(mod._usernameValidation.className).toContain('success');
-        vi.useRealTimers();
-      });
-
-      it('should show "taken" when username is unavailable', async () => {
-        mockApi.checkUsername.mockResolvedValue({ available: false });
-        await createModule();
-        vi.useFakeTimers();
-
-        mod._usernameInput.value = 'taken';
-        mod._usernameInput.dispatchEvent(new Event('input'));
-
-        await vi.advanceTimersByTimeAsync(400);
-
-        expect(mod._usernameValidation.textContent).toBe('Уже занят');
-        expect(mod._usernameValidation.className).toContain('error');
-        vi.useRealTimers();
-      });
-
-      it('should show error when check request fails', async () => {
-        mockApi.checkUsername.mockRejectedValue(new Error('net'));
-        await createModule();
-        vi.useFakeTimers();
-
-        mod._usernameInput.value = 'failing';
-        mod._usernameInput.dispatchEvent(new Event('input'));
-
-        await vi.advanceTimersByTimeAsync(400);
-
-        expect(mod._usernameValidation.textContent).toBe('Ошибка проверки');
-        vi.useRealTimers();
-      });
-
-      it('should not duplicate server check for same username', async () => {
-        await createModule();
-        vi.useFakeTimers();
-
-        mod._usernameInput.value = 'unique';
-        mod._usernameInput.dispatchEvent(new Event('input'));
-        await vi.advanceTimersByTimeAsync(400);
-
-        // Trigger again with same value
-        mod._usernameInput.value = 'unique';
-        mod._usernameInput.dispatchEvent(new Event('input'));
-        await vi.advanceTimersByTimeAsync(400);
-
-        expect(mockApi.checkUsername).toHaveBeenCalledTimes(1);
-        vi.useRealTimers();
-      });
-
-      it('should lowercase username on input', async () => {
-        await createModule();
-
-        mod._usernameInput.value = 'JohnDoe';
-        mod._usernameInput.dispatchEvent(new Event('input'));
-
-        expect(mod._usernameInput.value).toBe('johndoe');
+        expect(mod._usernameHint.textContent).toContain('нельзя изменить');
       });
     });
 
@@ -325,16 +233,18 @@ describe('User Profile Integration', () => {
       it('should save profile changes to API', async () => {
         await createModule();
 
-        mod._usernameInput.value = 'newname';
         mod._displayNameInput.value = 'New Name';
         mod._bioInput.value = 'New bio';
 
         await mod._save();
 
         expect(mockApi.updateProfile).toHaveBeenCalledWith(expect.objectContaining({
-          username: 'newname',
           displayName: 'New Name',
           bio: 'New bio',
+        }));
+        // Username should not be sent
+        expect(mockApi.updateProfile).toHaveBeenCalledWith(expect.not.objectContaining({
+          username: expect.anything(),
         }));
         expect(mockApp._showToast).toHaveBeenCalledWith('Профиль сохранён', 'success');
       });
@@ -342,12 +252,12 @@ describe('User Profile Integration', () => {
       it('should update local currentUser after successful save', async () => {
         await createModule();
 
-        mod._usernameInput.value = 'updated';
         mod._displayNameInput.value = 'Updated Name';
 
         await mod._save();
 
-        expect(mockApp._currentUser.username).toBe('updated');
+        // Username should remain unchanged (read-only)
+        expect(mockApp._currentUser.username).toBe('johndoe');
         expect(mockApp._currentUser.displayName).toBe('Updated Name');
       });
 
@@ -369,16 +279,6 @@ describe('User Profile Integration', () => {
         expect(mockApi.updateProfile).toHaveBeenCalledWith(expect.objectContaining({
           avatarUrl: null,
         }));
-      });
-
-      it('should reject invalid username format on save', async () => {
-        await createModule();
-        mod._usernameInput.value = '!!invalid!!';
-
-        await mod._save();
-
-        expect(mockApi.updateProfile).not.toHaveBeenCalled();
-        expect(mockApp._showToast).toHaveBeenCalledWith('Некорректный формат username', 'error');
       });
 
       it('should show error toast when save fails', async () => {
@@ -408,13 +308,12 @@ describe('User Profile Integration', () => {
         expect(preview.innerHTML).toContain('My bio');
       });
 
-      it('should update preview on username input', async () => {
+      it('should show current username in preview', async () => {
         await createModule();
 
-        mod._usernameInput.value = 'preview-test';
-        mod._usernameInput.dispatchEvent(new Event('input'));
+        mod._renderProfilePreview();
 
-        expect(mod._previewContainer.innerHTML).toContain('@preview-test');
+        expect(mod._previewContainer.innerHTML).toContain('@johndoe');
       });
 
       it('should show avatar image in preview when pending', async () => {
@@ -442,20 +341,9 @@ describe('User Profile Integration', () => {
     // ── Destroy ──────────────────────────────────────────────────
 
     describe('Destroy', () => {
-      it('should clear pending timers on destroy', async () => {
+      it('should not throw on destroy', async () => {
         await createModule();
-        vi.useFakeTimers();
-
-        mod._usernameInput.value = 'pending';
-        mod._usernameInput.dispatchEvent(new Event('input'));
-
-        mod.destroy();
-
-        // Timer should not fire after destroy
-        await vi.advanceTimersByTimeAsync(500);
-
-        expect(mockApi.checkUsername).not.toHaveBeenCalled();
-        vi.useRealTimers();
+        expect(() => mod.destroy()).not.toThrow();
       });
     });
   });

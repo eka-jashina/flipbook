@@ -125,7 +125,7 @@ describe('ApiClient', () => {
     it('should call onUnauthorized and throw on 401', async () => {
       global.fetch = vi.fn().mockResolvedValue(mockResponse(401, { message: 'Unauthorized' }));
 
-      await expect(client._fetch('/api/test')).rejects.toThrow('Необходима авторизация');
+      await expect(client._fetch('/api/test')).rejects.toThrow('Unauthorized');
       expect(onUnauthorized).toHaveBeenCalled();
     });
 
@@ -133,7 +133,7 @@ describe('ApiClient', () => {
       const c = new ApiClient();
       global.fetch = vi.fn().mockResolvedValue(mockResponse(401, { message: 'Unauthorized' }));
 
-      await expect(c._fetch('/api/test')).rejects.toThrow('Необходима авторизация');
+      await expect(c._fetch('/api/test')).rejects.toThrow('Unauthorized');
     });
 
     it('should throw ApiError on error response', async () => {
@@ -281,8 +281,8 @@ describe('ApiClient', () => {
       expect(result).toEqual({ id: 1 });
     });
 
-    it('getMe should return null on 401', async () => {
-      global.fetch = vi.fn().mockResolvedValue(mockResponse(401, { message: 'Unauthorized' }));
+    it('getMe should return null when not authenticated', async () => {
+      global.fetch = vi.fn().mockResolvedValue(mockResponse(200, { data: { user: null } }));
 
       const result = await client.getMe();
       expect(result).toBeNull();

@@ -262,7 +262,6 @@ export const createReadingSessionSchema = z.object({
 
 // ── Profile ───────────────────────────────────────
 export const updateProfileSchema = z.object({
-  username: usernameField.optional(),
   displayName: z.string().max(100).nullable().optional(),
   bio: z.string().max(500).nullable().optional(),
   avatarUrl: safeUrlOrPath.nullable().optional(),

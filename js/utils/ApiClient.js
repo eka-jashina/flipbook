@@ -233,6 +233,11 @@ export class ApiClient {
     return data.user;
   }
 
+  /** Проверить доступность username (публичный, для регистрации) */
+  async checkUsernamePublic(username) {
+    return this._fetch(`/api/v1/auth/check-username/${encodeURIComponent(username)}`);
+  }
+
   /** Регистрация + автоматический вход */
   async register(email, password, displayName, username) {
     const data = await this._fetch('/api/v1/auth/register', {
