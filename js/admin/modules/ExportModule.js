@@ -3,6 +3,7 @@
  */
 import { BaseModule } from './BaseModule.js';
 import { trackExportConfig } from '../../utils/Analytics.js';
+import { t } from '@i18n';
 
 export class ExportModule extends BaseModule {
   cacheDOM() {
@@ -40,7 +41,7 @@ export class ExportModule extends BaseModule {
 
     URL.revokeObjectURL(url);
     trackExportConfig();
-    this._showToast('Конфигурация скачана');
+    this._showToast(t('admin.export.downloaded'));
   }
 
   _importConfig(e) {
@@ -52,9 +53,9 @@ export class ExportModule extends BaseModule {
       try {
         this.store.importJSON(reader.result);
         this.app._render();
-        this._showToast('Конфигурация загружена');
+        this._showToast(t('admin.export.loaded'));
       } catch {
-        this._showToast('Ошибка: неверный формат JSON');
+        this._showToast(t('admin.export.invalidJson'));
       }
     };
     reader.readAsText(file);
@@ -64,19 +65,19 @@ export class ExportModule extends BaseModule {
 
   async _resetAll() {
     const ok = await this._confirm(
-      'Сбросить все настройки? Ридер вернётся к конфигурации по умолчанию.',
-      { title: 'Сброс настроек', okText: 'Сбросить' },
+      t('admin.export.resetMessage'),
+      { title: t('admin.export.resetTitle'), okText: t('common.reset') },
     );
     if (!ok) return;
 
     this.store.clear();
     this.app._render();
-    this._showToast('Всё сброшено');
+    this._showToast(t('admin.export.resetDone'));
   }
 
   _copyJson() {
     navigator.clipboard.writeText(this.store.exportJSON()).then(() => {
-      this._showToast('Скопировано в буфер');
+      this._showToast(t('admin.export.copied'));
     });
   }
 }

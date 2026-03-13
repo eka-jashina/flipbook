@@ -10,6 +10,7 @@
  */
 
 import { BaseModule } from './BaseModule.js';
+import { t } from '@i18n';
 
 export class ProfileModule extends BaseModule {
   constructor(app) {
@@ -88,7 +89,7 @@ export class ProfileModule extends BaseModule {
     // Показать подсказку что username нельзя менять
     this._usernameValidation.hidden = true;
     if (username) {
-      this._usernameHint.textContent = 'Имя пользователя нельзя изменить после регистрации.';
+      this._usernameHint.textContent = t('admin.profile.usernameReadonly');
     }
   }
 
@@ -116,7 +117,7 @@ export class ProfileModule extends BaseModule {
       this._renderAvatarPreview(result.fileUrl);
       this._renderProfilePreview();
     } catch {
-      this._showToast('Ошибка загрузки аватара', 'error');
+      this._showToast(t('admin.profile.avatarError'), 'error');
     }
 
     this._avatarInput.value = '';
@@ -130,7 +131,7 @@ export class ProfileModule extends BaseModule {
 
   _renderAvatarPreview(avatarUrl) {
     if (avatarUrl) {
-      this._avatarPreview.innerHTML = `<img src="${this._escapeHtml(avatarUrl)}" alt="Аватар" class="profile-avatar-img">`;
+      this._avatarPreview.innerHTML = `<img src="${this._escapeHtml(avatarUrl)}" alt="${t('admin.profile.avatarAlt')}" class="profile-avatar-img">`;
       this._avatarRemoveBtn.hidden = false;
     } else {
       const name = this._displayNameInput?.value || this._currentUser?.displayName || this._currentUser?.username || '?';
@@ -207,10 +208,10 @@ export class ProfileModule extends BaseModule {
       // Сбросить pending — теперь _currentUser актуален
       this._pendingAvatarUrl = undefined;
 
-      this._showToast('Профиль сохранён', 'success');
+      this._showToast(t('admin.profile.saved'), 'success');
       this._renderProfilePreview();
     } catch (err) {
-      const message = err.message || 'Ошибка сохранения профиля';
+      const message = err.message || t('admin.profile.saveError');
       this._showToast(message, 'error');
     }
   }

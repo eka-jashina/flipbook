@@ -4,6 +4,7 @@
  */
 import { BaseModule } from './BaseModule.js';
 import { readFileAsDataURL } from './adminHelpers.js';
+import { t } from '@i18n';
 
 export class AppearanceModule extends BaseModule {
   constructor(app) {
@@ -144,18 +145,18 @@ export class AppearanceModule extends BaseModule {
 
   async _renderAppearanceThemeFields() {
     const a = await this.store.getAppearance();
-    const t = a[this._editTheme] || a.light;
+    const th = a[this._editTheme] || a.light;
 
-    this.coverBgStart.value = t.coverBgStart;
-    this.coverBgEnd.value = t.coverBgEnd;
-    this.coverText.value = t.coverText;
-    this._renderCoverBgPreview(t.coverBgImage);
-    this.pageTexture.value = t.pageTexture;
-    this._renderTextureSelector(t.pageTexture, t.customTextureData);
-    this.bgPage.value = t.bgPage;
-    this.bgPageSwatch.style.background = t.bgPage;
-    this.bgApp.value = t.bgApp;
-    this.bgAppSwatch.style.background = t.bgApp;
+    this.coverBgStart.value = th.coverBgStart;
+    this.coverBgEnd.value = th.coverBgEnd;
+    this.coverText.value = th.coverText;
+    this._renderCoverBgPreview(th.coverBgImage);
+    this.pageTexture.value = th.pageTexture;
+    this._renderTextureSelector(th.pageTexture, th.customTextureData);
+    this.bgPage.value = th.bgPage;
+    this.bgPageSwatch.style.background = th.bgPage;
+    this.bgApp.value = th.bgApp;
+    this.bgAppSwatch.style.background = th.bgApp;
   }
 
   async _updateAppearancePreview() {
@@ -163,21 +164,21 @@ export class AppearanceModule extends BaseModule {
     this.coverTextPreview.style.background = bg;
     this.coverTextPreview.style.color = this.coverText.value;
     const cover = await this.store.getCover();
-    this.coverTextPreview.textContent = cover.title || 'Заголовок';
+    this.coverTextPreview.textContent = cover.title || t('admin.appearance.previewTitleFallback');
 
     // Live preview — обложка
     const a = await this.store.getAppearance();
-    const t = a[this._editTheme] || a.light;
+    const th = a[this._editTheme] || a.light;
 
     this.previewCover.style.background = bg;
     this.previewCover.style.color = this.coverText.value;
-    if (t.coverBgImage) {
-      this.previewCover.style.backgroundImage = `url(${t.coverBgImage})`;
+    if (th.coverBgImage) {
+      this.previewCover.style.backgroundImage = `url(${th.coverBgImage})`;
     } else {
       this.previewCover.style.backgroundImage = '';
     }
-    this.previewTitle.textContent = cover.title || 'Заголовок';
-    this.previewAuthor.textContent = cover.author || 'Автор';
+    this.previewTitle.textContent = cover.title || t('admin.appearance.previewTitleFallback');
+    this.previewAuthor.textContent = cover.author || t('admin.appearance.previewAuthorFallback');
 
     // Live preview — страница
     this.previewPage.style.backgroundColor = this.bgPage.value;
@@ -210,7 +211,7 @@ export class AppearanceModule extends BaseModule {
     this.store.updateAppearanceTheme(this._editTheme, { coverBgImage: dataUrl });
     this._renderCoverBgPreview(dataUrl);
     this._renderJsonPreview();
-    this._showToast('Фон обложки загружен');
+    this._showToast(t('admin.appearance.coverBgLoaded'));
     e.target.value = '';
   }
 
@@ -218,7 +219,7 @@ export class AppearanceModule extends BaseModule {
     this.store.updateAppearanceTheme(this._editTheme, { coverBgImage: null });
     this._renderCoverBgPreview(null);
     this._renderJsonPreview();
-    this._showToast('Фон обложки удалён');
+    this._showToast(t('admin.appearance.coverBgRemoved'));
   }
 
   // --- Текстура ---
@@ -240,7 +241,7 @@ export class AppearanceModule extends BaseModule {
       this.customTextureThumb.style.backgroundImage = `url(${customData})`;
       this.customTextureThumb.classList.add('has-image');
       this.textureCustomInfo.hidden = false;
-      this.textureCustomName.textContent = 'Своя текстура';
+      this.textureCustomName.textContent = t('admin.appearance.customTextureName');
     } else {
       this.customTextureThumb.style.backgroundImage = '';
       this.customTextureThumb.classList.remove('has-image');
@@ -251,8 +252,8 @@ export class AppearanceModule extends BaseModule {
   async _selectTexture(value) {
     this.pageTexture.value = value;
     const a = await this.store.getAppearance();
-    const t = a[this._editTheme];
-    this._renderTextureSelector(value, t?.customTextureData);
+    const th = a[this._editTheme];
+    this._renderTextureSelector(value, th?.customTextureData);
   }
 
   async _handleTextureUpload(e) {
@@ -270,7 +271,7 @@ export class AppearanceModule extends BaseModule {
     this.pageTexture.value = 'custom';
     this._renderTextureSelector('custom', dataUrl);
     this._renderJsonPreview();
-    this._showToast('Текстура загружена');
+    this._showToast(t('admin.appearance.textureLoaded'));
     e.target.value = '';
   }
 
@@ -283,7 +284,7 @@ export class AppearanceModule extends BaseModule {
     this.pageTexture.value = 'default';
     this._renderTextureSelector('default', null);
     this._renderJsonPreview();
-    this._showToast('Своя текстура удалена');
+    this._showToast(t('admin.appearance.textureRemoved'));
   }
 
   // --- Сохранение per-book (appearance tab) ---
@@ -291,7 +292,7 @@ export class AppearanceModule extends BaseModule {
   _saveAppearance() {
     this._saveCurrentThemeFromForm();
     this._renderJsonPreview();
-    this._showToast('Оформление сохранено');
+    this._showToast(t('admin.appearance.saved'));
   }
 
   _resetAppearance() {
@@ -320,7 +321,7 @@ export class AppearanceModule extends BaseModule {
     this._renderAppearanceThemeFields();
     this._updateAppearancePreview();
     this._renderJsonPreview();
-    this._showToast('Оформление сброшено');
+    this._showToast(t('admin.appearance.resetDone'));
   }
 
   // --- Сохранение platform settings (fontMin/fontMax + visibility) ---
@@ -332,6 +333,6 @@ export class AppearanceModule extends BaseModule {
     });
 
     this._renderJsonPreview();
-    this._showToast('Настройки платформы сохранены');
+    this._showToast(t('admin.appearance.platformSaved'));
   }
 }

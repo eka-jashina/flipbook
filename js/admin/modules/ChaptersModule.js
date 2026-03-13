@@ -14,6 +14,7 @@ import { BookSelectorManager } from './BookSelectorManager.js';
 import { CoverManager } from './CoverManager.js';
 import { ChapterFileHandler } from './ChapterFileHandler.js';
 import { QuillEditorWrapper } from './QuillEditorWrapper.js';
+import { t } from '@i18n';
 
 export class ChaptersModule extends BaseModule {
   constructor(app) {
@@ -132,14 +133,14 @@ export class ChaptersModule extends BaseModule {
     this.chaptersList.innerHTML = chapters.map((ch, i) => {
       const isAlbum = !!ch.albumData;
       const typeLabel = isAlbum
-        ? '<span class="chapter-type-badge chapter-type-badge--album">Альбом</span>'
+        ? `<span class="chapter-type-badge chapter-type-badge--album">${t('admin.chapters.albumType')}</span>`
         : '';
       const metaText = isAlbum
-        ? `${ch.albumData.pages?.length || 0} стр.`
-        : (ch.htmlContent ? 'Встроенный контент' : this._escapeHtml(ch.file));
+        ? t('admin.chapters.pageCount', { count: ch.albumData.pages?.length || 0 })
+        : (ch.htmlContent ? t('admin.chapters.embedded') : this._escapeHtml(ch.file));
       return `
       <div class="chapter-card${isAlbum ? ' chapter-card--album' : ''}" data-index="${i}">
-        <div class="chapter-drag" title="Перетащите для изменения порядка">
+        <div class="chapter-drag" title="${t('admin.chapters.dragHint')}">
           <svg viewBox="0 0 24 24" width="20" height="20">
             <path fill="currentColor" d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
           </svg>
@@ -149,16 +150,16 @@ export class ChaptersModule extends BaseModule {
           <div class="chapter-meta">${ch.title ? `${this._escapeHtml(ch.id)} · ` : ''}${metaText}</div>
         </div>
         <div class="chapter-actions">
-          ${i > 0 ? `<button class="chapter-action-btn" data-action="up" data-index="${i}" title="Вверх">
+          ${i > 0 ? `<button class="chapter-action-btn" data-action="up" data-index="${i}" title="${t('admin.chapters.moveUp')}">
             <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
           </button>` : ''}
-          ${i < chapters.length - 1 ? `<button class="chapter-action-btn" data-action="down" data-index="${i}" title="Вниз">
+          ${i < chapters.length - 1 ? `<button class="chapter-action-btn" data-action="down" data-index="${i}" title="${t('admin.chapters.moveDown')}">
             <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
           </button>` : ''}
-          <button class="chapter-action-btn" data-action="edit" data-index="${i}" title="Редактировать">
+          <button class="chapter-action-btn" data-action="edit" data-index="${i}" title="${t('common.edit')}">
             <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
           </button>
-          <button class="chapter-action-btn delete" data-action="delete" data-index="${i}" title="Удалить">
+          <button class="chapter-action-btn delete" data-action="delete" data-index="${i}" title="${t('common.delete')}">
             <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
           </button>
         </div>
@@ -179,13 +180,13 @@ export class ChaptersModule extends BaseModule {
           await this.store.moveChapter(index, index - 1);
           await this._renderChapters();
           this._renderJsonPreview();
-          this._showToast('Порядок изменён');
+          this._showToast(t('admin.chapters.orderChanged'));
           break;
         case 'down':
           await this.store.moveChapter(index, index + 1);
           await this._renderChapters();
           this._renderJsonPreview();
-          this._showToast('Порядок изменён');
+          this._showToast(t('admin.chapters.orderChanged'));
           break;
         case 'edit': {
           const chapters = await this.store.getChapters();
@@ -199,12 +200,12 @@ export class ChaptersModule extends BaseModule {
           break;
         }
         case 'delete':
-          this._confirm('Удалить эту главу?').then(async (ok) => {
+          this._confirm(t('admin.chapters.deleteConfirm')).then(async (ok) => {
             if (!ok) return;
             await this.store.removeChapter(index);
             await this._renderChapters();
             this._renderJsonPreview();
-            this._showToast('Глава удалена');
+            this._showToast(t('admin.chapters.deleted'));
           });
           break;
       }
@@ -226,7 +227,7 @@ export class ChaptersModule extends BaseModule {
     if (editIndex !== null) {
       const chapters = await this.store.getChapters();
       const ch = chapters[editIndex];
-      this.modalTitle.textContent = 'Редактировать главу';
+      this.modalTitle.textContent = t('admin.chapters.editTitle');
       this.inputId.value = ch.id;
       this.inputTitle.value = ch.title || '';
       this.inputBg.value = ch.bg || '';
@@ -245,7 +246,7 @@ export class ChaptersModule extends BaseModule {
         this._fileHandler.resetUI();
       }
     } else {
-      this.modalTitle.textContent = 'Добавить главу';
+      this.modalTitle.textContent = t('admin.chapters.addTitle');
       this.chapterForm.reset();
       await this._switchInputMode('upload');
       this._fileHandler.resetUI();
@@ -314,10 +315,10 @@ export class ChaptersModule extends BaseModule {
 
     if (this._editingIndex !== null) {
       await this.store.updateChapter(this._editingIndex, chapter);
-      this._showToast('Глава обновлена');
+      this._showToast(t('admin.chapters.updated'));
     } else {
       await this.store.addChapter(chapter);
-      this._showToast('Глава добавлена');
+      this._showToast(t('admin.chapters.added'));
     }
 
     this._pendingHtmlContent = null;

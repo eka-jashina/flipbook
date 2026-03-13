@@ -5,6 +5,7 @@
  */
 import { BookParser } from '../BookParser.js';
 import { setupDropzone } from './adminHelpers.js';
+import { t } from '@i18n';
 
 /** Максимальный размер загружаемого файла главы (10 МБ) */
 const CHAPTER_FILE_MAX_SIZE = 10 * 1024 * 1024;
@@ -45,13 +46,13 @@ export class ChapterFileHandler {
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
 
     if (!CHAPTER_FILE_EXTENSIONS.includes(ext)) {
-      this._host._showToast(`Допустимые форматы: ${CHAPTER_FILE_EXTENSIONS.join(', ')}`);
+      this._host._showToast(t('admin.chapters.unsupportedFormat', { formats: CHAPTER_FILE_EXTENSIONS.join(', ') }));
       this.chapterFileInput.value = '';
       return;
     }
 
     if (file.size > CHAPTER_FILE_MAX_SIZE) {
-      this._host._showToast(`Файл слишком большой (макс. ${CHAPTER_FILE_MAX_SIZE / (1024 * 1024)} МБ)`);
+      this._host._showToast(t('admin.chapters.fileTooLarge', { size: CHAPTER_FILE_MAX_SIZE / (1024 * 1024) }));
       this.chapterFileInput.value = '';
       return;
     }
@@ -69,15 +70,15 @@ export class ChapterFileHandler {
       }
 
       if (!html || !html.trim()) {
-        this._host._showToast('Файл пуст или не удалось извлечь контент');
+        this._host._showToast(t('admin.chapters.fileEmpty'));
         return;
       }
 
       this._host._pendingHtmlContent = html;
       this.showFileInfo(file.name);
-      this._host._showToast('Файл загружен');
+      this._host._showToast(t('admin.chapters.fileLoaded'));
     } catch (err) {
-      this._host._showToast(`Ошибка чтения файла: ${err.message}`);
+      this._host._showToast(t('admin.chapters.fileReadError', { message: err.message }));
     } finally {
       this.chapterFileDropzone.classList.remove('loading');
       this.chapterFileInput.value = '';

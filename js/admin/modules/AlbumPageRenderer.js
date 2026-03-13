@@ -3,8 +3,9 @@
  * карточки страниц, слоты изображений, кнопки раскладки, селекты опций
  */
 
+import { t } from '@i18n';
 import {
-  FRAME_OPTIONS, FILTER_OPTIONS,
+  getFrameOptions, getFilterOptions,
   DEFAULT_FILTER_INTENSITY, IMAGE_MAX_FILE_SIZE,
   getPageSlots, computeFilterStyle,
 } from './albumConstants.js';
@@ -27,7 +28,7 @@ export function renderAlbumPages(manager) {
 
     const title = document.createElement('span');
     title.className = 'album-page-title';
-    title.textContent = `Страница ${pageIndex + 1}`;
+    title.textContent = t('admin.album.pageTitle', { num: pageIndex + 1 });
 
     header.appendChild(title);
 
@@ -40,7 +41,7 @@ export function renderAlbumPages(manager) {
         const upBtn = document.createElement('button');
         upBtn.type = 'button';
         upBtn.className = 'album-page-move-btn';
-        upBtn.title = 'Переместить вверх';
+        upBtn.title = t('admin.album.moveUp');
         upBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>';
         upBtn.addEventListener('click', () => manager._movePageUp(pageIndex));
         moveWrap.appendChild(upBtn);
@@ -50,7 +51,7 @@ export function renderAlbumPages(manager) {
         const downBtn = document.createElement('button');
         downBtn.type = 'button';
         downBtn.className = 'album-page-move-btn';
-        downBtn.title = 'Переместить вниз';
+        downBtn.title = t('admin.album.moveDown');
         downBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>';
         downBtn.addEventListener('click', () => manager._movePageDown(pageIndex));
         moveWrap.appendChild(downBtn);
@@ -61,7 +62,7 @@ export function renderAlbumPages(manager) {
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'album-page-remove';
-      removeBtn.title = 'Удалить страницу';
+      removeBtn.title = t('admin.album.removePage');
       removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
       removeBtn.addEventListener('click', () => manager._removeAlbumPage(pageIndex));
       header.appendChild(removeBtn);
@@ -71,7 +72,7 @@ export function renderAlbumPages(manager) {
     const pageBulkBtn = document.createElement('button');
     pageBulkBtn.type = 'button';
     pageBulkBtn.className = 'album-page-bulk-btn';
-    pageBulkBtn.title = 'Загрузить несколько фото';
+    pageBulkBtn.title = t('admin.album.bulkUpload');
     pageBulkBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>';
     pageBulkBtn.addEventListener('click', () => manager._bulkUploadToPage(pageIndex));
     header.appendChild(pageBulkBtn);
@@ -107,14 +108,14 @@ export function renderAlbumPages(manager) {
 /** Сгенерировать HTML кнопок выбора шаблона */
 export function buildLayoutButtons(activeLayout) {
   const layouts = [
-    { id: '1', title: '1 фото', items: 1 },
-    { id: '2', title: '2 фото (вертикально)', items: 2 },
-    { id: '2h', title: '2 фото (горизонтально)', items: 2 },
-    { id: '3', title: 'Большое слева + 2 справа', items: 3 },
-    { id: '3r', title: 'Большое справа + 2 слева', items: 3 },
-    { id: '3t', title: 'Большое сверху + 2 снизу', items: 3 },
-    { id: '3b', title: 'Большое снизу + 2 сверху', items: 3 },
-    { id: '4', title: 'Сетка 2x2', items: 4 },
+    { id: '1', title: t('admin.album.layout1'), items: 1 },
+    { id: '2', title: t('admin.album.layout2v'), items: 2 },
+    { id: '2h', title: t('admin.album.layout2h'), items: 2 },
+    { id: '3', title: t('admin.album.layout3l'), items: 3 },
+    { id: '3r', title: t('admin.album.layout3r'), items: 3 },
+    { id: '3t', title: t('admin.album.layout3t'), items: 3 },
+    { id: '3b', title: t('admin.album.layout3b'), items: 3 },
+    { id: '4', title: t('admin.album.layout4'), items: 4 },
   ];
   return layouts.map(l => {
     const active = l.id === activeLayout ? ' active' : '';
@@ -134,7 +135,7 @@ function renderPageImageSlots(manager, container, page, pageIndex) {
 
     const tmpl = document.getElementById('tmpl-album-image-slot');
     const slotContent = tmpl.content.cloneNode(true);
-    slotContent.querySelector('.album-image-slot-placeholder-text').textContent = `Фото ${i + 1}`;
+    slotContent.querySelector('.album-image-slot-placeholder-text').textContent = t('admin.album.photoLabel', { index: i + 1 });
     slotContent.querySelector('.album-image-slot-num').textContent = i + 1;
     slot.appendChild(slotContent);
 
@@ -218,7 +219,7 @@ function renderPageImageSlots(manager, container, page, pageIndex) {
     const captionInput = document.createElement('input');
     captionInput.type = 'text';
     captionInput.className = 'album-image-slot-caption';
-    captionInput.placeholder = 'Подпись...';
+    captionInput.placeholder = t('admin.album.captionPlaceholder');
     captionInput.value = img?.caption || '';
     captionInput.addEventListener('input', () => {
       manager._isDirty = true;
@@ -232,7 +233,7 @@ function renderPageImageSlots(manager, container, page, pageIndex) {
     optionsRow.className = 'album-image-options';
 
     const frameSelect = buildOptionSelect(
-      FRAME_OPTIONS, img?.frame || 'none', (val) => {
+      getFrameOptions(), img?.frame || 'none', (val) => {
         manager._ensureImageData(page, i);
         page.images[i].frame = val;
       },
@@ -241,7 +242,7 @@ function renderPageImageSlots(manager, container, page, pageIndex) {
 
     const currentFilter = img?.filter || 'none';
     const filterSelect = buildOptionSelect(
-      FILTER_OPTIONS, currentFilter, (val) => {
+      getFilterOptions(), currentFilter, (val) => {
         manager._ensureImageData(page, i);
         page.images[i].filter = val;
         // Показать/скрыть слайдер интенсивности

@@ -3,6 +3,7 @@
  */
 import { BaseModule } from './BaseModule.js';
 import { readFileAsDataURL } from './adminHelpers.js';
+import { t } from '@i18n';
 
 const FONT_EXTENSIONS = ['.woff2', '.woff', '.ttf', '.otf'];
 // Reader loads admin config from localStorage; data URL expands file size (~33%),
@@ -81,7 +82,7 @@ export class FontsModule extends BaseModule {
     this.store.setDecorativeFont({ name, dataUrl });
     this._renderDecorativeFont();
     this._renderJsonPreview();
-    this._showToast('Декоративный шрифт загружен');
+    this._showToast(t('admin.fonts.decorativeLoaded'));
     e.target.value = '';
   }
 
@@ -89,7 +90,7 @@ export class FontsModule extends BaseModule {
     this.store.setDecorativeFont(null);
     this._renderDecorativeFont();
     this._renderJsonPreview();
-    this._showToast('Декоративный шрифт сброшен');
+    this._showToast(t('admin.fonts.decorativeReset'));
   }
 
   // --- Шрифты для чтения ---
@@ -106,22 +107,22 @@ export class FontsModule extends BaseModule {
 
     this.readingFontsList.innerHTML = fonts.map((f, i) => {
       const previewFamily = f.builtin ? f.family : `CustomReading_${i}, ${f.family.split(',').pop().trim()}`;
-      const meta = f.builtin ? 'Встроенный' : 'Пользовательский';
+      const meta = f.builtin ? t('admin.fonts.builtin') : t('admin.fonts.custom');
 
       return `
         <div class="reading-font-card${f.enabled ? '' : ' disabled-font'}" data-index="${i}">
-          <div class="reading-font-preview" style="font-family: ${this._escapeHtml(previewFamily)}">Абвг Abcd</div>
+          <div class="reading-font-preview" style="font-family: ${this._escapeHtml(previewFamily)}">${t('admin.fonts.previewSample')}</div>
           <div class="reading-font-info">
             <div class="reading-font-label">${this._escapeHtml(f.label)}</div>
             <div class="reading-font-meta">${meta}</div>
           </div>
           <div class="reading-font-actions">
-            <label class="admin-toggle" title="${f.enabled ? 'Отключить' : 'Включить'}">
+            <label class="admin-toggle" title="${f.enabled ? t('admin.fonts.disable') : t('admin.fonts.enable')}">
               <input type="checkbox" data-font-toggle="${i}" ${f.enabled ? 'checked' : ''}>
               <span class="admin-toggle-slider"></span>
             </label>
             ${!f.builtin ? `
-              <button class="chapter-action-btn delete" data-font-delete="${i}" title="Удалить">
+              <button class="chapter-action-btn delete" data-font-delete="${i}" title="${t('common.delete')}">
                 <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
               </button>
             ` : ''}
@@ -139,26 +140,26 @@ export class FontsModule extends BaseModule {
         const enabledCount = fonts.filter(f => f.enabled).length;
         if (enabledCount <= 1 && !toggle.checked) {
           toggle.checked = true;
-          this._showToast('Нельзя отключить последний шрифт');
+          this._showToast(t('admin.fonts.cannotDisableLast'));
           return;
         }
         await this.store.updateReadingFont(idx, { enabled: toggle.checked });
         await this._renderReadingFonts();
         await this.app.settings.render();
         this._renderJsonPreview();
-        this._showToast(toggle.checked ? 'Шрифт включён' : 'Шрифт отключён');
+        this._showToast(toggle.checked ? t('admin.fonts.enabled') : t('admin.fonts.disabled'));
         return;
       }
 
       const deleteBtn = e.target.closest('[data-font-delete]');
       if (deleteBtn) {
-        this._confirm('Удалить этот шрифт?').then(async (ok) => {
+        this._confirm(t('admin.fonts.deleteConfirm')).then(async (ok) => {
           if (!ok) return;
           await this.store.removeReadingFont(parseInt(deleteBtn.dataset.fontDelete, 10));
           await this._renderReadingFonts();
           await this.app.settings.render();
           this._renderJsonPreview();
-          this._showToast('Шрифт удалён');
+          this._showToast(t('admin.fonts.deleted'));
         });
       }
     };
@@ -169,8 +170,8 @@ export class FontsModule extends BaseModule {
 
   _openReadingFontModal() {
     this._pendingReadingFontDataUrl = null;
-    this.readingFontUploadLabel.textContent = 'Выбрать файл';
-    this.readingFontModalTitle.textContent = 'Добавить шрифт';
+    this.readingFontUploadLabel.textContent = t('admin.fonts.selectFile');
+    this.readingFontModalTitle.textContent = t('admin.modal.font.addTitle');
     this.readingFontForm.reset();
     this.readingFontModal.showModal();
   }
@@ -193,7 +194,7 @@ export class FontsModule extends BaseModule {
     if (!label) return;
 
     if (!this._pendingReadingFontDataUrl) {
-      this._showToast('Загрузите файл шрифта');
+      this._showToast(t('admin.fonts.validationRequired'));
       return;
     }
 
@@ -214,6 +215,6 @@ export class FontsModule extends BaseModule {
     this._renderReadingFonts();
     this.app.settings.render();
     this._renderJsonPreview();
-    this._showToast('Шрифт добавлен');
+    this._showToast(t('admin.fonts.added'));
   }
 }

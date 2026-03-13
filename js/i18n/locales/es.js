@@ -19,6 +19,8 @@ export default {
   'common.saved': 'Guardado',
   'common.confirmation': 'Confirmación',
   'common.back': 'Atrás',
+  'common.saving': 'Guardando...',
+  'common.notSaved': 'No guardado',
 
   // ─── Lector ────────────────────────────────────────────────────────────────
   'reader.bookControl': 'Control del libro',
@@ -270,6 +272,9 @@ export default {
   'admin.appearance.saved': 'Apariencia guardada',
   'admin.appearance.resetDone': 'Apariencia restablecida',
   'admin.appearance.platformSaved': 'Ajustes de plataforma guardados',
+  'admin.appearance.previewTitleFallback': 'Título',
+  'admin.appearance.previewAuthorFallback': 'Autor',
+  'admin.appearance.customTextureName': 'Textura personalizada',
 
   // ─── Admin: Portada ───────────────────────────────────────────────────────
   'admin.cover.infoSection': 'Información',
@@ -408,6 +413,7 @@ export default {
   'admin.fonts.selectFile': 'Seleccionar archivo',
   'admin.fonts.validationRequired': 'Suba un archivo de fuente',
   'admin.fonts.added': 'Fuente añadida',
+  'admin.fonts.loadError': 'Error al cargar la fuente',
 
   // ─── Admin: Álbum ─────────────────────────────────────────────────────────
   'admin.album.noEmptySlots': 'No hay espacios vacíos en esta página',
@@ -439,6 +445,30 @@ export default {
   'admin.album.hideTitleHint': 'El título solo será visible en el índice',
   'admin.album.addPage': '+ Añadir página',
   'admin.album.bulkUpload': 'Subir fotos',
+  'admin.album.titleRequired': 'Ingrese el título del álbum',
+  'admin.album.photoRequired': 'Añada al menos una imagen',
+  'admin.album.updated': 'Álbum de fotos actualizado',
+  'admin.album.added': 'Álbum de fotos añadido',
+  'admin.album.imageLoadError': 'No se pudo cargar la imagen',
+  'admin.album.processingError': 'Error al procesar la imagen',
+  'admin.album.cropError': 'Error al recortar',
+  'admin.album.photoLabel': 'Foto {{index}}',
+  'admin.album.emptySlotsConfirm': 'Quedan {{count}} espacios vacíos. Los espacios vacíos no se mostrarán. ¿Guardar?',
+  'admin.album.emptySlotConfirm': 'Queda 1 espacio vacío. Los espacios vacíos no se mostrarán. ¿Guardar?',
+  'admin.album.layoutPhotoLoss_one': 'El cambio de diseño eliminará {{count}} foto. ¿Continuar?',
+  'admin.album.layoutPhotoLoss_other': 'El cambio de diseño eliminará {{count}} fotos. ¿Continuar?',
+  'admin.album.pageTitle': 'Página {{num}}',
+  'admin.album.removePage': 'Eliminar página',
+  'admin.album.captionPlaceholder': 'Pie de foto...',
+  'admin.album.layout1': '1 foto',
+  'admin.album.layout2v': '2 fotos (vertical)',
+  'admin.album.layout2h': '2 fotos (horizontal)',
+  'admin.album.layout3l': 'Grande izquierda + 2 derecha',
+  'admin.album.layout3r': 'Grande derecha + 2 izquierda',
+  'admin.album.layout3t': 'Grande arriba + 2 abajo',
+  'admin.album.layout3b': 'Grande abajo + 2 arriba',
+  'admin.album.layout4': 'Cuadrícula 2×2',
+  'admin.album.filterGrayscale': 'B/N',
 
   // ─── Admin: Subida de libro ────────────────────────────────────────────────
   'admin.upload.unsupported': 'Formato no compatible. Compatibles: {{formats}}',
@@ -457,6 +487,21 @@ export default {
   'admin.mode.manualDesc': 'Portada, capítulos, fondos — control total',
   'admin.mode.albumTitle': 'Álbum de fotos',
   'admin.mode.albumDesc': 'Disposiciones, fotos, pies de foto — editor visual',
+
+  // ─── Admin: Recorte ───────────────────────────────────────────────────────
+  'admin.cropper.apply': 'Aplicar',
+  'admin.cropper.cancel': 'Cancelar',
+  'admin.cropper.ariaLabel': 'Recorte de foto',
+
+  // ─── Admin: Archivos ────────────────────────────────────────────────────────
+  'admin.file.tooLarge': 'El archivo es demasiado grande (máx. {{size}} MB)',
+  'admin.file.invalidMime.image': 'Solo se permiten imágenes',
+  'admin.file.invalidMime.audio': 'Solo se permiten archivos de audio',
+  'admin.file.invalidExtension': 'Formatos permitidos: {{formats}}',
+
+  // ─── Admin: Almacenamiento ──────────────────────────────────────────────────
+  'admin.storage.overflow': 'El almacenamiento del navegador está lleno. Es posible que la configuración no se guarde.',
+  'admin.storage.overflowKey': 'Almacenamiento desbordado ({{key}}). Es posible que la configuración no se guarde.',
 
   // ─── Admin: General ───────────────────────────────────────────────────────
   'admin.badge': 'Cuenta',
@@ -485,6 +530,7 @@ export default {
   'admin.bookEditor': 'Editor de libro',
 
   // ─── Admin: Pestañas del editor ────────────────────────────────────────────
+  'admin.editor.placeholder': 'Comience a escribir el texto del capítulo...',
   'admin.editor.cover': 'Portada',
   'admin.editor.chapters': 'Capítulos',
   'admin.editor.appearance': 'Apariencia',
@@ -523,6 +569,11 @@ export default {
   'admin.profile.avatarRemove': 'Eliminar',
   'admin.profile.saveButton': 'Guardar perfil',
   'admin.profile.displayNamePlaceholder': '¿Cómo te llamas?',
+  'admin.profile.saved': 'Perfil guardado',
+  'admin.profile.avatarError': 'Error al subir el avatar',
+  'admin.profile.usernameReadonly': 'El nombre de usuario no se puede cambiar después del registro.',
+  'admin.profile.saveError': 'Error al guardar el perfil',
+  'admin.profile.avatarAlt': 'Avatar',
 
   // ─── Errores de API ───────────────────────────────────────────────────────
   'api.error.createBook': 'No se pudo crear el libro',

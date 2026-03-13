@@ -19,6 +19,8 @@ export default {
   'common.saved': 'Gespeichert',
   'common.confirmation': 'Bestätigung',
   'common.back': 'Zurück',
+  'common.saving': 'Speichern...',
+  'common.notSaved': 'Nicht gespeichert',
 
   // ─── Reader ────────────────────────────────────────────────────────────────
   'reader.bookControl': 'Buchsteuerung',
@@ -270,6 +272,9 @@ export default {
   'admin.appearance.saved': 'Gestaltung gespeichert',
   'admin.appearance.resetDone': 'Gestaltung zurückgesetzt',
   'admin.appearance.platformSaved': 'Plattformeinstellungen gespeichert',
+  'admin.appearance.previewTitleFallback': 'Titel',
+  'admin.appearance.previewAuthorFallback': 'Autor',
+  'admin.appearance.customTextureName': 'Eigene Textur',
 
   // ─── Admin: Cover ──────────────────────────────────────────────────────────
   'admin.cover.infoSection': 'Information',
@@ -408,6 +413,7 @@ export default {
   'admin.fonts.selectFile': 'Datei auswählen',
   'admin.fonts.validationRequired': 'Laden Sie eine Schriftdatei hoch',
   'admin.fonts.added': 'Schriftart hinzugefügt',
+  'admin.fonts.loadError': 'Fehler beim Laden der Schriftart',
 
   // ─── Admin: Album ──────────────────────────────────────────────────────────
   'admin.album.noEmptySlots': 'Keine leeren Plätze auf dieser Seite',
@@ -439,6 +445,35 @@ export default {
   'admin.album.hideTitleHint': 'Der Titel wird nur im Inhaltsverzeichnis sichtbar sein',
   'admin.album.addPage': '+ Seite hinzufügen',
   'admin.album.bulkUpload': 'Fotos hochladen',
+  'admin.album.titleRequired': 'Geben Sie den Albumtitel ein',
+  'admin.album.photoRequired': 'Fügen Sie mindestens ein Bild hinzu',
+  'admin.album.updated': 'Fotoalbum aktualisiert',
+  'admin.album.added': 'Fotoalbum hinzugefügt',
+  'admin.album.imageLoadError': 'Bild konnte nicht geladen werden',
+  'admin.album.processingError': 'Fehler bei der Bildverarbeitung',
+  'admin.album.cropError': 'Fehler beim Zuschneiden',
+  'admin.album.photoLabel': 'Foto {{index}}',
+  'admin.album.emptySlotsConfirm': '{{count}} leere Plätze verbleiben. Leere Stellen werden nicht angezeigt. Speichern?',
+  'admin.album.emptySlotConfirm': '1 leerer Platz verbleibt. Leere Stellen werden nicht angezeigt. Speichern?',
+  'admin.album.layoutPhotoLoss_one': 'Beim Layoutwechsel wird {{count}} Foto gelöscht. Fortfahren?',
+  'admin.album.layoutPhotoLoss_other': 'Beim Layoutwechsel werden {{count}} Fotos gelöscht. Fortfahren?',
+  'admin.album.pageTitle': 'Seite {{num}}',
+  'admin.album.removePage': 'Seite entfernen',
+  'admin.album.captionPlaceholder': 'Beschriftung...',
+  'admin.album.layout1': '1 Foto',
+  'admin.album.layout2v': '2 Fotos (vertikal)',
+  'admin.album.layout2h': '2 Fotos (horizontal)',
+  'admin.album.layout3l': 'Groß links + 2 rechts',
+  'admin.album.layout3r': 'Groß rechts + 2 links',
+  'admin.album.layout3t': 'Groß oben + 2 unten',
+  'admin.album.layout3b': 'Groß unten + 2 oben',
+  'admin.album.layout4': '2×2 Raster',
+  'admin.album.filterGrayscale': 'S/W',
+
+  // ─── Admin: Zuschneiden ────────────────────────────────────────────────────
+  'admin.cropper.apply': 'Übernehmen',
+  'admin.cropper.cancel': 'Abbrechen',
+  'admin.cropper.ariaLabel': 'Foto zuschneiden',
 
   // ─── Admin: Buch hochladen ─────────────────────────────────────────────────
   'admin.upload.unsupported': 'Nicht unterstütztes Format. Unterstützt werden: {{formats}}',
@@ -485,6 +520,7 @@ export default {
   'admin.bookEditor': 'Bucheditor',
 
   // ─── Admin: Editor-Tabs ────────────────────────────────────────────────────
+  'admin.editor.placeholder': 'Beginnen Sie mit dem Schreiben des Kapiteltextes...',
   'admin.editor.cover': 'Cover',
   'admin.editor.chapters': 'Kapitel',
   'admin.editor.appearance': 'Gestaltung',
@@ -523,6 +559,11 @@ export default {
   'admin.profile.avatarRemove': 'Entfernen',
   'admin.profile.saveButton': 'Profil speichern',
   'admin.profile.displayNamePlaceholder': 'Wie heißen Sie?',
+  'admin.profile.saved': 'Profil gespeichert',
+  'admin.profile.avatarError': 'Fehler beim Hochladen des Avatars',
+  'admin.profile.usernameReadonly': 'Der Benutzername kann nach der Registrierung nicht geändert werden.',
+  'admin.profile.saveError': 'Fehler beim Speichern des Profils',
+  'admin.profile.avatarAlt': 'Avatar',
 
   // ─── API-Fehler ────────────────────────────────────────────────────────────
   'api.error.createBook': 'Buch konnte nicht erstellt werden',

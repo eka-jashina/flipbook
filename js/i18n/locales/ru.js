@@ -19,6 +19,8 @@ export default {
   'common.saved': 'Сохранено',
   'common.confirmation': 'Подтверждение',
   'common.back': 'Назад',
+  'common.saving': 'Сохранение...',
+  'common.notSaved': 'Не сохранено',
 
   // ─── Ридер ──────────────────────────────────────────────────────────────────
   'reader.bookControl': 'Управление книгой',
@@ -271,6 +273,9 @@ export default {
   'admin.appearance.saved': 'Оформление сохранено',
   'admin.appearance.resetDone': 'Оформление сброшено',
   'admin.appearance.platformSaved': 'Настройки платформы сохранены',
+  'admin.appearance.previewTitleFallback': 'Заголовок',
+  'admin.appearance.previewAuthorFallback': 'Автор',
+  'admin.appearance.customTextureName': 'Своя текстура',
 
   // ─── Админ: Обложка ────────────────────────────────────────────────────────
   'admin.cover.infoSection': 'Информация',
@@ -409,6 +414,7 @@ export default {
   'admin.fonts.selectFile': 'Выбрать файл',
   'admin.fonts.validationRequired': 'Загрузите файл шрифта',
   'admin.fonts.added': 'Шрифт добавлен',
+  'admin.fonts.loadError': 'Ошибка загрузки шрифта',
 
   // ─── Админ: Альбом ─────────────────────────────────────────────────────────
   'admin.album.noEmptySlots': 'Нет пустых слотов на этой странице',
@@ -441,6 +447,31 @@ export default {
   'admin.album.hideTitleHint': 'Заголовок будет виден только в оглавлении',
   'admin.album.addPage': '+ Добавить страницу',
   'admin.album.bulkUpload': 'Загрузить фото',
+  'admin.album.titleRequired': 'Укажите название альбома',
+  'admin.album.photoRequired': 'Добавьте хотя бы одно изображение',
+  'admin.album.updated': 'Фотоальбом обновлён',
+  'admin.album.added': 'Фотоальбом добавлен',
+  'admin.album.imageLoadError': 'Не удалось загрузить изображение',
+  'admin.album.processingError': 'Ошибка при обработке изображения',
+  'admin.album.cropError': 'Ошибка при кадрировании',
+  'admin.album.photoLabel': 'Фото {{index}}',
+  'admin.album.emptySlotsConfirm': 'Осталось незаполненных слотов: {{count}}. Пустые места не будут отображаться. Сохранить?',
+  'admin.album.emptySlotConfirm': 'Остался 1 незаполненный слот. Пустые места не будут отображаться. Сохранить?',
+  'admin.album.layoutPhotoLoss_one': 'При смене раскладки будет удалено {{count}} фото. Продолжить?',
+  'admin.album.layoutPhotoLoss_few': 'При смене раскладки будут удалены {{count}} фото. Продолжить?',
+  'admin.album.layoutPhotoLoss_many': 'При смене раскладки будут удалены {{count}} фото. Продолжить?',
+  'admin.album.pageTitle': 'Страница {{num}}',
+  'admin.album.removePage': 'Удалить страницу',
+  'admin.album.captionPlaceholder': 'Подпись...',
+  'admin.album.layout1': '1 фото',
+  'admin.album.layout2v': '2 фото (вертикально)',
+  'admin.album.layout2h': '2 фото (горизонтально)',
+  'admin.album.layout3l': 'Большое слева + 2 справа',
+  'admin.album.layout3r': 'Большое справа + 2 слева',
+  'admin.album.layout3t': 'Большое сверху + 2 снизу',
+  'admin.album.layout3b': 'Большое снизу + 2 сверху',
+  'admin.album.layout4': 'Сетка 2×2',
+  'admin.album.filterGrayscale': 'Ч/Б',
 
   // ─── Админ: Загрузка книги ──────────────────────────────────────────────────
   'admin.upload.unsupported': 'Неподдерживаемый формат. Поддерживаются: {{formats}}',
@@ -459,6 +490,21 @@ export default {
   'admin.mode.manualDesc': 'Обложка, главы, фоны — полный контроль',
   'admin.mode.albumTitle': 'Фотоальбом',
   'admin.mode.albumDesc': 'Раскладки, фото, подписи — визуальный редактор',
+
+  // ─── Админ: Кадрирование ────────────────────────────────────────────────────
+  'admin.cropper.apply': 'Применить',
+  'admin.cropper.cancel': 'Отмена',
+  'admin.cropper.ariaLabel': 'Кадрирование фотографии',
+
+  // ─── Админ: Файлы ─────────────────────────────────────────────────────────
+  'admin.file.tooLarge': 'Файл слишком большой (макс. {{size}} МБ)',
+  'admin.file.invalidMime.image': 'Допустимы только изображения',
+  'admin.file.invalidMime.audio': 'Допустимы только аудиофайлы',
+  'admin.file.invalidExtension': 'Допустимые форматы: {{formats}}',
+
+  // ─── Админ: Хранилище ─────────────────────────────────────────────────────
+  'admin.storage.overflow': 'Хранилище браузера переполнено. Настройки могут не сохраняться.',
+  'admin.storage.overflowKey': 'Хранилище переполнено ({{key}}). Настройки могут не сохраниться.',
 
   // ─── Админ: Общее ──────────────────────────────────────────────────────────
   'admin.badge': 'Личный кабинет',
@@ -487,6 +533,7 @@ export default {
   'admin.bookEditor': 'Редактор книги',
 
   // ─── Админ: Вкладки редактора ────────────────────────────────────────────────
+  'admin.editor.placeholder': 'Начните писать текст главы...',
   'admin.editor.cover': 'Обложка',
   'admin.editor.chapters': 'Главы',
   'admin.editor.appearance': 'Оформление',
@@ -525,6 +572,11 @@ export default {
   'admin.profile.avatarRemove': 'Удалить',
   'admin.profile.saveButton': 'Сохранить профиль',
   'admin.profile.displayNamePlaceholder': 'Как вас зовут?',
+  'admin.profile.saved': 'Профиль сохранён',
+  'admin.profile.avatarError': 'Ошибка загрузки аватара',
+  'admin.profile.usernameReadonly': 'Имя пользователя нельзя изменить после регистрации.',
+  'admin.profile.saveError': 'Ошибка сохранения профиля',
+  'admin.profile.avatarAlt': 'Аватар',
 
   // ─── API ошибки ─────────────────────────────────────────────────────────────
   'api.error.createBook': 'Не удалось создать книгу',
@@ -596,4 +648,5 @@ export default {
   'parser.unsupported': 'Неподдерживаемый формат: {{ext}}. Допустимы .epub, .fb2, .docx, .doc, .txt',
   'parser.invalidFb2': 'Файл не является валидным FB2 (ожидается XML)',
   'parser.invalidDoc': 'Файл не является валидным DOC (неверная сигнатура файла)',
+  'parser.invalidSignature': 'Файл не является валидным {{format}} (неверная сигнатура файла)',
 };

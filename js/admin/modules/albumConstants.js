@@ -1,6 +1,7 @@
 /**
  * Константы и чистые утилиты фотоальбома
  */
+import { t } from '@i18n';
 
 /** Количество изображений для каждого шаблона */
 export const LAYOUT_IMAGE_COUNT = {
@@ -18,25 +19,29 @@ export const IMAGE_QUALITY = 0.85;
 /** Максимальный размер загружаемого файла до сжатия (10 МБ) */
 export const IMAGE_MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-/** Доступные рамки для фотографий */
-export const FRAME_OPTIONS = [
-  { id: 'none', label: 'Без рамки' },
-  { id: 'thin', label: 'Тонкая' },
-  { id: 'shadow', label: 'Тень' },
-  { id: 'polaroid', label: 'Polaroid' },
-  { id: 'rounded', label: 'Скруглённая' },
-  { id: 'double', label: 'Двойная' },
-];
+/** Доступные рамки для фотографий (вызывать как функцию — label зависит от текущего языка) */
+export function getFrameOptions() {
+  return [
+    { id: 'none', label: t('admin.album.frameNone') },
+    { id: 'thin', label: t('admin.album.frameThin') },
+    { id: 'shadow', label: t('admin.album.frameShadow') },
+    { id: 'polaroid', label: 'Polaroid' },
+    { id: 'rounded', label: t('admin.album.frameRounded') },
+    { id: 'double', label: t('admin.album.frameDouble') },
+  ];
+}
 
-/** Доступные фильтры для фотографий */
-export const FILTER_OPTIONS = [
-  { id: 'none', label: 'Без фильтра' },
-  { id: 'grayscale', label: 'Ч/Б' },
-  { id: 'sepia', label: 'Сепия' },
-  { id: 'contrast', label: 'Контраст' },
-  { id: 'warm', label: 'Тёплый' },
-  { id: 'cool', label: 'Холодный' },
-];
+/** Доступные фильтры для фотографий (вызывать как функцию — label зависит от текущего языка) */
+export function getFilterOptions() {
+  return [
+    { id: 'none', label: t('admin.album.filterNone') },
+    { id: 'grayscale', label: t('admin.album.filterGrayscale') },
+    { id: 'sepia', label: t('admin.album.filterSepia') },
+    { id: 'contrast', label: t('admin.album.filterContrast') },
+    { id: 'warm', label: t('admin.album.filterWarm') },
+    { id: 'cool', label: t('admin.album.filterCool') },
+  ];
+}
 
 /** Допустимые значения поворота (градусы) */
 export const ROTATION_VALUES = [0, 90, 180, 270];

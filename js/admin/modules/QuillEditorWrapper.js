@@ -6,6 +6,8 @@
  * для сокращения начальной загрузки админ-панели (~150 КБ).
  */
 
+import { t } from '@i18n';
+
 /** Максимальный размер изображения для вставки (5 МБ) */
 const IMAGE_MAX_SIZE = 5 * 1024 * 1024;
 
@@ -43,7 +45,7 @@ export class QuillEditorWrapper {
 
     this._quill = new _QuillCtor(container, {
       theme: 'snow',
-      placeholder: 'Начните писать текст главы...',
+      placeholder: t('admin.editor.placeholder'),
       modules: {
         toolbar: {
           container: [

@@ -2,6 +2,8 @@
  * Базовый модуль админ-панели
  * Предоставляет доступ к store, DOM-элементам и утилитам
  */
+import { t } from '@i18n';
+
 export class BaseModule {
   constructor(app) {
     this.app = app;
@@ -43,14 +45,14 @@ export class BaseModule {
   _validateFile(file, { maxSize, mimePrefix, extensions, inputEl } = {}) {
     if (maxSize !== undefined && file.size > maxSize) {
       const mb = maxSize / (1024 * 1024);
-      this._showToast(`Файл слишком большой (макс. ${mb} МБ)`);
+      this._showToast(t('admin.file.tooLarge', { size: mb }));
       if (inputEl) inputEl.value = '';
       return false;
     }
 
     if (mimePrefix && !file.type.startsWith(mimePrefix)) {
-      const labels = { 'image/': 'изображения', 'audio/': 'аудиофайлы' };
-      this._showToast(`Допустимы только ${labels[mimePrefix] ?? mimePrefix}`);
+      const mimeKey = mimePrefix === 'image/' ? 'admin.file.invalidMime.image' : 'admin.file.invalidMime.audio';
+      this._showToast(t(mimeKey));
       if (inputEl) inputEl.value = '';
       return false;
     }
@@ -58,7 +60,7 @@ export class BaseModule {
     if (extensions) {
       const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
       if (!extensions.includes(ext)) {
-        this._showToast(`Допустимые форматы: ${extensions.join(', ')}`);
+        this._showToast(t('admin.file.invalidExtension', { formats: extensions.join(', ') }));
         if (inputEl) inputEl.value = '';
         return false;
       }
@@ -81,7 +83,7 @@ export class BaseModule {
     fontFace.load().then((loaded) => {
       document.fonts.add(loaded);
     }).catch(() => {
-      this._showToast('Ошибка загрузки шрифта');
+      this._showToast(t('admin.fonts.loadError'));
     });
   }
 }
