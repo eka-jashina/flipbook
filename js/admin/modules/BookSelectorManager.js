@@ -3,6 +3,8 @@
  * Отвечает за рендер карточек книг, выбор и удаление книг, сортировку.
  * Извлечён из ChaptersModule для разделения ответственности.
  */
+import { t } from '@i18n';
+
 export class BookSelectorManager {
   /**
    * @param {import('./ChaptersModule.js').ChaptersModule} host - Родительский модуль
@@ -31,7 +33,7 @@ export class BookSelectorManager {
         this._host.store.moveBook(index, newIndex);
         this.render();
         this._host._renderJsonPreview();
-        this._host._showToast('Порядок изменён');
+        this._host._showToast(t('admin.chapters.orderChanged'));
         return;
       }
 
@@ -70,22 +72,22 @@ export class BookSelectorManager {
     const activeId = this._host.store.getActiveBookId();
 
     this.bookSelector.innerHTML = books.map((b, i) => `
-      <div class="book-card${b.id === activeId ? ' active' : ''}" data-book-id="${this._host._escapeHtml(b.id)}" tabindex="0" role="button" aria-label="${this._host._escapeHtml(b.title || 'Без названия')}">
+      <div class="book-card${b.id === activeId ? ' active' : ''}" data-book-id="${this._host._escapeHtml(b.id)}" tabindex="0" role="button" aria-label="${this._host._escapeHtml(b.title || t('admin.upload.defaultTitle'))}">
         <div class="book-card-info">
-          <div class="book-card-title">${this._host._escapeHtml(b.title || 'Без названия')}</div>
-          <div class="book-card-meta">${this._host._escapeHtml(b.author || '')}${b.author ? ' · ' : ''}${b.chaptersCount} гл.</div>
+          <div class="book-card-title">${this._host._escapeHtml(b.title || t('admin.upload.defaultTitle'))}</div>
+          <div class="book-card-meta">${this._host._escapeHtml(b.author || '')}${b.author ? ' · ' : ''}${t('admin.chapters.chapterCount', { count: b.chaptersCount })}</div>
         </div>
         <div class="book-card-actions">
           ${books.length > 1 ? `<div class="book-card-sort">
-            ${i > 0 ? `<button class="chapter-action-btn" data-book-move="up" data-book-index="${i}" title="Влево">
+            ${i > 0 ? `<button class="chapter-action-btn" data-book-move="up" data-book-index="${i}" title="${t('admin.chapters.moveLeft')}">
               <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>` : ''}
-            ${i < books.length - 1 ? `<button class="chapter-action-btn" data-book-move="down" data-book-index="${i}" title="Вправо">
+            ${i < books.length - 1 ? `<button class="chapter-action-btn" data-book-move="down" data-book-index="${i}" title="${t('admin.chapters.moveRight')}">
               <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
             </button>` : ''}
           </div>` : ''}
-          ${b.id === activeId ? '<span class="book-card-active-badge">Активна</span>' : ''}
-          ${books.length > 1 ? `<button class="chapter-action-btn delete" data-book-delete="${this._host._escapeHtml(b.id)}" title="Удалить книгу">
+          ${b.id === activeId ? `<span class="book-card-active-badge">${t('admin.chapters.activeLabel')}</span>` : ''}
+          ${books.length > 1 ? `<button class="chapter-action-btn delete" data-book-delete="${this._host._escapeHtml(b.id)}" title="${t('common.delete')}">
             <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
           </button>` : ''}
         </div>
@@ -106,15 +108,15 @@ export class BookSelectorManager {
   async _handleDeleteBook(bookId) {
     const books = this._host.store.getBooks();
     if (books.length <= 1) {
-      this._host._showToast('Нельзя удалить единственную книгу');
+      this._host._showToast(t('admin.chapters.cannotDeleteOnly'));
       return;
     }
     const book = books.find(b => b.id === bookId);
-    if (!await this._host._confirm(`Удалить книгу «${book?.title || bookId}»?`)) return;
+    if (!await this._host._confirm(t('admin.chapters.bookDeleteConfirm', { title: book?.title || bookId }))) return;
 
     this._host.store.removeBook(bookId);
     this._host.app._render();
     this._host.app._showView('bookshelf');
-    this._host._showToast('Книга удалена');
+    this._host._showToast(t('admin.chapters.bookDeleted'));
   }
 }

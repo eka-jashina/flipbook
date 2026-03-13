@@ -2,16 +2,19 @@
  * Модуль настроек по умолчанию и видимости настроек
  */
 import { BaseModule } from './BaseModule.js';
+import { t } from '@i18n';
 
 /** Конфигурация переключателей видимости */
-const VISIBILITY_TOGGLES = [
-  { key: 'fontSize', label: 'Размер шрифта' },
-  { key: 'theme', label: 'Тема' },
-  { key: 'font', label: 'Шрифт' },
-  { key: 'fullscreen', label: 'Полноэкранный режим' },
-  { key: 'sound', label: 'Звук перелистывания' },
-  { key: 'ambient', label: 'Атмосфера' },
-];
+function getVisibilityToggles() {
+  return [
+    { key: 'fontSize', label: t('admin.settings.fontSize') },
+    { key: 'theme', label: t('admin.settings.theme') },
+    { key: 'font', label: t('admin.settings.font') },
+    { key: 'fullscreen', label: t('admin.settings.fullscreen') },
+    { key: 'sound', label: t('admin.settings.sound') },
+    { key: 'ambient', label: t('admin.settings.ambient') },
+  ];
+}
 
 export class SettingsModule extends BaseModule {
   cacheDOM() {
@@ -38,7 +41,7 @@ export class SettingsModule extends BaseModule {
     });
 
     this.defaultSound.addEventListener('change', () => {
-      this.soundLabel.textContent = this.defaultSound.checked ? 'Включён' : 'Выключен';
+      this.soundLabel.textContent = this.defaultSound.checked ? t('admin.settings.enabled') : t('admin.settings.disabled');
     });
 
     this.defaultVolume.addEventListener('input', () => {
@@ -68,7 +71,7 @@ export class SettingsModule extends BaseModule {
       if (!input) return;
       this.store.updateSettingsVisibility({ [input.dataset.visibility]: input.checked });
       this._renderJsonPreview();
-      this._showToast(input.checked ? 'Настройка показана' : 'Настройка скрыта');
+      this._showToast(input.checked ? t('admin.settings.shown') : t('admin.settings.hidden'));
     });
   }
 
@@ -89,7 +92,7 @@ export class SettingsModule extends BaseModule {
     });
 
     this.defaultSound.checked = s.soundEnabled;
-    this.soundLabel.textContent = s.soundEnabled ? 'Включён' : 'Выключен';
+    this.soundLabel.textContent = s.soundEnabled ? t('admin.settings.enabled') : t('admin.settings.disabled');
     this.defaultVolume.value = Math.round(s.soundVolume * 100);
     this.volumeValue.textContent = `${Math.round(s.soundVolume * 100)}%`;
 
@@ -103,7 +106,7 @@ export class SettingsModule extends BaseModule {
 
   /** Сгенерировать HTML переключателей видимости из конфигурации */
   _renderVisibilityTogglesHTML() {
-    this.visibilityToggles.innerHTML = VISIBILITY_TOGGLES.map(({ key, label }) => `
+    this.visibilityToggles.innerHTML = getVisibilityToggles().map(({ key, label }) => `
       <div class="visibility-toggle-row">
         <span class="visibility-toggle-label">${label}</span>
         <label class="admin-toggle"><input type="checkbox" data-visibility="${key}" checked><span class="admin-toggle-slider"></span></label>
@@ -136,7 +139,7 @@ export class SettingsModule extends BaseModule {
     });
 
     this._renderJsonPreview();
-    this._showToast('Настройки сохранены');
+    this._showToast(t('admin.settings.saved'));
   }
 
   async _resetSettings() {
@@ -162,7 +165,7 @@ export class SettingsModule extends BaseModule {
     await this._renderSettings();
     await this._renderSettingsVisibility();
     this._renderJsonPreview();
-    this._showToast('Настройки сброшены');
+    this._showToast(t('admin.settings.reset'));
   }
 
   /** Обновить select шрифтов в настройках по умолчанию */

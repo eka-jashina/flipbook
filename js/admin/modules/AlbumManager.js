@@ -10,6 +10,7 @@
  * - AlbumHtmlBuilder.js    — генерация HTML из структурированных данных
  */
 
+import { t } from '@i18n';
 import { PhotoCropper } from './PhotoCropper.js';
 import { LAYOUT_IMAGE_COUNT, DEFAULT_FILTER_INTENSITY, getPageSlots, computeFilterStyle } from './albumConstants.js';
 import { buildAlbumHtml, buildItemModifiers, buildImgInlineStyle, buildImgDataAttrs } from './AlbumHtmlBuilder.js';
@@ -86,15 +87,15 @@ export class AlbumManager {
   /** Обновить UI в зависимости от режима (создание / редактирование) */
   _updateUI() {
     const isEditing = this._editingChapterIndex !== null;
-    this.saveAlbumBtn.textContent = isEditing ? 'Сохранить альбом' : 'Добавить альбом';
+    this.saveAlbumBtn.textContent = isEditing ? t('admin.album.saveButton') : t('admin.album.addButton');
     if (this.albumHeading) {
-      this.albumHeading.textContent = isEditing ? 'Редактирование альбома' : 'Фотоальбом';
+      this.albumHeading.textContent = isEditing ? t('admin.album.editHeading') : t('admin.album.addHeading');
     }
   }
 
   async _cancelAlbum() {
     if (this._isDirty) {
-      const ok = await this._module._confirm('Несохранённые изменения будут потеряны. Выйти?');
+      const ok = await this._module._confirm(t('admin.album.unsavedConfirm'));
       if (!ok) return;
     }
     const app = this._module.app;
@@ -143,9 +144,10 @@ export class AlbumManager {
     // Проверить, будут ли потеряны загруженные фото
     const lostImages = page.images.slice(count).filter(img => img?.dataUrl);
     if (lostImages.length > 0) {
-      const ok = await this._module._confirm(
-        `При смене раскладки ${lostImages.length === 1 ? 'будет удалено 1 фото' : `будут удалены ${lostImages.length} фото`}. Продолжить?`,
-      );
+      const msg = lostImages.length === 1
+        ? t('admin.album.layoutPhotoLoss_one', { count: 1 })
+        : t('admin.album.layoutPhotoLoss_other', { count: lostImages.length });
+      const ok = await this._module._confirm(msg);
       if (!ok) return;
     }
 
@@ -169,7 +171,7 @@ export class AlbumManager {
   async _handleAlbumSubmit() {
     const title = this.albumTitleInput.value.trim();
     if (!title) {
-      this._module._showToast('Укажите название альбома');
+      this._module._showToast(t('admin.album.titleRequired'));
       return;
     }
 
@@ -178,7 +180,7 @@ export class AlbumManager {
       page.images.some(img => img?.dataUrl)
     );
     if (!hasAnyImage) {
-      this._module._showToast('Добавьте хотя бы одно изображение');
+      this._module._showToast(t('admin.album.photoRequired'));
       return;
     }
 
@@ -191,9 +193,10 @@ export class AlbumManager {
       }
     }
     if (emptySlots > 0) {
-      const ok = await this._module._confirm(
-        `${emptySlots === 1 ? 'Остался 1 незаполненный слот' : `Осталось незаполненных слотов: ${emptySlots}`}. Пустые места не будут отображаться. Сохранить?`,
-      );
+      const msg = emptySlots === 1
+        ? t('admin.album.emptySlotConfirm')
+        : t('admin.album.emptySlotsConfirm', { count: emptySlots });
+      const ok = await this._module._confirm(msg);
       if (!ok) return;
     }
 
@@ -217,7 +220,7 @@ export class AlbumManager {
         htmlContent,
         albumData,
       });
-      this._module._showToast('Фотоальбом обновлён');
+      this._module._showToast(t('admin.album.updated'));
     } else {
       // Создание нового альбома
       const chapterId = `album_${Date.now()}`;
@@ -230,7 +233,7 @@ export class AlbumManager {
         bg: '',
         bgMobile: '',
       });
-      this._module._showToast('Фотоальбом добавлен');
+      this._module._showToast(t('admin.album.added'));
     }
 
     this._isDirty = false;

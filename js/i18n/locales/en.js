@@ -19,6 +19,8 @@ export default {
   'common.saved': 'Saved',
   'common.confirmation': 'Confirmation',
   'common.back': 'Back',
+  'common.saving': 'Saving...',
+  'common.notSaved': 'Not saved',
 
   // ─── Reader ──────────────────────────────────────────────────────────────────
   'reader.bookControl': 'Book controls',
@@ -270,6 +272,9 @@ export default {
   'admin.appearance.saved': 'Appearance saved',
   'admin.appearance.resetDone': 'Appearance reset',
   'admin.appearance.platformSaved': 'Platform settings saved',
+  'admin.appearance.previewTitleFallback': 'Title',
+  'admin.appearance.previewAuthorFallback': 'Author',
+  'admin.appearance.customTextureName': 'Custom texture',
 
   // ─── Admin: Cover ──────────────────────────────────────────────────────────
   'admin.cover.infoSection': 'Information',
@@ -408,6 +413,7 @@ export default {
   'admin.fonts.selectFile': 'Select file',
   'admin.fonts.validationRequired': 'Upload a font file',
   'admin.fonts.added': 'Font added',
+  'admin.fonts.loadError': 'Font loading error',
 
   // ─── Admin: Album ──────────────────────────────────────────────────────────
   'admin.album.noEmptySlots': 'No empty slots on this page',
@@ -439,6 +445,30 @@ export default {
   'admin.album.hideTitleHint': 'Title will only be visible in the table of contents',
   'admin.album.addPage': '+ Add page',
   'admin.album.bulkUpload': 'Upload photos',
+  'admin.album.titleRequired': 'Enter album title',
+  'admin.album.photoRequired': 'Add at least one image',
+  'admin.album.updated': 'Photo album updated',
+  'admin.album.added': 'Photo album added',
+  'admin.album.imageLoadError': 'Failed to load image',
+  'admin.album.processingError': 'Image processing error',
+  'admin.album.cropError': 'Cropping error',
+  'admin.album.photoLabel': 'Photo {{index}}',
+  'admin.album.emptySlotsConfirm': '{{count}} empty slots remain. Empty spaces will not be displayed. Save?',
+  'admin.album.emptySlotConfirm': '1 empty slot remains. Empty spaces will not be displayed. Save?',
+  'admin.album.layoutPhotoLoss_one': 'Changing layout will delete {{count}} photo. Continue?',
+  'admin.album.layoutPhotoLoss_other': 'Changing layout will delete {{count}} photos. Continue?',
+  'admin.album.pageTitle': 'Page {{num}}',
+  'admin.album.removePage': 'Remove page',
+  'admin.album.captionPlaceholder': 'Caption...',
+  'admin.album.layout1': '1 photo',
+  'admin.album.layout2v': '2 photos (vertical)',
+  'admin.album.layout2h': '2 photos (horizontal)',
+  'admin.album.layout3l': 'Large left + 2 right',
+  'admin.album.layout3r': 'Large right + 2 left',
+  'admin.album.layout3t': 'Large top + 2 bottom',
+  'admin.album.layout3b': 'Large bottom + 2 top',
+  'admin.album.layout4': '2x2 grid',
+  'admin.album.filterGrayscale': 'B&W',
 
   // ─── Admin: Book Upload ────────────────────────────────────────────────────────
   'admin.upload.unsupported': 'Unsupported format. Supported: {{formats}}',
@@ -457,6 +487,21 @@ export default {
   'admin.mode.manualDesc': 'Cover, chapters, backgrounds — full control',
   'admin.mode.albumTitle': 'Photo album',
   'admin.mode.albumDesc': 'Layouts, photos, captions — visual editor',
+
+  // ─── Admin: Cropper ──────────────────────────────────────────────────────────
+  'admin.cropper.apply': 'Apply',
+  'admin.cropper.cancel': 'Cancel',
+  'admin.cropper.ariaLabel': 'Photo cropping',
+
+  // ─── Admin: Files ──────────────────────────────────────────────────────────
+  'admin.file.tooLarge': 'File is too large (max. {{size}} MB)',
+  'admin.file.invalidMime.image': 'Only images are allowed',
+  'admin.file.invalidMime.audio': 'Only audio files are allowed',
+  'admin.file.invalidExtension': 'Allowed formats: {{formats}}',
+
+  // ─── Admin: Storage ──────────────────────────────────────────────────────────
+  'admin.storage.overflow': 'Browser storage is full. Settings may not be saved.',
+  'admin.storage.overflowKey': 'Storage overflow ({{key}}). Settings may not be saved.',
 
   // ─── Admin: General ──────────────────────────────────────────────────────────
   'admin.badge': 'Account',
@@ -485,6 +530,7 @@ export default {
   'admin.bookEditor': 'Book Editor',
 
   // ─── Admin: Editor Tabs ────────────────────────────────────────────────────────
+  'admin.editor.placeholder': 'Start writing chapter text...',
   'admin.editor.cover': 'Cover',
   'admin.editor.chapters': 'Chapters',
   'admin.editor.appearance': 'Appearance',
@@ -523,6 +569,11 @@ export default {
   'admin.profile.avatarRemove': 'Remove',
   'admin.profile.saveButton': 'Save profile',
   'admin.profile.displayNamePlaceholder': 'What\'s your name?',
+  'admin.profile.saved': 'Profile saved',
+  'admin.profile.avatarError': 'Avatar upload error',
+  'admin.profile.usernameReadonly': 'Username cannot be changed after registration.',
+  'admin.profile.saveError': 'Profile save error',
+  'admin.profile.avatarAlt': 'Avatar',
 
   // ─── API Errors ──────────────────────────────────────────────────────────────
   'api.error.createBook': 'Failed to create book',

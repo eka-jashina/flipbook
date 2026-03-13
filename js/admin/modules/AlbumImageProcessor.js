@@ -3,6 +3,7 @@
  * сжатие, кадрирование, поворот, массовая загрузка
  */
 
+import { t } from '@i18n';
 import {
   LAYOUT_IMAGE_COUNT, IMAGE_MAX_DIMENSION, IMAGE_QUALITY,
   IMAGE_MAX_FILE_SIZE, ROTATION_VALUES, DEFAULT_FILTER_INTENSITY,
@@ -46,7 +47,7 @@ export function compressImage(file) {
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Не удалось загрузить изображение'));
+      reject(new Error(t('admin.album.imageLoadError')));
     };
 
     img.src = url;
@@ -80,7 +81,7 @@ export async function readPageImageFile(manager, file, pageIndex, imageIndex) {
     manager._renderAlbumPages();
   } catch {
     slotEl?.classList.remove('loading');
-    manager._module._showToast('Ошибка при обработке изображения');
+    manager._module._showToast(t('admin.album.processingError'));
   }
 }
 
@@ -107,7 +108,7 @@ export async function cropPageImage(manager, pageIndex, imageIndex) {
     if (!target.originalDataUrl) target.originalDataUrl = source;
     manager._renderAlbumPages();
   } catch {
-    manager._module._showToast('Ошибка при кадрировании');
+    manager._module._showToast(t('admin.album.cropError'));
   }
 }
 
@@ -167,7 +168,7 @@ export function bulkUploadToPage(manager, pageIndex) {
     if (!page.images[i]?.dataUrl) emptySlots.push(i);
   }
   if (!emptySlots.length) {
-    manager._module._showToast('Нет пустых слотов на этой странице');
+    manager._module._showToast(t('admin.album.noEmptySlots'));
     return;
   }
 

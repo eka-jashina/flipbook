@@ -4,6 +4,7 @@
  * Извлечён из ChaptersModule для разделения ответственности.
  */
 import { readFileAsDataURL } from './adminHelpers.js';
+import { t } from '@i18n';
 
 export class CoverManager {
   /**
@@ -62,7 +63,7 @@ export class CoverManager {
       this.bgCoverThumb.style.backgroundImage = `url(${customData})`;
       this.bgCoverThumb.classList.add('has-image');
       this.bgCoverCustomInfo.hidden = false;
-      this.bgCoverCustomName.textContent = 'Своё изображение';
+      this.bgCoverCustomName.textContent = t('admin.cover.customImageName');
     } else {
       this.bgCoverThumb.style.backgroundImage = '';
       this.bgCoverThumb.classList.remove('has-image');
@@ -85,7 +86,7 @@ export class CoverManager {
     this._host.store.updateCover({ bgMode: 'custom', bgCustomData: dataUrl });
     this._renderBgModeSelector('custom', dataUrl);
     this._host._renderJsonPreview();
-    this._host._showToast('Фон загружен');
+    this._host._showToast(t('admin.chapters.bgLoaded'));
     e.target.value = '';
   }
 
@@ -93,7 +94,7 @@ export class CoverManager {
     this._host.store.updateCover({ bgMode: 'default', bgCustomData: null });
     this._renderBgModeSelector('default', null);
     this._host._renderJsonPreview();
-    this._host._showToast('Своё изображение удалено');
+    this._host._showToast(t('admin.chapters.bgRemoved'));
   }
 
   _saveCover() {
@@ -104,10 +105,10 @@ export class CoverManager {
     });
 
     // Обновить заголовок редактора
-    this._host.app.editorTitle.textContent = this.coverTitle.value.trim() || 'Редактор книги';
+    this._host.app.editorTitle.textContent = this.coverTitle.value.trim() || t('admin.bookEditor');
 
     this._host._bookSelector.render();
     this._host._renderJsonPreview();
-    this._host._showToast('Обложка сохранена');
+    this._host._showToast(t('admin.chapters.coverSaved'));
   }
 }

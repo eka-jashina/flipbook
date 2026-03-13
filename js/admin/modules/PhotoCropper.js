@@ -10,6 +10,8 @@
  * - Сохранение пропорций через зажатый Shift
  */
 
+import { t } from '@i18n';
+
 /** Минимальный размер области выделения (px) */
 const MIN_CROP_SIZE = 30;
 
@@ -58,7 +60,7 @@ export class PhotoCropper {
     overlay.className = 'photo-cropper';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Кадрирование фотографии');
+    overlay.setAttribute('aria-label', t('admin.cropper.ariaLabel'));
 
     // Контейнер изображения
     const imgContainer = document.createElement('div');
@@ -91,13 +93,13 @@ export class PhotoCropper {
     const confirmBtn = document.createElement('button');
     confirmBtn.type = 'button';
     confirmBtn.className = 'btn btn-primary photo-cropper__btn';
-    confirmBtn.textContent = 'Применить';
+    confirmBtn.textContent = t('admin.cropper.apply');
     confirmBtn.addEventListener('click', () => this._confirm());
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
     cancelBtn.className = 'btn btn-secondary photo-cropper__btn';
-    cancelBtn.textContent = 'Отмена';
+    cancelBtn.textContent = t('admin.cropper.cancel');
     cancelBtn.addEventListener('click', () => this._cancel());
 
     actions.appendChild(confirmBtn);

@@ -7,6 +7,7 @@
 import { BookParser } from '../BookParser.js';
 import { setupDropzone } from './adminHelpers.js';
 import { trackBookImported } from '../../utils/Analytics.js';
+import { t } from '@i18n';
 
 export class BookUploadManager {
   constructor(chaptersModule) {
@@ -49,14 +50,14 @@ export class BookUploadManager {
     const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] ?? '';
     if (!BOOK_EXTENSIONS.includes(ext)) {
       const allowed = BOOK_EXTENSIONS.map(e => e.slice(1)).join(', ');
-      this._module._showToast(`Неподдерживаемый формат. Поддерживаются: ${allowed}`);
+      this._module._showToast(t('admin.upload.unsupported', { formats: allowed }));
       return;
     }
 
     this.bookDropzone.hidden = true;
     this.bookUploadProgress.hidden = false;
     this.bookUploadResult.hidden = true;
-    this.bookUploadStatus.textContent = 'Обработка файла...';
+    this.bookUploadStatus.textContent = t('admin.upload.processing');
 
     try {
       const parsed = await BookParser.parse(file);
@@ -65,11 +66,11 @@ export class BookUploadManager {
 
       this.bookUploadProgress.hidden = true;
       this.bookUploadResult.hidden = false;
-      this.bookUploadTitle.textContent = parsed.title || 'Без названия';
-      this.bookUploadAuthor.textContent = parsed.author ? `Автор: ${parsed.author}` : '';
-      this.bookUploadChaptersCount.textContent = `Найдено глав: ${parsed.chapters.length}`;
+      this.bookUploadTitle.textContent = parsed.title || t('admin.upload.defaultTitle');
+      this.bookUploadAuthor.textContent = parsed.author ? t('admin.upload.authorLabel', { author: parsed.author }) : '';
+      this.bookUploadChaptersCount.textContent = t('admin.upload.chaptersCount', { count: parsed.chapters.length });
     } catch (err) {
-      this._module._showToast(`Ошибка: ${err.message}`);
+      this._module._showToast(t('admin.upload.error', { message: err.message }));
       this._resetBookUpload();
     }
   }
@@ -93,7 +94,7 @@ export class BookUploadManager {
     this.store.addBook({
       id: bookId,
       cover: {
-        title: title || 'Без названия',
+        title: title || t('admin.upload.defaultTitle'),
         author: author || '',
         bg: '',
         bgMobile: '',
@@ -105,7 +106,7 @@ export class BookUploadManager {
       await this.store.waitForSave();
     } catch {
       this.store.removeBook(bookId);
-      this._module._showToast('Ошибка сохранения: недостаточно места в хранилище');
+      this._module._showToast(t('admin.upload.storageQuota'));
       return;
     }
 
@@ -113,7 +114,7 @@ export class BookUploadManager {
 
     this._module.app._render();
     this._resetBookUpload();
-    this._module._showToast(`Книга «${title || 'Без названия'}» добавлена (${chapters.length} гл.)`);
+    this._module._showToast(t('admin.upload.added', { title: title || t('admin.upload.defaultTitle'), count: chapters.length }));
 
     // Открыть редактор загруженной книги
     this._module.app.openEditor();

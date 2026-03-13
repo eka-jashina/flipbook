@@ -3,13 +3,16 @@
  */
 import { BaseModule } from './BaseModule.js';
 import { readFileAsDataURL } from './adminHelpers.js';
+import { t } from '@i18n';
 
 /** Конфигурация звуковых карточек */
-const SOUND_CARDS = [
-  { key: 'pageFlip', label: 'Перелистывание', placeholder: 'sounds/page-flip.mp3', defaultHint: 'sounds/page-flip.mp3' },
-  { key: 'bookOpen', label: 'Открытие книги', placeholder: 'sounds/cover-flip.mp3', defaultHint: 'sounds/cover-flip.mp3' },
-  { key: 'bookClose', label: 'Закрытие книги', placeholder: 'sounds/cover-flip.mp3', defaultHint: 'sounds/cover-flip.mp3' },
-];
+function getSoundCards() {
+  return [
+    { key: 'pageFlip', label: t('admin.sounds.pageFlip'), placeholder: 'sounds/page-flip.mp3', defaultHint: 'sounds/page-flip.mp3' },
+    { key: 'bookOpen', label: t('admin.sounds.bookOpen'), placeholder: 'sounds/cover-flip.mp3', defaultHint: 'sounds/cover-flip.mp3' },
+    { key: 'bookClose', label: t('admin.sounds.bookClose'), placeholder: 'sounds/cover-flip.mp3', defaultHint: 'sounds/cover-flip.mp3' },
+  ];
+}
 
 export class SoundsModule extends BaseModule {
   cacheDOM() {
@@ -21,7 +24,7 @@ export class SoundsModule extends BaseModule {
     this._fields = {};
     this._uploads = {};
     this._hints = {};
-    for (const { key } of SOUND_CARDS) {
+    for (const { key } of getSoundCards()) {
       this._fields[key] = document.getElementById(`sound-${key}`);
       this._uploads[key] = document.getElementById(`sound-${key}-upload`);
       this._hints[key] = document.getElementById(`sound-${key}-hint`);
@@ -33,12 +36,12 @@ export class SoundsModule extends BaseModule {
 
   /** Сгенерировать HTML звуковых карточек */
   _renderSoundCardsHTML() {
-    this.soundCardsGrid.innerHTML = SOUND_CARDS.map(({ key, label, placeholder, defaultHint }) => `
+    this.soundCardsGrid.innerHTML = getSoundCards().map(({ key, label, placeholder, defaultHint }) => `
       <div class="setting-card">
         <label class="setting-label" for="sound-${key}">${label}</label>
         <div class="sound-input-row">
           <input class="form-input" type="text" id="sound-${key}" placeholder="${placeholder}">
-          <label class="btn btn-small upload-btn" title="Загрузить файл">
+          <label class="btn btn-small upload-btn" title="${t('admin.sounds.uploadFile')}">
             <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
             <input type="file" id="sound-${key}-upload" accept="audio/*" hidden>
           </label>
@@ -49,7 +52,7 @@ export class SoundsModule extends BaseModule {
   }
 
   bindEvents() {
-    for (const { key } of SOUND_CARDS) {
+    for (const { key } of getSoundCards()) {
       this._uploads[key].addEventListener('change', (e) => this._handleSoundUpload(e, key));
     }
     this.saveSoundsBtn.addEventListener('click', () => this._saveSounds());
@@ -63,17 +66,17 @@ export class SoundsModule extends BaseModule {
   async _renderSounds() {
     const sounds = await this.store.getSounds();
 
-    for (const { key, defaultHint } of SOUND_CARDS) {
+    for (const { key, defaultHint } of getSoundCards()) {
       const input = this._fields[key];
       const hint = this._hints[key];
       const value = sounds[key] || '';
 
       if (value.startsWith('data:')) {
         input.value = '';
-        hint.textContent = 'Загруженный файл';
+        hint.textContent = t('admin.sounds.uploadedHint');
       } else {
         input.value = value;
-        hint.textContent = `Дефолт: ${defaultHint}`;
+        hint.textContent = t('admin.sounds.defaultHint', { path: defaultHint });
       }
     }
   }
@@ -88,13 +91,13 @@ export class SoundsModule extends BaseModule {
     this.store.updateSounds({ [key]: dataUrl });
     this._renderSounds();
     this._renderJsonPreview();
-    this._showToast('Звук загружен');
+    this._showToast(t('admin.sounds.loaded'));
     e.target.value = '';
   }
 
   async _saveSounds() {
     const update = {};
-    for (const { key } of SOUND_CARDS) {
+    for (const { key } of getSoundCards()) {
       const value = this._fields[key].value.trim();
       if (value) update[key] = value;
     }
@@ -108,7 +111,7 @@ export class SoundsModule extends BaseModule {
 
     this._renderSounds();
     this._renderJsonPreview();
-    this._showToast('Звуки сохранены');
+    this._showToast(t('admin.sounds.saved'));
   }
 
   _resetSounds() {
@@ -120,6 +123,6 @@ export class SoundsModule extends BaseModule {
 
     this._renderSounds();
     this._renderJsonPreview();
-    this._showToast('Звуки сброшены');
+    this._showToast(t('admin.sounds.reset'));
   }
 }
