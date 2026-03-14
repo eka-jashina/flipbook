@@ -302,6 +302,12 @@ export class AdminConfigStore {
     return book ? structuredClone(book.chapters) : [];
   }
 
+  getChapterContent(index) {
+    const book = this._getActiveBook();
+    if (!book || index < 0 || index >= book.chapters.length) return null;
+    return book.chapters[index].htmlContent || null;
+  }
+
   addChapter(chapter) {
     this._modifyActiveBook(book => {
       book.chapters.push({ ...chapter });

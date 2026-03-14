@@ -15,7 +15,7 @@
  */
 
 import {
-  fetchChapters, createChapter, updateChapterByIndex,
+  fetchChapters, fetchChapterContentByIndex, createChapter, updateChapterByIndex,
   removeChapterByIndex, moveChapterByIndex,
   fetchAmbients, createAmbient, updateAmbientByIndex, removeAmbientByIndex,
   fetchReadingFonts, createReadingFont, updateReadingFontByIndex,
@@ -181,6 +181,11 @@ export class ServerAdminConfigStore {
     if (!this._activeBookId) return;
     try { await createChapter(this._api, this._activeBookId, chapter); this._save(); }
     catch (err) { this._handleError('Не удалось добавить главу', err); throw err; }
+  }
+
+  async getChapterContent(index) {
+    if (!this._activeBookId) return null;
+    return fetchChapterContentByIndex(this._api, this._activeBookId, index);
   }
 
   async updateChapter(index, chapter) {

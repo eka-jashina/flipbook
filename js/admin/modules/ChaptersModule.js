@@ -358,6 +358,11 @@ export class ChaptersModule extends BaseModule {
     await this._saveExpandedChapter();
     this._collapseAll();
 
+    // Подгрузить htmlContent, если на сервере есть контент, но он не загружен
+    if (ch._hasHtmlContent && !ch.htmlContent && this.store.getChapterContent) {
+      ch.htmlContent = await this.store.getChapterContent(index);
+    }
+
     // Раскрыть новую
     this._expandedIndex = index;
     const card = this.chaptersList.querySelector(`.chapter-card[data-index="${index}"]`);
