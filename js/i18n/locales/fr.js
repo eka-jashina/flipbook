@@ -181,6 +181,8 @@ export default {
   'admin.chapters.orderChanged': 'Ordre modifié',
   'admin.chapters.deleteConfirm': 'Supprimer ce chapitre ?',
   'admin.chapters.deleted': 'Chapitre supprimé',
+  'admin.chapters.saveChapter': 'Enregistrer le chapitre',
+  'admin.chapters.chapterSaved': 'Chapitre enregistré',
   'admin.chapters.editTitle': 'Modifier le chapitre',
   'admin.chapters.addTitle': 'Ajouter un chapitre',
   'admin.chapters.updated': 'Chapitre mis à jour',

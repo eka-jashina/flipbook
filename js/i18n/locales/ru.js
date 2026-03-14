@@ -182,6 +182,8 @@ export default {
   'admin.chapters.orderChanged': 'Порядок изменён',
   'admin.chapters.deleteConfirm': 'Удалить эту главу?',
   'admin.chapters.deleted': 'Глава удалена',
+  'admin.chapters.saveChapter': 'Сохранить главу',
+  'admin.chapters.chapterSaved': 'Глава сохранена',
   'admin.chapters.editTitle': 'Редактировать главу',
   'admin.chapters.addTitle': 'Добавить главу',
   'admin.chapters.updated': 'Глава обновлена',

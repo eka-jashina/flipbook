@@ -453,6 +453,12 @@ export class ChaptersModule extends BaseModule {
           <label class="form-label">${t('admin.modal.chapter.bgMobile')}</label>
           <input class="form-input chapter-inline-bg-mobile" type="text" value="${this._escapeHtml(ch.bgMobile || '')}" placeholder="${t('admin.modal.chapter.bgMobilePlaceholder')}">
         </div>
+      </div>
+      <div class="chapter-save-row">
+        <button type="button" class="btn btn-primary chapter-save-btn" data-action-inline="save-chapter">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+          ${t('admin.chapters.saveChapter')}
+        </button>
       </div>`;
   }
 
@@ -514,6 +520,12 @@ export class ChaptersModule extends BaseModule {
         if (dropzone) dropzone.hidden = false;
         if (fileInfo) fileInfo.hidden = true;
       });
+    }
+
+    // Кнопка «Сохранить главу»
+    const saveBtn = body.querySelector('[data-action-inline="save-chapter"]');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => this._handleSaveChapterClick());
     }
 
     // Если есть htmlContent — инициализировать Quill
@@ -650,6 +662,12 @@ export class ChaptersModule extends BaseModule {
           <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
           <span>${t('admin.album.bulkUpload')}</span>
         </button>
+      </div>
+      <div class="chapter-save-row">
+        <button type="button" class="btn btn-primary chapter-save-btn" data-action-inline="save-chapter">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+          ${t('admin.chapters.saveChapter')}
+        </button>
       </div>`;
   }
 
@@ -690,11 +708,38 @@ export class ChaptersModule extends BaseModule {
     bulkUploadBtn.addEventListener('click', () => {
       this._album._bulkUpload();
     });
+
+    // Кнопка «Сохранить главу»
+    const saveBtn = body.querySelector('[data-action-inline="save-chapter"]');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => this._handleSaveChapterClick());
+    }
   }
 
   // ═══════════════════════════════════════════
   // Сохранение раскрытой главы
   // ═══════════════════════════════════════════
+
+  /**
+   * Обработчик нажатия кнопки «Сохранить главу» —
+   * сохраняет содержимое и показывает подтверждение.
+   */
+  async _handleSaveChapterClick() {
+    const saveBtn = this.chaptersList.querySelector('[data-action-inline="save-chapter"]');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = t('common.saving');
+    }
+    try {
+      await this._saveExpandedChapter();
+      this._showToast(t('admin.chapters.chapterSaved'));
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg> ${t('admin.chapters.saveChapter')}`;
+      }
+    }
+  }
 
   async _saveExpandedChapter() {
     if (this._expandedIndex < 0) return;
@@ -769,7 +814,6 @@ export class ChaptersModule extends BaseModule {
     }
 
     await this.store.updateChapter(this._expandedIndex, chapter);
-    this._destroyInlineEditor();
     this._renderJsonPreview();
   }
 

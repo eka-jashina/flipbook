@@ -181,6 +181,8 @@ export default {
   'admin.chapters.orderChanged': 'Reihenfolge geändert',
   'admin.chapters.deleteConfirm': 'Dieses Kapitel löschen?',
   'admin.chapters.deleted': 'Kapitel gelöscht',
+  'admin.chapters.saveChapter': 'Kapitel speichern',
+  'admin.chapters.chapterSaved': 'Kapitel gespeichert',
   'admin.chapters.editTitle': 'Kapitel bearbeiten',
   'admin.chapters.addTitle': 'Kapitel hinzufügen',
   'admin.chapters.updated': 'Kapitel aktualisiert',

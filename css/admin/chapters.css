@@ -383,4 +383,19 @@
   border-color: var(--admin-danger);
 }
 
+/* === Кнопка «Сохранить главу» === */
+
+.chapter-save-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 16px;
+  margin-top: 8px;
+  border-top: 1px solid var(--admin-border);
+}
+
+.chapter-save-btn {
+  min-width: 160px;
+  justify-content: center;
+}
+
 /* Empty state: стили определены в screens.css */
