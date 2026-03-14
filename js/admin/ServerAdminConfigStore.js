@@ -77,8 +77,14 @@ export class ServerAdminConfigStore {
 
   getBooks() {
     return this._books.map(b => ({
-      id: b.id, title: b.title, author: b.author, chaptersCount: b.chaptersCount || 0,
+      id: b.id, title: b.title, author: b.author, type: b.type || 'book', chaptersCount: b.chaptersCount || 0,
     }));
+  }
+
+  /** Тип активной книги ('book' | 'album') */
+  getBookType() {
+    const book = this._books.find(b => b.id === this._activeBookId);
+    return book?.type || 'book';
   }
 
   getActiveBookId() { return this._activeBookId; }
@@ -92,6 +98,7 @@ export class ServerAdminConfigStore {
       const created = await this._api.createBook({
         title: book.cover?.title || book.title || '',
         author: book.cover?.author || book.author || '',
+        ...(book.type && { type: book.type }),
       });
       this._books.push({ id: created.id, title: created.title, author: created.author, chaptersCount: 0 });
       this._save();

@@ -204,6 +204,13 @@ export default {
   'admin.chapters.importHint': 'Drop a file (.epub, .fb2, .docx, .doc, .txt) to add chapters',
   'admin.chapters.importSuccess': '{{count}} chapters imported',
 
+  // Album sections
+  'admin.sections.addSection': 'Add section',
+  'admin.sections.emptyTitle': 'No sections added',
+  'admin.sections.emptyHint': 'Click "Add section" to get started',
+  'admin.sections.deleteConfirm': 'Delete this section?',
+  'admin.sections.deleted': 'Section deleted',
+
   // ─── Admin: Sounds ──────────────────────────────────────────────────────────
   'admin.sounds.effectsSection': 'Sound effects',
   'admin.sounds.effectsDescription': 'Sound files for page flipping and book opening/closing',
@@ -533,6 +540,7 @@ export default {
   'admin.editor.placeholder': 'Start writing chapter text...',
   'admin.editor.cover': 'Cover',
   'admin.editor.chapters': 'Chapters',
+  'admin.editor.sections': 'Sections',
   'admin.editor.appearance': 'Appearance',
   'admin.editor.sounds': 'Sounds',
   'admin.editor.defaults': 'Reading Settings',

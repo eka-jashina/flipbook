@@ -150,6 +150,7 @@ describe('AdminConfigStore', () => {
         id: 'default',
         title: 'О хоббитах',
         author: 'Дж.Р.Р.Толкин',
+        type: 'book',
         chaptersCount: 3,
       });
     });

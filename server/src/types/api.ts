@@ -24,6 +24,7 @@ export interface BookListItem {
   id: string;
   title: string;
   author: string;
+  type: string;
   position: number;
   visibility: string;
   description: string | null;
@@ -46,6 +47,7 @@ export interface BookDetail {
   id: string;
   title: string;
   author: string;
+  type: string;
   visibility: string;
   description: string | null;
   publishedAt: string | null;
@@ -189,6 +191,7 @@ export interface PublicBookCard {
   id: string;
   title: string;
   author: string;
+  type: string;
   description: string | null;
   publishedAt: string | null;
   chaptersCount: number;
@@ -210,6 +213,7 @@ export interface PublicBookDetail {
   id: string;
   title: string;
   author: string;
+  type: string;
   description: string | null;
   publishedAt: string | null;
   cover: {

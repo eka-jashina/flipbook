@@ -205,6 +205,13 @@ export default {
   'admin.chapters.importHint': 'Перетащите файл (.epub, .fb2, .docx, .doc, .txt) для добавления глав',
   'admin.chapters.importSuccess': 'Импортировано глав: {{count}}',
 
+  // Разделы альбома
+  'admin.sections.addSection': 'Добавить раздел',
+  'admin.sections.emptyTitle': 'Нет добавленных разделов',
+  'admin.sections.emptyHint': 'Нажмите «Добавить раздел», чтобы начать',
+  'admin.sections.deleteConfirm': 'Удалить этот раздел?',
+  'admin.sections.deleted': 'Раздел удалён',
+
   // ─── Админ: Звуки ──────────────────────────────────────────────────────────
   'admin.sounds.effectsSection': 'Звуковые эффекты',
   'admin.sounds.effectsDescription': 'Файлы звуков для перелистывания и открытия/закрытия книги',
@@ -536,6 +543,7 @@ export default {
   'admin.editor.placeholder': 'Начните писать текст главы...',
   'admin.editor.cover': 'Обложка',
   'admin.editor.chapters': 'Главы',
+  'admin.editor.sections': 'Разделы',
   'admin.editor.appearance': 'Оформление',
   'admin.editor.sounds': 'Звуки',
   'admin.editor.defaults': 'Настройки чтения',

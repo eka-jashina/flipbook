@@ -103,7 +103,7 @@ export async function getBookById(
  */
 export async function createBook(
   userId: string,
-  data: { title: string; author?: string },
+  data: { title: string; author?: string; type?: string },
 ): Promise<BookDetail> {
   const prisma = getPrisma();
 
@@ -126,6 +126,7 @@ export async function createBook(
         userId,
         title: data.title,
         author: data.author || '',
+        type: data.type || 'book',
         position: nextPosition,
       },
     });
@@ -152,6 +153,7 @@ export async function updateBook(
   data: {
     title?: string;
     author?: string;
+    type?: string;
     visibility?: string;
     description?: string | null;
     coverBgMode?: string;
@@ -193,6 +195,7 @@ export async function updateBook(
     data: {
       ...(data.title !== undefined && { title: data.title }),
       ...(data.author !== undefined && { author: data.author }),
+      ...(data.type !== undefined && { type: data.type }),
       ...(data.visibility !== undefined && { visibility: data.visibility }),
       ...(data.description !== undefined && { description: data.description }),
       ...(publishedAt !== undefined && { publishedAt }),

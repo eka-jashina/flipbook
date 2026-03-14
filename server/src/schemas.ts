@@ -74,11 +74,13 @@ export const resetPasswordSchema = z.object({
 export const createBookSchema = z.object({
   title: z.string().min(1).max(500),
   author: z.string().max(500).optional(),
+  type: z.enum(['book', 'album']).optional(),
 });
 
 export const updateBookSchema = z.object({
   title: z.string().min(1).max(500).optional(),
   author: z.string().max(500).optional(),
+  type: z.enum(['book', 'album']).optional(),
   visibility: z.enum(['draft', 'published', 'unlisted']).optional(),
   description: z.string().max(2000).nullable().optional(),
   coverBgMode: z.enum(['default', 'none', 'custom']).optional(),

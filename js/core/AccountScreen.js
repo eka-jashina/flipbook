@@ -369,6 +369,7 @@ export class AccountScreen {
       case 'album': {
         const albumCreated = await this.store.addBook({
           id: `book_${Date.now()}`,
+          type: 'album',
           cover: { title: t('admin.albumBook'), author: '', bg: '', bgMobile: '' },
           chapters: [],
         });
@@ -376,8 +377,8 @@ export class AccountScreen {
         this.store.setActiveBook(albumBookId);
         this._pendingBookId = albumBookId;
         await this._render();
-        this._showView('album');
-        this.chapters._album.openInView();
+        await this.openEditor();
+        this._switchEditorTab('chapters');
         break;
       }
     }
@@ -401,6 +402,14 @@ export class AccountScreen {
   async openEditor() {
     const cover = await this.store.getCover();
     this.editorTitle.textContent = cover.title || t('admin.bookEditor');
+
+    // Динамически переименовать таб «Главы» → «Разделы» для альбомов
+    const isAlbum = this.store.getBookType?.() === 'album';
+    const chaptersTab = this.container.querySelector('[data-editor-tab="chapters"]');
+    if (chaptersTab) {
+      chaptersTab.textContent = isAlbum ? t('admin.editor.sections') : t('admin.editor.chapters');
+    }
+
     this._switchEditorTab('cover');
     this._showView('editor');
   }
