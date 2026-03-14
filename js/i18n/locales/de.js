@@ -204,6 +204,13 @@ export default {
   'admin.chapters.importHint': 'Datei (.epub, .fb2, .docx, .doc, .txt) hierher ziehen, um Kapitel hinzuzufügen',
   'admin.chapters.importSuccess': '{{count}} Kapitel importiert',
 
+  // Albumabschnitte
+  'admin.sections.addSection': 'Abschnitt hinzufügen',
+  'admin.sections.emptyTitle': 'Keine Abschnitte hinzugefügt',
+  'admin.sections.emptyHint': 'Klicken Sie auf «Abschnitt hinzufügen», um zu beginnen',
+  'admin.sections.deleteConfirm': 'Diesen Abschnitt löschen?',
+  'admin.sections.deleted': 'Abschnitt gelöscht',
+
   // ─── Admin: Klänge ────────────────────────────────────────────────────────
   'admin.sounds.effectsSection': 'Soundeffekte',
   'admin.sounds.effectsDescription': 'Sounddateien für Blättern und Öffnen/Schließen des Buches',
@@ -533,6 +540,7 @@ export default {
   'admin.editor.placeholder': 'Beginnen Sie mit dem Schreiben des Kapiteltextes...',
   'admin.editor.cover': 'Cover',
   'admin.editor.chapters': 'Kapitel',
+  'admin.editor.sections': 'Abschnitte',
   'admin.editor.appearance': 'Gestaltung',
   'admin.editor.sounds': 'Klänge',
   'admin.editor.defaults': 'Leseeinstellungen',

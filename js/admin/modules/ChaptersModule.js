@@ -98,13 +98,24 @@ export class ChaptersModule extends BaseModule {
   }
 
   bindEvents() {
-    // Добавить главу — создаёт пустую и раскрывает
-    this.addChapterBtn.addEventListener('click', () => this._addNewChapter());
+    // Добавить главу / раздел — создаёт пустую и раскрывает
+    this.addChapterBtn.addEventListener('click', () => {
+      if (this._isAlbumBook()) {
+        this._addNewSection();
+      } else {
+        this._addNewChapter();
+      }
+    });
 
-    // Альбом — кнопка в табе «Главы» (переход в album view)
+    // Альбом — кнопка в табе «Главы» (добавить альбом-раздел)
     this.addAlbumBtn.addEventListener('click', () => {
-      this.app._showView('album');
-      this._album.openInView();
+      if (this._isAlbumBook()) {
+        // В режиме альбома кнопка добавляет новый раздел
+        this._addNewSection();
+      } else {
+        this.app._showView('album');
+        this._album.openInView();
+      }
     });
 
     // Дропзона импорта файла книги
@@ -124,10 +135,37 @@ export class ChaptersModule extends BaseModule {
     this._bookUpload.bindEvents();
   }
 
+  /** Является ли текущая книга альбомом */
+  _isAlbumBook() {
+    return this.store.getBookType?.() === 'album';
+  }
+
   async render() {
     this._bookSelector.render();
     await this._cover.render();
+    this._updateAlbumModeUI();
     await this._renderChapters();
+  }
+
+  /** Обновить UI кнопок и надписей для режима альбома */
+  _updateAlbumModeUI() {
+    const isAlbum = this._isAlbumBook();
+    // Переименовать кнопку «Добавить главу» → «Добавить раздел»
+    const addLabel = this.addChapterBtn.querySelector('span');
+    if (addLabel) {
+      addLabel.textContent = isAlbum ? t('admin.sections.addSection') : t('admin.chapters.addChapter');
+    }
+    // Скрыть кнопку «Фотоальбом» для альбомных книг (там все разделы — альбомные)
+    if (this.addAlbumBtn) {
+      this.addAlbumBtn.hidden = isAlbum;
+    }
+    // Обновить пустое состояние
+    const emptyTitle = this.chaptersEmpty?.querySelector('[data-i18n="admin.chapters.emptyTitle"]')
+      || this.chaptersEmpty?.querySelector('p:first-of-type');
+    const emptyHint = this.chaptersEmpty?.querySelector('[data-i18n="admin.chapters.emptyHint"]')
+      || this.chaptersEmpty?.querySelector('.empty-hint');
+    if (emptyTitle) emptyTitle.textContent = isAlbum ? t('admin.sections.emptyTitle') : t('admin.chapters.emptyTitle');
+    if (emptyHint) emptyHint.textContent = isAlbum ? t('admin.sections.emptyHint') : t('admin.chapters.emptyHint');
   }
 
   // ═══════════════════════════════════════════
@@ -196,7 +234,9 @@ export class ChaptersModule extends BaseModule {
    */
   _renderChapterCard(ch, index, total) {
     const isAlbum = !!ch.albumData;
-    const typeLabel = isAlbum
+    const isAlbumBook = this._isAlbumBook();
+    // В альбомной книге не показываем бейдж «Альбом» — там все разделы альбомные
+    const typeLabel = (isAlbum && !isAlbumBook)
       ? `<span class="chapter-type-badge chapter-type-badge--album">${t('admin.chapters.albumType')}</span>`
       : '';
     const metaText = isAlbum
@@ -299,8 +339,9 @@ export class ChaptersModule extends BaseModule {
     const chapters = await this.store.getChapters();
     const ch = chapters[index];
 
-    // Альбомы — открываем в отдельном view (пока)
-    if (ch?.albumData) {
+    // Альбомы с albumData — в режиме обычной книги открываем в отдельном view,
+    // в режиме альбомной книги — раскрываем inline
+    if (ch?.albumData && !this._isAlbumBook()) {
       this.app._showView('album');
       await this._album.openForEdit(index);
       return;
@@ -324,10 +365,16 @@ export class ChaptersModule extends BaseModule {
 
     card.classList.add('chapter-card--expanded');
     const body = card.querySelector('.chapter-card-body');
-    body.innerHTML = this._renderChapterBody(ch, index);
 
-    // Инициализировать файловую дропзону и переключатель режимов
-    this._initInlineControls(body, ch);
+    if (this._isAlbumBook()) {
+      // Альбомный раздел — инициализируем inline-редактор альбома
+      body.innerHTML = this._renderSectionBody(ch, index);
+      this._initInlineSectionControls(body, ch, index);
+    } else {
+      body.innerHTML = this._renderChapterBody(ch, index);
+      // Инициализировать файловую дропзону и переключатель режимов
+      this._initInlineControls(body, ch);
+    }
   }
 
   _collapseAll() {
@@ -335,6 +382,11 @@ export class ChaptersModule extends BaseModule {
     this._destroyInlineEditor();
     this._pendingHtmlContent = null;
     this._inputMode = 'upload';
+    // Восстановить albumPagesEl, если был inline-режим альбома
+    if (this._restoreAlbumPagesEl) {
+      this._restoreAlbumPagesEl();
+      this._restoreAlbumPagesEl = null;
+    }
     this.chaptersList.querySelectorAll('.chapter-card--expanded').forEach(card => {
       card.classList.remove('chapter-card--expanded');
       const body = card.querySelector('.chapter-card-body');
@@ -543,6 +595,104 @@ export class ChaptersModule extends BaseModule {
   }
 
   // ═══════════════════════════════════════════
+  // Альбомные разделы (inline)
+  // ═══════════════════════════════════════════
+
+  /** Добавить новый раздел альбома */
+  async _addNewSection() {
+    const sectionId = `album_${Date.now()}`;
+    await this.store.addChapter({
+      id: sectionId,
+      title: '',
+      file: '',
+      htmlContent: '',
+      albumData: {
+        title: '',
+        hideTitle: true,
+        pages: [{ layout: '1', images: [] }],
+      },
+      bg: '',
+      bgMobile: '',
+    });
+    await this._renderChapters();
+
+    // Раскрыть только что созданный раздел
+    const newChapters = await this.store.getChapters();
+    const newIndex = newChapters.length - 1;
+    await this._toggleChapter(newIndex);
+
+    const card = this.chaptersList.querySelector(`.chapter-card[data-index="${newIndex}"]`);
+    if (card?.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  /**
+   * HTML тела раскрытого раздела альбома
+   */
+  _renderSectionBody(ch, _index) {
+    const data = ch.albumData || { title: '', hideTitle: true, pages: [] };
+    return `
+      <div class="form-group">
+        <label class="form-label">${t('admin.album.titleLabel')}</label>
+        <input class="form-input section-inline-title" type="text" value="${this._escapeHtml(data.title || '')}" placeholder="${t('admin.album.titlePlaceholder')}">
+      </div>
+      <div class="form-group">
+        <label class="admin-toggle album-hide-toggle">
+          <input type="checkbox" class="section-inline-hide-title" ${data.hideTitle !== false ? 'checked' : ''}>
+          <span class="admin-toggle-slider"></span>
+        </label>
+        <span class="album-hide-label">${t('admin.album.hideTitleLabel')}</span>
+        <span class="form-hint">${t('admin.album.hideTitleHint')}</span>
+      </div>
+      <div class="section-inline-album-pages"></div>
+      <div class="album-actions-row">
+        <button class="btn btn-secondary album-add-page-btn section-add-page" type="button">${t('admin.album.addPage')}</button>
+        <button class="btn btn-secondary album-bulk-upload-btn section-bulk-upload" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+          <span>${t('admin.album.bulkUpload')}</span>
+        </button>
+      </div>`;
+  }
+
+  /**
+   * Инициализировать элементы управления для inline-раздела альбома
+   */
+  _initInlineSectionControls(body, ch, index) {
+    const pagesContainer = body.querySelector('.section-inline-album-pages');
+    const addPageBtn = body.querySelector('.section-add-page');
+    const bulkUploadBtn = body.querySelector('.section-bulk-upload');
+
+    // Сохраняем ссылку на текущие данные страниц
+    const albumData = ch.albumData || { title: '', hideTitle: true, pages: [{ layout: '1', images: [] }] };
+    this._inlineAlbumPages = structuredClone(albumData.pages);
+
+    // Настроить AlbumManager для работы с inline-контейнером
+    this._album._albumPages = this._inlineAlbumPages;
+    this._album._editingChapterIndex = index;
+    this._album._isDirty = false;
+
+    // Подменяем albumPagesEl на inline-контейнер
+    const origPagesEl = this._album.albumPagesEl;
+    this._album.albumPagesEl = pagesContainer;
+    this._album._renderAlbumPages();
+
+    // Восстанавливаем оригинал при сворачивании (через _collapseAll hook)
+    this._restoreAlbumPagesEl = () => {
+      this._album.albumPagesEl = origPagesEl;
+      this._inlineAlbumPages = null;
+    };
+
+    // Кнопка «+ Добавить страницу»
+    addPageBtn.addEventListener('click', () => {
+      this._album._addAlbumPage();
+    });
+
+    // Кнопка «Загрузить фото»
+    bulkUploadBtn.addEventListener('click', () => {
+      this._album._bulkUpload();
+    });
+  }
+
+  // ═══════════════════════════════════════════
   // Сохранение раскрытой главы
   // ═══════════════════════════════════════════
 
@@ -555,6 +705,35 @@ export class ChaptersModule extends BaseModule {
     const body = card.querySelector('.chapter-card-body');
     if (!body) return;
 
+    const chapters = await this.store.getChapters();
+    const existing = chapters[this._expandedIndex];
+    if (!existing) return;
+
+    // Сохранение inline-раздела альбома
+    if (this._isAlbumBook() && this._inlineAlbumPages) {
+      const sectionTitle = body.querySelector('.section-inline-title')?.value.trim() || '';
+      const hideTitle = body.querySelector('.section-inline-hide-title')?.checked ?? true;
+
+      const albumData = {
+        title: sectionTitle,
+        hideTitle,
+        pages: structuredClone(this._album._albumPages),
+      };
+
+      // Сгенерировать HTML из альбомных данных
+      const htmlContent = this._album._buildAlbumHtml(albumData);
+
+      await this.store.updateChapter(this._expandedIndex, {
+        ...existing,
+        title: sectionTitle || existing.title,
+        htmlContent,
+        albumData,
+      });
+      this._renderJsonPreview();
+      return;
+    }
+
+    // Обычная глава
     const idInput = body.querySelector('.chapter-inline-id');
     const titleInput = body.querySelector('.chapter-inline-title');
     const bgInput = body.querySelector('.chapter-inline-bg');
@@ -569,10 +748,6 @@ export class ChaptersModule extends BaseModule {
     if (this._inputMode === 'editor' && this._editor.isInitialized && !this._editor.isEmpty()) {
       this._pendingHtmlContent = this._editor.getHTML();
     }
-
-    const chapters = await this.store.getChapters();
-    const existing = chapters[this._expandedIndex];
-    if (!existing) return;
 
     const chapter = {
       id: id || existing.id,

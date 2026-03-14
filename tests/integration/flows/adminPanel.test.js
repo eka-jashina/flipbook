@@ -160,7 +160,7 @@ describe('Admin Panel Flow Integration', () => {
 
       const books = store.getBooks();
       expect(books).toHaveLength(2);
-      expect(books[0]).toEqual({ id: 'b1', title: 'Первая книга', author: 'Автор 1', chaptersCount: 3 });
+      expect(books[0]).toEqual({ id: 'b1', title: 'Первая книга', author: 'Автор 1', type: 'book', chaptersCount: 3 });
     });
 
     it('should switch active book', () => {

@@ -244,6 +244,7 @@ export function mapBookToPublicCard(book: {
   id: string;
   title: string;
   author: string;
+  type: string;
   description: string | null;
   publishedAt: Date | null;
   _count: { chapters: number };
@@ -253,6 +254,7 @@ export function mapBookToPublicCard(book: {
     id: book.id,
     title: book.title,
     author: book.author,
+    type: book.type,
     description: book.description,
     publishedAt: book.publishedAt?.toISOString() ?? null,
     chaptersCount: book._count.chapters,
@@ -266,6 +268,7 @@ type BookWithRelations = {
   id: string;
   title: string;
   author: string;
+  type: string;
   visibility: string;
   description: string | null;
   publishedAt: Date | null;
@@ -286,6 +289,7 @@ export function mapBookToDetail(book: BookWithRelations): BookDetail {
     id: book.id,
     title: book.title,
     author: book.author,
+    type: book.type,
     visibility: book.visibility,
     description: book.description,
     publishedAt: book.publishedAt?.toISOString() ?? null,
@@ -318,6 +322,7 @@ type BookForList = {
   id: string;
   title: string;
   author: string;
+  type: string;
   position: number;
   visibility: string;
   description: string | null;
@@ -332,6 +337,7 @@ export function mapBookToListItem(book: BookForList): BookListItem {
     id: book.id,
     title: book.title,
     author: book.author,
+    type: book.type,
     position: book.position,
     visibility: book.visibility,
     description: book.description,

@@ -38,6 +38,7 @@ model Book {
   userId           String    @map("user_id") @db.Uuid
   title            String    @default("") @db.VarChar(500)
   author           String    @default("") @db.VarChar(500)
+  type             String    @default("book") @db.VarChar(20)
   position         Int       @default(0)
   visibility       String    @default("draft") @db.VarChar(20)
   description      String?   @db.VarChar(2000)

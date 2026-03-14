@@ -195,6 +195,7 @@ export class AdminConfigStore {
       id: b.id,
       title: b.cover?.title || 'Без названия',
       author: b.cover?.author || '',
+      type: b.type || 'book',
       chaptersCount: b.chapters?.length || 0,
     }));
   }
@@ -202,6 +203,12 @@ export class AdminConfigStore {
   /** ID активной книги */
   getActiveBookId() {
     return this._config.activeBookId;
+  }
+
+  /** Тип активной книги ('book' | 'album') */
+  getBookType() {
+    const book = this._getActiveBook();
+    return book?.type || 'book';
   }
 
   /** Переключить активную книгу */
@@ -235,6 +242,7 @@ export class AdminConfigStore {
   addBook(book) {
     this._config.books.push({
       id: book.id || `book_${Date.now()}`,
+      type: book.type || 'book',
       cover: book.cover || { title: '', author: '', bg: '', bgMobile: '' },
       chapters: book.chapters || [],
       ...structuredClone(DEFAULT_BOOK_SETTINGS),
