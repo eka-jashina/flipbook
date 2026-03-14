@@ -116,8 +116,13 @@ export class BookUploadManager {
     this._resetBookUpload();
     this._module._showToast(t('admin.upload.added', { title: title || t('admin.upload.defaultTitle'), count: chapters.length }));
 
-    // Открыть редактор загруженной книги
-    this._module.app.openEditor();
+    // Перейти к ридеру загруженной книги (или открыть редактор, если нет роутера)
+    const router = this._module.app._router;
+    if (router) {
+      router.navigate(`/book/${bookId}`);
+    } else {
+      this._module.app.openEditor();
+    }
   }
 
   _resetBookUpload() {

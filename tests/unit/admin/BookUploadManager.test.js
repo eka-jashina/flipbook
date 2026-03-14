@@ -29,6 +29,7 @@ function createMockModule() {
     app: {
       _render: vi.fn(),
       openEditor: vi.fn(),
+      _router: { navigate: vi.fn() },
     },
     _showToast: vi.fn(),
   };
@@ -491,8 +492,10 @@ describe('BookUploadManager', () => {
       expect(mockModule.app._render).toHaveBeenCalled();
     });
 
-    it('should call app.openEditor()', () => {
-      expect(mockModule.app.openEditor).toHaveBeenCalled();
+    it('should navigate to reader via router', () => {
+      expect(mockModule.app._router.navigate).toHaveBeenCalled();
+      const url = mockModule.app._router.navigate.mock.calls[0][0];
+      expect(url).toMatch(/^\/book\/book_\d+$/);
     });
 
     it('should show success toast', () => {
@@ -539,8 +542,8 @@ describe('BookUploadManager', () => {
       expect(mockModule.store.setActiveBook).not.toHaveBeenCalled();
     });
 
-    it('should NOT call app.openEditor()', () => {
-      expect(mockModule.app.openEditor).not.toHaveBeenCalled();
+    it('should NOT navigate to reader', () => {
+      expect(mockModule.app._router.navigate).not.toHaveBeenCalled();
     });
   });
 
