@@ -202,6 +202,8 @@ export default {
   'admin.chapters.moveLeft': 'Влево',
   'admin.chapters.moveRight': 'Вправо',
   'admin.chapters.chapterCount': '{{count}} гл.',
+  'admin.chapters.importHint': 'Перетащите файл (.epub, .fb2, .docx, .doc, .txt) для добавления глав',
+  'admin.chapters.importSuccess': 'Импортировано глав: {{count}}',
 
   // ─── Админ: Звуки ──────────────────────────────────────────────────────────
   'admin.sounds.effectsSection': 'Звуковые эффекты',

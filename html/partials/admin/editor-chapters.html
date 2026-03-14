@@ -18,6 +18,15 @@
                 </div>
               </div>
 
+              <!-- Дропзона для импорта файла книги прямо в табе глав -->
+              <div class="chapters-import-dropzone" id="chaptersImportDropzone">
+                <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+                  <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                </svg>
+                <p class="chapters-import-text" data-i18n="admin.chapters.importHint">Перетащите файл (.epub, .fb2, .docx, .doc, .txt) для добавления глав</p>
+                <input type="file" id="chaptersImportFileInput" accept=".epub,.fb2,.docx,.doc,.txt" hidden>
+              </div>
+
               <div class="chapters-list" id="chaptersList"></div>
 
               <div class="empty-state" id="chaptersEmpty" hidden>

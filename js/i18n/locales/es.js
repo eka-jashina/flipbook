@@ -201,6 +201,8 @@ export default {
   'admin.chapters.moveLeft': 'Izquierda',
   'admin.chapters.moveRight': 'Derecha',
   'admin.chapters.chapterCount': '{{count}} cap.',
+  'admin.chapters.importHint': 'Arrastra un archivo (.epub, .fb2, .docx, .doc, .txt) para añadir capítulos',
+  'admin.chapters.importSuccess': '{{count}} capítulos importados',
 
   // ─── Admin: Sonidos ───────────────────────────────────────────────────────
   'admin.sounds.effectsSection': 'Efectos de sonido',
