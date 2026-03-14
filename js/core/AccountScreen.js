@@ -203,10 +203,11 @@ export class AccountScreen {
 
     // Кнопки навигации
     this.addBookBtn = c.querySelector('#addBookBtn');
-    this.modeSelectorBack = c.querySelector('#modeSelectorBack');
-    this.uploadBack = c.querySelector('#uploadBack');
+    this.typeSelectorBack = c.querySelector('#typeSelectorBack');
+    this.createBookBack = c.querySelector('#createBookBack');
     this.editorBack = c.querySelector('#editorBack');
     this.albumBack = c.querySelector('#albumBack');
+    this.createEmptyBookBtn = c.querySelector('#createEmptyBookBtn');
 
     // Карточки режимов
     this.modeCardsContainer = c.querySelector('#modeCards');
@@ -236,9 +237,9 @@ export class AccountScreen {
     });
 
     // Навигация по экранам
-    this.addBookBtn.addEventListener('click', () => this._showView('mode-selector'));
-    this.modeSelectorBack.addEventListener('click', () => this._showView('bookshelf'));
-    this.uploadBack.addEventListener('click', () => this._showView('mode-selector'));
+    this.addBookBtn.addEventListener('click', () => this._showView('type-selector'));
+    this.typeSelectorBack.addEventListener('click', () => this._showView('bookshelf'));
+    this.createBookBack.addEventListener('click', () => this._showView('type-selector'));
     this.editorBack.addEventListener('click', async () => {
       await this._cleanupPendingBook();
       this._showView('bookshelf');
@@ -247,11 +248,14 @@ export class AccountScreen {
       this.chapters._album._cancelAlbum();
     });
 
-    // Карточки выбора режима
+    // Карточки выбора типа
     this.modeCardsContainer.addEventListener('click', (e) => {
       const card = e.target.closest('.mode-card');
       if (card) this._handleModeSelect(card.dataset.mode);
     });
+
+    // Кнопка «Создать пустую книгу»
+    this.createEmptyBookBtn.addEventListener('click', () => this._createEmptyBook());
 
     // Табы редактора
     this.editorTabs.forEach(tab => {
@@ -350,23 +354,10 @@ export class AccountScreen {
 
   async _handleModeSelect(mode) {
     switch (mode) {
-      case 'upload':
-        this._showView('upload');
+      case 'book':
+        this._showView('create-book');
         break;
       case 'edit': {
-        await this._render();
-        await this.openEditor();
-        break;
-      }
-      case 'manual': {
-        const created = await this.store.addBook({
-          id: `book_${Date.now()}`,
-          cover: { title: t('admin.newBook'), author: '', bg: '', bgMobile: '' },
-          chapters: [],
-        });
-        const bookId = created?.id || `book_${Date.now()}`;
-        this.store.setActiveBook(bookId);
-        this._pendingBookId = bookId;
         await this._render();
         await this.openEditor();
         break;
@@ -386,6 +377,20 @@ export class AccountScreen {
         break;
       }
     }
+  }
+
+  /** Создать пустую книгу и открыть редактор */
+  async _createEmptyBook() {
+    const created = await this.store.addBook({
+      id: `book_${Date.now()}`,
+      cover: { title: t('admin.newBook'), author: '', bg: '', bgMobile: '' },
+      chapters: [],
+    });
+    const bookId = created?.id || `book_${Date.now()}`;
+    this.store.setActiveBook(bookId);
+    this._pendingBookId = bookId;
+    await this._render();
+    await this.openEditor();
   }
 
   /** Открыть редактор для текущей активной книги */

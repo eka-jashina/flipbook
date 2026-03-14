@@ -76,10 +76,11 @@ class AdminApp {
 
     // Кнопки навигации между экранами
     this.addBookBtn = document.getElementById('addBookBtn');
-    this.modeSelectorBack = document.getElementById('modeSelectorBack');
-    this.uploadBack = document.getElementById('uploadBack');
+    this.typeSelectorBack = document.getElementById('typeSelectorBack');
+    this.createBookBack = document.getElementById('createBookBack');
     this.editorBack = document.getElementById('editorBack');
     this.albumBack = document.getElementById('albumBack');
+    this.createEmptyBookBtn = document.getElementById('createEmptyBookBtn');
     this.toShelfLink = document.getElementById('toShelfLink');
 
     // Контейнер карточек режимов (карточки генерируются динамически)
@@ -115,9 +116,9 @@ class AdminApp {
     });
 
     // Навигация по экранам
-    this.addBookBtn.addEventListener('click', () => this._showView('mode-selector'));
-    this.modeSelectorBack.addEventListener('click', () => this._showView('bookshelf'));
-    this.uploadBack.addEventListener('click', () => this._showView('mode-selector'));
+    this.addBookBtn.addEventListener('click', () => this._showView('type-selector'));
+    this.typeSelectorBack.addEventListener('click', () => this._showView('bookshelf'));
+    this.createBookBack.addEventListener('click', () => this._showView('type-selector'));
     this.editorBack.addEventListener('click', async () => {
       await this._cleanupPendingBook();
       this._showView('bookshelf');
@@ -133,11 +134,16 @@ class AdminApp {
       window.location.href = this.toShelfLink.href;
     });
 
-    // Карточки выбора режима (делегирование событий)
+    // Карточки выбора типа (делегирование событий)
     this.modeCardsContainer.addEventListener('click', (e) => {
       const card = e.target.closest('.mode-card');
       if (card) this._handleModeSelect(card.dataset.mode);
     });
+
+    // Кнопка «Создать пустую книгу»
+    if (this.createEmptyBookBtn) {
+      this.createEmptyBookBtn.addEventListener('click', () => this._createEmptyBook());
+    }
 
     // Табы редактора
     this.editorTabs.forEach(tab => {
@@ -209,28 +215,14 @@ class AdminApp {
 
   async _handleModeSelect(mode) {
     switch (mode) {
-      case 'upload':
-        this._showView('upload');
+      case 'book':
+        this._showView('create-book');
         break;
       case 'edit': {
         // Открыть редактор для указанной книги
         const editBookId = sessionStorage.getItem('flipbook-admin-edit-book');
         sessionStorage.removeItem('flipbook-admin-edit-book');
         if (editBookId) this.store.setActiveBook(editBookId);
-        this._render();
-        await this.openEditor();
-        break;
-      }
-      case 'manual': {
-        // Создать новую пустую книгу и открыть редактор
-        const created = await this.store.addBook({
-          id: `book_${Date.now()}`,
-          cover: { title: 'Новая книга', author: '', bg: '', bgMobile: '' },
-          chapters: [],
-        });
-        const bookId = created?.id || `book_${Date.now()}`;
-        this.store.setActiveBook(bookId);
-        this._pendingBookId = bookId;
         this._render();
         await this.openEditor();
         break;
@@ -251,6 +243,20 @@ class AdminApp {
         break;
       }
     }
+  }
+
+  /** Создать пустую книгу и открыть редактор */
+  async _createEmptyBook() {
+    const created = await this.store.addBook({
+      id: `book_${Date.now()}`,
+      cover: { title: 'Новая книга', author: '', bg: '', bgMobile: '' },
+      chapters: [],
+    });
+    const bookId = created?.id || `book_${Date.now()}`;
+    this.store.setActiveBook(bookId);
+    this._pendingBookId = bookId;
+    this._render();
+    await this.openEditor();
   }
 
   /** Открыть редактор для текущей активной книги */

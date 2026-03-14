@@ -496,10 +496,8 @@ export default {
   'admin.upload.added': 'Buch «{{title}}» hinzugefügt ({{count}} Kap.)',
 
   // ─── Admin: Bucherstellungsmodi ────────────────────────────────────────────
-  'admin.mode.uploadTitle': 'Datei hochladen',
-  'admin.mode.uploadDesc': 'EPUB, FB2, DOCX, DOC, TXT — automatische Kapitelextraktion',
-  'admin.mode.manualTitle': 'Manuell erstellen',
-  'admin.mode.manualDesc': 'Cover, Kapitel, Hintergründe — volle Kontrolle',
+  'admin.mode.bookTitle': 'Buch',
+  'admin.mode.bookDesc': 'Datei hochladen oder von Grund auf erstellen',
   'admin.mode.albumTitle': 'Fotoalbum',
   'admin.mode.albumDesc': 'Layouts, Fotos, Beschriftungen — visueller Editor',
 
@@ -518,8 +516,9 @@ export default {
   'admin.tabs.settings': 'Einstellungen',
   'admin.tabs.export': 'Export',
   'admin.addBook': 'Buch hinzufügen',
-  'admin.createBookQuestion': 'Wie möchten Sie ein Buch erstellen?',
-  'admin.createBookHint': 'Wählen Sie eine Methode — Sie können das Ergebnis jederzeit bearbeiten',
+  'admin.createTypeQuestion': 'Was erstellen wir?',
+  'admin.createBookOr': '— oder —',
+  'admin.createEmptyBook': 'Leeres Buch erstellen',
   'admin.uploadBook': 'Buch hochladen',
   'admin.dropzoneText': 'Datei hierher ziehen oder zum Auswählen klicken',
   'admin.dropzoneFormats': 'Formate: .epub, .fb2, .docx, .doc, .txt',
