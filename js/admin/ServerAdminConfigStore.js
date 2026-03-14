@@ -374,4 +374,14 @@ export class ServerAdminConfigStore {
 
   async getConfig() { return this._api.exportConfig(); }
   async clear() { await this.reset(); }
+
+  /**
+   * Загрузить изображение в S3 и вернуть URL.
+   * @param {File} file
+   * @returns {Promise<string>} URL загруженного файла
+   */
+  async uploadImage(file) {
+    const result = await this._api.uploadImage(file);
+    return result.fileUrl;
+  }
 }

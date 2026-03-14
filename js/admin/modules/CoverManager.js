@@ -82,9 +82,16 @@ export class CoverManager {
 
     if (!this._host._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: e.target })) return;
 
-    const dataUrl = await readFileAsDataURL(file);
-    this._host.store.updateCover({ bgMode: 'custom', bgCustomData: dataUrl });
-    this._renderBgModeSelector('custom', dataUrl);
+    let imageData;
+    const uploadedUrl = await this._host.store.uploadImage(file);
+    if (uploadedUrl) {
+      imageData = uploadedUrl;
+    } else {
+      imageData = await readFileAsDataURL(file);
+    }
+
+    this._host.store.updateCover({ bgMode: 'custom', bgCustomData: imageData });
+    this._renderBgModeSelector('custom', imageData);
     this._host._renderJsonPreview();
     this._host._showToast(t('admin.chapters.bgLoaded'));
     e.target.value = '';
