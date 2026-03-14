@@ -207,9 +207,16 @@ export class AppearanceModule extends BaseModule {
 
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: e.target })) return;
 
-    const dataUrl = await readFileAsDataURL(file);
-    this.store.updateAppearanceTheme(this._editTheme, { coverBgImage: dataUrl });
-    this._renderCoverBgPreview(dataUrl);
+    let imageData;
+    const uploadedUrl = await this.store.uploadImage(file);
+    if (uploadedUrl) {
+      imageData = uploadedUrl;
+    } else {
+      imageData = await readFileAsDataURL(file);
+    }
+
+    this.store.updateAppearanceTheme(this._editTheme, { coverBgImage: imageData });
+    this._renderCoverBgPreview(imageData);
     this._renderJsonPreview();
     this._showToast(t('admin.appearance.coverBgLoaded'));
     e.target.value = '';
@@ -262,14 +269,21 @@ export class AppearanceModule extends BaseModule {
 
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'image/', inputEl: e.target })) return;
 
-    const dataUrl = await readFileAsDataURL(file);
+    let imageData;
+    const uploadedUrl = await this.store.uploadImage(file);
+    if (uploadedUrl) {
+      imageData = uploadedUrl;
+    } else {
+      imageData = await readFileAsDataURL(file);
+    }
+
     this.store.updateAppearanceTheme(this._editTheme, {
       pageTexture: 'custom',
-      customTextureData: dataUrl,
+      customTextureData: imageData,
     });
 
     this.pageTexture.value = 'custom';
-    this._renderTextureSelector('custom', dataUrl);
+    this._renderTextureSelector('custom', imageData);
     this._renderJsonPreview();
     this._showToast(t('admin.appearance.textureLoaded'));
     e.target.value = '';

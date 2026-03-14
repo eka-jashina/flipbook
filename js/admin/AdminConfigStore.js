@@ -498,4 +498,11 @@ export class AdminConfigStore {
     lsStorage.clear();
     this._config = structuredClone(DEFAULT_CONFIG);
   }
+
+  /**
+   * Загрузить изображение.
+   * В локальном store загрузка не нужна — data URL хранится напрямую.
+   * @returns {Promise<null>}
+   */
+  async uploadImage() { return null; }
 }
