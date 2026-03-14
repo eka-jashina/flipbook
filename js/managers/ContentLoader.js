@@ -126,9 +126,9 @@ export class ContentLoader {
     const data = this._publicMode
       ? await this._api.getPublicChapterContent(this._bookId, chapterId)
       : await this._api.getChapterContent(this._bookId, chapterId);
-    // API может вернуть объект { htmlContent: "..." } или строку напрямую
+    // API может вернуть объект { html: "..." }, { htmlContent: "..." } или строку
     if (typeof data === 'string') return data;
-    return data?.htmlContent || data?.content || '';
+    return data?.html || data?.htmlContent || data?.content || '';
   }
 
   /**
