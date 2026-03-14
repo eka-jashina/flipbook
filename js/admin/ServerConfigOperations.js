@@ -40,7 +40,7 @@ export async function fetchChapters(api, bookId) {
  */
 export async function createChapter(api, bookId, chapter) {
   await api.createChapter(bookId, {
-    title: chapter.title || '',
+    title: chapter.title || 'Без названия',
     htmlContent: chapter.htmlContent || null,
     filePath: chapter.file || null,
     bg: chapter.bg || '',
@@ -61,13 +61,14 @@ export async function updateChapterByIndex(api, bookId, index, chapter) {
   if (index < 0 || index >= chapters.length) return;
   const chapterId = chapters[index].id;
 
-  await api.updateChapter(bookId, chapterId, {
-    title: chapter.title,
-    htmlContent: chapter.htmlContent,
-    filePath: chapter.file,
-    bg: chapter.bg,
-    bgMobile: chapter.bgMobile,
-  });
+  const data = {};
+  if (chapter.title) data.title = chapter.title;
+  if (chapter.htmlContent !== undefined) data.htmlContent = chapter.htmlContent;
+  if (chapter.file !== undefined) data.filePath = chapter.file;
+  if (chapter.bg !== undefined) data.bg = chapter.bg;
+  if (chapter.bgMobile !== undefined) data.bgMobile = chapter.bgMobile;
+
+  await api.updateChapter(bookId, chapterId, data);
 }
 
 /**
