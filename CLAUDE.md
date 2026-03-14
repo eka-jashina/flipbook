@@ -61,8 +61,11 @@ cd server && npm run dev       # Start backend dev server (port 4000, tsx watch)
 cd server && npm run db:migrate # Run Prisma migrations
 cd server && npm run db:seed    # Seed database with test data
 cd server && npm run db:studio  # Open Prisma Studio GUI
+cd server && npm run db:generate # Generate Prisma client
 cd server && npm run db:backup  # Backup PostgreSQL database
 cd server && npm run test       # Run server tests (Vitest + supertest)
+cd server && npm run test:coverage # Server tests with coverage
+cd server && npm run lint       # ESLint on server src/
 
 # Docker (full stack)
 docker compose up -d           # Start PostgreSQL + MinIO + server
@@ -133,7 +136,8 @@ flipbook/
 │       │   ├── modal-ambient.html
 │       │   ├── modal-chapter.html
 │       │   ├── modal-reading-font.html
-│       │   └── platform-settings.html
+│       │   ├── platform-settings.html
+│       │   └── templates.html         # Admin template fragments
 │       └── reader/            # Reader partials
 │           ├── landing.html       # Landing screen (guests)
 │           ├── bookshelf.html
@@ -202,6 +206,7 @@ flipbook/
 │   ├── index.js              # Reader application entry point
 │   ├── config.js             # Configuration (multi-source: localStorage / API)
 │   ├── sentry.js             # Sentry error monitoring initialization
+│   ├── types.js              # TypeScript-style type definitions
 │   │
 │   ├── config/              # Configuration helpers (extracted from config.js)
 │   │   ├── configHelpers.js     # Pure helpers: path resolution, fonts, ambients
@@ -276,6 +281,7 @@ flipbook/
 │   │   ├── AccountScreenUI.js     # Account screen UI rendering helpers
 │   │   ├── AccountPublishTab.js   # Book publishing tab (visibility, description)
 │   │   ├── ProfileHeader.js       # Profile header component (avatar, name, bio)
+│   │   ├── bookshelfUtils.js      # Bookshelf-specific utilities
 │   │   │
 │   │   ├── services/              # Service groups (DI bundles)
 │   │   │   ├── CoreServices.js        # DOM, events, timers, storage
@@ -317,8 +323,11 @@ flipbook/
 │       │   ├── AlbumPageRenderer.js   # Album page rendering
 │       │   ├── AmbientsModule.js      # Ambient sounds config
 │       │   ├── AppearanceModule.js    # Book appearance customization
+│       │   ├── BookSelectorManager.js # Book selection UI
 │       │   ├── BookUploadManager.js   # Book upload handling
+│       │   ├── CoverManager.js        # Book cover management
 │       │   ├── ChaptersModule.js      # Chapter management
+│       │   ├── ChapterFileHandler.js  # Chapter file upload handling
 │       │   ├── ExportModule.js        # Config export
 │       │   ├── FontsModule.js         # Font management
 │       │   ├── PhotoCropper.js        # Interactive photo cropping tool
@@ -335,6 +344,12 @@ flipbook/
 │           ├── EpubParser.js          # EPUB (.epub)
 │           ├── Fb2Parser.js           # FictionBook (.fb2)
 │           └── OLE2Parser.js          # OLE2 binary format parser (for .doc)
+│
+├── shared/                    # Shared code (frontend + backend)
+│   └── parsers/              # Shared parser utilities
+│       ├── baseParser.js        # Base parser utilities
+│       ├── parserUtils.js       # Common parsing functions
+│       └── index.js             # Shared parsers barrel export
 │
 ├── server/                    # Backend server (Express + Prisma + PostgreSQL)
 │   ├── Dockerfile
@@ -421,9 +436,11 @@ flipbook/
 │   │   │   └── zodToOpenApi.ts       # Zod→OpenAPI conversion
 │   │   └── types/
 │   │       └── api.ts                # API type definitions
-│   └── tests/                    # Server tests (Vitest + supertest)
+│   └── tests/                    # Server tests (Vitest + supertest, 36 files)
 │       ├── setup.ts
 │       ├── helpers.ts
+│       ├── fixtures/
+│       │   └── generate.ts          # Test fixture generation
 │       └── *.test.ts                 # Per-resource test files
 │
 ├── k6/                        # K6 load testing suite
@@ -444,19 +461,20 @@ flipbook/
 │   ├── setup.js              # Test environment setup
 │   ├── helpers/              # Test utilities
 │   ├── unit/                 # Unit tests (Vitest)
-│   │   ├── utils/            # Utility tests (23 files)
+│   │   ├── config/           # Config tests (3 files)
+│   │   ├── utils/            # Utility tests (24 files)
 │   │   ├── managers/         # Manager tests (5 files)
 │   │   ├── core/             # Core + delegates + services tests (20 + 8 + 4 files)
-│   │   └── admin/            # Admin module tests (21 files)
+│   │   └── admin/            # Admin module tests (31 files)
 │   ├── integration/          # Integration tests (Vitest + jsdom)
 │   │   ├── smoke.test.js
-│   │   ├── flows/            # User flow tests (24 files)
+│   │   ├── flows/            # User flow tests (37 files)
 │   │   ├── lifecycle/        # Lifecycle tests
 │   │   └── services/         # Service tests
 │   └── e2e/                  # E2E tests (Playwright)
 │       ├── fixtures/         # Test fixtures
-│       ├── pages/            # Page Object models
-│       ├── flows/            # Test scenarios (8 files incl. offline, admin-panel, multi-book)
+│       ├── pages/            # Page Object models (BookPage, SettingsPanel)
+│       ├── flows/            # Test scenarios (19 files)
 │       └── performance/      # Performance tests
 │
 ├── scripts/                   # Build & maintenance scripts
@@ -484,6 +502,7 @@ flipbook/
 ├── docker-compose.observability.yml # Docker Compose overlay (Loki + Grafana + DB backup)
 ├── amvera.yml                # Amvera Cloud deployment config
 ├── DEPLOYMENT.md             # Deployment guide (Amvera Cloud + Cloud.ru S3)
+├── LOCAL_SETUP.md            # Local development setup guide
 ├── PROJECT_REVIEW.md         # Project review & analysis document
 ├── vite.config.js            # Vite configuration
 ├── vite-plugin-mobile-backgrounds.js # Custom plugin for mobile backgrounds
@@ -612,6 +631,10 @@ DOM + CSS Animations
 | IdbStorage | `utils/IdbStorage.js` | IndexedDB wrapper for large data |
 | SettingsValidator | `utils/SettingsValidator.js` | Settings validation & sanitization |
 | ServerConfigOperations | `admin/ServerConfigOperations.js` | Server config CRUD operations |
+| bookshelfUtils | `core/bookshelfUtils.js` | Bookshelf-specific utility functions |
+| BookSelectorManager | `admin/modules/BookSelectorManager.js` | Book selection UI management |
+| CoverManager | `admin/modules/CoverManager.js` | Book cover management |
+| ChapterFileHandler | `admin/modules/ChapterFileHandler.js` | Chapter file upload handling |
 
 ## Backend Architecture (server/)
 
@@ -914,19 +937,22 @@ tests/
 │   └── admin/            # Admin module tests (21 files)
 ├── integration/          # Integration tests
 │   ├── smoke.test.js
-│   ├── flows/            # User flow tests (24 files)
+│   ├── flows/            # User flow tests (37 files)
 │   │   ├── navigation, settings, chapters, drag, events, accessibility
 │   │   ├── chapterRepagination, settingsRepagination, dragNavConflict
 │   │   ├── errorRecovery, fullReadingSession, resizeFlow
-│   │   ├── adminPanel, audio, authMigration, bookshelf, theme
+│   │   ├── adminPanel, adminUIModules, audio, authMigration, bookshelf, theme
+│   │   ├── accountScreen, appInitializer, bookUploadParsing, landingScreen
 │   │   ├── ambientSoundLifecycle, bookSwitchingLifecycle, configExportImport
 │   │   ├── delegateMediator, fontManagement, multiBookSession, photoAlbumLifecycle
+│   │   ├── photoCropper, publicDiscovery, pwa, quillEditor
+│   │   ├── readingSessions, router, userProfile, i18n
 │   ├── lifecycle/        # Lifecycle tests
 │   └── services/         # Service tests
 └── e2e/                  # E2E tests (Playwright)
     ├── fixtures/         # Test fixtures
     ├── pages/            # Page Object models
-    ├── flows/            # Test scenarios (reading, navigation, settings, responsive, accessibility, offline, admin-panel, multi-book)
+    ├── flows/            # Test scenarios (reading, navigation, settings, responsive, accessibility, offline, admin-panel, multi-book, auth, appearance, book-publishing, book-upload, context-menu, i18n, landing, photo-album, quill-editor, reading-sessions, user-profile)
     └── performance/      # Performance tests
 ```
 
@@ -1081,7 +1107,7 @@ DevOps scripts (`scripts/`):
 ## Dependencies
 
 ### Frontend Runtime
-- **dompurify** `^3.3.1` — XSS protection (sanitization engine for HTMLSanitizer)
+- **dompurify** `^3.3.2` — XSS protection (sanitization engine for HTMLSanitizer)
 - **jszip** `^3.10.1` — ZIP operations (admin export, docx/epub parsing)
 - **quill** `^2.0.3` — WYSIWYG rich text editor (admin chapter editing)
 - **i18next** `^25.8.13` — Internationalization (5 languages)
@@ -1089,7 +1115,7 @@ DevOps scripts (`scripts/`):
 - **web-vitals** `^5.1.0` — Core Web Vitals performance monitoring (LCP, FID, CLS)
 
 ### Frontend Dev Dependencies (key)
-- **vite** `^5.0.0` — Bundler
+- **vite** `^7.3.1` — Bundler
 - **vitest** `^4.0.18` — Unit/integration testing
 - **@playwright/test** `^1.58.1` — E2E testing
 - **eslint** `^9.39.2` — JS linting
@@ -1118,8 +1144,9 @@ DevOps scripts (`scripts/`):
 - **connect-pg-simple** `^10.0.0` — PostgreSQL session store
 - **cors** `^2.8.5` — CORS support
 - **cookie-parser** `^1.4.7` — Cookie parsing
-- **multer** `^1.4.5-lts.1` — File upload handling (multipart/form-data)
-- **dompurify** `^3.3.1` — Server-side HTML sanitization
+- **multer** `^2.1.1` — File upload handling (multipart/form-data)
+- **dotenv** `^17.3.1` — Environment variable loading
+- **dompurify** `^3.3.2` — Server-side HTML sanitization
 - **jsdom** `^28.1.0` — Server-side DOM for sanitization
 - **jszip** `^3.10.1` — ZIP operations (export/import)
 - **@sentry/node** `^9.47.1` — Error monitoring

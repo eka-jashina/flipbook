@@ -10,7 +10,7 @@
 
 [![Vanilla JS](https://img.shields.io/badge/Vanilla-JavaScript-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![ES Modules](https://img.shields.io/badge/ES-Modules-4285F4)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
-[![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![CSS3](https://img.shields.io/badge/CSS3-3D%20Transforms-1572B6?logo=css3)](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Transforms)
 [![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 
@@ -172,6 +172,7 @@ flipbook/
 │   ├── index.js                    # Точка входа
 │   ├── config.js                   # Конфигурация (admin-aware, мультикнижная)
 │   ├── sentry.js                   # Sentry мониторинг ошибок
+│   ├── types.js                    # Определения типов (TypeScript-style)
 │   ├── config/                     # Вспомогательные модули конфигурации
 │   │   ├── configHelpers.js        # Чистые хелперы: пути, шрифты, амбиенты
 │   │   └── enrichConfigFromIDB.js  # Дозагрузка данных из IndexedDB
@@ -241,6 +242,7 @@ flipbook/
 │   │   ├── AccountScreenUI.js     # Хелперы рендеринга UI кабинета
 │   │   ├── AccountPublishTab.js   # Вкладка публикации книг (видимость, описание)
 │   │   ├── ProfileHeader.js        # Компонент профиля (аватар, имя, био)
+│   │   ├── bookshelfUtils.js       # Утилиты книжной полки
 │   │   │
 │   │   ├── services/               # Сервисные группы (DI)
 │   │   │   ├── CoreServices.js         # DOM, события, таймеры, storage
@@ -282,8 +284,11 @@ flipbook/
 │       │   ├── AlbumPageRenderer.js   # Рендеринг страниц альбома
 │       │   ├── AmbientsModule.js       # Настройка ambient-звуков
 │       │   ├── AppearanceModule.js     # Кастомизация оформления книги
+│       │   ├── BookSelectorManager.js  # Выбор книги
 │       │   ├── BookUploadManager.js    # Загрузка книг
+│       │   ├── CoverManager.js         # Управление обложкой книги
 │       │   ├── ChaptersModule.js       # Управление главами
+│       │   ├── ChapterFileHandler.js   # Загрузка файлов глав
 │       │   ├── ExportModule.js         # Экспорт конфигурации
 │       │   ├── FontsModule.js          # Управление шрифтами
 │       │   ├── PhotoCropper.js         # Интерактивный инструмент обрезки фото
@@ -358,7 +363,7 @@ flipbook/
 │
 ├── html/                           # HTML-фрагменты (подключение при сборке)
 │   └── partials/
-│       ├── admin/                  # Фрагменты админ-панели
+│       ├── admin/                  # Фрагменты админ-панели (11 файлов вкл. templates.html)
 │       └── reader/                 # Фрагменты читалки
 │           ├── landing.html        # Лендинг (гости)
 │           ├── bookshelf.html      # Книжная полка
@@ -367,6 +372,12 @@ flipbook/
 │           ├── controls.html       # Контролы
 │           ├── pwa.html            # PWA
 │           └── templates.html      # Шаблоны
+│
+├── shared/                        # Общий код (фронтенд + бэкенд)
+│   └── parsers/                   # Общие утилиты парсеров
+│       ├── baseParser.js          # Базовые утилиты парсера
+│       ├── parserUtils.js         # Общие функции парсинга
+│       └── index.js               # Точка входа
 │
 ├── server/                         # Бэкенд (Express + Prisma + PostgreSQL)
 │   ├── prisma/                     # Схема БД (16 моделей) + миграции
@@ -420,6 +431,7 @@ flipbook/
 ├── docker-compose.k6.yml           # Docker Compose оверлей для K6
 ├── docker-compose.observability.yml # Docker Compose оверлей (Loki + Grafana + backup)
 ├── Dockerfile                      # Full-stack Docker-образ
+├── LOCAL_SETUP.md                  # Руководство по локальной разработке
 ├── lighthouserc.json               # Конфигурация Lighthouse CI (пороги качества)
 └── package.json                    # Зависимости и скрипты
 ```
@@ -452,9 +464,7 @@ npm run dev
 | `npm run serve` | Запуск статик-сервера для `dist/` |
 | `npm run size` | Проверка размера файлов в `dist/` |
 | `npm run clean` | Удаление папки `dist/` |
-| `npm run deploy` | Сборка + деплой на Netlify |
-| `npm run deploy:netlify` | Деплой `dist/` на Netlify |
-| `npm run deploy:vercel` | Деплой на Vercel |
+| `npm run deploy` | Production-сборка (деплой через git push amvera main) |
 | `npm run test` | Запуск unit/integration тестов (Vitest) |
 | `npm run test:run` | Однократный запуск тестов |
 | `npm run test:watch` | Тесты в watch-режиме |
@@ -549,6 +559,10 @@ npm run dev
 | **IdbStorage** | `utils/IdbStorage.js` | IndexedDB-обёртка для крупных данных |
 | **SettingsValidator** | `utils/SettingsValidator.js` | Валидация и санитизация настроек |
 | **ServerConfigOperations** | `admin/ServerConfigOperations.js` | Серверные CRUD-операции конфига |
+| **bookshelfUtils** | `core/bookshelfUtils.js` | Утилиты книжной полки |
+| **BookSelectorManager** | `admin/modules/BookSelectorManager.js` | Выбор книги |
+| **CoverManager** | `admin/modules/CoverManager.js` | Управление обложкой книги |
+| **ChapterFileHandler** | `admin/modules/ChapterFileHandler.js` | Загрузка файлов глав |
 
 ---
 
@@ -628,8 +642,12 @@ npm run dev            # Vite dev-сервер (порт 3000)
 | `npm run start` | Запуск production-сервера |
 | `npm run db:migrate` | Применить Prisma миграции |
 | `npm run db:seed` | Заполнить БД тестовыми данными |
+| `npm run db:generate` | Генерация Prisma-клиента |
 | `npm run db:studio` | Открыть Prisma Studio (GUI) |
+| `npm run db:backup` | Резервное копирование БД |
 | `npm run test` | Запуск тестов API (Vitest + supertest) |
+| `npm run test:coverage` | Тесты с отчётом покрытия |
+| `npm run lint` | ESLint на server src/ |
 
 ### API-маршруты
 
@@ -704,7 +722,6 @@ npm run infra:observability
 - **Docker Compose + K6** — `docker-compose.k6.yml` оверлей для нагрузочного тестирования
 - **Docker Compose + Observability** — `docker-compose.observability.yml` оверлей для мониторинга
 - **Amvera Cloud** — конфигурация в `amvera.yml`
-- **Railway** — конфигурация в `railway.toml`
 - **GitHub Pages** — только фронтенд (автоматически через GitHub Actions)
 
 Подробная инструкция по деплою: [`DEPLOYMENT.md`](./DEPLOYMENT.md)
@@ -868,7 +885,7 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 ## Зависимости
 
 ### Frontend Runtime
-- **dompurify** `^3.3.1` — XSS-защита (движок санитизации HTML)
+- **dompurify** `^3.3.2` — XSS-защита (движок санитизации HTML)
 - **jszip** `^3.10.1` — ZIP-операции (экспорт конфига, парсинг docx/epub)
 - **quill** `^2.0.3` — WYSIWYG-редактор (редактирование глав в личном кабинете)
 - **i18next** `^25.8.13` — Интернационализация (5 языков)
@@ -876,7 +893,7 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 - **web-vitals** `^5.1.0` — Мониторинг Core Web Vitals (LCP, FID, CLS)
 
 ### Frontend Dev Dependencies (ключевые)
-- **vite** `^5.0.0` — Бандлер
+- **vite** `^7.3.1` — Бандлер
 - **vitest** `^4.0.18` — Юнит/интеграционное тестирование
 - **@playwright/test** `^1.58.1` — E2E-тестирование
 - **eslint** `^9.39.2` — Линтинг JS
