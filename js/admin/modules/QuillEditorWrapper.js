@@ -15,11 +15,16 @@ const IMAGE_MAX_SIZE = 5 * 1024 * 1024;
 let _QuillCtor = null;
 
 export class QuillEditorWrapper {
-  constructor() {
+  /**
+   * @param {Object} [store] - Store с методом uploadImage для загрузки на S3
+   */
+  constructor(store) {
     /** @type {Object|null} Quill instance */
     this._quill = null;
     /** @type {HTMLElement|null} */
     this._container = null;
+    /** @type {Object|null} */
+    this._store = store || null;
   }
 
   /**
@@ -114,7 +119,7 @@ export class QuillEditorWrapper {
   }
 
   /**
-   * Вставить изображение как base64 data URL
+   * Вставить изображение — загрузить на S3 (если доступно) или как data URL
    * @private
    */
   _handleImageInsert() {
@@ -122,17 +127,27 @@ export class QuillEditorWrapper {
     input.type = 'file';
     input.accept = 'image/png,image/jpeg,image/gif,image/webp';
 
-    input.addEventListener('change', () => {
+    input.addEventListener('change', async () => {
       const file = input.files[0];
       if (!file || file.size > IMAGE_MAX_SIZE) return;
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        const range = this._quill.getSelection(true);
-        this._quill.insertEmbed(range.index, 'image', reader.result);
-        this._quill.setSelection(range.index + 1);
-      };
-      reader.readAsDataURL(file);
+      let imageUrl;
+      if (this._store) {
+        const uploadedUrl = await this._store.uploadImage(file);
+        if (uploadedUrl) imageUrl = uploadedUrl;
+      }
+
+      if (!imageUrl) {
+        imageUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const range = this._quill.getSelection(true);
+      this._quill.insertEmbed(range.index, 'image', imageUrl);
+      this._quill.setSelection(range.index + 1);
     });
 
     input.click();

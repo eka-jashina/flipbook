@@ -31,7 +31,7 @@ export class ChaptersModule extends BaseModule {
     /** HTML-контент, загруженный через файл (pending до сохранения) */
     this._pendingHtmlContent = null;
     /** @type {QuillEditorWrapper} */
-    this._editor = new QuillEditorWrapper();
+    this._editor = new QuillEditorWrapper(app.store);
     /** @type {'upload'|'editor'} Текущий режим ввода контента в раскрытой карточке */
     this._inputMode = 'upload';
 

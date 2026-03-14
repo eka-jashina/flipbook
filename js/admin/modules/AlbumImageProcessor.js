@@ -55,6 +55,34 @@ export function compressImage(file) {
 }
 
 /**
+ * Конвертировать data URL в File для загрузки на S3
+ * @param {string} dataUrl
+ * @param {string} filename
+ * @returns {File}
+ */
+function dataUrlToFile(dataUrl, filename) {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const bytes = atob(base64);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new File([arr], filename, { type: mime });
+}
+
+/**
+ * Загрузить data URL на S3 (если store поддерживает) или вернуть как есть
+ * @param {Object} store
+ * @param {string} dataUrl
+ * @param {string} filename
+ * @returns {Promise<string>} URL (S3 или data URL)
+ */
+async function uploadOrKeepDataUrl(store, dataUrl, filename) {
+  const file = dataUrlToFile(dataUrl, filename);
+  const uploadedUrl = await store.uploadImage(file);
+  return uploadedUrl || dataUrl;
+}
+
+/**
  * Прочитать и сжать файл изображения, поместить в слот
  * @param {import('./AlbumManager.js').AlbumManager} manager
  */
@@ -65,13 +93,14 @@ export async function readPageImageFile(manager, file, pageIndex, imageIndex) {
 
   try {
     const dataUrl = await manager._compressImage(file);
+    const imageUrl = await uploadOrKeepDataUrl(manager.store, dataUrl, file.name);
     const page = manager._albumPages[pageIndex];
     if (!page) return; // Страница могла быть удалена во время сжатия
     const prev = page.images[imageIndex];
     manager._isDirty = true;
     page.images[imageIndex] = {
-      dataUrl,
-      originalDataUrl: dataUrl,
+      dataUrl: imageUrl,
+      originalDataUrl: imageUrl,
       caption: prev?.caption || '',
       frame: prev?.frame || 'none',
       filter: prev?.filter || 'none',
@@ -102,8 +131,9 @@ export async function cropPageImage(manager, pageIndex, imageIndex) {
     // Страница могла быть удалена во время кадрирования
     if (!manager._albumPages[pageIndex]) return;
     manager._isDirty = true;
+    const croppedUrl = await uploadOrKeepDataUrl(manager.store, cropped, `crop_${Date.now()}.jpg`);
     const target = manager._albumPages[pageIndex].images[imageIndex];
-    target.dataUrl = cropped;
+    target.dataUrl = croppedUrl;
     // Сохранить оригинал если его ещё нет
     if (!target.originalDataUrl) target.originalDataUrl = source;
     manager._renderAlbumPages();
@@ -238,13 +268,14 @@ export async function processBulkFiles(manager, files, slots) {
     slotEl?.classList.add('loading');
     try {
       const dataUrl = await manager._compressImage(file);
+      const imageUrl = await uploadOrKeepDataUrl(manager.store, dataUrl, file.name);
       const page = manager._albumPages[pageIndex];
       if (!page) return;
       manager._isDirty = true;
       const prev = page.images[imageIndex];
       page.images[imageIndex] = {
-        dataUrl,
-        originalDataUrl: dataUrl,
+        dataUrl: imageUrl,
+        originalDataUrl: imageUrl,
         caption: prev?.caption || '',
         frame: prev?.frame || 'none',
         filter: prev?.filter || 'none',

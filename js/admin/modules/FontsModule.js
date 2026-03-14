@@ -77,9 +77,16 @@ export class FontsModule extends BaseModule {
 
     if (!this._validateFile(file, { maxSize: MAX_DECORATIVE_FONT_SIZE, extensions: FONT_EXTENSIONS, inputEl: e.target })) return;
 
-    const dataUrl = await readFileAsDataURL(file);
+    let fontData;
+    const uploadedUrl = await this.store.uploadFont(file);
+    if (uploadedUrl) {
+      fontData = uploadedUrl;
+    } else {
+      fontData = await readFileAsDataURL(file);
+    }
+
     const name = file.name.replace(/\.[^.]+$/, '');
-    this.store.setDecorativeFont({ name, dataUrl });
+    this.store.setDecorativeFont({ name, dataUrl: fontData });
     this._renderDecorativeFont();
     this._renderJsonPreview();
     this._showToast(t('admin.fonts.decorativeLoaded'));
@@ -182,7 +189,12 @@ export class FontsModule extends BaseModule {
 
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, extensions: FONT_EXTENSIONS, inputEl: e.target })) return;
 
-    this._pendingReadingFontDataUrl = await readFileAsDataURL(file);
+    const uploadedUrl = await this.store.uploadFont(file);
+    if (uploadedUrl) {
+      this._pendingReadingFontDataUrl = uploadedUrl;
+    } else {
+      this._pendingReadingFontDataUrl = await readFileAsDataURL(file);
+    }
     this.readingFontUploadLabel.textContent = file.name;
     e.target.value = '';
   }
