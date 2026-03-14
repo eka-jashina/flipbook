@@ -16,19 +16,22 @@ vi.mock('../../../../js/utils/ErrorHandler.js', () => ({
   ErrorHandler: mockErrorHandler,
 }));
 
-vi.mock('../../../../js/config.js', () => ({
-  CONFIG: {
-    CHAPTERS: [
-      { id: 'ch1', file: 'content/part_1.html' },
-      { id: 'ch2', file: 'content/part_2.html' },
-    ],
-    COVER_BG: 'images/cover.webp',
-    COVER_BG_MOBILE: 'images/cover_m.webp',
-    LAYOUT: {
-      MIN_PAGE_WIDTH_RATIO: 0.3,
-      SETTLE_DELAY: 50,
-    },
+const mockConfig = {
+  CHAPTERS: [
+    { id: 'ch1', file: 'content/part_1.html' },
+    { id: 'ch2', file: 'content/part_2.html' },
+  ],
+  COVER_BG: 'images/cover.webp',
+  COVER_BG_MOBILE: 'images/cover_m.webp',
+  LAYOUT: {
+    MIN_PAGE_WIDTH_RATIO: 0.3,
+    SETTLE_DELAY: 50,
   },
+  BOOK_ID: null,
+};
+
+vi.mock('../../../../js/config.js', () => ({
+  getConfig: () => mockConfig,
   BookState: {
     CLOSED: 'CLOSED',
     OPENING: 'OPENING',

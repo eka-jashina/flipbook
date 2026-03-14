@@ -9,7 +9,7 @@
  * 
  */
 
-import { CONFIG } from '../../config.js';
+import { getConfig } from '../../config.js';
 import { BaseDelegate } from './BaseDelegate.js';
 
 export class ChapterDelegate extends BaseDelegate {
@@ -62,7 +62,7 @@ export class ChapterDelegate extends BaseDelegate {
    */
   getNextChapter(currentChapter) {
     const nextChapter = currentChapter + 1;
-    return nextChapter < CONFIG.CHAPTERS.length ? nextChapter : null;
+    return nextChapter < getConfig().CHAPTERS.length ? nextChapter : null;
   }
 
   /**
@@ -78,13 +78,13 @@ export class ChapterDelegate extends BaseDelegate {
       if (body) {
         body.dataset.chapter = 'cover';
       }
-      const coverBg = isMobile ? CONFIG.COVER_BG_MOBILE : CONFIG.COVER_BG;
+      const coverBg = isMobile ? getConfig().COVER_BG_MOBILE : getConfig().COVER_BG;
       this.backgroundManager.setBackground(coverBg);
       return;
     }
 
     const currentChapter = this.getCurrentChapter(pageIndex);
-    const chapterInfo = CONFIG.CHAPTERS[currentChapter];
+    const chapterInfo = getConfig().CHAPTERS[currentChapter];
 
     if (!chapterInfo) return;
 
@@ -114,7 +114,7 @@ export class ChapterDelegate extends BaseDelegate {
     const nextChapter = this.getNextChapter(currentChapter);
 
     if (nextChapter !== null && nextChapter !== this.lastPreloadedChapter) {
-      const nextChapterInfo = CONFIG.CHAPTERS[nextChapter];
+      const nextChapterInfo = getConfig().CHAPTERS[nextChapter];
       const bgUrl = isMobile ? nextChapterInfo?.bgMobile : nextChapterInfo?.bg;
 
       if (bgUrl) {

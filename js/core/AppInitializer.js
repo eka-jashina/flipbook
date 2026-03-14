@@ -15,7 +15,7 @@
  * - embed: минимальный UI (только книга + перелистывание, ссылка «Открыть на Flipbook»)
  */
 
-import { CONFIG } from '../config.js';
+import { getConfig } from '../config.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { AmbientManager } from '../managers/AmbientManager.js';
 import { t, getLanguage, applyTranslations } from '@i18n';
@@ -74,7 +74,7 @@ export class AppInitializer {
    */
   _setupUI() {
     // Установить фон обложки
-    this.backgroundManager.setBackground(CONFIG.COVER_BG);
+    this.backgroundManager.setBackground(getConfig().COVER_BG);
     this.dom.get('body').dataset.chapter = "cover";
 
     // Показать кнопку "Продолжить" если есть сохраненная позиция
@@ -261,7 +261,7 @@ export class AppInitializer {
     container.innerHTML = '';
 
     const tmpl = document.getElementById('tmpl-ambient-pill');
-    for (const [type, config] of Object.entries(CONFIG.AMBIENT)) {
+    for (const [type, config] of Object.entries(getConfig().AMBIENT)) {
       const frag = tmpl.content.cloneNode(true);
       const pill = frag.querySelector('.ambient-pill');
       pill.dataset.type = type;

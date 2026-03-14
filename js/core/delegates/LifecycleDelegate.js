@@ -8,7 +8,7 @@
  * - repaginate() → Пересчитать страницы (при смене шрифта/размера)
  */
 
-import { CONFIG, BookState } from '../../config.js';
+import { getConfig, BookState } from '../../config.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
 import { AmbientManager } from '../../managers/AmbientManager.js';
 import { BaseDelegate, DelegateEvents } from './BaseDelegate.js';
@@ -63,7 +63,7 @@ export class LifecycleDelegate extends BaseDelegate {
    * Инициализация - предзагрузка обложки и звуков
    */
   async init() {
-    const coverBg = this.isMobile ? CONFIG.COVER_BG_MOBILE : CONFIG.COVER_BG;
+    const coverBg = this.isMobile ? getConfig().COVER_BG_MOBILE : getConfig().COVER_BG;
     await Promise.all([
       this.backgroundManager.preload(coverBg, true),
       this.soundManager ? this.soundManager.preload() : Promise.resolve(),
@@ -97,7 +97,7 @@ export class LifecycleDelegate extends BaseDelegate {
       // ─── Этап 3: Параллельная загрузка (анимация + контент) ───
       // Связываем операции: если одна упадёт — отменяем вторую,
       // чтобы избежать рассогласования состояния.
-      const chapters = CONFIG.CHAPTERS.map(c => ({
+      const chapters = getConfig().CHAPTERS.map(c => ({
         file: c.file, id: c.id, htmlContent: c.htmlContent,
         _idb: c._idb, _hasHtmlContent: c._hasHtmlContent,
       }));
@@ -133,7 +133,7 @@ export class LifecycleDelegate extends BaseDelegate {
       }
 
       // ─── Этап 5: Пагинация контента ───
-      const chapterTitles = CONFIG.CHAPTERS.map(c => c.title || '');
+      const chapterTitles = getConfig().CHAPTERS.map(c => c.title || '');
       const { pageData, chapterStarts } = await this.paginator.paginate(html, rightA, { chapterTitles });
 
       if (this.isDestroyed) return;
@@ -157,7 +157,7 @@ export class LifecycleDelegate extends BaseDelegate {
       this.stateMachine.transitionTo(BookState.OPENED);
 
       // ─── Этап 8: Аналитика — начало сессии чтения ───
-      trackReadingSessionStart(CONFIG.BOOK_ID || 'default', safeStartIndex);
+      trackReadingSessionStart(getConfig().BOOK_ID || 'default', safeStartIndex);
 
       // ─── Этап 9: Запуск ambient звука ───
       // (требует user gesture, поэтому здесь, а не при инициализации)
@@ -270,7 +270,7 @@ export class LifecycleDelegate extends BaseDelegate {
       }
 
       // ─── Этап 2: Загрузка контента ───
-      const chapters = CONFIG.CHAPTERS.map(c => ({
+      const chapters = getConfig().CHAPTERS.map(c => ({
         file: c.file, id: c.id, htmlContent: c.htmlContent,
         _idb: c._idb, _hasHtmlContent: c._hasHtmlContent,
       }));
@@ -284,7 +284,7 @@ export class LifecycleDelegate extends BaseDelegate {
       }
 
       // ─── Этап 3: Пагинация ───
-      const chapterTitles = CONFIG.CHAPTERS.map(c => c.title || '');
+      const chapterTitles = getConfig().CHAPTERS.map(c => c.title || '');
       const { pageData, chapterStarts } = await this.paginator.paginate(html, rightA, { chapterTitles });
 
       if (this.isDestroyed) return;
@@ -370,8 +370,8 @@ export class LifecycleDelegate extends BaseDelegate {
     if (!book || !rightA) return;
 
     const bookWidth = book.offsetWidth;
-    const minPageWidth = bookWidth * CONFIG.LAYOUT.MIN_PAGE_WIDTH_RATIO;
-    const settleDelay = CONFIG.LAYOUT.SETTLE_DELAY;
+    const minPageWidth = bookWidth * getConfig().LAYOUT.MIN_PAGE_WIDTH_RATIO;
+    const settleDelay = getConfig().LAYOUT.SETTLE_DELAY;
     /** Max time to wait for layout to stabilize before proceeding anyway */
     const LAYOUT_TIMEOUT = 3000;
 

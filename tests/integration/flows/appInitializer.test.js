@@ -9,14 +9,16 @@ import { cleanupIntegrationDOM } from '../../helpers/integrationUtils.js';
 import { flushPromises } from '../../helpers/testUtils.js';
 
 // Mock CONFIG
-vi.mock('../../../js/config.js', () => ({
-  CONFIG: {
-    COVER_BG: '/images/cover.webp',
-    AMBIENT: {
-      none: { label: 'Тишина', icon: '🔇', shortLabel: 'Тишина' },
-      rain: { label: 'Дождь', icon: '🌧', shortLabel: 'Дождь' },
-    },
+const mockConfig = {
+  COVER_BG: '/images/cover.webp',
+  AMBIENT: {
+    none: { label: 'Тишина', icon: '🔇', shortLabel: 'Тишина' },
+    rain: { label: 'Дождь', icon: '🌧', shortLabel: 'Дождь' },
   },
+};
+
+vi.mock('../../../js/config.js', () => ({
+  getConfig: () => mockConfig,
 }));
 
 // Mock ErrorHandler
