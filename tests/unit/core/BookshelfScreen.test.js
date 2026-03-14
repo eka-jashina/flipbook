@@ -438,7 +438,7 @@ describe('BookshelfScreen', () => {
       const spy = vi.spyOn(screen, '_handleBookAction');
       const menuItem = container.querySelector('[data-book-action="read"]');
       click(menuItem);
-      expect(spy).toHaveBeenCalledWith('read', 'b1');
+      expect(spy).toHaveBeenCalledWith('read', 'b1', undefined);
     });
 
     it('should close menu before handling menu item action', () => {

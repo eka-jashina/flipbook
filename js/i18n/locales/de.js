@@ -475,6 +475,16 @@ export default {
   'admin.cropper.cancel': 'Abbrechen',
   'admin.cropper.ariaLabel': 'Foto zuschneiden',
 
+  // ─── Admin: Dateien ───────────────────────────────────────────────────────
+  'admin.file.tooLarge': 'Datei ist zu groß (max. {{size}} MB)',
+  'admin.file.invalidMime.image': 'Nur Bilder sind erlaubt',
+  'admin.file.invalidMime.audio': 'Nur Audiodateien sind erlaubt',
+  'admin.file.invalidExtension': 'Erlaubte Formate: {{formats}}',
+
+  // ─── Admin: Speicher ──────────────────────────────────────────────────────
+  'admin.storage.overflow': 'Der Browserspeicher ist voll. Einstellungen werden möglicherweise nicht gespeichert.',
+  'admin.storage.overflowKey': 'Speicherüberlauf ({{key}}). Einstellungen werden möglicherweise nicht gespeichert.',
+
   // ─── Admin: Buch hochladen ─────────────────────────────────────────────────
   'admin.upload.unsupported': 'Nicht unterstütztes Format. Unterstützt werden: {{formats}}',
   'admin.upload.processing': 'Datei wird verarbeitet...',
@@ -498,7 +508,6 @@ export default {
   'admin.saveError': 'Fehler beim Speichern',
   'admin.newBook': 'Neues Buch',
   'admin.albumBook': 'Fotoalbum',
-  'admin.badge': 'Konto',
   'admin.back': 'Zurück',
   'admin.tabsAria': 'Kontoabschnitte',
   'admin.editorTabsAria': 'Bucheditor-Abschnitte',
@@ -558,7 +567,6 @@ export default {
   'admin.profile.displayNamePlaceholder': 'Wie heißen Sie?',
   'admin.profile.avatarRemove': 'Entfernen',
   'admin.profile.saveButton': 'Profil speichern',
-  'admin.profile.displayNamePlaceholder': 'Wie heißen Sie?',
   'admin.profile.saved': 'Profil gespeichert',
   'admin.profile.avatarError': 'Fehler beim Hochladen des Avatars',
   'admin.profile.usernameReadonly': 'Der Benutzername kann nach der Registrierung nicht geändert werden.',
