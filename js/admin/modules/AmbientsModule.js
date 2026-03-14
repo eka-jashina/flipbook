@@ -42,8 +42,9 @@ export class AmbientsModule extends BaseModule {
 
     this.ambientCards.innerHTML = ambients.map((a, i) => {
       const isNone = a.id === 'none';
+      const isUploaded = a.file && (a.file.startsWith('data:') || a.file.startsWith('http'));
       const meta = a.file
-        ? this._escapeHtml(a.file.startsWith('data:') ? t('admin.ambients.uploadedFile') : a.file)
+        ? this._escapeHtml(isUploaded ? t('admin.ambients.uploadedFile') : a.file)
         : t('admin.ambients.noFile');
 
       return `
@@ -117,8 +118,9 @@ export class AmbientsModule extends BaseModule {
       this.ambientModalTitle.textContent = t('admin.ambients.editTitle');
       this.ambientLabelInput.value = a.label;
       this.ambientIconInput.value = a.icon;
-      this.ambientFileInput.value = a.file && !a.file.startsWith('data:') ? a.file : '';
-      if (a.file && a.file.startsWith('data:')) {
+      const isUploadedFile = a.file && (a.file.startsWith('data:') || a.file.startsWith('http'));
+      this.ambientFileInput.value = isUploadedFile ? '' : (a.file || '');
+      if (isUploadedFile) {
         this._pendingAmbientDataUrl = a.file;
         this.ambientUploadLabel.textContent = t('admin.ambients.fileLoaded');
       }
@@ -134,11 +136,14 @@ export class AmbientsModule extends BaseModule {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Reader uses localStorage snapshot from AdminConfigStore; large data URLs may not fit quota
-    // and then new ambients won't be visible in the reader config.
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'audio/', inputEl: e.target })) return;
 
-    this._pendingAmbientDataUrl = await readFileAsDataURL(file);
+    const uploadedUrl = await this.store.uploadSound(file);
+    if (uploadedUrl) {
+      this._pendingAmbientDataUrl = uploadedUrl;
+    } else {
+      this._pendingAmbientDataUrl = await readFileAsDataURL(file);
+    }
     this.ambientUploadLabel.textContent = file.name;
     e.target.value = '';
   }

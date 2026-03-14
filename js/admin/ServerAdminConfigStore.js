@@ -384,4 +384,24 @@ export class ServerAdminConfigStore {
     const result = await this._api.uploadImage(file);
     return result.fileUrl;
   }
+
+  /**
+   * Загрузить звуковой файл в S3 и вернуть URL.
+   * @param {File} file
+   * @returns {Promise<string>} URL загруженного файла
+   */
+  async uploadSound(file) {
+    const result = await this._api.uploadSound(file);
+    return result.fileUrl;
+  }
+
+  /**
+   * Загрузить файл шрифта в S3 и вернуть URL.
+   * @param {File} file
+   * @returns {Promise<string>} URL загруженного файла
+   */
+  async uploadFont(file) {
+    const result = await this._api.uploadFont(file);
+    return result.fileUrl;
+  }
 }

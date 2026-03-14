@@ -505,4 +505,10 @@ export class AdminConfigStore {
    * @returns {Promise<null>}
    */
   async uploadImage() { return null; }
+
+  /** @returns {Promise<null>} */
+  async uploadSound() { return null; }
+
+  /** @returns {Promise<null>} */
+  async uploadFont() { return null; }
 }

@@ -71,7 +71,8 @@ export class SoundsModule extends BaseModule {
       const hint = this._hints[key];
       const value = sounds[key] || '';
 
-      if (value.startsWith('data:')) {
+      const isUploaded = value.startsWith('data:') || value.startsWith('http');
+      if (isUploaded) {
         input.value = '';
         hint.textContent = t('admin.sounds.uploadedHint');
       } else {
@@ -87,8 +88,15 @@ export class SoundsModule extends BaseModule {
 
     if (!this._validateFile(file, { maxSize: 2 * 1024 * 1024, mimePrefix: 'audio/', inputEl: e.target })) return;
 
-    const dataUrl = await readFileAsDataURL(file);
-    this.store.updateSounds({ [key]: dataUrl });
+    let soundData;
+    const uploadedUrl = await this.store.uploadSound(file);
+    if (uploadedUrl) {
+      soundData = uploadedUrl;
+    } else {
+      soundData = await readFileAsDataURL(file);
+    }
+
+    this.store.updateSounds({ [key]: soundData });
     this._renderSounds();
     this._renderJsonPreview();
     this._showToast(t('admin.sounds.loaded'));
