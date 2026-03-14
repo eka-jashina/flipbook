@@ -6,16 +6,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock CONFIG
+const mockConfig = {
+  CHAPTERS: [
+    { id: 'ch1', file: 'content/part_1.html', bg: 'images/bg1.webp', bgMobile: 'images/bg1_m.webp' },
+    { id: 'ch2', file: 'content/part_2.html', bg: 'images/bg2.webp', bgMobile: 'images/bg2_m.webp' },
+    { id: 'ch3', file: 'content/part_3.html', bg: 'images/bg3.webp', bgMobile: 'images/bg3_m.webp' },
+  ],
+  COVER_BG: 'images/cover.webp',
+  COVER_BG_MOBILE: 'images/cover_m.webp',
+};
+
 vi.mock('../../../../js/config.js', () => ({
-  CONFIG: {
-    CHAPTERS: [
-      { id: 'ch1', file: 'content/part_1.html', bg: 'images/bg1.webp', bgMobile: 'images/bg1_m.webp' },
-      { id: 'ch2', file: 'content/part_2.html', bg: 'images/bg2.webp', bgMobile: 'images/bg2_m.webp' },
-      { id: 'ch3', file: 'content/part_3.html', bg: 'images/bg3.webp', bgMobile: 'images/bg3_m.webp' },
-    ],
-    COVER_BG: 'images/cover.webp',
-    COVER_BG_MOBILE: 'images/cover_m.webp',
-  },
+  getConfig: () => mockConfig,
 }));
 
 const { ChapterDelegate } = await import('../../../../js/core/delegates/ChapterDelegate.js');

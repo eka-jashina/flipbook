@@ -10,11 +10,11 @@
 
 import { BookshelfScreen, loadBooksFromAPI, getBookshelfData, clearActiveBook } from '../core/BookshelfScreen.js';
 import { LandingScreen } from '../core/LandingScreen.js';
-import { CONFIG, enrichConfigFromIDB, loadConfigFromAPI, loadPublicConfigFromAPI, setConfig } from '../config.js';
+import { createConfig, enrichConfigFromIDB, loadConfigFromAPI, loadPublicConfigFromAPI, setConfig } from '../config.js';
 import { BookController } from '../core/BookController.js';
 import { AuthModal } from '../core/AuthModal.js';
 import { MigrationHelper } from '../core/MigrationHelper.js';
-import { adminConfigStorage } from '../config/configHelpers.js';
+import { adminConfigStorage, loadAdminConfig } from '../config/configHelpers.js';
 import { installPrompt } from '../utils/InstallPrompt.js';
 import { photoLightbox } from '../utils/PhotoLightbox.js';
 
@@ -387,8 +387,12 @@ async function initReaderWithMode(bookId, route) {
 }
 
 async function initReaderFallback() {
-  const enriched = await enrichConfigFromIDB(CONFIG);
-  if (enriched !== CONFIG) setConfig(enriched);
+  // Пересоздаём конфиг из localStorage, чтобы подхватить изменения из админки
+  const freshConfig = createConfig(loadAdminConfig());
+  setConfig(freshConfig);
+
+  const enriched = await enrichConfigFromIDB(freshConfig);
+  if (enriched !== freshConfig) setConfig(enriched);
 
   ctx.state.app = new BookController();
   await ctx.state.app.init();
