@@ -95,9 +95,10 @@ export class ChapterFileHandler {
     }
 
     // При редактировании — сбросить существующий контент
-    if (this._host._editingIndex !== null) {
-      const existing = this._host.store.getChapters()[this._host._editingIndex];
-      if (existing.file) {
+    const editIdx = this._host._expandedIndex ?? this._host._editingIndex ?? null;
+    if (editIdx !== null && editIdx >= 0) {
+      const existing = this._host.store.getChapters()[editIdx];
+      if (existing?.file) {
         // Есть URL-путь — вернуть его отображение
         this.showFileInfo(existing.file);
         return;

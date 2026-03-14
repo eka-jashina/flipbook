@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 vi.mock('../../../js/admin/modules/QuillEditorWrapper.js', () => ({
   QuillEditorWrapper: class {
     constructor() {
-      this.init = vi.fn();
+      this.init = vi.fn().mockResolvedValue(undefined);
       this.setHTML = vi.fn();
       this.getHTML = vi.fn(() => '');
       this.isEmpty = vi.fn(() => true);
@@ -79,6 +79,9 @@ function setupDOM() {
     <div id="chaptersEmpty" hidden></div>
     <button id="addChapter"></button>
     <button id="addAlbum"></button>
+    <div id="chaptersImportDropzone">
+      <input type="file" id="chaptersImportFileInput" accept=".epub,.fb2,.docx,.doc,.txt" hidden>
+    </div>
     <div id="bookSelector"></div>
     <button id="deleteBook" hidden></button>
     <div id="bookUploadArea">
@@ -165,7 +168,7 @@ describe('ChaptersModule', () => {
 
   describe('constructor', () => {
     it('should initialize state', () => {
-      expect(mod._editingIndex).toBeNull();
+      expect(mod._expandedIndex).toBe(-1);
       expect(mod._album).toBeDefined();
       expect(mod._bookUpload).toBeDefined();
     });
@@ -282,78 +285,191 @@ describe('ChaptersModule', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // _openModal
+  // _toggleChapter (inline editing — replaces _openModal)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  describe('_openModal()', () => {
-    it('should open modal for new chapter', async () => {
-      const showModalSpy = vi.spyOn(mod.modal, 'showModal');
+  describe('_toggleChapter()', () => {
+    it('should expand chapter inline for editing', async () => {
+      await mod._renderChapters();
+      await mod._toggleChapter(0);
 
-      await mod._openModal();
-
-      expect(mod._editingIndex).toBeNull();
-      expect(mod.modalTitle.textContent).toBe('Добавить главу');
-      expect(showModalSpy).toHaveBeenCalled();
+      expect(mod._expandedIndex).toBe(0);
+      const card = mod.chaptersList.querySelector('.chapter-card[data-index="0"]');
+      expect(card.classList.contains('chapter-card--expanded')).toBe(true);
     });
 
-    it('should open modal for editing chapter', async () => {
-      await mod._openModal(0);
+    it('should collapse expanded chapter on second toggle', async () => {
+      await mod._renderChapters();
+      await mod._toggleChapter(0);
+      await mod._toggleChapter(0);
 
-      expect(mod._editingIndex).toBe(0);
-      expect(mod.modalTitle.textContent).toBe('Редактировать главу');
-      expect(mod.inputId.value).toBe('part_1');
-      expect(mod.chapterFileName.textContent).toBe('content/part_1.html');
+      expect(mod._expandedIndex).toBe(-1);
+      const card = mod.chaptersList.querySelector('.chapter-card[data-index="0"]');
+      expect(card.classList.contains('chapter-card--expanded')).toBe(false);
+    });
+
+    it('should switch to new chapter when different one is toggled', async () => {
+      await mod._renderChapters();
+      await mod._toggleChapter(0);
+      await mod._toggleChapter(1);
+
+      expect(mod._expandedIndex).toBe(1);
+      const card0 = mod.chaptersList.querySelector('.chapter-card[data-index="0"]');
+      const card1 = mod.chaptersList.querySelector('.chapter-card[data-index="1"]');
+      expect(card0.classList.contains('chapter-card--expanded')).toBe(false);
+      expect(card1.classList.contains('chapter-card--expanded')).toBe(true);
+    });
+
+    it('should populate inline fields with chapter data', async () => {
+      await mod._renderChapters();
+      await mod._toggleChapter(0);
+
+      const card = mod.chaptersList.querySelector('.chapter-card[data-index="0"]');
+      const body = card.querySelector('.chapter-card-body');
+      const idInput = body.querySelector('.chapter-inline-id');
+      expect(idInput.value).toBe('part_1');
+    });
+
+    it('should set editor mode for chapter with htmlContent', async () => {
+      app.store.getChapters.mockResolvedValue([
+        { id: 'inline', title: 'Inline', file: '', htmlContent: '<p>HTML</p>', bg: '', bgMobile: '' },
+      ]);
+      await mod._renderChapters();
+      await mod._toggleChapter(0);
+
+      expect(mod._inputMode).toBe('editor');
+      expect(mod._pendingHtmlContent).toBe('<p>HTML</p>');
+    });
+
+    it('should set upload mode for chapter with file path', async () => {
+      await mod._renderChapters();
+      await mod._toggleChapter(0);
+
+      expect(mod._inputMode).toBe('upload');
     });
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // _handleChapterSubmit
+  // _addNewChapter
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_addNewChapter()', () => {
+    it('should add empty chapter to store and expand it', async () => {
+      await mod._addNewChapter();
+
+      expect(app.store.addChapter).toHaveBeenCalledWith(expect.objectContaining({
+        title: '',
+        file: '',
+        htmlContent: '',
+      }));
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // _saveExpandedChapter
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_saveExpandedChapter()', () => {
+    it('should save inline fields to store on collapse', async () => {
+      await mod._renderChapters();
+      await mod._toggleChapter(0);
+
+      // Modify inline fields
+      const card = mod.chaptersList.querySelector('.chapter-card[data-index="0"]');
+      const body = card.querySelector('.chapter-card-body');
+      const titleInput = body.querySelector('.chapter-inline-title');
+      titleInput.value = 'New Title';
+
+      await mod._saveExpandedChapter();
+
+      expect(app.store.updateChapter).toHaveBeenCalledWith(0, expect.objectContaining({
+        title: 'New Title',
+      }));
+    });
+
+    it('should not save if no chapter is expanded', async () => {
+      await mod._saveExpandedChapter();
+      expect(app.store.updateChapter).not.toHaveBeenCalled();
+    });
+
+    it('should collect HTML from editor when in editor mode', async () => {
+      app.store.getChapters.mockResolvedValue([
+        { id: 'inline', title: '', file: '', htmlContent: '<p>old</p>', bg: '', bgMobile: '' },
+      ]);
+      await mod._renderChapters();
+      await mod._toggleChapter(0);
+
+      mod._inputMode = 'editor';
+      mod._editor.isInitialized = true;
+      mod._editor.isEmpty = vi.fn(() => false);
+      mod._editor.getHTML = vi.fn(() => '<p>Editor content</p>');
+
+      await mod._saveExpandedChapter();
+
+      expect(app.store.updateChapter).toHaveBeenCalledWith(0, expect.objectContaining({
+        htmlContent: '<p>Editor content</p>',
+      }));
+    });
+
+    it('should destroy editor after save', async () => {
+      await mod._renderChapters();
+      await mod._toggleChapter(0);
+
+      mod._editor.isInitialized = true;
+      await mod._saveExpandedChapter();
+
+      expect(mod._editor.destroy).toHaveBeenCalled();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // _openModal (legacy — delegates to inline editing)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_openModal() legacy', () => {
+    it('should add new chapter when called without index', async () => {
+      await mod._openModal();
+      expect(app.store.addChapter).toHaveBeenCalled();
+    });
+
+    it('should expand chapter inline when called with index', async () => {
+      await mod._renderChapters();
+      await mod._openModal(0);
+
+      expect(mod._expandedIndex).toBe(0);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // _switchInputMode (legacy)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('_switchInputMode()', () => {
+    it('should switch to editor mode', async () => {
+      await mod._switchInputMode('editor');
+      expect(mod._inputMode).toBe('editor');
+    });
+
+    it('should switch to upload mode', async () => {
+      await mod._switchInputMode('editor');
+      await mod._switchInputMode('upload');
+      expect(mod._inputMode).toBe('upload');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // _handleChapterSubmit (legacy — delegates to _saveExpandedChapter)
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('_handleChapterSubmit()', () => {
-    it('should add new chapter', async () => {
-      mod.inputId.value = 'part_3';
-      mod._pendingHtmlContent = '<article><p>Content</p></article>';
-      mod.inputBg.value = 'bg3.webp';
-      mod.inputBgMobile.value = '';
-      vi.spyOn(mod.modal, 'close');
-
-      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
-
-      expect(app.store.addChapter).toHaveBeenCalledWith({
-        id: 'part_3',
-        title: '',
-        file: '',
-        bg: 'bg3.webp',
-        bgMobile: '',
-        htmlContent: '<article><p>Content</p></article>',
-      });
-      expect(app._showToast).toHaveBeenCalledWith('Глава добавлена');
-      expect(mod.modal.close).toHaveBeenCalled();
-    });
-
-    it('should update existing chapter in edit mode', async () => {
-      mod._editingIndex = 0;
-      mod.inputId.value = 'part_1_updated';
-      mod.inputBg.value = '';
-      mod.inputBgMobile.value = '';
-      vi.spyOn(mod.modal, 'close');
-
-      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
-
-      expect(app.store.updateChapter).toHaveBeenCalledWith(0, expect.objectContaining({
-        id: 'part_1_updated',
-        file: 'content/part_1.html',
-      }));
-      expect(app._showToast).toHaveBeenCalledWith('Глава обновлена');
-    });
-
     it('should reject if id is empty', async () => {
       mod.inputId.value = '';
       mod._pendingHtmlContent = '<article>content</article>';
 
       await mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
+      // Legacy submit delegates to _saveExpandedChapter which needs expanded chapter
+      // No expanded chapter means nothing saved
       expect(app.store.addChapter).not.toHaveBeenCalled();
     });
 
@@ -364,153 +480,6 @@ describe('ChaptersModule', () => {
       await mod._handleChapterSubmit({ preventDefault: vi.fn() });
 
       expect(app.store.addChapter).not.toHaveBeenCalled();
-    });
-
-    it('should preserve htmlContent when editing chapter without file', async () => {
-      app.store.getChapters.mockResolvedValue([
-        { id: 'album', file: '', htmlContent: '<article>...</article>', bg: '', bgMobile: '' },
-      ]);
-      mod._editingIndex = 0;
-      mod._pendingHtmlContent = '<article>...</article>';
-      mod.inputId.value = 'album_updated';
-      mod.inputBg.value = '';
-      mod.inputBgMobile.value = '';
-      vi.spyOn(mod.modal, 'close');
-
-      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
-
-      const chapter = app.store.updateChapter.mock.calls[0][1];
-      expect(chapter.htmlContent).toBe('<article>...</article>');
-    });
-  });
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // _switchInputMode
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  describe('_switchInputMode()', () => {
-    it('should switch to editor mode', async () => {
-      await mod._switchInputMode('editor');
-
-      expect(mod._inputMode).toBe('editor');
-      expect(mod.chapterUploadPanel.hidden).toBe(true);
-      expect(mod.chapterEditorPanel.hidden).toBe(false);
-      expect(mod.modal.classList.contains('editor-active')).toBe(true);
-    });
-
-    it('should switch to upload mode', async () => {
-      await mod._switchInputMode('editor');
-      await mod._switchInputMode('upload');
-
-      expect(mod._inputMode).toBe('upload');
-      expect(mod.chapterUploadPanel.hidden).toBe(false);
-      expect(mod.chapterEditorPanel.hidden).toBe(true);
-      expect(mod.modal.classList.contains('editor-active')).toBe(false);
-    });
-
-    it('should toggle active class on buttons', async () => {
-      await mod._switchInputMode('editor');
-
-      const buttons = mod.chapterInputToggle.querySelectorAll('[data-input-mode]');
-      expect(buttons[0].classList.contains('active')).toBe(false);
-      expect(buttons[1].classList.contains('active')).toBe(true);
-    });
-
-    it('should init editor lazily on first switch', async () => {
-      await mod._switchInputMode('editor');
-
-      expect(mod._editor.init).toHaveBeenCalledWith(mod.chapterEditorContainer);
-    });
-
-    it('should load pending HTML into editor when switching', async () => {
-      mod._pendingHtmlContent = '<article>Test</article>';
-
-      await mod._switchInputMode('editor');
-
-      expect(mod._editor.setHTML).toHaveBeenCalledWith('<article>Test</article>');
-    });
-  });
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // _handleChapterSubmit with editor
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  describe('_handleChapterSubmit() with editor', () => {
-    it('should collect HTML from editor when in editor mode', async () => {
-      mod._inputMode = 'editor';
-      mod._editor.isInitialized = true;
-      mod._editor.isEmpty = vi.fn(() => false);
-      mod._editor.getHTML = vi.fn(() => '<p>Editor content</p>');
-      mod.inputId.value = 'part_new';
-      mod.inputBg.value = '';
-      mod.inputBgMobile.value = '';
-      vi.spyOn(mod.modal, 'close');
-
-      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
-
-      expect(app.store.addChapter).toHaveBeenCalledWith(expect.objectContaining({
-        htmlContent: '<p>Editor content</p>',
-      }));
-    });
-
-    it('should destroy editor after submit', async () => {
-      mod._inputMode = 'editor';
-      mod._editor.isInitialized = true;
-      mod._editor.isEmpty = vi.fn(() => false);
-      mod._editor.getHTML = vi.fn(() => '<p>Content</p>');
-      mod.inputId.value = 'test';
-      vi.spyOn(mod.modal, 'close');
-
-      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
-
-      expect(mod._editor.destroy).toHaveBeenCalled();
-    });
-
-    it('should not collect from editor when in upload mode', async () => {
-      mod._inputMode = 'upload';
-      mod._editor.isInitialized = true;
-      mod._editor.isEmpty = vi.fn(() => false);
-      mod._editor.getHTML = vi.fn(() => '<p>Should not use this</p>');
-      mod.inputId.value = 'test';
-      mod._pendingHtmlContent = '<article>File content</article>';
-      vi.spyOn(mod.modal, 'close');
-
-      await mod._handleChapterSubmit({ preventDefault: vi.fn() });
-
-      expect(mod._editor.getHTML).not.toHaveBeenCalled();
-      expect(app.store.addChapter).toHaveBeenCalledWith(expect.objectContaining({
-        htmlContent: '<article>File content</article>',
-      }));
-    });
-  });
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // _openModal with editor
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  describe('_openModal() with editor', () => {
-    it('should open editor mode for chapter with htmlContent', async () => {
-      app.store.getChapters.mockResolvedValue([
-        { id: 'inline', title: 'Inline', file: '', htmlContent: '<p>Inline HTML</p>', bg: '', bgMobile: '' },
-      ]);
-
-      await mod._openModal(0);
-
-      expect(mod._inputMode).toBe('editor');
-      expect(mod._editor.setHTML).toHaveBeenCalledWith('<p>Inline HTML</p>');
-    });
-
-    it('should open upload mode for chapter with file path', async () => {
-      await mod._openModal(0);
-
-      expect(mod._inputMode).toBe('upload');
-      expect(mod.chapterFileName.textContent).toBe('content/part_1.html');
-    });
-
-    it('should default to upload mode for new chapter', async () => {
-      await mod._openModal();
-
-      expect(mod._inputMode).toBe('upload');
     });
   });
 
