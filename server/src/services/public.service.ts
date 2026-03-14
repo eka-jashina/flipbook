@@ -56,6 +56,44 @@ export async function getShelf(username: string): Promise<PublicShelf> {
 }
 
 /**
+ * Get full details of a public book by author username + slug.
+ */
+export async function getPublicBookBySlug(
+  username: string,
+  slug: string,
+): Promise<PublicBookDetail> {
+  const prisma = getPrisma();
+
+  const user = await prisma.user.findUnique({
+    where: { username },
+    select: { id: true, username: true, displayName: true, avatarUrl: true, bio: true },
+  });
+
+  if (!user) throw new AppError(404, 'Author not found');
+
+  const book = await prisma.book.findFirst({
+    where: { userId: user.id, slug, deletedAt: null },
+    include: {
+      chapters: { orderBy: { position: 'asc' } },
+      appearance: true,
+      sounds: true,
+      ambients: { orderBy: { position: 'asc' } },
+      decorativeFont: true,
+      defaultSettings: true,
+    },
+  });
+
+  if (!book || book.visibility === 'draft') {
+    throw new AppError(404, 'Book not found');
+  }
+
+  return {
+    ...mapBookToDetail(book),
+    owner: mapUserToPublicAuthor(user),
+  };
+}
+
+/**
  * Get full details of a public book (published or unlisted).
  */
 export async function getPublicBook(bookId: string): Promise<PublicBookDetail> {

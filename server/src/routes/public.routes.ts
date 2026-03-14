@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getShelf,
   getPublicBook,
+  getPublicBookBySlug,
   getPublicChapters,
   getPublicChapterContent,
   discoverBooks,
@@ -38,6 +39,20 @@ router.get(
   asyncHandler(async (req, res) => {
     const shelf = await getShelf(req.params.username as string);
     ok(res, shelf);
+  }),
+);
+
+/**
+ * GET /api/public/shelves/:username/:slug — Get public book by author + slug
+ */
+router.get(
+  '/shelves/:username/:slug',
+  asyncHandler(async (req, res) => {
+    const book = await getPublicBookBySlug(
+      req.params.username as string,
+      req.params.slug as string,
+    );
+    ok(res, book);
   }),
 );
 

@@ -47,6 +47,7 @@ model Book {
   coverBgMobile    String    @default("") @map("cover_bg_mobile") @db.VarChar(500)
   coverBgMode      String    @default("default") @map("cover_bg_mode") @db.VarChar(20)
   coverBgCustomUrl String?   @map("cover_bg_custom_url") @db.VarChar(500)
+  slug             String?   @db.VarChar(100)
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
@@ -62,6 +63,7 @@ model Book {
   readingPreferences ReadingPreferences[]
   readingSessions    ReadingSession[]
 
+  @@unique([userId, slug])
   @@index([userId])
   @@index([userId, position])
   @@index([userId, deletedAt])

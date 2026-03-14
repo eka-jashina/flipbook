@@ -231,6 +231,22 @@ export async function handlePublicShelf({ username }) {
   }
 }
 
+/** Маршрут: /:username/:slug → Показать книгу по slug автора */
+export async function handleBookBySlug({ username, slug }) {
+  // Резолвим slug → bookId через публичный API, затем открываем ридер
+  try {
+    const book = await ctx.apiClient.getPublicBookBySlug(username, slug);
+    if (book?.id) {
+      await handleReader({ bookId: book.id });
+      return;
+    }
+  } catch (err) {
+    console.error('Ошибка загрузки книги по slug:', err);
+  }
+  // Fallback: если книга не найдена, переходим на полку автора
+  ctx.router.navigate(`/${username}`, { replace: true });
+}
+
 /** Маршрут: /book/:bookId → Показать ридер */
 export async function handleReader({ bookId }) {
   await screenTransition('to-reader', () => {

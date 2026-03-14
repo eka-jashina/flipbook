@@ -70,6 +70,15 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(8).max(128),
 });
 
+// ── Book Slug ─────────────────────────────────────
+/** Book slug: lowercase latin, digits, hyphens. 3-100 chars, starts with alphanumeric. */
+const BOOK_SLUG_REGEX = /^[a-z0-9][a-z0-9-]{2,99}$/;
+const BOOK_SLUG_MSG = { message: 'Slug must be 3-100 chars: lowercase letters, digits, hyphens. Must start with letter or digit.' };
+
+const bookSlugField = z.string()
+  .min(3).max(100)
+  .regex(BOOK_SLUG_REGEX, BOOK_SLUG_MSG);
+
 // ── Books ──────────────────────────────────────────
 export const createBookSchema = z.object({
   title: z.string().min(1).max(500),
@@ -83,8 +92,13 @@ export const updateBookSchema = z.object({
   type: z.enum(['book', 'album']).optional(),
   visibility: z.enum(['draft', 'published', 'unlisted']).optional(),
   description: z.string().max(2000).nullable().optional(),
+  slug: bookSlugField.nullable().optional(),
   coverBgMode: z.enum(['default', 'none', 'custom']).optional(),
   coverBgCustomUrl: safeUrlOrPath.nullable().optional(),
+});
+
+export const bookSlugParamSchema = z.object({
+  slug: z.string().min(3).max(100),
 });
 
 export const reorderBooksSchema = z.object({

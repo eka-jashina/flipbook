@@ -8,6 +8,10 @@ vi.mock('../../../js/utils/Analytics.js', () => ({
   trackBookPublished: vi.fn(),
 }));
 
+vi.mock('../../../js/i18n/index.js', () => ({
+  t: (key, fallback) => fallback || key,
+}));
+
 import { AccountPublishTab } from '../../../js/core/AccountPublishTab.js';
 import { trackBookPublished } from '../../../js/utils/Analytics.js';
 
@@ -29,6 +33,11 @@ describe('AccountPublishTab', () => {
       </div>
       <textarea id="bookDescription"></textarea>
       <span id="descCharCount">0</span>
+      <div id="slugSection">
+        <input id="bookSlug" value="">
+        <div id="slugPreview"></div>
+        <div id="slugStatus"></div>
+      </div>
       <div id="shareSection" hidden>
         <input id="shareLink" value="">
       </div>
@@ -37,8 +46,9 @@ describe('AccountPublishTab', () => {
     `;
 
     mockApi = {
-      getBook: vi.fn(() => Promise.resolve({ visibility: 'draft', description: 'A book' })),
+      getBook: vi.fn(() => Promise.resolve({ visibility: 'draft', description: 'A book', slug: null })),
       updateBook: vi.fn(() => Promise.resolve()),
+      checkBookSlug: vi.fn(() => Promise.resolve({ available: true })),
     };
 
     mockStore = {
@@ -52,6 +62,7 @@ describe('AccountPublishTab', () => {
       apiClient: mockApi,
       store: mockStore,
       showToast: mockShowToast,
+      currentUser: { username: 'testuser' },
     });
   });
 
@@ -64,6 +75,9 @@ describe('AccountPublishTab', () => {
       expect(tab._shareLink).not.toBeNull();
       expect(tab._copyShareLinkBtn).not.toBeNull();
       expect(tab._savePublishBtn).not.toBeNull();
+      expect(tab._slugInput).not.toBeNull();
+      expect(tab._slugStatus).not.toBeNull();
+      expect(tab._slugPreview).not.toBeNull();
     });
   });
 
@@ -87,7 +101,7 @@ describe('AccountPublishTab', () => {
     });
 
     it('should check correct visibility radio', async () => {
-      mockApi.getBook.mockResolvedValue({ visibility: 'published', description: '' });
+      mockApi.getBook.mockResolvedValue({ visibility: 'published', description: '', slug: null });
       await tab.render();
 
       const radio = container.querySelector('input[value="published"]');
@@ -95,11 +109,26 @@ describe('AccountPublishTab', () => {
     });
 
     it('should show share section when published', async () => {
-      mockApi.getBook.mockResolvedValue({ visibility: 'published', description: '' });
+      mockApi.getBook.mockResolvedValue({ visibility: 'published', description: '', slug: null });
       await tab.render();
 
       expect(tab._shareSection.hidden).toBe(false);
       expect(tab._shareLink.value).toContain('/book/book-123');
+    });
+
+    it('should use slug in share link when available', async () => {
+      mockApi.getBook.mockResolvedValue({ visibility: 'published', description: '', slug: 'my-book' });
+      await tab.render();
+
+      expect(tab._shareSection.hidden).toBe(false);
+      expect(tab._shareLink.value).toContain('/testuser/my-book');
+    });
+
+    it('should populate slug input', async () => {
+      mockApi.getBook.mockResolvedValue({ visibility: 'draft', description: '', slug: 'existing-slug' });
+      await tab.render();
+
+      expect(tab._slugInput.value).toBe('existing-slug');
     });
 
     it('should hide share section when draft', async () => {
@@ -129,22 +158,40 @@ describe('AccountPublishTab', () => {
   });
 
   describe('_save', () => {
-    it('should save visibility and description', async () => {
+    it('should save visibility, description and slug', async () => {
       tab.bindEvents();
 
       container.querySelector('input[value="published"]').checked = true;
       tab._bookDescription.value = 'New description';
+      tab._slugInput.value = 'my-book';
 
       await tab._save();
 
       expect(mockApi.updateBook).toHaveBeenCalledWith('book-123', {
         visibility: 'published',
         description: 'New description',
+        slug: 'my-book',
       });
       expect(mockShowToast).toHaveBeenCalledWith(
         expect.any(String),
         'success'
       );
+    });
+
+    it('should save null slug when empty', async () => {
+      tab.bindEvents();
+
+      container.querySelector('input[value="draft"]').checked = true;
+      tab._bookDescription.value = '';
+      tab._slugInput.value = '';
+
+      await tab._save();
+
+      expect(mockApi.updateBook).toHaveBeenCalledWith('book-123', {
+        visibility: 'draft',
+        description: '',
+        slug: null,
+      });
     });
 
     it('should track analytics when publishing', async () => {
@@ -174,6 +221,43 @@ describe('AccountPublishTab', () => {
       await tab._save();
 
       expect(mockApi.updateBook).not.toHaveBeenCalled();
+    });
+
+    it('should reject invalid slug', async () => {
+      tab.bindEvents();
+      container.querySelector('input[value="draft"]').checked = true;
+      tab._slugInput.value = 'ab'; // too short
+
+      await tab._save();
+
+      expect(mockApi.updateBook).not.toHaveBeenCalled();
+      expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'error');
+    });
+  });
+
+  describe('slug input', () => {
+    it('should normalize input to lowercase', () => {
+      tab.bindEvents();
+      tab._slugInput.value = 'My Book';
+      tab._slugInput.dispatchEvent(new Event('input'));
+
+      expect(tab._slugInput.value).toBe('my-book');
+    });
+
+    it('should show error for invalid slug format', () => {
+      tab.bindEvents();
+      tab._slugInput.value = '-a';
+      tab._slugInput.dispatchEvent(new Event('input'));
+
+      expect(tab._slugStatus.className).toContain('slug-status--error');
+    });
+
+    it('should update slug preview', () => {
+      tab.bindEvents();
+      tab._slugInput.value = 'cool-book';
+      tab._slugInput.dispatchEvent(new Event('input'));
+
+      expect(tab._slugPreview.textContent).toContain('testuser/cool-book');
     });
   });
 });

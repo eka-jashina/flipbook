@@ -6,6 +6,7 @@ import {
   updateBook,
   deleteBook,
   reorderBooks,
+  isSlugAvailable,
 } from '../services/books.service.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireBookOwnership } from '../middleware/bookOwnership.js';
@@ -53,6 +54,19 @@ router.patch(
   asyncHandler(async (req, res) => {
     await reorderBooks(req.user!.id, req.body.bookIds);
     ok(res, { message: 'Books reordered' });
+  }),
+);
+
+/**
+ * GET /api/books/check-slug/:slug — Check slug availability for current user
+ */
+router.get(
+  '/check-slug/:slug',
+  asyncHandler(async (req, res) => {
+    const slug = req.params.slug as string;
+    const bookId = req.query.excludeBookId as string | undefined;
+    const available = await isSlugAvailable(req.user!.id, slug, bookId);
+    ok(res, { slug, available });
   }),
 );
 
