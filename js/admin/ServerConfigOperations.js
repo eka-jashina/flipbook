@@ -103,6 +103,23 @@ export async function moveChapterByIndex(api, bookId, fromIndex, toIndex) {
   await api.reorderChapters(bookId, ids);
 }
 
+/**
+ * Загрузить содержимое одной главы по индексу.
+ * @param {Object} api
+ * @param {string} bookId
+ * @param {number} index
+ * @returns {Promise<string|null>} htmlContent
+ */
+export async function fetchChapterContentByIndex(api, bookId, index) {
+  const result = await api.getChapters(bookId);
+  const chapters = result.chapters || result;
+  if (index < 0 || index >= chapters.length) return null;
+  const chapterId = chapters[index].id;
+
+  const detail = await api.getChapter(bookId, chapterId);
+  return detail.htmlContent || null;
+}
+
 // ─── Амбиенты ────────────────────────────────────────────────────────────────
 
 /**
