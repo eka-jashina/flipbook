@@ -462,10 +462,10 @@ flipbook/
 │   ├── helpers/              # Test utilities
 │   ├── unit/                 # Unit tests (Vitest)
 │   │   ├── config/           # Config tests (3 files)
-│   │   ├── utils/            # Utility tests (24 files)
-│   │   ├── managers/         # Manager tests (5 files)
-│   │   ├── core/             # Core + delegates + services tests (20 + 8 + 4 files)
-│   │   └── admin/            # Admin module tests (31 files)
+│   │   ├── utils/            # Utility tests (23 files)
+│   │   ├── managers/         # Manager tests (7 files)
+│   │   ├── core/             # Core + delegates + services tests (25 + 9 + 4 files)
+│   │   └── admin/            # Admin module tests (36 files)
 │   ├── integration/          # Integration tests (Vitest + jsdom)
 │   │   ├── smoke.test.js
 │   │   ├── flows/            # User flow tests (37 files)
@@ -930,11 +930,11 @@ tests/
 │   └── integrationUtils.js # Integration test utilities
 ├── unit/                 # Unit tests
 │   ├── utils/            # Utility tests (23 files)
-│   ├── managers/         # Manager tests (5 files)
-│   ├── core/             # Core tests (20 files)
-│   │   ├── delegates/    # Delegate tests (8 files)
+│   ├── managers/         # Manager tests (7 files)
+│   ├── core/             # Core tests (25 files)
+│   │   ├── delegates/    # Delegate tests (9 files)
 │   │   └── services/     # Service tests (4 files)
-│   └── admin/            # Admin module tests (21 files)
+│   └── admin/            # Admin module tests (36 files)
 ├── integration/          # Integration tests
 │   ├── smoke.test.js
 │   ├── flows/            # User flow tests (37 files)
