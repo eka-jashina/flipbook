@@ -280,6 +280,7 @@ export async function handleAccount() {
   const tab = query.get('tab') || 'books';
   const editBookId = query.get('edit');
   const mode = query.get('mode');
+  const create = query.get('create') === 'true';
 
   if (!ctx.state.accountScreen) {
     const { AccountScreen } = await import('../core/AccountScreen.js');
@@ -289,7 +290,7 @@ export async function handleAccount() {
 
   await screenTransition('to-account', () => {
     cleanupReader(); cleanupLanding(); cleanupBookshelf();
-    ctx.state.accountScreen.show(tab, { editBookId, mode });
+    ctx.state.accountScreen.show(tab, { editBookId, mode, create });
   });
 }
 

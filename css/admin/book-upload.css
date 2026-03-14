@@ -121,6 +121,27 @@
   flex-shrink: 0;
 }
 
+/* Разделитель «— или —» */
+.create-book-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+  color: var(--admin-text-secondary);
+  font-size: 14px;
+}
+
+/* Кнопка «Создать пустую книгу» */
+.create-book-empty-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 15px;
+}
+
 @media (max-width: 768px) {
   .book-upload-result {
     flex-direction: column;

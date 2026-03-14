@@ -69,10 +69,10 @@
               </button>
             </div>
 
-            <!-- ─── Вид: Выбор режима ─── -->
-            <div class="screen-view" data-view="mode-selector" id="viewModeSelector" hidden>
+            <!-- ─── Вид: Выбор типа (Книга / Альбом) ─── -->
+            <div class="screen-view" data-view="type-selector" id="viewTypeSelector" hidden>
               <div class="screen-back-row">
-                <button class="btn-back" type="button" id="modeSelectorBack">
+                <button class="btn-back" type="button" id="typeSelectorBack">
                   <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                     <path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
                   </svg>
@@ -81,25 +81,24 @@
               </div>
 
               <div class="mode-selector-header">
-                <h2 data-i18n="admin.createBookQuestion">Как вы хотите создать книгу?</h2>
-                <p class="panel-description" data-i18n="admin.createBookHint">Выберите способ — вы всегда сможете отредактировать результат</p>
+                <h2 data-i18n="admin.createTypeQuestion">Что создаём?</h2>
               </div>
 
               <div class="mode-cards" id="modeCards">
-                <!-- Карточки режимов генерируются из JS -->
+                <!-- Карточки типов генерируются из JS -->
               </div>
             </div>
 
-            <!-- ─── Вид: Загрузка файла ─── -->
-            <div class="screen-view" data-view="upload" id="viewUpload" hidden>
+            <!-- ─── Вид: Создание книги (дропзона + пустая книга) ─── -->
+            <div class="screen-view" data-view="create-book" id="viewCreateBook" hidden>
               <div class="screen-back-row">
-                <button class="btn-back" type="button" id="uploadBack">
+                <button class="btn-back" type="button" id="createBookBack">
                   <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                     <path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
                   </svg>
                   <span data-i18n="common.back">Назад</span>
                 </button>
-                <h2 data-i18n="admin.uploadBook">Загрузить книгу</h2>
+                <h2 data-i18n="admin.newBook">Новая книга</h2>
               </div>
 
               <div class="book-upload-area" id="bookUploadArea">
@@ -129,6 +128,17 @@
                   </div>
                 </div>
               </div>
+
+              <div class="create-book-divider">
+                <span data-i18n="admin.createBookOr">— или —</span>
+              </div>
+
+              <button class="btn btn-secondary create-book-empty-btn" id="createEmptyBookBtn" type="button">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                <span data-i18n="admin.createEmptyBook">Создать пустую книгу</span>
+              </button>
             </div>
 
             <!-- ─── Вид: Редактор книги ─── -->

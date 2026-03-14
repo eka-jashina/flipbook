@@ -1,6 +1,6 @@
 /**
  * Тесты для modeCardsData
- * Конфигурация и генерация карточек выбора режима
+ * Конфигурация и генерация карточек выбора типа (Книга / Альбом)
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -12,14 +12,13 @@ import { MODE_CARDS, renderModeCards } from '../../../js/admin/modeCardsData.js'
 
 describe('modeCardsData', () => {
   describe('MODE_CARDS', () => {
-    it('should have 3 mode cards', () => {
-      expect(MODE_CARDS).toHaveLength(3);
+    it('should have 2 mode cards', () => {
+      expect(MODE_CARDS).toHaveLength(2);
     });
 
-    it('should include upload, manual, and album modes', () => {
+    it('should include book and album modes', () => {
       const modes = MODE_CARDS.map(c => c.mode);
-      expect(modes).toContain('upload');
-      expect(modes).toContain('manual');
+      expect(modes).toContain('book');
       expect(modes).toContain('album');
     });
 
@@ -39,16 +38,16 @@ describe('modeCardsData', () => {
       container = document.createElement('div');
     });
 
-    it('should render 3 buttons into container', () => {
+    it('should render 2 buttons into container', () => {
       renderModeCards(container);
       const buttons = container.querySelectorAll('button');
-      expect(buttons).toHaveLength(3);
+      expect(buttons).toHaveLength(2);
     });
 
     it('should set data-mode attribute on buttons', () => {
       renderModeCards(container);
       const modes = [...container.querySelectorAll('button')].map(b => b.dataset.mode);
-      expect(modes).toEqual(['upload', 'manual', 'album']);
+      expect(modes).toEqual(['book', 'album']);
     });
 
     it('should use default CSS classes', () => {
@@ -75,13 +74,13 @@ describe('modeCardsData', () => {
     it('should include SVG icons', () => {
       renderModeCards(container);
       const svgs = container.querySelectorAll('svg');
-      expect(svgs).toHaveLength(3);
+      expect(svgs).toHaveLength(2);
     });
 
     it('should set data-i18n attributes for translation', () => {
       renderModeCards(container);
       const i18nEls = container.querySelectorAll('[data-i18n]');
-      expect(i18nEls.length).toBe(6); // 3 titles + 3 descriptions
+      expect(i18nEls.length).toBe(4); // 2 titles + 2 descriptions
     });
   });
 });

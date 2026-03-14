@@ -5,19 +5,13 @@
 
 import { t } from '@i18n';
 
-/** Конфигурация карточек режимов */
+/** Конфигурация карточек типов (Книга / Альбом) */
 export const MODE_CARDS = [
   {
-    mode: 'upload',
-    icon: '<path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>',
-    titleKey: 'admin.mode.uploadTitle',
-    descKey: 'admin.mode.uploadDesc',
-  },
-  {
-    mode: 'manual',
-    icon: '<path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>',
-    titleKey: 'admin.mode.manualTitle',
-    descKey: 'admin.mode.manualDesc',
+    mode: 'book',
+    icon: '<path fill="currentColor" d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/>',
+    titleKey: 'admin.mode.bookTitle',
+    descKey: 'admin.mode.bookDesc',
   },
   {
     mode: 'album',

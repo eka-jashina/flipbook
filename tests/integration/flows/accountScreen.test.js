@@ -155,7 +155,7 @@ describe('Account Screen Integration', () => {
     });
 
     // Screen views inside books tab
-    ['bookshelf', 'mode-selector', 'upload', 'editor', 'album'].forEach(view => {
+    ['bookshelf', 'type-selector', 'create-book', 'editor', 'album'].forEach(view => {
       const v = document.createElement('div');
       v.className = 'screen-view';
       v.dataset.view = view;
@@ -196,13 +196,13 @@ describe('Account Screen Integration', () => {
     addBookBtn.id = 'addBookBtn';
     container.appendChild(addBookBtn);
 
-    const modeSelectorBack = document.createElement('button');
-    modeSelectorBack.id = 'modeSelectorBack';
-    container.appendChild(modeSelectorBack);
+    const typeSelectorBack = document.createElement('button');
+    typeSelectorBack.id = 'typeSelectorBack';
+    container.appendChild(typeSelectorBack);
 
-    const uploadBack = document.createElement('button');
-    uploadBack.id = 'uploadBack';
-    container.appendChild(uploadBack);
+    const createBookBack = document.createElement('button');
+    createBookBack.id = 'createBookBack';
+    container.appendChild(createBookBack);
 
     const editorBack = document.createElement('button');
     editorBack.id = 'editorBack';
@@ -211,6 +211,10 @@ describe('Account Screen Integration', () => {
     const albumBack = document.createElement('button');
     albumBack.id = 'albumBack';
     container.appendChild(albumBack);
+
+    const createEmptyBookBtn = document.createElement('button');
+    createEmptyBookBtn.id = 'createEmptyBookBtn';
+    container.appendChild(createEmptyBookBtn);
 
     // Mode cards container
     const modeCards = document.createElement('div');
@@ -394,7 +398,7 @@ describe('Account Screen Integration', () => {
   });
 
   describe('View navigation (books tab)', () => {
-    it('should navigate to mode-selector when add book button clicked', async () => {
+    it('should navigate to type-selector when add book button clicked', async () => {
       screen = new AccountScreen({ apiClient: mockApi, router: mockRouter, currentUser: { id: '1' } });
       await screen.init();
       await screen.show();
@@ -402,65 +406,65 @@ describe('Account Screen Integration', () => {
       const addBtn = screen.container.querySelector('#addBookBtn');
       addBtn.click();
 
-      const modeView = screen.container.querySelector('[data-view="mode-selector"]');
-      expect(modeView.hidden).toBe(false);
+      const typeView = screen.container.querySelector('[data-view="type-selector"]');
+      expect(typeView.hidden).toBe(false);
     });
 
-    it('should navigate back to bookshelf from mode-selector', async () => {
+    it('should navigate back to bookshelf from type-selector', async () => {
       screen = new AccountScreen({ apiClient: mockApi, router: mockRouter, currentUser: { id: '1' } });
       await screen.init();
       await screen.show();
 
-      // Go to mode-selector
+      // Go to type-selector
       screen.container.querySelector('#addBookBtn').click();
 
       // Go back
-      screen.container.querySelector('#modeSelectorBack').click();
+      screen.container.querySelector('#typeSelectorBack').click();
 
       const bookshelfView = screen.container.querySelector('[data-view="bookshelf"]');
       expect(bookshelfView.hidden).toBe(false);
     });
 
-    it('should navigate back to mode-selector from upload', async () => {
+    it('should navigate back to type-selector from create-book', async () => {
       screen = new AccountScreen({ apiClient: mockApi, router: mockRouter, currentUser: { id: '1' } });
       await screen.init();
       await screen.show();
 
-      // Simulate going to upload view
-      screen._showView('upload');
+      // Simulate going to create-book view
+      screen._showView('create-book');
 
       // Go back
-      screen.container.querySelector('#uploadBack').click();
+      screen.container.querySelector('#createBookBack').click();
 
-      const modeView = screen.container.querySelector('[data-view="mode-selector"]');
-      expect(modeView.hidden).toBe(false);
+      const typeView = screen.container.querySelector('[data-view="type-selector"]');
+      expect(typeView.hidden).toBe(false);
     });
   });
 
   describe('Mode selection', () => {
-    it('should handle upload mode selection', async () => {
+    it('should handle book mode selection — show create-book view', async () => {
       screen = new AccountScreen({ apiClient: mockApi, router: mockRouter, currentUser: { id: '1' } });
       await screen.init();
       await screen.show();
 
       // Create mode card inside modeCards container
-      const uploadCard = document.createElement('button');
-      uploadCard.className = 'mode-card';
-      uploadCard.dataset.mode = 'upload';
-      screen.modeCardsContainer.appendChild(uploadCard);
+      const bookCard = document.createElement('button');
+      bookCard.className = 'mode-card';
+      bookCard.dataset.mode = 'book';
+      screen.modeCardsContainer.appendChild(bookCard);
 
-      uploadCard.click();
+      bookCard.click();
 
-      const uploadView = screen.container.querySelector('[data-view="upload"]');
-      expect(uploadView.hidden).toBe(false);
+      const createBookView = screen.container.querySelector('[data-view="create-book"]');
+      expect(createBookView.hidden).toBe(false);
     });
 
-    it('should handle manual mode — create book and open editor', async () => {
+    it('should create empty book and open editor', async () => {
       screen = new AccountScreen({ apiClient: mockApi, router: mockRouter, currentUser: { id: '1' } });
       await screen.init();
       await screen.show();
 
-      await screen._handleModeSelect('manual');
+      await screen._createEmptyBook();
 
       expect(screen.store.addBook).toHaveBeenCalled();
       expect(screen.store.setActiveBook).toHaveBeenCalledWith('new-book-1');
@@ -556,8 +560,8 @@ describe('Account Screen Integration', () => {
       // 4. Switch back to books
       screen.container.querySelector('[data-tab="books"]').click();
 
-      // 5. Create a manual book
-      await screen._handleModeSelect('manual');
+      // 5. Create an empty book
+      await screen._createEmptyBook();
       expect(screen._pendingBookId).toBe('new-book-1');
 
       // 6. Editor is open

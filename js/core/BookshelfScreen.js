@@ -174,7 +174,7 @@ export class BookshelfScreen {
     if (addBtn && this._mode === 'owner') {
       e.preventDefault();
       if (this._router) {
-        this._router.navigate('/account');
+        this._router.navigate('/account?create=true');
       }
       return;
     }

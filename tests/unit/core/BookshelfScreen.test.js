@@ -406,7 +406,7 @@ describe('BookshelfScreen', () => {
       screen.render();
     });
 
-    it('should navigate to /account when add-book button is clicked with router', () => {
+    it('should navigate to /account?create=true when add-book button is clicked with router', () => {
       const mockRouter = { navigate: vi.fn() };
       screen = new BookshelfScreen({ container, books: [makeBook('b1')], onBookSelect, router: mockRouter });
       screen.render();
@@ -414,7 +414,7 @@ describe('BookshelfScreen', () => {
       btn.dataset.action = 'add-book';
       container.appendChild(btn);
       click(btn);
-      expect(mockRouter.navigate).toHaveBeenCalledWith('/account');
+      expect(mockRouter.navigate).toHaveBeenCalledWith('/account?create=true');
     });
 
     it('should prevent default on add-book click', () => {

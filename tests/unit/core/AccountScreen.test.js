@@ -120,8 +120,8 @@ describe('AccountScreen', () => {
       <div class="admin-panel" data-panel="settings" hidden></div>
       <div class="admin-panel" data-panel="export" hidden></div>
       <div class="screen-view" data-view="bookshelf" hidden></div>
-      <div class="screen-view" data-view="mode-selector" hidden></div>
-      <div class="screen-view" data-view="upload" hidden></div>
+      <div class="screen-view" data-view="type-selector" hidden></div>
+      <div class="screen-view" data-view="create-book" hidden></div>
       <div class="screen-view active" data-view="editor" hidden></div>
       <div class="screen-view" data-view="album" hidden></div>
       <div id="editorTabsWrapper"><div id="editorTabs" style="overflow:auto;">
@@ -134,10 +134,11 @@ describe('AccountScreen', () => {
       <div class="editor-panel" data-editor-panel="publish" hidden></div>
       <span id="editorTitle"></span>
       <button id="addBookBtn"></button>
-      <button id="modeSelectorBack"></button>
-      <button id="uploadBack"></button>
+      <button id="typeSelectorBack"></button>
+      <button id="createBookBack"></button>
       <button id="editorBack"></button>
       <button id="albumBack"></button>
+      <button id="createEmptyBookBtn"></button>
       <div id="modeCards"></div>
       <a id="accountToShelf" href="/"></a>
     `;
