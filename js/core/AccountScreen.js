@@ -140,9 +140,10 @@ export class AccountScreen {
    * @param {string} [tab='books'] - Вкладка для открытия
    * @param {Object} [options]
    * @param {string} [options.editBookId] - Если задан, открыть редактор этой книги
-   * @param {string} [options.mode] - Режим (upload/manual/album)
+   * @param {string} [options.mode] - Режим (book/album)
+   * @param {boolean} [options.create] - Если true, открыть выбор типа
    */
-  async show(tab = 'books', { editBookId, mode } = {}) {
+  async show(tab = 'books', { editBookId, mode, create } = {}) {
     this.container.hidden = false;
     document.body.dataset.screen = 'account';
 
@@ -155,6 +156,9 @@ export class AccountScreen {
     } else if (mode) {
       this._switchTab('books');
       this._handleModeSelect(mode);
+    } else if (create) {
+      this._switchTab('books');
+      this._showView('type-selector');
     }
   }
 
