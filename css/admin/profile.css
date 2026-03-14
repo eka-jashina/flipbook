@@ -169,6 +169,33 @@
   outline-offset: 2px;
 }
 
+/* Slug (адрес книги) */
+.slug-preview {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--admin-text-secondary);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.slug-status {
+  margin-top: 4px;
+  font-size: 12px;
+  min-height: 16px;
+}
+
+.slug-status--ok {
+  color: var(--admin-success, #22c55e);
+}
+
+.slug-status--error {
+  color: var(--admin-danger);
+}
+
+.slug-status--checking {
+  color: var(--admin-text-tertiary);
+}
+
 /* Ссылка для шаринга */
 .share-link-row {
   display: flex;

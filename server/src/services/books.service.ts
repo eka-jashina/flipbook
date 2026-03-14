@@ -156,6 +156,7 @@ export async function updateBook(
     type?: string;
     visibility?: string;
     description?: string | null;
+    slug?: string | null;
     coverBgMode?: string;
     coverBgCustomUrl?: string | null;
     ifUnmodifiedSince?: string;
@@ -174,6 +175,17 @@ export async function updateBook(
     const clientDate = new Date(data.ifUnmodifiedSince);
     if (book.updatedAt > clientDate) {
       throw new AppError(409, 'Book was modified by another request', 'CONFLICT_DETECTED');
+    }
+  }
+
+  // Validate slug uniqueness (per user, excluding current book)
+  if (data.slug) {
+    const existing = await prisma.book.findFirst({
+      where: { userId, slug: data.slug, deletedAt: null, id: { not: bookId } },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new AppError(409, 'This slug is already used by another of your books');
     }
   }
 
@@ -198,6 +210,7 @@ export async function updateBook(
       ...(data.type !== undefined && { type: data.type }),
       ...(data.visibility !== undefined && { visibility: data.visibility }),
       ...(data.description !== undefined && { description: data.description }),
+      ...(data.slug !== undefined && { slug: data.slug }),
       ...(publishedAt !== undefined && { publishedAt }),
       ...(data.coverBgMode !== undefined && { coverBgMode: data.coverBgMode }),
       ...(data.coverBgCustomUrl !== undefined && {
@@ -275,6 +288,23 @@ export async function deleteBook(
       );
     }
   }
+}
+
+/**
+ * Check if a slug is available for a user's book.
+ */
+export async function isSlugAvailable(
+  userId: string,
+  slug: string,
+  excludeBookId?: string,
+): Promise<boolean> {
+  const prisma = getPrisma();
+  const where: Record<string, unknown> = { userId, slug, deletedAt: null };
+  if (excludeBookId) {
+    where.id = { not: excludeBookId };
+  }
+  const existing = await prisma.book.findFirst({ where, select: { id: true } });
+  return !existing;
 }
 
 /**

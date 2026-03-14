@@ -28,6 +28,7 @@ export interface BookListItem {
   position: number;
   visibility: string;
   description: string | null;
+  slug: string | null;
   chaptersCount: number;
   coverBgMode: string;
   appearance: {
@@ -50,6 +51,7 @@ export interface BookDetail {
   type: string;
   visibility: string;
   description: string | null;
+  slug: string | null;
   publishedAt: string | null;
   cover: {
     bg: string;
@@ -193,6 +195,7 @@ export interface PublicBookCard {
   author: string;
   type: string;
   description: string | null;
+  slug: string | null;
   publishedAt: string | null;
   chaptersCount: number;
   appearance: {
@@ -215,6 +218,7 @@ export interface PublicBookDetail {
   author: string;
   type: string;
   description: string | null;
+  slug: string | null;
   publishedAt: string | null;
   cover: {
     bg: string;

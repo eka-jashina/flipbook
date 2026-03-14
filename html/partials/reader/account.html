@@ -229,6 +229,14 @@
                   <div class="char-counter"><span id="descCharCount">0</span> / 2000</div>
                 </fieldset>
 
+                <fieldset class="setting-fieldset setting-fieldset--top" id="slugSection">
+                  <legend class="setting-fieldset-legend" data-i18n="admin.publication.slugLabel">Адрес книги</legend>
+                  <p class="fieldset-description" data-i18n="admin.publication.slugHint">Латиница, цифры и дефисы (3-100 символов). Будет использован в URL книги.</p>
+                  <input class="form-input" type="text" id="bookSlug" maxlength="100" data-i18n-placeholder="admin.publication.slugPlaceholder" placeholder="my-book" autocomplete="off" spellcheck="false">
+                  <div class="slug-preview" id="slugPreview"></div>
+                  <div class="slug-status" id="slugStatus"></div>
+                </fieldset>
+
                 <fieldset class="setting-fieldset setting-fieldset--top" id="shareSection" hidden>
                   <legend class="setting-fieldset-legend" data-i18n="admin.publication.shareLink">Ссылка для шаринга</legend>
                   <div class="share-link-row">

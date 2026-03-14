@@ -405,7 +405,7 @@ describe('Mappers', () => {
     it('should map book to public card', () => {
       const book = {
         id: 'b1', title: 'Great Book', author: 'Author',
-        description: 'A description', publishedAt: new Date('2024-06-01T00:00:00Z'),
+        description: 'A description', slug: 'great-book', publishedAt: new Date('2024-06-01T00:00:00Z'),
         _count: { chapters: 5 },
         appearance: {
           lightCoverBgStart: '#aaa',
@@ -420,6 +420,7 @@ describe('Mappers', () => {
       expect(dto.title).toBe('Great Book');
       expect(dto.author).toBe('Author');
       expect(dto.description).toBe('A description');
+      expect(dto.slug).toBe('great-book');
       expect(dto.publishedAt).toBe('2024-06-01T00:00:00.000Z');
       expect(dto.chaptersCount).toBe(5);
       expect(dto.appearance).toEqual({
@@ -430,7 +431,7 @@ describe('Mappers', () => {
     it('should handle null publishedAt and appearance', () => {
       const book = {
         id: 'b2', title: 'Draft Book', author: 'Author',
-        description: null, publishedAt: null,
+        description: null, slug: null, publishedAt: null,
         _count: { chapters: 0 },
         appearance: null,
       };
@@ -450,7 +451,7 @@ describe('Mappers', () => {
       const book = {
         id: 'b1', title: 'My Book', author: 'Me',
         position: 0, visibility: 'draft',
-        description: null, coverBgMode: 'default',
+        description: null, slug: null, coverBgMode: 'default',
         _count: { chapters: 3 },
         appearance: {
           lightCoverBgStart: '#fff',
@@ -476,7 +477,7 @@ describe('Mappers', () => {
       const book = {
         id: 'b2', title: 'New Book', author: 'Me',
         position: 1, visibility: 'draft',
-        description: null, coverBgMode: 'default',
+        description: null, slug: null, coverBgMode: 'default',
         _count: { chapters: 0 },
         appearance: null,
         readingProgress: [],

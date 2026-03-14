@@ -33,7 +33,7 @@ import { StorageManager } from './utils/StorageManager.js';
 import { initAnalytics, setAnalyticsApiClient } from './utils/Analytics.js';
 import {
   initRouteHandlers,
-  handleHome, handlePublicShelf, handleReader, handleEmbed, handleAccount,
+  handleHome, handlePublicShelf, handleReader, handleEmbed, handleAccount, handleBookBySlug,
   cleanupReader, cleanupBookshelf, cleanupLanding,
 } from './routes/handlers.js';
 
@@ -167,6 +167,7 @@ async function init() {
       { name: 'reader', path: '/book/:bookId', handler: handleReader },
       { name: 'embed', path: '/embed/:bookId', handler: handleEmbed },
       { name: 'account', path: '/account', handler: handleAccount },
+      { name: 'bookBySlug', path: '/:username/:slug', handler: handleBookBySlug },
       { name: 'shelf', path: '/:username', handler: handlePublicShelf },
     ]);
 

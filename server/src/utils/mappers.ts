@@ -246,6 +246,7 @@ export function mapBookToPublicCard(book: {
   author: string;
   type: string;
   description: string | null;
+  slug: string | null;
   publishedAt: Date | null;
   _count: { chapters: number };
   appearance: { lightCoverBgStart: string; lightCoverBgEnd: string; lightCoverText: string } | null;
@@ -256,6 +257,7 @@ export function mapBookToPublicCard(book: {
     author: book.author,
     type: book.type,
     description: book.description,
+    slug: book.slug,
     publishedAt: book.publishedAt?.toISOString() ?? null,
     chaptersCount: book._count.chapters,
     appearance: book.appearance ? mapAppearanceToCoverDto(book.appearance) : null,
@@ -271,6 +273,7 @@ type BookWithRelations = {
   type: string;
   visibility: string;
   description: string | null;
+  slug: string | null;
   publishedAt: Date | null;
   coverBg: string;
   coverBgMobile: string;
@@ -292,6 +295,7 @@ export function mapBookToDetail(book: BookWithRelations): BookDetail {
     type: book.type,
     visibility: book.visibility,
     description: book.description,
+    slug: book.slug,
     publishedAt: book.publishedAt?.toISOString() ?? null,
     cover: {
       bg: book.coverBg,
@@ -326,6 +330,7 @@ type BookForList = {
   position: number;
   visibility: string;
   description: string | null;
+  slug: string | null;
   coverBgMode: string;
   _count: { chapters: number };
   appearance: { lightCoverBgStart: string; lightCoverBgEnd: string; lightCoverText: string } | null;
@@ -341,6 +346,7 @@ export function mapBookToListItem(book: BookForList): BookListItem {
     position: book.position,
     visibility: book.visibility,
     description: book.description,
+    slug: book.slug,
     chaptersCount: book._count.chapters,
     coverBgMode: book.coverBgMode,
     appearance: book.appearance ? mapAppearanceToCoverDto(book.appearance) : null,

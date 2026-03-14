@@ -129,6 +129,7 @@ export class AccountScreen {
       apiClient: this._api,
       store: this._store,
       showToast: (msg, type) => this._showToast(msg, type),
+      currentUser: this._currentUser,
     });
     this._publishTab.bindEvents();
 

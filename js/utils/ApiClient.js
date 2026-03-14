@@ -584,6 +584,13 @@ export class ApiClient {
     return this._fetchWithRetry(`/api/v1/public/books/${encodeURIComponent(bookId)}`);
   }
 
+  /** Публичная книга по username + slug */
+  async getPublicBookBySlug(username, slug) {
+    return this._fetchWithRetry(
+      `/api/v1/public/shelves/${encodeURIComponent(username)}/${encodeURIComponent(slug)}`
+    );
+  }
+
   /** Контент главы публичной книги */
   async getPublicChapterContent(bookId, chapterId) {
     return this._fetchWithRetry(
@@ -608,5 +615,11 @@ export class ApiClient {
   /** Проверить доступность username */
   async checkUsername(username) {
     return this._fetchWithRetry(`/api/v1/profile/check-username/${encodeURIComponent(username)}`);
+  }
+
+  /** Проверить доступность slug для книги */
+  async checkBookSlug(slug, excludeBookId) {
+    const params = excludeBookId ? `?excludeBookId=${encodeURIComponent(excludeBookId)}` : '';
+    return this._fetchWithRetry(`/api/v1/books/check-slug/${encodeURIComponent(slug)}${params}`);
   }
 }
